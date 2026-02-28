@@ -1,0 +1,376 @@
+:root {
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.4;
+  font-weight: 400;
+  color: #1b2c3d;
+  background: #d8dee8;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, #5d6d82 0%, #73849a 18%, #d8dee8 60%);
+}
+
+.topbar {
+  height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  color: #f4f8ff;
+  background: linear-gradient(180deg, #33465d 0%, #23364b 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-icon {
+  font-size: 42px;
+  line-height: 1;
+}
+
+.brand-name {
+  font-size: 42px;
+  font-weight: 700;
+}
+
+.window-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.window-actions button {
+  width: 36px;
+  height: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #eff6ff;
+  cursor: pointer;
+}
+
+.workspace {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 280px minmax(580px, 1fr) 340px;
+  gap: 0;
+}
+
+.sidebar {
+  background: linear-gradient(180deg, rgba(35, 52, 72, 0.94) 0%, rgba(55, 78, 106, 0.9) 100%);
+  color: #dce7f5;
+  border-right: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sidebar-search {
+  height: 30px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(240, 246, 255, 0.14);
+  color: #f4f8ff;
+  padding: 0 8px;
+}
+
+.sidebar-section-label {
+  font-weight: 600;
+  opacity: 0.95;
+}
+
+.staff-card {
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: #f2f5f8;
+  color: #2f4259;
+  padding: 8px;
+  font-size: 25px;
+  letter-spacing: 4px;
+  text-align: center;
+}
+
+.menu-block {
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  padding-top: 8px;
+}
+
+.menu-title {
+  font-size: 29px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.menu-item {
+  width: 100%;
+  text-align: left;
+  border: 0;
+  color: #e8f1ff;
+  background: transparent;
+  padding: 8px 4px;
+  font-size: 27px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  cursor: pointer;
+}
+
+.menu-item.active,
+.menu-item:hover {
+  color: #ffffff;
+}
+
+.library-panel {
+  padding: 14px;
+  background: #edf1f6;
+  border-right: 1px solid #c8d1dc;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.library-toolbar {
+  display: grid;
+  grid-template-columns: 1fr 42px;
+  gap: 6px;
+}
+
+.library-toolbar input,
+.library-toolbar button {
+  height: 46px;
+  border-radius: 4px;
+  border: 1px solid #c5cfdb;
+  background: #ffffff;
+  color: #4d6075;
+  font-size: 31px;
+}
+
+.library-toolbar input {
+  padding: 0 14px;
+}
+
+.library-toolbar button {
+  cursor: pointer;
+}
+
+.library-table {
+  border: 1px solid #c8d1dc;
+  border-radius: 4px;
+  background: #f8fafd;
+  overflow: hidden;
+}
+
+.row-grid {
+  display: grid;
+  grid-template-columns: 1.5fr 0.9fr 0.6fr;
+  align-items: center;
+}
+
+.table-header {
+  background: #eef2f6;
+  color: #34485d;
+  font-size: 33px;
+  font-weight: 700;
+  padding: 10px 14px;
+  border-bottom: 1px solid #ced7e3;
+}
+
+.table-row {
+  min-height: 43px;
+  padding: 7px 14px;
+  border-bottom: 1px solid #d8e0ea;
+  color: #344b61;
+  font-size: 36px;
+}
+
+.table-row:last-child {
+  border-bottom: 0;
+}
+
+.parent-row {
+  font-weight: 700;
+  background: #eef3f9;
+}
+
+.child-row {
+  background: #fbfdff;
+}
+
+.version-panel {
+  background: #eff3f8;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid #c8d1dc;
+}
+
+.version-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #2f455e;
+  font-size: 33px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.version-header strong {
+  flex: 1;
+  font-size: 43px;
+}
+
+.version-header button {
+  border: 0;
+  background: transparent;
+  color: #4a6078;
+  font-size: 30px;
+  cursor: pointer;
+}
+
+.version-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.version-item {
+  border-radius: 4px;
+  border: 1px solid #cad4df;
+  padding: 10px 10px;
+  text-align: left;
+  background: #f9fbfd;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+}
+
+.version-item.active {
+  background: linear-gradient(180deg, #4f84d7 0%, #2d62b8 100%);
+  color: #f3f8ff;
+}
+
+.version-item.draft {
+  background: #ffffff;
+}
+
+.version-item.ok {
+  background: #f7fafe;
+}
+
+.version-item.info {
+  background: #f5f8fc;
+}
+
+.version-name {
+  font-weight: 700;
+  font-size: 30px;
+}
+
+.version-date {
+  opacity: 0.9;
+  font-size: 27px;
+}
+
+.version-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.version-actions button {
+  height: 38px;
+  border: 1px solid #c7d1dd;
+  border-radius: 4px;
+  background: #fcfdff;
+  font-size: 31px;
+  font-weight: 600;
+  color: #3c536d;
+  cursor: pointer;
+}
+
+.statusbar {
+  min-height: 52px;
+  border-top: 1px solid #c0cad7;
+  background: linear-gradient(180deg, #e9edf3 0%, #dde3eb 100%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+}
+
+.status-left {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  color: #354c63;
+  font-size: 26px;
+  font-weight: 600;
+}
+
+.settings-btn {
+  height: 34px;
+  border-radius: 6px;
+  border: 1px solid #b5c1cf;
+  background: #f7f9fc;
+  color: #374f67;
+  font-size: 27px;
+  font-weight: 600;
+  padding: 0 12px;
+  cursor: pointer;
+}
+
+@media (max-width: 1400px) {
+  .workspace {
+    grid-template-columns: 250px minmax(520px, 1fr) 300px;
+  }
+
+  .brand-name {
+    font-size: 30px;
+  }
+
+  .menu-title {
+    font-size: 22px;
+  }
+
+  .menu-item,
+  .table-header,
+  .table-row,
+  .version-header,
+  .version-name,
+  .version-date,
+  .version-actions button,
+  .status-left,
+  .settings-btn,
+  .library-toolbar input,
+  .library-toolbar button {
+    font-size: 16px;
+  }
+}
