@@ -16,7 +16,7 @@ Aplicativo desktop (Windows e Linux) para organizar partituras e arquivos musica
 
 ## Metadados da partitura
 
-Título, compositor, arranjador, instrumento, categoria, tags, data da última alteração, tamanho do arquivo e hash.
+Título, compositor, arranjador, instrumento, categoria, tags, data da última alteração, tamanho do arquivo e hash (opcional, configurável).
 
 ## Funcionalidades
 
@@ -126,6 +126,8 @@ A crate [notify](https://docs.rs/notify/) será usada para monitorar alteraçõe
 ### Hashing com BLAKE3
 
 O [BLAKE3](https://docs.rs/blake3/) será usado para calcular hashes dos arquivos. É significativamente mais rápido que SHA-256 (aproveita SIMD e paralelismo), ideal para comparar versões e detectar alterações reais no conteúdo. Utilizado no versionamento e na verificação de integridade do backup.
+
+**Configuração:** o cálculo de hash vem **desativado por padrão** e pode ser habilitado na tela de configurações. Quando desativado, a detecção de alterações utiliza apenas tamanho do arquivo + data de modificação (rápido e suficiente para a maioria dos casos). Quando ativado, o hash BLAKE3 é calculado para detectar alterações reais no conteúdo mesmo que o tamanho permaneça igual.
 
 ### Compactação com zstd
 

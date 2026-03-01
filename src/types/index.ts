@@ -1,40 +1,76 @@
-export interface ScoreChild {
+// ── Domain types matching the Rust backend ──
+
+export interface ScoreListItem {
+  id: string;
   title: string;
-  author: string;
-  modified: string;
+  composer: string | null;
+  arranger: string | null;
+  updated_at: string;
+  favorited: boolean;
+  instruments: ScoreFileItem[];
 }
 
-export interface ScoreRow {
-  title: string;
-  author: string;
-  modified: string;
-  expanded?: boolean;
-  children?: ScoreChild[];
+export interface ScoreFileItem {
+  id: string;
+  instrument: string | null;
+  file_extension: string;
+  updated_at: string;
+  has_draft: boolean;
+  version_count: number;
 }
 
-export type VersionTone = "active" | "draft" | "ok" | "info";
+export interface FileVersion {
+  id: string;
+  score_file_id: string;
+  version_number: number;
+  label: string | null;
+  status: "Current" | "Previous" | "Draft" | "Compressed";
+  file_path: string;
+  file_size: number;
+  hash: string | null;
+  is_compressed: boolean;
+  created_at: string;
+}
 
-export interface Version {
+export interface Category {
+  id: string;
   name: string;
-  detail: string;
-  tone: VersionTone;
-  icon?: string;
+  created_at: string;
 }
 
-export interface MenuItem {
-  label: string;
-  icon?: React.ReactNode;
-  active?: boolean;
+export interface AppSettings {
+  organization_name: string | null;
+  logo_path: string | null;
+  google_drive_mode: "Local" | "Api";
+  hash_enabled: boolean;
+  first_run_completed: boolean;
 }
 
-export interface MenuSection {
-  title: string;
-  icon?: React.ReactNode;
-  items: MenuItem[];
+export interface IndexedFile {
+  path: string;
+  name: string;
+  instrument: string | null;
+  extension: string;
+  size: number;
 }
 
-export interface StatusItem {
-  icon: React.ReactNode;
-  label: string;
-  highlight?: boolean;
+// ── UI State types ──
+
+export type SidebarView =
+  | "all"
+  | "favorites"
+  | "drafts"
+  | { type: "category"; id: string; name: string };
+
+export interface AppState {
+  scores: ScoreListItem[];
+  categories: Category[];
+  settings: AppSettings | null;
+  sidebarView: SidebarView;
+  selectedScore: ScoreListItem | null;
+  selectedFile: ScoreFileItem | null;
+  versions: FileVersion[];
+  searchQuery: string;
+  isFirstRun: boolean;
+  isLoading: boolean;
 }

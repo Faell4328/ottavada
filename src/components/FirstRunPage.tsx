@@ -1,0 +1,122 @@
+import { useState } from "react";
+import { Music, HardDrive, Cloud } from "lucide-react";
+import { useAppState } from "../context/AppContext";
+
+export default function FirstRunPage() {
+  const { completeFirstRun } = useAppState();
+  const [orgName, setOrgName] = useState("");
+  const [driveMode, setDriveMode] = useState<"local" | "api">("local");
+
+  async function handleContinue() {
+    await completeFirstRun(orgName.trim() || null, driveMode);
+  }
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-[#33465d] to-[#5d6d82]">
+      <div className="w-full max-w-md rounded-xl bg-white p-8 shadow-2xl">
+        {/* Logo */}
+        <div className="flex flex-col items-center mb-8">
+          <div className="flex items-center gap-3 mb-2">
+            <Music className="h-10 w-10 text-[#4f84d7]" />
+            <h1 className="text-2xl font-bold text-[#2f4259]">
+              Score Maestro
+            </h1>
+          </div>
+          <p className="text-sm text-[#6b849e] text-center">
+            Organize suas partituras com versionamento e backups automáticos
+          </p>
+        </div>
+
+        {/* Organization name */}
+        <div className="mb-6">
+          <label className="block text-sm font-semibold text-[#34485d] mb-1.5">
+            Nome da organização{" "}
+            <span className="text-[#8b9db2] font-normal">(opcional)</span>
+          </label>
+          <input
+            value={orgName}
+            onChange={(e) => setOrgName(e.target.value)}
+            className="w-full h-10 rounded-lg border border-[#c5cfdb] bg-[#f8fafd] px-3 text-sm text-[#4d6075] outline-none focus:border-[#7ba0d4] focus:ring-2 focus:ring-[#7ba0d4]/20"
+            placeholder="Ex: Igreja, Banda, Orquestra..."
+          />
+        </div>
+
+        {/* Google Drive mode */}
+        <div className="mb-8">
+          <label className="block text-sm font-semibold text-[#34485d] mb-2">
+            Backup no Google Drive
+          </label>
+          <div className="flex flex-col gap-2">
+            <DriveOption
+              icon={<HardDrive className="h-5 w-5" />}
+              label="Google Drive Local"
+              description="Usa a pasta do Google Drive instalada no computador"
+              recommended
+              selected={driveMode === "local"}
+              onClick={() => setDriveMode("local")}
+            />
+            <DriveOption
+              icon={<Cloud className="h-5 w-5" />}
+              label="Google Drive via API"
+              description="Sincroniza diretamente com o Google Drive via rclone"
+              selected={driveMode === "api"}
+              onClick={() => setDriveMode("api")}
+            />
+          </div>
+        </div>
+
+        {/* Continue */}
+        <button
+          type="button"
+          onClick={handleContinue}
+          className="w-full h-11 rounded-lg bg-[#4f84d7] text-sm font-bold text-white hover:bg-[#3d6fb8] transition-colors cursor-pointer border-0"
+        >
+          Começar a usar
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function DriveOption({
+  icon,
+  label,
+  description,
+  recommended,
+  selected,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  description: string;
+  recommended?: boolean;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex items-start gap-3 rounded-lg border-2 p-3 text-left transition-all cursor-pointer ${
+        selected
+          ? "border-[#4f84d7] bg-[#f0f5ff]"
+          : "border-[#e0e5ec] bg-white hover:border-[#a0b3c7]"
+      }`}
+    >
+      <span className={selected ? "text-[#4f84d7]" : "text-[#6b849e]"}>
+        {icon}
+      </span>
+      <div className="flex-1">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-bold text-[#2f4259]">{label}</span>
+          {recommended && (
+            <span className="text-[10px] font-bold text-[#4f84d7] bg-[#e8f0fe] px-1.5 py-0.5 rounded">
+              Recomendado
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-[#6b849e] mt-0.5">{description}</p>
+      </div>
+    </button>
+  );
+}
