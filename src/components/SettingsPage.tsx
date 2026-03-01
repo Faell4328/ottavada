@@ -116,9 +116,17 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
         </div>
 
         {/* Footer */}
-        <div className="mt-12 text-center text-xs text-[#8b9db2]">
-          Made by Rhafaell with lots of coffee ☕
-        </div>
+        {
+          (Math.round(Math.random()*10) == 1) ? (
+            <div className="mt-12 text-center text-xs text-[#8b9db2]">
+              In total, 200 cups of coffee were consumed and it is increasing ☕📈
+            </div>
+          ):(
+            <div className="mt-12 text-center text-xs text-[#8b9db2]">
+              Made by Rhafaell with lots of coffee ☕
+            </div>
+          )
+        }
       </div>
     </div>
   );
