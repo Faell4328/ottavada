@@ -84,11 +84,11 @@ export default function TopBar({
 
   return (
     <header
-      className="flex h-[52px] items-center justify-between bg-gradient-to-b from-[#33465d] to-[#23364b] px-4 text-white border-b border-white/15"
+      className="flex h-[70px] items-center justify-between bg-gradient-to-b from-[#33465d] to-[#23364b] px-4 text-white border-b border-white/15"
       data-tauri-drag-region
     >
       <div className="flex items-center gap-3">
-        <Music className="h-7 w-7" />
+        <img src="public/logo.png" alt="Logo" className="h-auto w-[70px] rounded-full" />
         <span className="text-xl font-bold tracking-tight">{title}</span>
       </div>
 

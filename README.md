@@ -13,6 +13,7 @@ Aplicativo desktop (Windows e Linux) para organizar partituras e arquivos musica
 - Manter histórico completo de versões e rascunhos.
 - Automatizar backups (local, pendrive e Google Drive).
 - Preservar a estrutura de pastas existente do usuário.
+- Deve ter uma opção para exporta/importa as partituras, categorias, metadados e todas as de mais informações.
 
 ## Metadados da partitura
 
