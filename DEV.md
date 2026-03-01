@@ -602,6 +602,70 @@ app_settings (key-value store independente)
 - **Node.js** ≥ 18 + **npm**
 - Dependências do sistema para Tauri (Linux): `webkit2gtk-4.1`, `libappindicator3-dev`, etc.
 
+### Pré-requisitos e passos (Arch Linux)
+
+Se você está usando Arch Linux / Manjaro, aqui estão os passos recomendados para preparar o ambiente de desenvolvimento e para cross-compile para Windows (`x86_64-pc-windows-gnu`):
+
+- Instalar Node.js + npm:
+
+```bash
+sudo pacman -S --needed --noconfirm nodejs npm
+```
+
+- Instalar Rust via `rustup` (recomendado):
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source $HOME/.cargo/env
+# opcional: configure toolchain default com `rustup default stable`
+```
+
+- Dependências do sistema necessárias para rodar e buildar Tauri no Linux (Arch):
+
+```bash
+sudo pacman -S --needed --noconfirm webkit2gtk libappindicator-gtk3 libsecret xdg-desktop-portal-gtk gtk3
+```
+
+- Ferramentas de desenvolvimento básicas (se ainda não instaladas):
+
+```bash
+sudo pacman -S --needed --noconfirm base-devel pkgconf
+```
+
+- Cross-compile / toolchain MinGW (necessário para alvo `x86_64-pc-windows-gnu`):
+
+```bash
+sudo pacman -S --needed --noconfirm mingw-w64-gcc mingw-w64-binutils mingw-w64-headers mingw-w64-crt
+```
+
+- Verificar que o `dlltool` do MinGW está disponível:
+
+```bash
+which x86_64-w64-mingw32-dlltool
+# deve retornar algo como: /usr/bin/x86_64-w64-mingw32-dlltool
+```
+
+- Registrar target Windows no Rust (rustup):
+
+```bash
+rustup target add x86_64-pc-windows-gnu
+```
+
+- Comandos úteis para build Windows (cross-compile):
+
+```bash
+# adiciona target Rust (uma vez)
+rustup target add x86_64-pc-windows-gnu
+
+# build via script do projeto (usa mingw toolchain para linkagem)
+npm run tauri:build:win
+```
+
+Observações:
+- Em Arch você pode instalar `rustup` também via `pacman` (`rustup` / `rust`), mas o método oficial recomendado é via script `sh.rustup.rs`.
+- Os pacotes `webkit2gtk` e `xdg-desktop-portal-gtk` são importantes para o WebView e dialogs nativos do Tauri no Linux.
+- Para cross-linking no alvo Windows, o `dlltool` (parte de `mingw-w64-binutils`) é requerido — se o build reclamar de `x86_64-w64-mingw32-dlltool` ausente, instale os pacotes MinGW acima.
+
 ### Desenvolvimento
 
 ```bash
@@ -619,6 +683,103 @@ npm run tauri build
 ```
 
 ---
+
+### Windows — Compilar e empacotar
+
+Aqui estão as opções e requisitos para gerar binários/instaladores Windows.
+
+- **Opção recomendada — Compilar em um host Windows (mais simples e confiável):**
+  - Pré-requisitos: `Node.js` ≥ 18, `npm`, `Rust` (via `rustup`) com toolchain MSVC, Visual Studio Build Tools (Desktop development with C++), NSIS (`makensis.exe`) para empacotar instaladores e (opcional) ferramentas de assinatura (`signtool`).
+  - Passos rápidos:
+    ```powershell
+    # Instalar target MSVC (exemplo):
+    rustup toolchain install stable-x86_64-pc-windows-msvc
+    # Instalar dependências JS e build frontend
+    npm install
+    npm run tauri:build
+    ```
+  - Observações: o build e bundling (criando .exe/.msi/NSIS) funcionam nativamente em Windows e suportam assinatura de código.
+
+- **Opção alternativa — Cross-compile a partir de Linux (x86_64-pc-windows-gnu):**
+  - Pré-requisitos mínimos: `rustup` target `x86_64-pc-windows-gnu`, toolchain MinGW (`mingw-w64`), `wine` (para executar `makensis.exe`/ferramentas Windows) e `nsis` (ou `makensis.exe` disponível via wine). Em distribuições como Arch/Manjaro instale `mingw-w64-gcc`, `wine` e pacotes NSIS (AUR) conforme necessário.
+  - Exemplos de comandos (Linux):
+    ```bash
+    # adicionar target Rust
+    rustup target add x86_64-pc-windows-gnu
+    # instalar toolchain mingw (via pacman/apt) e wine/nsis conforme distro
+    npm install
+    # comando definido no package.json para cross-build Windows
+    npm run tauri:build:win
+    ```
+  - Caveats e problemas comuns:
+    - O bundler pode tentar executar `makensis.exe` e falhar com "No such file or directory" (veja logs). Para contornar: instale `makensis.exe` no Windows ou use `wine makensis.exe`/pacotes nsis apropriados no Linux. Em algumas distros NSIS está disponível via repositório; noutras é necessário AUR ou usar o binário `makensis.exe` com `wine`.
+    - Assinatura automática geralmente não funciona em hosts Linux — para assinatura de código prefira um host Windows com `signtool` ou um processo de CI Windows.
+    - Algumas features do bundler (ex.: MSI/NSIS integradas) têm comportamento experimental em cross-compile — logs podem mostrar avisos sobre bundlers ignorados.
+
+- **Erros frequentes e remediações:**
+  - "failed to run command makensis.exe: No such file or directory": instale NSIS (`makensis`) no host Windows, ou disponibilize `makensis.exe` via `wine` no Linux PATH.
+  - "Signing skipped" / problemas de assinatura: execute a etapa de assinatura em Windows ou configure `bundler.windows.sign_command` no `tauri.conf.json` apontando para seu comando de assinatura remoto/local.
+
+  - **Instalação do NSIS em Arch Linux / AUR e criação de shim/wrapper para `makensis.exe`:**
+
+    Se o bundler reclamar que `makensis.exe` não foi encontrado durante o cross-build no Linux, as opções práticas em Arch/Manjaro são:
+
+    - Tentar instalar dependências oficiais via `pacman` (instala `wine` e toolchains MinGW necessários):
+
+    ```bash
+    sudo pacman -Syu --needed --noconfirm \
+      wine p7zip \
+      mingw-w64-gcc mingw-w64-binutils mingw-w64-headers mingw-w64-crt \
+      base-devel pkgconf
+    ```
+
+    - Se `nsis` não estiver disponível nos repositórios oficiais, instale via AUR com `paru` ou `yay`:
+
+    ```bash
+    # com paru
+    paru -S --needed nsis
+
+    # ou com yay
+    yay -S --needed nsis
+    ```
+
+    - Verifique se `makensis` ficou disponível:
+
+    ```bash
+    which makensis || echo "makensis not found"
+    ```
+
+    - O bundler do Tauri procura por `makensis.exe`. Se `makensis` estiver instalado como binário POSIX, crie um link chamado `makensis.exe` no `PATH`:
+
+    ```bash
+    sudo ln -sf "$(which makensis)" /usr/local/bin/makensis.exe
+    sudo chmod +x /usr/local/bin/makensis.exe
+    ```
+
+    - Alternativa (quando usar o instalador Windows via `wine`): crie um wrapper `makensis.exe` que invoque o `makensis.exe` dentro do prefixo `wine`:
+
+    ```bash
+    sudo tee /usr/local/bin/makensis.exe > /dev/null <<'EOF'
+    #!/bin/sh
+    exec wine makensis.exe "$@"
+    EOF
+    sudo chmod +x /usr/local/bin/makensis.exe
+    ```
+
+    Observações:
+    - O wrapper com `wine` exige que o `makensis.exe` esteja instalado no prefixo `wine` (instale o instalador NSIS com `wine` se necessário).
+    - Criar o symlink para o binário POSIX (`makensis`) é a solução mais simples quando disponível — o bundler só precisa executar `makensis.exe` no `PATH`.
+    - Após configurar, reexecute o build Windows:
+
+    ```bash
+    npm run tauri:build:win
+    ```
+
+    Se ainda houver erros cole os logs finais e ajudarei a diagnosticar o próximo passo.
+
+  - **Recomendações práticas:**
+    - Para releases finais e assinados, use um host Windows (ou CI Windows) para garantir bundling e signing corretos.
+    - Para desenvolvimento rápido e testes, cross-compile no Linux é viável (já incluído no `package.json` deste projeto), mas verifique dependências (`mingw-w64`, `wine`, `nsis`).
 
 ## Testes
 
