@@ -1,14 +1,42 @@
-import { useState } from "react";
-import { Music, HardDrive, Cloud } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Music, HardDrive, Cloud, Eye, EyeOff } from "lucide-react";
 import { useAppState } from "../context/AppContext";
+
+function generateUUID(): string {
+  // Simple UUID v4 generator
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
 
 export default function FirstRunPage() {
   const { completeFirstRun } = useAppState();
-  const [orgName, setOrgName] = useState("");
+  const [computerName, setComputerName] = useState("");
+  const [apiKey, setApiKey] = useState("");
+  const [showApiKey, setShowApiKey] = useState(false);
   const [driveMode, setDriveMode] = useState<"local" | "api">("local");
 
+  useEffect(() => {
+    // Generate a UUID for initial computer name
+    setComputerName(generateUUID().substring(0, 8).toUpperCase());
+  }, []);
+
   async function handleContinue() {
-    await completeFirstRun(orgName.trim() || null, driveMode);
+    if (!computerName.trim()) {
+      alert("Nome do computador é obrigatório");
+      return;
+    }
+    if (driveMode === "api" && !apiKey.trim()) {
+      alert("Chave da API do Google Drive é obrigatória para o modo API");
+      return;
+    }
+    await completeFirstRun(
+      computerName.trim(),
+      driveMode,
+      driveMode === "api" ? apiKey.trim() : null
+    );
   }
 
   return (
@@ -27,22 +55,24 @@ export default function FirstRunPage() {
           </p>
         </div>
 
-        {/* Organization name */}
+        {/* Computer name */}
         <div className="mb-6">
           <label className="block text-sm font-semibold text-[#34485d] mb-1.5">
-            Nome da organização{" "}
-            <span className="text-[#8b9db2] font-normal">(opcional)</span>
+            Nome do computador
           </label>
           <input
-            value={orgName}
-            onChange={(e) => setOrgName(e.target.value)}
+            value={computerName}
+            onChange={(e) => setComputerName(e.target.value)}
             className="w-full h-10 rounded-lg border border-[#c5cfdb] bg-[#f8fafd] px-3 text-sm text-[#4d6075] outline-none focus:border-[#7ba0d4] focus:ring-2 focus:ring-[#7ba0d4]/20"
-            placeholder="Ex: Igreja, Banda, Orquestra..."
+            placeholder="Ex: Estúdio, Home, Sala Ensaio..."
           />
+          <p className="text-xs text-[#8b9db2] mt-1">
+            Identificador único deste computador. Vem pré-preenchido com um UUID que você pode alterar.
+          </p>
         </div>
 
         {/* Google Drive mode */}
-        <div className="mb-8">
+        <div className="mb-6">
           <label className="block text-sm font-semibold text-[#34485d] mb-2">
             Backup no Google Drive
           </label>
@@ -58,12 +88,44 @@ export default function FirstRunPage() {
             <DriveOption
               icon={<Cloud className="h-5 w-5" />}
               label="Google Drive via API"
-              description="Sincroniza diretamente com o Google Drive via rclone"
+              description="Sincroniza diretamente com o Google Drive usando Service Account"
               selected={driveMode === "api"}
               onClick={() => setDriveMode("api")}
             />
           </div>
         </div>
+
+        {/* API Key (conditional) */}
+        {driveMode === "api" && (
+          <div className="mb-6">
+            <label className="block text-sm font-semibold text-[#34485d] mb-1.5">
+              Chave da API do Google Drive (Service Account)
+            </label>
+            <div className="relative">
+              <input
+                type={showApiKey ? "text" : "password"}
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                className="w-full h-10 rounded-lg border border-[#c5cfdb] bg-[#f8fafd] px-3 text-sm text-[#4d6075] outline-none focus:border-[#7ba0d4] focus:ring-2 focus:ring-[#7ba0d4]/20 pr-10"
+                placeholder="Cole aqui o JSON da chave ou o token..."
+              />
+              <button
+                type="button"
+                onClick={() => setShowApiKey(!showApiKey)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[#6b849e] hover:text-[#4d6075]"
+              >
+                {showApiKey ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </button>
+            </div>
+            <p className="text-xs text-[#8b9db2] mt-1">
+              Você pode atualizar isso nas configurações mais tarde.
+            </p>
+          </div>
+        )}
 
         {/* Continue */}
         <button

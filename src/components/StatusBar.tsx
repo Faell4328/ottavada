@@ -1,10 +1,9 @@
 import { Cloud, Usb, Settings } from "lucide-react";
+import { useNavigate } from "react-router";
 
-interface StatusBarProps {
-  onOpenSettings?: () => void;
-}
+export default function StatusBar() {
+  const navigate = useNavigate();
 
-export default function StatusBar({ onOpenSettings }: StatusBarProps) {
   return (
     <footer className="flex h-10 items-center justify-between border-t border-[#c0cad7] bg-gradient-to-b from-[#e9edf3] to-[#dde3eb] px-3">
       <div className="flex items-center gap-4">
@@ -23,7 +22,7 @@ export default function StatusBar({ onOpenSettings }: StatusBarProps) {
 
       <button
         type="button"
-        onClick={onOpenSettings}
+        onClick={() => navigate("/settings")}
         className="flex h-7 items-center gap-1.5 rounded-md border border-[#b5c1cf] bg-[#f7f9fc] px-3 text-xs font-semibold text-[#374f67] hover:bg-[#eef2f7] transition-colors cursor-pointer"
       >
         <Settings className="h-3.5 w-3.5" />

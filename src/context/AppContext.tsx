@@ -6,6 +6,7 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
+import toast from "react-hot-toast";
 import type {
   ScoreListItem,
   ScoreFileItem,
@@ -125,8 +126,9 @@ interface AppContextValue {
   deleteCategory: (categoryId: string) => Promise<void>;
   saveSettings: (settings: AppSettings) => Promise<void>;
   completeFirstRun: (
-    organizationName: string | null,
-    googleDriveMode: string
+    computerName: string,
+    googleDriveMode: string,
+    apiKey?: string | null
   ) => Promise<void>;
 }
 
@@ -320,21 +322,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
       try {
         await api.saveSettings(settings);
         dispatch({ type: "SET_SETTINGS", payload: settings });
+        toast.success("Configurações salvas com sucesso!");
       } catch (err) {
         console.error("Failed to save settings:", err);
+        toast.error("Erro ao salvar configurações");
       }
     },
     []
   );
 
   const handleCompleteFirstRun = useCallback(
-    async (organizationName: string | null, googleDriveMode: string) => {
+    async (computerName: string, googleDriveMode: string, apiKey?: string | null) => {
       try {
-        await api.completeFirstRun(organizationName, googleDriveMode);
+        await api.completeFirstRun(computerName, googleDriveMode, apiKey);
         dispatch({ type: "SET_FIRST_RUN", payload: false });
         await Promise.all([loadScores(), loadCategories(), loadSettings()]);
+        toast.success("Configuração inicial concluída!");
       } catch (err) {
         console.error("Failed to complete first run:", err);
+        toast.error("Erro ao completar configuração inicial");
       }
     },
     [loadScores, loadCategories, loadSettings]

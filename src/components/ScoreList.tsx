@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { Search, ChevronDown, ChevronRight, Heart, FileMusic } from "lucide-react";
 import { useAppState } from "../context/AppContext";
 import type { ScoreListItem, ScoreFileItem } from "../types";
@@ -8,6 +9,7 @@ export default function ScoreList() {
     useAppState();
   const [localQuery, setLocalQuery] = useState("");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const parentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -18,6 +20,39 @@ export default function ScoreList() {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, [localQuery, setSearchQuery]);
+
+  // Flatten the scores with their instruments for virtualization
+  const flatScores = useMemo(() => {
+    const items: Array<{
+      type: "score" | "instrument";
+      score?: ScoreListItem;
+      instrument?: ScoreFileItem;
+      scoreId?: string;
+    }> = [];
+
+    state.scores.forEach((score) => {
+      items.push({ type: "score", score });
+      if (state.selectedScore?.id === score.id) {
+        score.instruments.forEach((instrument) => {
+          items.push({
+            type: "instrument",
+            score,
+            instrument,
+            scoreId: score.id,
+          });
+        });
+      }
+    });
+
+    return items;
+  }, [state.scores, state.selectedScore?.id]);
+
+  const virtualizer = useVirtualizer({
+    count: flatScores.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 35,
+    overscan: 10,
+  });
 
   const viewLabel =
     state.sidebarView === "all"
@@ -31,7 +66,7 @@ export default function ScoreList() {
             : "";
 
   return (
-    <section className="flex flex-1 flex-col gap-2.5 bg-[#edf1f6] p-3.5 border-r border-[#c8d1dc] overflow-auto">
+    <section className="flex flex-1 flex-col gap-2.5 bg-[#edf1f6] p-3.5 border-r border-[#c8d1dc] overflow-hidden">
       <div className="flex items-center justify-between mb-1">
         <h2 className="text-sm font-bold text-[#2f4259]">{viewLabel}</h2>
         <span className="text-xs text-[#6b849e]">
@@ -54,16 +89,19 @@ export default function ScoreList() {
       </div>
 
       {/* Table */}
-      <div className="overflow-hidden rounded border border-[#c8d1dc] bg-[#f8fafd] flex-1">
+      <div className="overflow-hidden rounded border border-[#c8d1dc] bg-[#f8fafd] flex-1 flex flex-col">
         {/* Header */}
-        <div className="grid grid-cols-[1.5fr_0.9fr_0.6fr] items-center border-b border-[#ced7e3] bg-[#eef2f6] px-3.5 py-2.5 text-xs font-bold text-[#34485d]">
+        <div className="grid grid-cols-[1.5fr_0.9fr_0.6fr] items-center border-b border-[#ced7e3] bg-[#eef2f6] px-3.5 py-2.5 text-xs font-bold text-[#34485d] flex-shrink-0">
           <span>Título</span>
           <span>Compositor / Arranjador</span>
           <span>Modificado</span>
         </div>
 
-        {/* Rows */}
-        <div className="divide-y divide-[#d8e0ea]">
+        {/* Virtualized Rows */}
+        <div
+          ref={parentRef}
+          className="flex-1 overflow-auto"
+        >
           {state.scores.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-[#8b9db2]">
               <FileMusic className="h-12 w-12 mb-3 opacity-40" />
@@ -73,21 +111,57 @@ export default function ScoreList() {
               </p>
             </div>
           ) : (
-            state.scores.map((score) => (
-              <ScoreGroup
-                key={score.id}
-                score={score}
-                isExpanded={state.selectedScore?.id === score.id}
-                selectedFileId={state.selectedFile?.id ?? null}
-                onToggle={() =>
-                  selectScore(
-                    state.selectedScore?.id === score.id ? null : score
-                  )
-                }
-                onSelectFile={selectFile}
-                onToggleFavorite={() => toggleFavorite(score.id)}
-              />
-            ))
+            <div
+              style={{
+                height: `${virtualizer.getTotalSize()}px`,
+                width: "100%",
+                position: "relative",
+              }}
+            >
+              {virtualizer.getVirtualItems().map((virtualItem) => {
+                const item = flatScores[virtualItem.index];
+                return (
+                  <div
+                    key={virtualItem.key}
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: "100%",
+                      height: `${virtualItem.size}px`,
+                      transform: `translateY(${virtualItem.start}px)`,
+                    }}
+                  >
+                    {item.type === "score" && item.score ? (
+                      <ScoreRow
+                        score={item.score}
+                        isExpanded={state.selectedScore?.id === item.score.id}
+                        onToggle={() =>
+                          selectScore(
+                            state.selectedScore?.id === item.score.id
+                              ? null
+                              : item.score
+                          )
+                        }
+                        onToggleFavorite={() => toggleFavorite(item.score.id)}
+                      />
+                    ) : item.type === "instrument" && item.instrument ? (
+                      <InstrumentRow
+                        instrument={item.instrument}
+                        isSelected={state.selectedFile?.id === item.instrument.id}
+                        onSelectFile={() =>
+                          selectFile(
+                            state.selectedFile?.id === item.instrument.id
+                              ? null
+                              : item.instrument
+                          )
+                        }
+                      />
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
       </div>
@@ -95,86 +169,90 @@ export default function ScoreList() {
   );
 }
 
-function ScoreGroup({
+function ScoreRow({
   score,
   isExpanded,
-  selectedFileId,
   onToggle,
-  onSelectFile,
   onToggleFavorite,
 }: {
   score: ScoreListItem;
   isExpanded: boolean;
-  selectedFileId: string | null;
   onToggle: () => void;
-  onSelectFile: (file: ScoreFileItem | null) => void;
   onToggleFavorite: () => void;
 }) {
   const author = [score.composer, score.arranger].filter(Boolean).join(" / ");
 
   return (
-    <>
-      <div
-        className={`grid grid-cols-[1.5fr_0.9fr_0.6fr] items-center px-3.5 py-2 text-[13px] text-[#344b61] ${
-          isExpanded ? "bg-[#eef3f9] font-bold" : "hover:bg-[#f2f5fa]"
-        } cursor-pointer transition-colors`}
-        onClick={onToggle}
-      >
-        <span className="flex items-center gap-1.5">
-          {isExpanded ? (
-            <ChevronDown className="h-3.5 w-3.5 text-[#7b8da1]" />
-          ) : (
-            <ChevronRight className="h-3.5 w-3.5 text-[#7b8da1]" />
-          )}
-          <span className="font-bold">{score.title}</span>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleFavorite();
-            }}
-            className="ml-1 border-0 bg-transparent cursor-pointer p-0"
-          >
-            <Heart
-              className={`h-3.5 w-3.5 transition-colors ${
-                score.favorited
-                  ? "fill-red-400 text-red-400"
-                  : "text-[#b0bfcf] hover:text-red-300"
-              }`}
-            />
-          </button>
-        </span>
-        <span className="text-[#5c7089]">{author || "—"}</span>
-        <span className="text-[#5c7089]">{formatDate(score.updated_at)}</span>
-      </div>
-
-      {isExpanded &&
-        score.instruments.map((file) => (
-          <div
-            key={file.id}
-            onClick={() =>
-              onSelectFile(selectedFileId === file.id ? null : file)
-            }
-            className={`grid grid-cols-[1.5fr_0.9fr_0.6fr] items-center px-3.5 py-1.5 pl-9 text-[13px] cursor-pointer transition-colors ${
-              selectedFileId === file.id
-                ? "bg-[#d8e6f5] text-[#1e3a5f]"
-                : "bg-[#fbfdff] text-[#4a6278] hover:bg-[#f2f6fb]"
+    <div
+      className={`grid grid-cols-[1.5fr_0.9fr_0.6fr] items-center px-3.5 py-2 text-[13px] text-[#344b61] h-full ${
+        isExpanded ? "bg-[#eef3f9] font-bold" : "hover:bg-[#f2f5fa]"
+      } cursor-pointer transition-colors divide-y divide-[#d8e0ea]`}
+      onClick={onToggle}
+    >
+      <span className="flex items-center gap-1.5">
+        {isExpanded ? (
+          <ChevronDown className="h-3.5 w-3.5 text-[#7b8da1]" />
+        ) : (
+          <ChevronRight className="h-3.5 w-3.5 text-[#7b8da1]" />
+        )}
+        <span className="font-bold">{score.title}</span>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleFavorite();
+          }}
+          className="ml-1 border-0 bg-transparent cursor-pointer p-0"
+        >
+          <Heart
+            className={`h-3.5 w-3.5 transition-colors ${
+              score.favorited
+                ? "fill-red-400 text-red-400"
+                : "text-[#b0bfcf] hover:text-red-300"
             }`}
-          >
-            <span className="flex items-center gap-1.5">
-              <FileMusic className="h-3.5 w-3.5 text-[#8fa3b8]" />
-              {file.instrument ?? "Sem instrumento"}
-              {file.has_draft && (
-                <span className="ml-1 inline-block h-2 w-2 rounded-full bg-amber-400" title="Rascunho ativo" />
-              )}
-            </span>
-            <span className="text-xs text-[#8b9db2]">.{file.file_extension}</span>
-            <span className="text-xs text-[#8b9db2]">
-              {file.version_count} versão{file.version_count !== 1 ? "ões" : ""}
-            </span>
-          </div>
-        ))}
-    </>
+          />
+        </button>
+      </span>
+      <span className="text-[#5c7089]">{author || "—"}</span>
+      <span className="text-[#5c7089]">{formatDate(score.updated_at)}</span>
+    </div>
+  );
+}
+
+function InstrumentRow({
+  instrument,
+  isSelected,
+  onSelectFile,
+}: {
+  instrument: ScoreFileItem;
+  isSelected: boolean;
+  onSelectFile: () => void;
+}) {
+  return (
+    <div
+      onClick={onSelectFile}
+      className={`grid grid-cols-[1.5fr_0.9fr_0.6fr] items-center px-3.5 py-1.5 pl-9 text-[13px] cursor-pointer transition-colors h-full ${
+        isSelected
+          ? "bg-[#d8e6f5] text-[#1e3a5f]"
+          : "bg-[#fbfdff] text-[#4a6278] hover:bg-[#f2f6fb]"
+      }`}
+    >
+      <span className="flex items-center gap-1.5">
+        <FileMusic className="h-3.5 w-3.5 text-[#8fa3b8]" />
+        {instrument.instrument ?? "Sem instrumento"}
+        {instrument.has_draft && (
+          <span
+            className="ml-1 inline-block h-2 w-2 rounded-full bg-amber-400"
+            title="Rascunho ativo"
+          />
+        )}
+      </span>
+      <span className="text-xs text-[#8b9db2]">.{instrument.file_extension}</span>
+      <span className="text-xs text-[#8b9db2]">
+        {instrument.version_count} versão
+        {instrument.version_count !== 1 ? "ões" : ""}
+      </span>
+    </div>
   );
 }
 

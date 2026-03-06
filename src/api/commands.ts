@@ -98,8 +98,9 @@ export async function isFirstRun(): Promise<boolean> {
 }
 
 export async function completeFirstRun(
-  organizationName: string | null,
-  googleDriveMode: string
+  computerName: string,
+  googleDriveMode: string,
+  apiKey?: string | null
 ): Promise<void> {
-  return invoke("complete_first_run", { organizationName, googleDriveMode });
+  return invoke("complete_first_run", { computerName, googleDriveMode, apiKey });
 }

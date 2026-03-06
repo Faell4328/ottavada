@@ -21,9 +21,11 @@
     "@tauri-apps/plugin-opener": "^2",
     "@tauri-apps/plugin-shell": "^2.3.5",
     "@tauri-apps/plugin-store": "^2.4.2",
+    "@tanstack/react-virtual": "^3.5.1",
     "lucide-react": "^0.575.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "react-hot-toast": "^2.6.0",
     "react-router": "^7.13.1"
   },
   "devDependencies": {

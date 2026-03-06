@@ -1,4 +1,5 @@
 import { Music, FolderSearch, Plus, Settings } from "lucide-react";
+import { useNavigate } from "react-router";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useAppState } from "../context/AppContext";
 import * as api from "../api/commands";
@@ -6,14 +7,13 @@ import type { IndexedFile } from "../types";
 
 interface TopBarProps {
   title?: string;
-  onOpenSettings?: () => void;
 }
 
 export default function TopBar({
   title = "Score Maestro",
-  onOpenSettings,
 }: TopBarProps) {
   const { loadScores } = useAppState();
+  const navigate = useNavigate();
 
   async function importFiles(files: IndexedFile[]) {
     if (files.length === 0) {
@@ -106,7 +106,7 @@ export default function TopBar({
         <ActionButton
           icon={<Settings className="h-4 w-4" />}
           title="Configurações"
-          onClick={onOpenSettings}
+          onClick={() => navigate("/settings")}
         />
       </div>
     </header>

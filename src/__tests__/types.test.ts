@@ -97,7 +97,7 @@ describe("TypeScript Types", () => {
   describe("AppSettings", () => {
     it("should represent default settings", () => {
       const settings: AppSettings = {
-        organization_name: null,
+        computer_name: null,
         logo_path: null,
         google_drive_mode: "Local",
         hash_enabled: false,
@@ -109,7 +109,7 @@ describe("TypeScript Types", () => {
 
     it("should support Api mode", () => {
       const settings: AppSettings = {
-        organization_name: "Igreja Teste",
+        computer_name: "Computador Teste",
         logo_path: null,
         google_drive_mode: "Api",
         hash_enabled: true,

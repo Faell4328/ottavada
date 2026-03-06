@@ -39,7 +39,7 @@ export interface Category {
 }
 
 export interface AppSettings {
-  organization_name: string | null;
+  computer_name: string | null;
   logo_path: string | null;
   google_drive_mode: "Local" | "Api";
   hash_enabled: boolean;

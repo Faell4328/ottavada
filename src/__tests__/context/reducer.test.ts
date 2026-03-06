@@ -187,7 +187,7 @@ describe("AppContext Reducer", () => {
   describe("SET_SETTINGS", () => {
     it("should set app settings", () => {
       const settings: AppSettings = {
-        organization_name: "Igreja",
+        computer_name: "Computador Teste",
         logo_path: null,
         google_drive_mode: "Local",
         hash_enabled: false,

@@ -86,21 +86,23 @@ pub struct Category {
 /// Configurações da aplicação
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppSettings {
-    pub organization_name: Option<String>,
+    pub computer_name: Option<String>,
     pub logo_path: Option<String>,
     pub google_drive_mode: GoogleDriveMode,
     pub hash_enabled: bool,
     pub first_run_completed: bool,
+    pub api_key: Option<String>,
 }
 
 impl Default for AppSettings {
     fn default() -> Self {
         Self {
-            organization_name: None,
+            computer_name: None,
             logo_path: None,
             google_drive_mode: GoogleDriveMode::Local,
             hash_enabled: false,
             first_run_completed: false,
+            api_key: None,
         }
     }
 }

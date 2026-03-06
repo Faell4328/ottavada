@@ -282,23 +282,24 @@ mod tests {
         assert!(!settings.hash_enabled);
         assert!(!settings.first_run_completed);
         assert_eq!(settings.google_drive_mode, GoogleDriveMode::Local);
-        assert!(settings.organization_name.is_none());
+        assert!(settings.computer_name.is_none());
     }
 
     #[test]
     fn test_save_and_get_settings() {
         let db = make_db();
         let settings = AppSettings {
-            organization_name: Some("Igreja Teste".to_string()),
+            computer_name: Some("Computador Teste".to_string()),
             logo_path: None,
             google_drive_mode: GoogleDriveMode::Api,
             hash_enabled: true,
             first_run_completed: true,
+            api_key: Some("test_key".to_string()),
         };
         db.save_app_settings(&settings).unwrap();
 
         let loaded = db.get_app_settings().unwrap();
-        assert_eq!(loaded.organization_name, Some("Igreja Teste".to_string()));
+        assert_eq!(loaded.computer_name, Some("Computador Teste".to_string()));
         assert_eq!(loaded.google_drive_mode, GoogleDriveMode::Api);
         assert!(loaded.hash_enabled);
         assert!(loaded.first_run_completed);

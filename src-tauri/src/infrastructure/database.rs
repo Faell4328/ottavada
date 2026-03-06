@@ -494,7 +494,7 @@ impl Database {
 
     pub fn get_app_settings(&self) -> Result<AppSettings, AppError> {
         let settings = AppSettings {
-            organization_name: self.get_setting("organization_name")?,
+            computer_name: self.get_setting("computer_name")?,
             logo_path: self.get_setting("logo_path")?,
             google_drive_mode: match self.get_setting("google_drive_mode")?.as_deref() {
                 Some("api") => GoogleDriveMode::Api,
@@ -502,16 +502,20 @@ impl Database {
             },
             hash_enabled: self.get_setting("hash_enabled")?.as_deref() == Some("true"),
             first_run_completed: self.get_setting("first_run_completed")?.as_deref() == Some("true"),
+            api_key: self.get_setting("api_key")?,
         };
         Ok(settings)
     }
 
     pub fn save_app_settings(&self, settings: &AppSettings) -> Result<(), AppError> {
-        if let Some(ref name) = settings.organization_name {
-            self.set_setting("organization_name", name)?;
+        if let Some(ref name) = settings.computer_name {
+            self.set_setting("computer_name", name)?;
         }
         if let Some(ref path) = settings.logo_path {
             self.set_setting("logo_path", path)?;
+        }
+        if let Some(ref key) = settings.api_key {
+            self.set_setting("api_key", key)?;
         }
         self.set_setting("google_drive_mode", match settings.google_drive_mode {
             GoogleDriveMode::Local => "local",

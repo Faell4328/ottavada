@@ -23,11 +23,13 @@ pub fn is_first_run(db: State<'_, Database>) -> Result<bool, AppError> {
 #[tauri::command]
 pub fn complete_first_run(
     db: State<'_, Database>,
-    organization_name: Option<String>,
+    computer_name: String,
     google_drive_mode: String,
+    api_key: Option<String>,
 ) -> Result<(), AppError> {
     let mut settings = db.get_app_settings()?;
-    settings.organization_name = organization_name;
+    settings.computer_name = Some(computer_name);
+    settings.api_key = api_key;
     settings.google_drive_mode = match google_drive_mode.as_str() {
         "api" => crate::domain::models::GoogleDriveMode::Api,
         _ => crate::domain::models::GoogleDriveMode::Local,

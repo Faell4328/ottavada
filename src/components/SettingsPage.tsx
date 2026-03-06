@@ -1,17 +1,15 @@
 import { useState } from "react";
+import { useNavigate } from "react-router";
 import { ArrowLeft, Hash, Cloud, HardDrive } from "lucide-react";
 import { useAppState } from "../context/AppContext";
 import type { AppSettings } from "../types";
 
-interface SettingsPageProps {
-  onBack: () => void;
-}
-
-export default function SettingsPage({ onBack }: SettingsPageProps) {
+export default function SettingsPage() {
   const { state, saveSettings } = useAppState();
+  const navigate = useNavigate();
   const [settings, setSettings] = useState<AppSettings>(
     state.settings ?? {
-      organization_name: null,
+      computer_name: null,
       logo_path: null,
       google_drive_mode: "Local",
       hash_enabled: false,
@@ -25,36 +23,36 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
 
   async function handleSave() {
     await saveSettings(settings);
-    onBack();
+    navigate("/");
   }
 
   return (
-    <div className="flex flex-1 flex-col bg-[#edf1f6] overflow-auto">
+    <div className="flex min-h-screen flex-col bg-gradient-to-b from-[#5d6d82] via-[#73849a] to-[#d8dee8]">
       {/* Header */}
-      <div className="flex items-center gap-3 border-b border-[#c8d1dc] bg-white px-4 py-3">
+      <div className="flex items-center gap-3 border-b border-[#c8d1dc] bg-gradient-to-b from-[#33465d] to-[#23364b] px-4 py-3">
         <button
           type="button"
-          onClick={onBack}
-          className="flex h-8 w-8 items-center justify-center rounded border border-[#c5cfdb] bg-transparent hover:bg-[#f0f4f8] transition-colors cursor-pointer"
+          onClick={() => navigate("/")}
+          className="flex h-8 w-8 items-center justify-center rounded border border-white/25 bg-white/8 hover:bg-white/15 transition-colors cursor-pointer"
         >
-          <ArrowLeft className="h-4 w-4 text-[#4d6075]" />
+          <ArrowLeft className="h-4 w-4 text-white" />
         </button>
-        <h1 className="text-lg font-bold text-[#2f4259]">Configurações</h1>
+        <h1 className="text-lg font-bold text-white">Configurações</h1>
       </div>
 
       <div className="flex-1 p-6 max-w-2xl mx-auto w-full">
-        {/* Organização */}
-        <Section title="Organização">
-          <Field label="Nome da organização">
+        {/* Computador */}
+        <Section title="Computador">
+          <Field label="Nome do computador">
             <input
-              value={settings.organization_name ?? ""}
+              value={settings.computer_name ?? ""}
               onChange={(e) =>
                 update({
-                  organization_name: e.target.value || null,
+                  computer_name: e.target.value || null,
                 })
               }
               className="w-full h-9 rounded border border-[#c5cfdb] bg-white px-3 text-sm text-[#4d6075] outline-none focus:border-[#7ba0d4]"
-              placeholder="Ex: Igreja, Banda, Orquestra..."
+              placeholder="Ex: Estúdio, Home, Sala Ensaio..."
             />
           </Field>
         </Section>
