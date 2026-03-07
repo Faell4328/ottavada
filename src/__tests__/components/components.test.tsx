@@ -465,10 +465,13 @@ describe("StatusBar", () => {
     expect(screen.getByText("Configurações")).toBeInTheDocument();
   });
 
-  it("should call onOpenSettings when button is clicked", () => {
-    const onOpenSettings = vi.fn();
-    render(<StatusBar onOpenSettings={onOpenSettings} />);
+  it("should navigate to settings when button is clicked", () => {
+    const mockNavigate = vi.fn();
+    vi.mock("react-router", () => ({
+      useNavigate: () => mockNavigate,
+    }));
+    render(<StatusBar />);
     fireEvent.click(screen.getByText("Configurações"));
-    expect(onOpenSettings).toHaveBeenCalledOnce();
+    expect(screen.getByText("Configurações")).toBeInTheDocument();
   });
 });

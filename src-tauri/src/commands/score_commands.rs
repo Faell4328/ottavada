@@ -194,3 +194,62 @@ pub fn create_score(
         .find(|s| s.id == score_id)
         .ok_or_else(|| AppError::Generic("Erro ao recuperar música criada".into()))
 }
+
+#[tauri::command]
+pub fn get_search_suggestions(
+    db: State<'_, Database>,
+    query: String,
+    limit: Option<i32>,
+) -> Result<Vec<ScoreListItem>, AppError> {
+    if query.trim().is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let max_results = limit.unwrap_or(10);
+    let mut scores = db.search_scores(&query)?;
+    scores.truncate(max_results as usize);
+    Ok(scores)
+}
+
+#[tauri::command]
+pub async fn open_file(
+    db: State<'_, Database>,
+    score_file_id: String,
+) -> Result<(), AppError> {
+    // Obter as versões do arquivo
+    let versions = db.get_versions_for_file(&score_file_id)?;
+    
+    // Buscar a versão atual (Current), ou a primeira disponível
+    let version = versions
+        .iter()
+        .find(|v| v.status == crate::domain::models::VersionStatus::Current)
+        .or_else(|| versions.first())
+        .ok_or_else(|| AppError::Generic("Arquivo não encontrado".into()))?;
+
+    // Abrir arquivo com o programa padrão do sistema
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("cmd")
+            .args(&["/C", "start", "", &version.file_path])
+            .spawn()
+            .map_err(|e| AppError::Generic(format!("Erro ao abrir arquivo: {}", e)))?;
+    }
+    
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(&version.file_path)
+            .spawn()
+            .map_err(|e| AppError::Generic(format!("Erro ao abrir arquivo: {}", e)))?;
+    }
+    
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(&version.file_path)
+            .spawn()
+            .map_err(|e| AppError::Generic(format!("Erro ao abrir arquivo: {}", e)))?;
+    }
+    
+    Ok(())
+}

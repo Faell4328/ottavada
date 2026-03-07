@@ -14,6 +14,7 @@ export default function SettingsPage() {
       google_drive_mode: "Local",
       hash_enabled: false,
       first_run_completed: true,
+      google_service_account: null,
     }
   );
 

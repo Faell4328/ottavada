@@ -192,6 +192,7 @@ describe("AppContext Reducer", () => {
         google_drive_mode: "Local",
         hash_enabled: false,
         first_run_completed: true,
+        google_service_account: null,
       };
       const state = reducer(initialState, {
         type: "SET_SETTINGS",

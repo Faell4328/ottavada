@@ -102,6 +102,7 @@ describe("TypeScript Types", () => {
         google_drive_mode: "Local",
         hash_enabled: false,
         first_run_completed: false,
+        google_service_account: null,
       };
       expect(settings.hash_enabled).toBe(false);
       expect(settings.google_drive_mode).toBe("Local");
@@ -114,6 +115,7 @@ describe("TypeScript Types", () => {
         google_drive_mode: "Api",
         hash_enabled: true,
         first_run_completed: true,
+        google_service_account: null,
       };
       expect(settings.google_drive_mode).toBe("Api");
       expect(settings.hash_enabled).toBe(true);

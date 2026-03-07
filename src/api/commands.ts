@@ -50,6 +50,14 @@ export async function createScore(title: string): Promise<ScoreListItem> {
   return invoke("create_score", { title });
 }
 
+export async function getSearchSuggestions(query: string, limit?: number): Promise<ScoreListItem[]> {
+  return invoke("get_search_suggestions", { query, limit });
+}
+
+export async function openFile(scoreFileId: string): Promise<void> {
+  return invoke("open_file", { scoreFileId });
+}
+
 // ── Versions ──
 
 export async function getVersions(

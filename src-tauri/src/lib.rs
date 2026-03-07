@@ -37,11 +37,13 @@ pub fn run() {
             commands::score_commands::get_favorited_scores,
             commands::score_commands::get_scores_with_drafts,
             commands::score_commands::search_scores,
+            commands::score_commands::get_search_suggestions,
             commands::score_commands::toggle_favorite,
             commands::score_commands::scan_directory,
             commands::score_commands::import_indexed_files,
             commands::score_commands::get_scores_by_category,
             commands::score_commands::create_score,
+            commands::score_commands::open_file,
             // Versions
             commands::version_commands::get_versions,
             commands::version_commands::promote_draft,
