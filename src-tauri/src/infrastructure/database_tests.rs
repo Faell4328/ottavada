@@ -294,7 +294,7 @@ mod tests {
             google_drive_mode: GoogleDriveMode::Api,
             hash_enabled: true,
             first_run_completed: true,
-            api_key: Some("test_key".to_string()),
+            google_service_account: None,
         };
         db.save_app_settings(&settings).unwrap();
 

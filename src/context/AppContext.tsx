@@ -128,7 +128,7 @@ interface AppContextValue {
   completeFirstRun: (
     computerName: string,
     googleDriveMode: string,
-    apiKey?: string | null
+    googleServiceAccountJson?: string | null
   ) => Promise<void>;
 }
 
@@ -332,9 +332,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 
   const handleCompleteFirstRun = useCallback(
-    async (computerName: string, googleDriveMode: string, apiKey?: string | null) => {
+    async (computerName: string, googleDriveMode: string, googleServiceAccountJson?: string | null) => {
       try {
-        await api.completeFirstRun(computerName, googleDriveMode, apiKey);
+        await api.completeFirstRun(computerName, googleDriveMode, googleServiceAccountJson);
         dispatch({ type: "SET_FIRST_RUN", payload: false });
         await Promise.all([loadScores(), loadCategories(), loadSettings()]);
         toast.success("Configuração inicial concluída!");

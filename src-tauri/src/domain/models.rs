@@ -91,7 +91,7 @@ pub struct AppSettings {
     pub google_drive_mode: GoogleDriveMode,
     pub hash_enabled: bool,
     pub first_run_completed: bool,
-    pub api_key: Option<String>,
+    pub google_service_account: Option<GoogleServiceAccount>,
 }
 
 impl Default for AppSettings {
@@ -102,7 +102,7 @@ impl Default for AppSettings {
             google_drive_mode: GoogleDriveMode::Local,
             hash_enabled: false,
             first_run_completed: false,
-            api_key: None,
+            google_service_account: None,
         }
     }
 }
@@ -112,6 +112,39 @@ impl Default for AppSettings {
 pub enum GoogleDriveMode {
     Local,
     Api,
+}
+
+/// Google Drive Service Account credentials
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GoogleServiceAccount {
+    pub r#type: String,
+    pub project_id: String,
+    pub private_key_id: String,
+    pub private_key: String,
+    pub client_email: String,
+    pub client_id: String,
+    pub auth_uri: String,
+    pub token_uri: String,
+    pub auth_provider_x509_cert_url: String,
+    pub client_x509_cert_url: String,
+}
+
+impl GoogleServiceAccount {
+    pub fn validate(&self) -> Result<(), String> {
+        if self.r#type != "service_account" {
+            return Err("Tipo deve ser 'service_account'".to_string());
+        }
+        if self.project_id.is_empty() {
+            return Err("project_id é obrigatório".to_string());
+        }
+        if self.private_key.is_empty() {
+            return Err("private_key é obrigatória".to_string());
+        }
+        if self.client_email.is_empty() {
+            return Err("client_email é obrigatório".to_string());
+        }
+        Ok(())
+    }
 }
 
 /// Informação de backup

@@ -85,7 +85,8 @@ impl Database {
 
             CREATE TABLE IF NOT EXISTS app_settings (
                 key TEXT PRIMARY KEY,
-                value TEXT NOT NULL
+                value TEXT NOT NULL,
+                google_service_account TEXT
             );
 
             -- FTS5 for full-text search on scores
@@ -118,6 +119,12 @@ impl Database {
             CREATE INDEX IF NOT EXISTS idx_scores_category_id ON scores(category_id);
             CREATE INDEX IF NOT EXISTS idx_scores_favorited ON scores(favorited);
         ")?;
+
+        // Try to add google_service_account column if it doesn't exist (migration for old databases)
+        let _ = conn.execute(
+            "ALTER TABLE app_settings ADD COLUMN google_service_account TEXT",
+            [],
+        );
 
         Ok(())
     }
@@ -502,7 +509,8 @@ impl Database {
             },
             hash_enabled: self.get_setting("hash_enabled")?.as_deref() == Some("true"),
             first_run_completed: self.get_setting("first_run_completed")?.as_deref() == Some("true"),
-            api_key: self.get_setting("api_key")?,
+            google_service_account: self.get_setting("google_service_account")?
+                .and_then(|json| serde_json::from_str(&json).ok()),
         };
         Ok(settings)
     }
@@ -514,8 +522,10 @@ impl Database {
         if let Some(ref path) = settings.logo_path {
             self.set_setting("logo_path", path)?;
         }
-        if let Some(ref key) = settings.api_key {
-            self.set_setting("api_key", key)?;
+        if let Some(ref service_account) = settings.google_service_account {
+            if let Ok(json) = serde_json::to_string(service_account) {
+                self.set_setting("google_service_account", &json)?;
+            }
         }
         self.set_setting("google_drive_mode", match settings.google_drive_mode {
             GoogleDriveMode::Local => "local",

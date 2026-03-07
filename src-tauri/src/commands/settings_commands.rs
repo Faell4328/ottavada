@@ -24,16 +24,28 @@ pub fn is_first_run(db: State<'_, Database>) -> Result<bool, AppError> {
 pub fn complete_first_run(
     db: State<'_, Database>,
     computer_name: String,
-    google_drive_mode: String,
-    api_key: Option<String>,
+    _google_drive_mode: String,
+    google_service_account_json: Option<String>,
 ) -> Result<(), AppError> {
     let mut settings = db.get_app_settings()?;
     settings.computer_name = Some(computer_name);
-    settings.api_key = api_key;
-    settings.google_drive_mode = match google_drive_mode.as_str() {
-        "api" => crate::domain::models::GoogleDriveMode::Api,
-        _ => crate::domain::models::GoogleDriveMode::Local,
-    };
+    
+    // Parse and validate the service account
+    if let Some(json_str) = google_service_account_json {
+        let service_account: crate::domain::models::GoogleServiceAccount = 
+            serde_json::from_str(&json_str)
+                .map_err(|e| AppError::Generic(format!("JSON inválido: {}", e)))?;
+        
+        // Validate required fields
+        service_account.validate()
+            .map_err(|e| AppError::Generic(e))?;
+        
+        settings.google_service_account = Some(service_account);
+        settings.google_drive_mode = crate::domain::models::GoogleDriveMode::Api;
+    } else {
+        settings.google_drive_mode = crate::domain::models::GoogleDriveMode::Local;
+    }
+    
     settings.first_run_completed = true;
     db.save_app_settings(&settings)
 }
