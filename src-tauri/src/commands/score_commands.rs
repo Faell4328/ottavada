@@ -65,26 +65,59 @@ pub fn import_indexed_files(
         groups.entry(file.name.clone()).or_default().push(file);
     }
 
+    // Obter todas as músicas existentes para verificação de duplicatas
+    let all_scores = db.get_all_scores()?;
+
     let now = Local::now().naive_local();
 
     for (title, group_files) in &groups {
-        let score_id = uuid::Uuid::new_v4().to_string();
+        // Verificar se a música já existe (case-insensitive)
+        let existing_score = all_scores.iter().find(|s| s.title.eq_ignore_ascii_case(title));
+        
+        let score_id = if let Some(existing) = existing_score {
+            existing.id.clone()
+        } else {
+            // Criar nova música apenas se não existir
+            let new_score_id = uuid::Uuid::new_v4().to_string();
 
-        let score = Score {
-            id: score_id.clone(),
-            title: title.clone(),
-            composer: None,
-            arranger: None,
-            category_id: category_id.clone(),
-            tags: Vec::new(),
-            favorited: false,
-            created_at: now,
-            updated_at: now,
+            let score = Score {
+                id: new_score_id.clone(),
+                title: title.clone(),
+                composer: None,
+                arranger: None,
+                category_id: category_id.clone(),
+                tags: Vec::new(),
+                favorited: false,
+                created_at: now,
+                updated_at: now,
+            };
+
+            db.insert_score(&score)?;
+            new_score_id
         };
 
-        db.insert_score(&score)?;
+        // Obter instrumentos existentes para essa música
+        let existing_instruments = all_scores
+            .iter()
+            .find(|s| s.id == score_id)
+            .map(|s| s.instruments.clone())
+            .unwrap_or_default();
 
         for indexed_file in group_files {
+            // Verificar se o instrumento já existe para essa música (case-insensitive)
+            let instrument_exists = existing_instruments.iter().any(|fi| {
+                match (&fi.instrument, &indexed_file.instrument) {
+                    (Some(existing), Some(indexed)) => existing.eq_ignore_ascii_case(indexed),
+                    (None, None) => true,
+                    _ => false,
+                }
+            });
+
+            // Pular se o instrumento já existe
+            if instrument_exists {
+                continue;
+            }
+
             let file_id = uuid::Uuid::new_v4().to_string();
             let hash = if settings.hash_enabled {
                 crate::services::hasher::hash_file(Path::new(&indexed_file.path)).ok()
@@ -120,4 +153,44 @@ pub fn get_scores_by_category(
     category_id: String,
 ) -> Result<Vec<ScoreListItem>, AppError> {
     db.get_scores_by_category(&category_id)
+}
+
+#[tauri::command]
+pub fn create_score(
+    db: State<'_, Database>,
+    title: String,
+) -> Result<ScoreListItem, AppError> {
+    if title.trim().is_empty() {
+        return Err(AppError::Generic("Título da música não pode estar vazio".into()));
+    }
+
+    // Verificar se a música já existe
+    let all_scores = db.get_all_scores()?;
+    if all_scores.iter().any(|s| s.title.eq_ignore_ascii_case(&title)) {
+        return Err(AppError::Generic("Uma música com esse título já existe".into()));
+    }
+
+    let now = Local::now().naive_local();
+    let score_id = uuid::Uuid::new_v4().to_string();
+
+    let score = Score {
+        id: score_id.clone(),
+        title: title.trim().to_string(),
+        composer: None,
+        arranger: None,
+        category_id: None,
+        tags: Vec::new(),
+        favorited: false,
+        created_at: now,
+        updated_at: now,
+    };
+
+    db.insert_score(&score)?;
+
+    // Obter e retornar a música recém-criada
+    let all_scores = db.get_all_scores()?;
+    all_scores
+        .into_iter()
+        .find(|s| s.id == score_id)
+        .ok_or_else(|| AppError::Generic("Erro ao recuperar música criada".into()))
 }

@@ -46,6 +46,10 @@ export async function getScoresByCategory(
   return invoke("get_scores_by_category", { categoryId });
 }
 
+export async function createScore(title: string): Promise<ScoreListItem> {
+  return invoke("create_score", { title });
+}
+
 // ── Versions ──
 
 export async function getVersions(
