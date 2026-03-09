@@ -167,6 +167,7 @@ pub struct ScoreFileItem {
     pub id: String,
     pub instrument: Option<String>,
     pub file_extension: String,
+    pub original_path: String,
     pub updated_at: NaiveDateTime,
     pub has_draft: bool,
     pub version_count: i32,

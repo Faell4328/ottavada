@@ -327,6 +327,105 @@ pub fn add_file_to_score(
 }
 
 #[tauri::command]
+pub fn update_score(
+    db: State<'_, Database>,
+    score_id: String,
+    title: String,
+    composer: Option<String>,
+    arranger: Option<String>,
+    category_id: Option<String>,
+) -> Result<ScoreListItem, AppError> {
+    if title.trim().is_empty() {
+        return Err(AppError::Generic("Título da música não pode estar vazio".into()));
+    }
+
+    // Obter todas as músicas para verificar se o título é único
+    let all_scores = db.get_all_scores()?;
+    if all_scores.iter().any(|s| {
+        s.id != score_id && s.title.eq_ignore_ascii_case(&title)
+    }) {
+        return Err(AppError::Generic("Uma música com esse título já existe".into()));
+    }
+
+    // Obter o score original do banco para preservar os campos não editáveis
+    let original_score = db.get_score_raw_by_id(&score_id)?;
+
+    let now = Local::now().naive_local();
+
+    let updated_score = Score {
+        id: original_score.id.clone(),
+        title: title.trim().to_string(),
+        composer: composer.map(|c| c.trim().to_string()).filter(|c| !c.is_empty()),
+        arranger: arranger.map(|a| a.trim().to_string()).filter(|a| !a.is_empty()),
+        category_id,
+        tags: original_score.tags.clone(),
+        favorited: original_score.favorited,
+        created_at: original_score.created_at,
+        updated_at: now,
+    };
+
+    db.update_score(&updated_score)?;
+
+    // Obter e retornar a música atualizada
+    let all_scores = db.get_all_scores()?;
+    all_scores
+        .into_iter()
+        .find(|s| s.id == score_id)
+        .ok_or_else(|| AppError::Generic("Erro ao recuperar música atualizada".into()))
+}
+
+#[tauri::command]
+pub fn update_score_file(
+    db: State<'_, Database>,
+    score_file_id: String,
+    instrument_name: Option<String>,
+    file_path: String,
+) -> Result<(), AppError> {
+    use std::path::Path;
+    
+    let path = Path::new(&file_path);
+    if !path.exists() || !path.is_file() {
+        return Err(AppError::Generic("Arquivo não encontrado".into()));
+    }
+
+    let extension = path
+        .extension()
+        .and_then(|e| e.to_str())
+        .ok_or_else(|| AppError::Generic("Extensão de arquivo inválida".into()))?
+        .to_lowercase();
+
+    let valid_extensions = ["pdf", "mus", "musx"];
+    if !valid_extensions.contains(&extension.as_str()) {
+        return Err(AppError::Generic("Tipo de arquivo não suportado".into()));
+    }
+
+    let file_size: u64 = std::fs::metadata(&file_path)
+        .map_err(|_| AppError::Generic("Não foi possível obter informações do arquivo".into()))?
+        .len();
+
+    let settings = db.get_app_settings()?;
+    let hash = if settings.hash_enabled {
+        crate::services::hasher::hash_file(path).ok()
+    } else {
+        None
+    };
+
+    let now = Local::now().naive_local();
+
+    db.update_score_file(
+        &score_file_id,
+        instrument_name,
+        &file_path,
+        &extension,
+        file_size,
+        hash,
+        now,
+    )?;
+
+    Ok(())
+}
+
+#[tauri::command]
 pub fn add_files_to_score(
     db: State<'_, Database>,
     app_handle: tauri::AppHandle,

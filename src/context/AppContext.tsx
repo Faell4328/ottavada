@@ -58,7 +58,8 @@ type Action =
   | { type: "SET_SEARCH_QUERY"; payload: string }
   | { type: "SET_FIRST_RUN"; payload: boolean }
   | { type: "SET_LOADING"; payload: boolean }
-  | { type: "TOGGLE_FAVORITE"; payload: { scoreId: string; favorited: boolean } };
+  | { type: "TOGGLE_FAVORITE"; payload: { scoreId: string; favorited: boolean } }
+  | { type: "UPDATE_SELECTED_SCORE"; payload: ScoreListItem };
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
@@ -102,6 +103,14 @@ function reducer(state: State, action: Action): State {
             : s
         ),
       };
+    case "UPDATE_SELECTED_SCORE":
+      return {
+        ...state,
+        selectedScore: action.payload,
+        scores: state.scores.map((s) =>
+          s.id === action.payload.id ? action.payload : s
+        ),
+      };
     default:
       return state;
   }
@@ -125,6 +134,18 @@ interface AppContextValue {
   createCategory: (name: string) => Promise<void>;
   deleteCategory: (categoryId: string) => Promise<void>;
   saveSettings: (settings: AppSettings) => Promise<void>;
+  updateScore: (
+    scoreId: string,
+    title: string,
+    composer: string | null,
+    arranger: string | null,
+    categoryId: string | null
+  ) => Promise<void>;
+  updateScoreFile: (
+    scoreFileId: string,
+    instrumentName: string | null,
+    filePath: string
+  ) => Promise<void>;
   completeFirstRun: (
     computerId: string,
     computerName: string,
@@ -318,6 +339,60 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [loadCategories, state.sidebarView]
   );
 
+  const handleUpdateScore = useCallback(
+    async (
+      scoreId: string,
+      title: string,
+      composer: string | null,
+      arranger: string | null,
+      categoryId: string | null
+    ) => {
+      try {
+        const updatedScore = await api.updateScore(
+          scoreId,
+          title,
+          composer,
+          arranger,
+          categoryId
+        );
+        dispatch({ type: "UPDATE_SELECTED_SCORE", payload: updatedScore });
+        await loadScores();
+        toast.success("Música atualizada com sucesso!");
+      } catch (err) {
+        console.error("Failed to update score:", err);
+        const errorMsg = err instanceof Error ? err.message : "Erro ao atualizar música";
+        toast.error(errorMsg);
+        throw err;
+      }
+    },
+    [loadScores]
+  );
+
+  const handleUpdateScoreFile = useCallback(
+    async (
+      scoreFileId: string,
+      instrumentName: string | null,
+      filePath: string
+    ) => {
+      try {
+        await api.updateScoreFile(scoreFileId, instrumentName, filePath);
+        if (state.selectedFile?.id === scoreFileId) {
+          await loadScores();
+          dispatch({ type: "SET_SELECTED_FILE", payload: null });
+        } else {
+          await loadScores();
+        }
+        toast.success("Partitura atualizada com sucesso!");
+      } catch (err) {
+        console.error("Failed to update score file:", err);
+        const errorMsg = err instanceof Error ? err.message : "Erro ao atualizar partitura";
+        toast.error(errorMsg);
+        throw err;
+      }
+    },
+    [state.selectedFile, loadScores]
+  );
+
   const handleSaveSettings = useCallback(
     async (settings: AppSettings) => {
       try {
@@ -362,6 +437,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     deleteVersion: handleDeleteVersion,
     createCategory: handleCreateCategory,
     deleteCategory: handleDeleteCategory,
+    updateScore: handleUpdateScore,
+    updateScoreFile: handleUpdateScoreFile,
     saveSettings: handleSaveSettings,
     completeFirstRun: handleCompleteFirstRun,
   };

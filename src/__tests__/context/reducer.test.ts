@@ -119,6 +119,7 @@ function makeFile(id: string): ScoreFileItem {
     id,
     instrument: "Violino",
     file_extension: "pdf",
+    original_path: "/path/to/file.pdf",
     updated_at: "2024-01-01 12:00:00",
     has_draft: false,
     version_count: 1,

@@ -290,6 +290,7 @@ mod tests {
     fn test_save_and_get_settings() {
         let db = make_db();
         let settings = AppSettings {
+            computer_id: "test-computer-id".to_string(),
             computer_name: Some("Computador Teste".to_string()),
             logo_path: None,
             google_drive_mode: GoogleDriveMode::Api,

@@ -166,6 +166,56 @@ impl Database {
         Ok(())
     }
 
+    pub fn update_score(&self, score: &Score) -> Result<(), AppError> {
+        let conn = self.conn.lock().unwrap();
+        let tags_json = serde_json::to_string(&score.tags).unwrap_or_else(|_| "[]".to_string());
+
+        conn.execute(
+            "UPDATE scores SET title = ?1, composer = ?2, arranger = ?3, category_id = ?4, tags = ?5, favorited = ?6, updated_at = ?7
+             WHERE id = ?8",
+            params![
+                score.title,
+                score.composer,
+                score.arranger,
+                score.category_id,
+                tags_json,
+                score.favorited as i32,
+                score.updated_at.format("%Y-%m-%d %H:%M:%S").to_string(),
+                score.id,
+            ],
+        )?;
+        Ok(())
+    }
+
+    pub fn get_score_raw_by_id(&self, score_id: &str) -> Result<Score, AppError> {
+        let conn = self.conn.lock().unwrap();
+
+        let mut stmt = conn.prepare(
+            "SELECT id, title, composer, arranger, category_id, tags, favorited, created_at, updated_at
+             FROM scores
+             WHERE id = ?1"
+        )?;
+
+        let score = stmt.query_row(params![score_id], |row| {
+            let tags_json: String = row.get(5)?;
+            let tags: Vec<String> = serde_json::from_str(&tags_json).unwrap_or_default();
+
+            Ok(Score {
+                id: row.get(0)?,
+                title: row.get(1)?,
+                composer: row.get(2)?,
+                arranger: row.get(3)?,
+                category_id: row.get(4)?,
+                tags,
+                favorited: row.get::<_, i32>(6)? != 0,
+                created_at: parse_datetime(&row.get::<_, String>(7)?),
+                updated_at: parse_datetime(&row.get::<_, String>(8)?),
+            })
+        })?;
+
+        Ok(score)
+    }
+
     pub fn get_all_scores(&self) -> Result<Vec<ScoreListItem>, AppError> {
         let conn = self.conn.lock().unwrap();
 
@@ -200,7 +250,7 @@ impl Database {
 
     fn get_score_files_for_list(&self, conn: &Connection, score_id: &str) -> Result<Vec<ScoreFileItem>, AppError> {
         let mut stmt = conn.prepare(
-            "SELECT sf.id, sf.instrument, sf.file_extension, sf.updated_at,
+            "SELECT sf.id, sf.instrument, sf.file_extension, sf.original_path, sf.updated_at,
                     (SELECT COUNT(*) FROM file_versions fv WHERE fv.score_file_id = sf.id) as version_count,
                     (SELECT COUNT(*) FROM file_versions fv WHERE fv.score_file_id = sf.id AND fv.status = 'draft') as draft_count
              FROM score_files sf
@@ -213,9 +263,10 @@ impl Database {
                 id: row.get(0)?,
                 instrument: row.get(1)?,
                 file_extension: row.get(2)?,
-                updated_at: parse_datetime(&row.get::<_, String>(3)?),
-                version_count: row.get(4)?,
-                has_draft: row.get::<_, i32>(5)? > 0,
+                original_path: row.get(3)?,
+                updated_at: parse_datetime(&row.get::<_, String>(4)?),
+                version_count: row.get(5)?,
+                has_draft: row.get::<_, i32>(6)? > 0,
             })
         })?.filter_map(|r| r.ok()).collect();
 
@@ -321,6 +372,33 @@ impl Database {
                 file.host_computer_id,
                 file.created_at.format("%Y-%m-%d %H:%M:%S").to_string(),
                 file.updated_at.format("%Y-%m-%d %H:%M:%S").to_string(),
+            ],
+        )?;
+        Ok(())
+    }
+
+    pub fn update_score_file(
+        &self,
+        score_file_id: &str,
+        instrument: Option<String>,
+        original_path: &str,
+        file_extension: &str,
+        file_size: u64,
+        hash: Option<String>,
+        now: chrono::NaiveDateTime,
+    ) -> Result<(), AppError> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "UPDATE score_files SET instrument = ?1, original_path = ?2, file_extension = ?3, file_size = ?4, hash = ?5, updated_at = ?6
+             WHERE id = ?7",
+            params![
+                instrument,
+                original_path,
+                file_extension,
+                file_size as i64,
+                hash,
+                now.format("%Y-%m-%d %H:%M:%S").to_string(),
+                score_file_id,
             ],
         )?;
         Ok(())

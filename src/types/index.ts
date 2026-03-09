@@ -14,6 +14,7 @@ export interface ScoreFileItem {
   id: string;
   instrument: string | null;
   file_extension: string;
+  original_path: string;
   updated_at: string;
   has_draft: boolean;
   version_count: number;

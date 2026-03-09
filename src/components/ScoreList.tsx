@@ -1,18 +1,24 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { Search, ChevronDown, ChevronRight, Heart, FileMusic, Plus, FolderPlus } from "lucide-react";
+import { Search, ChevronDown, ChevronRight, Heart, FileMusic, Plus, FolderPlus, Edit2 } from "lucide-react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useAppState } from "../context/AppContext";
+import { EditMusicModal } from "./EditMusicModal";
+import { EditInstrumentModal } from "./EditInstrumentModal";
 import * as api from "../api/commands";
 import toast from "react-hot-toast";
 import type { ScoreListItem, ScoreFileItem } from "../types";
 
 export default function ScoreList() {
-  const { state, setSearchQuery, selectScore, selectFile, toggleFavorite, loadScores } =
+  const { state, setSearchQuery, selectScore, selectFile, toggleFavorite, loadScores, updateScore, updateScoreFile } =
     useAppState();
   const [localQuery, setLocalQuery] = useState("");
   const [suggestions, setSuggestions] = useState<ScoreListItem[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [editingScore, setEditingScore] = useState<ScoreListItem | null>(null);
+  const [isEditMusicModalOpen, setIsEditMusicModalOpen] = useState(false);
+  const [editingInstrument, setEditingInstrument] = useState<ScoreFileItem | null>(null);
+  const [isEditInstrumentModalOpen, setIsEditInstrumentModalOpen] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const parentRef = useRef<HTMLDivElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
@@ -287,6 +293,10 @@ export default function ScoreList() {
                         onAddDirectory={() => {
                           if (item.score) handleAddDirectoryToScore(item.score.id);
                         }}
+                        onEdit={() => {
+                          setEditingScore(item.score ?? null);
+                          setIsEditMusicModalOpen(true);
+                        }}
                       />
                     ) : item.type === "instrument" && item.instrument && item.score ? (
                       (() => {
@@ -302,6 +312,10 @@ export default function ScoreList() {
                                   : instrument
                               )
                             }
+                            onEdit={() => {
+                              setEditingInstrument(instrument);
+                              setIsEditInstrumentModalOpen(true);
+                            }}
                           />
                         );
                       })()
@@ -313,6 +327,28 @@ export default function ScoreList() {
           )}
         </div>
       </div>
+
+      {/* Edit Music Modal */}
+      <EditMusicModal
+        isOpen={isEditMusicModalOpen}
+        score={editingScore}
+        onClose={() => {
+          setIsEditMusicModalOpen(false);
+          setEditingScore(null);
+        }}
+        onSave={updateScore}
+      />
+
+      {/* Edit Instrument Modal */}
+      <EditInstrumentModal
+        isOpen={isEditInstrumentModalOpen}
+        instrument={editingInstrument}
+        onClose={() => {
+          setIsEditInstrumentModalOpen(false);
+          setEditingInstrument(null);
+        }}
+        onSave={updateScoreFile}
+      />
     </section>
   );
 }
@@ -324,6 +360,7 @@ function ScoreRow({
   onToggleFavorite,
   onAddFile,
   onAddDirectory,
+  onEdit,
 }: {
   score: ScoreListItem;
   isExpanded: boolean;
@@ -331,6 +368,7 @@ function ScoreRow({
   onToggleFavorite: () => void;
   onAddFile: () => void;
   onAddDirectory: () => void;
+  onEdit: () => void;
 }) {
   const author = [score.composer, score.arranger].filter(Boolean).join(" / ");
 
@@ -391,6 +429,18 @@ function ScoreRow({
           >
             <FolderPlus className="h-4 w-4 text-[#8b9db2]" />
           </button>
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit();
+            }}
+            className="p-1 rounded transition-colors hover:bg-white/10 hover:text-[#5c9ae6]"
+            title="Editar música"
+          >
+            <Edit2 className="h-4 w-4 text-[#8b9db2]" />
+          </button>
         </div>
       </span>
       <span className="text-[#5c7089]">{author || "—"}</span>
@@ -403,10 +453,12 @@ function InstrumentRow({
   instrument,
   isSelected,
   onSelectFile,
+  onEdit,
 }: {
   instrument: ScoreFileItem;
   isSelected: boolean;
   onSelectFile: () => void;
+  onEdit: () => void;
 }) {
   const [isOpening, setIsOpening] = useState(false);
 
@@ -443,6 +495,18 @@ function InstrumentRow({
             title="Rascunho ativo"
           />
         )}
+        {/* Edit button */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit();
+          }}
+          className="ml-auto p-1 rounded transition-colors hover:bg-white/10 hover:text-[#5c9ae6]"
+          title="Editar partitura"
+        >
+          <Edit2 className="h-3.5 w-3.5 text-[#8b9db2]" />
+        </button>
       </span>
       <span className="text-xs text-[#8b9db2]">.{instrument.file_extension}</span>
       <span className="text-xs text-[#8b9db2]">

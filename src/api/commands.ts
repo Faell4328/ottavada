@@ -50,6 +50,24 @@ export async function createScore(title: string): Promise<ScoreListItem> {
   return invoke("create_score", { title });
 }
 
+export async function updateScore(
+  scoreId: string,
+  title: string,
+  composer: string | null,
+  arranger: string | null,
+  categoryId: string | null
+): Promise<ScoreListItem> {
+  return invoke("update_score", { scoreId, title, composer, arranger, categoryId });
+}
+
+export async function updateScoreFile(
+  scoreFileId: string,
+  instrumentName: string | null,
+  filePath: string
+): Promise<void> {
+  return invoke("update_score_file", { scoreFileId, instrumentName, filePath });
+}
+
 export async function addFileToScore(
   scoreId: string,
   file: IndexedFile

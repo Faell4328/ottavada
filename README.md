@@ -58,11 +58,11 @@ Aplicativo desktop para Windows e Linux que organiza partituras e arquivos music
 - Sugestão de músicas enquanto se digita na busca (contextual por escopo: todas, favoritas, categoria etc.)
 - Favoritos
 - Categorias (ex.: clássicas, "Harpa Cristã"); uma música pode pertencer a várias categorias
-- Listar rascunhos ativos, dos arquivos que tiveram alterações identificadas e estão pendentes de definição como "main".
+- Listar rascunhos ativos dos arquivos que tiveram alterações identificadas e estão pendentes de definição como "main".
 
 ## Fluxos detalhados
 
-! O filtro está como .mus, .musx e .pdf. Mas ele deve ter suporte a .MUS, .MUSX e .PDF também, já que é uma variação possível.
+! O filtro está como .mus, .musx e .pdf. Mas ele deve ter suporte a .MUS, .MUSX e .PDF também, já que são variações possíveis.
 
 **Primeira execução**
 
@@ -73,6 +73,7 @@ O nome deve estar em branco para o usuário preencher e deve estar visível o UU
 **Adicionar música (cabeçalho)**
 
 Ao clicar em "adicionar música", abre-se um modal para digitar o nome da música, com botões para cancelar e salvar.
+
 
 **Adicionar arquivo (cabeçalho)**
 
@@ -94,6 +95,16 @@ Ao clicar em "adicionar diretório", abre-se o seletor de pastas. Se o diretóri
 
 Assim como há o botão de favoritar, há o botão de adicionar. Ao clicar nele, as ações devem ser parecidas com as do "Adicionar diretório (cabeçalho)", mas com a diferença de que já será adicionado diretamente à música, extraindo do nome apenas o instrumento.
 
+**Editando música**
+
+Deve ter um ícone para editar a música, ao clicar nele deve abrir um modal. No modal pode ser alterado o nome, adicionar/remover da categoria(s), adicionar/alterar compositor e arranjador
+
+**Editando partitura/instrumento**
+
+Deve ter um ícone para editar a partitura. Ao clicar nele, deve abrir um modal. No modal, pode ser alterado o nome do instrumento e também o diretório onde o arquivo original está.
+
+Deve ser possível alterar o caminho do arquivo. Ao clicar, deve ser aberto para o usuário selecionar outro.
+
 ## Interface
 
 **Header**
@@ -111,7 +122,7 @@ Assim como há o botão de favoritar, há o botão de adicionar. Ao clicar nele,
 - Duplo clique deve abrir o arquivo com o software padrão do sistema.
 - Reflete a seleção da sidebar esquerda (padrão: "Todas as partituras").
 - Barra de pesquisa com sugestões enquanto se digita, filtrando dentro da categoria selecionada.
-- Ao clicar numa música, expande para mostrar todos os instrumentos disponíveis.
+- Ao clicar em uma música, expande para mostrar todos os instrumentos disponíveis.
 
 **Sidebar direita**
 
@@ -127,7 +138,7 @@ Assim como há o botão de favoritar, há o botão de adicionar. Ao clicar nele,
 
 - Função principal: alterar o nome do computador.
 - Não deve exibir as credenciais ou detalhes da API do Google Drive.
-- Ao final da tela de configurações deve constar a frase: "Made by Rhafaell with lots of coffee ☕".
+- Ao final da tela de configurações, deve constar a frase: "Made by Rhafaell with lots of coffee ☕".
 
 ## Arquitetura
 
@@ -157,7 +168,7 @@ A busca com sugestões será implementada via **FTS5** (Full-Text Search) do SQL
 |-------|-----|
 | `rusqlite` (com feature `bundled`) | SQLite embutido com suporte a FTS5 |
 | `notify` | Monitoramento de arquivos multiplataforma |
-| `fs2` | Verificar espaço disponível em disco/pendrive |
+| `fs2` | Verificação de espaço disponível em disco/pendrive |
 | `serde` + `serde_json` | Serialização de dados |
 | `chrono` | Manipulação de datas (timestamps de versão, última alteração) |
 | `walkdir` | Varredura recursiva de diretórios na indexação |
@@ -169,8 +180,8 @@ A busca com sugestões será implementada via **FTS5** (Full-Text Search) do SQL
 |--------|-----|
 | `tauri-plugin-dialog` | Diálogos nativos (seleção de diretório, confirmações) |
 | `tauri-plugin-fs` | Acesso ao sistema de arquivos a partir do frontend |
-| `tauri-plugin-store` | Persistir configurações da aplicação |
-| `tauri-plugin-notification` | Notificar o usuário sobre status de backup |
+| `tauri-plugin-store` | Persistência das configurações da aplicação |
+| `tauri-plugin-notification` | Notificação ao usuário sobre status de backup |
 
 ## Bibliotecas Frontend (React)
 
