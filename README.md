@@ -22,7 +22,7 @@ Aplicativo desktop para Windows e Linux que organiza partituras e arquivos music
 
 **Computador**
 
-- Nome: inicia com um UUID gerado aleatoriamente; o usuário pode alterá‑lo posteriormente.
+- Nome: inicia com um UUID gerado aleatoriamente; o usuário pode alterá-lo posteriormente.
 - Dados para integração com o Google Drive.
 
 **Música**
@@ -61,6 +61,8 @@ Aplicativo desktop para Windows e Linux que organiza partituras e arquivos music
 
 ## Fluxos detalhados
 
+! O filtro está como .mus, .musx e .pdf. Mas ele deve ter suporte a .MUS, .MUSX e .PDF também, já que é uma variação possível.
+
 **Primeira execução**
 
 Na primeira execução, o aplicativo solicita o nome do computador e a chave da API do Google Drive (Service Account). O campo de nome vem preenchido com um UUID, que o usuário pode alterar.
@@ -71,7 +73,7 @@ Ao clicar em "adicionar música", abre-se um modal para digitar o nome da músic
 
 **Adicionar arquivo (cabeçalho)**
 
-Ao clicar em "adicionar arquivo", abre‑se o seletor com filtro para `.mus`, `.musx` e `.pdf` (um arquivo por vez). Se for escolhido um arquivo inválido, o sistema alerta e pede um arquivo válido.
+Ao clicar em "adicionar arquivo", abre-se o seletor com filtro para `.mus`, `.musx` e `.pdf` (um arquivo por vez). Se for escolhido um arquivo inválido, o sistema alerta e pede um arquivo válido.
 
 As informações de música e instrumento são obtidas a partir do nome do arquivo; ex.: `EIS O NOSSO DEUS - Alto Sax. 1.mus`.
 
@@ -83,15 +85,11 @@ Assim como há o botão de favoritar, há o botão de adicionar. Ao clicar nele,
 
 **Adicionar diretório (cabeçalho)**
 
-Ao clicar em "adicionar diretório", abre‑se o seletor de pastas. Se o diretório não contiver arquivos `.mus`, `.musx` ou `.pdf`, o sistema solicitará outra pasta. As informações são extraídas dos nomes dos arquivos dentro da pasta.
+Ao clicar em "adicionar diretório", abre-se o seletor de pastas. Se o diretório não contiver arquivos `.mus`, `.musx` ou `.pdf`, o sistema solicitará outra pasta. As informações são extraídas dos nomes dos arquivos dentro da pasta.
 
 **Adicionar diretório (na música)**
 
-Parecido com a do "Adicionar diretório (cabeçalho)", mas com a diferença que já vai ser adicionado diretamente a música, extraindo do nome apenas o instrumento.
-
-**Adicionar arquivo dentro da música**
-
-Ao passar o mouse sobre uma música ou ao clicar nela, aparece um ícone de "+" que permite adicionar uma partitura diretamente vinculada à música selecionada.
+Assim como há o botão de favoritar, há o botão de adicionar. Ao clicar nele, as ações devem ser parecidas com as do "Adicionar diretório (cabeçalho)", mas com a diferença de que já será adicionado diretamente à música, extraindo do nome apenas o instrumento.
 
 ## Interface
 
@@ -115,7 +113,7 @@ Ao passar o mouse sobre uma música ou ao clicar nela, aparece um ícone de "+" 
 **Sidebar direita**
 
 - Aparece apenas ao selecionar um instrumento de uma música.
-- Exibe informações sobre o arquivo e oferece opções para editar ou atualizar. Se o arquivo estiver em rascunho, deve haver um botão para torná‑lo "main".
+- Exibe informações sobre o arquivo e oferece opções para editar ou atualizar. Se o arquivo estiver em rascunho, deve haver um botão para torná-lo "main".
 
 **Footer**
 
