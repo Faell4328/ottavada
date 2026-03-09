@@ -28,7 +28,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-gradient-to-b from-[#5d6d82] via-[#73849a] to-[#d8dee8]">
+    <div className="flex min-h-screen flex-col bg-gradient-to-b from-[#5d6d82] via-[#73849a] to-[#d8dee8] select-none">
       {/* Header */}
       <div className="flex items-center gap-3 border-b border-[#c8d1dc] bg-gradient-to-b from-[#33465d] to-[#23364b] px-4 py-3">
         <button
