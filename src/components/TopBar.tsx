@@ -46,7 +46,7 @@ export default function TopBar({
         filters: [
           {
             name: "Partituras",
-            extensions: ["pdf", "mus", "musx"],
+            extensions: ["pdf", "PDF", "mus", "MUS", "musx", "MUSX"],
           },
         ],
       });

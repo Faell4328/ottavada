@@ -129,7 +129,7 @@ export default function ScoreList() {
         filters: [
           {
             name: "Partituras",
-            extensions: ["pdf", "mus", "musx"],
+            extensions: ["pdf", "PDF", "mus", "MUS", "musx", "MUSX"],
           },
         ],
       });
