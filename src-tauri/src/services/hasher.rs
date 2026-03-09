@@ -12,6 +12,7 @@ pub fn hash_file(path: &Path) -> Result<String, AppError> {
 
 /// Detecta se um arquivo foi alterado comparando tamanho + data de modificação.
 /// Quando hash está ativado, compara também pelo hash.
+#[allow(dead_code)]
 pub fn file_changed(
     path: &Path,
     known_size: u64,

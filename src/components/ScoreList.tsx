@@ -5,7 +5,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { useAppState } from "../context/AppContext";
 import * as api from "../api/commands";
 import toast from "react-hot-toast";
-import type { ScoreListItem, ScoreFileItem, IndexedFile } from "../types";
+import type { ScoreListItem, ScoreFileItem } from "../types";
 
 export default function ScoreList() {
   const { state, setSearchQuery, selectScore, selectFile, toggleFavorite, loadScores } =
@@ -13,7 +13,6 @@ export default function ScoreList() {
   const [localQuery, setLocalQuery] = useState("");
   const [suggestions, setSuggestions] = useState<ScoreListItem[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [hoveredScoreId, setHoveredScoreId] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const parentRef = useRef<HTMLDivElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
@@ -272,7 +271,6 @@ export default function ScoreList() {
                       <ScoreRow
                         score={item.score}
                         isExpanded={state.selectedScore?.id === item.score.id}
-                        isHovered={hoveredScoreId === item.score.id}
                         onToggle={() => {
                           selectScore(
                             state.selectedScore?.id === item.score?.id
@@ -289,10 +287,6 @@ export default function ScoreList() {
                         onAddDirectory={() => {
                           if (item.score) handleAddDirectoryToScore(item.score.id);
                         }}
-                        onMouseEnter={() => {
-                          if (item.score) setHoveredScoreId(item.score.id);
-                        }}
-                        onMouseLeave={() => setHoveredScoreId(null)}
                       />
                     ) : item.type === "instrument" && item.instrument && item.score ? (
                       (() => {
@@ -326,23 +320,17 @@ export default function ScoreList() {
 function ScoreRow({
   score,
   isExpanded,
-  isHovered,
   onToggle,
   onToggleFavorite,
   onAddFile,
   onAddDirectory,
-  onMouseEnter,
-  onMouseLeave,
 }: {
   score: ScoreListItem;
   isExpanded: boolean;
-  isHovered: boolean;
   onToggle: () => void;
   onToggleFavorite: () => void;
   onAddFile: () => void;
   onAddDirectory: () => void;
-  onMouseEnter: () => void;
-  onMouseLeave: () => void;
 }) {
   const author = [score.composer, score.arranger].filter(Boolean).join(" / ");
 
@@ -352,8 +340,6 @@ function ScoreRow({
         isExpanded ? "bg-[#eef3f9] font-bold" : "hover:bg-[#f2f5fa]"
       } cursor-pointer transition-colors divide-y divide-[#d8e0ea]`}
       onClick={onToggle}
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
     >
       <span className="flex items-center gap-2">
         {isExpanded ? (

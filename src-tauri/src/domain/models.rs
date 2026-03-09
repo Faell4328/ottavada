@@ -147,22 +147,6 @@ impl GoogleServiceAccount {
     }
 }
 
-/// Informação de backup
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BackupInfo {
-    pub last_cloud_backup: Option<NaiveDateTime>,
-    pub last_usb_backup: Option<NaiveDateTime>,
-    pub cloud_status: BackupStatus,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub enum BackupStatus {
-    Synced,
-    Pending,
-    Error(String),
-    NeverSynced,
-}
-
 /// Dados retornados para a listagem de partituras no frontend
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ScoreListItem {

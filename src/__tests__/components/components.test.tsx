@@ -14,6 +14,32 @@ vi.mock("@tauri-apps/plugin-dialog", () => ({
   open: vi.fn(),
 }));
 
+vi.mock("react-router", () => ({
+  useNavigate: () => vi.fn(),
+}));
+
+// Mock react-virtual to avoid virtualization issues in tests
+vi.mock("@tanstack/react-virtual", async () => {
+  const actual = await vi.importActual("@tanstack/react-virtual");
+  return {
+    ...(actual as any),
+    useVirtualizer: vi.fn((options: any) => {
+      const count = options.count || 0;
+      const items = Array.from({ length: count }, (_, i) => ({
+        key: `item-${i}`,
+        index: i,
+        start: i * (options.estimateSize?.() || 35),
+        size: options.estimateSize?.() || 35,
+      }));
+      
+      return {
+        getVirtualItems: () => items,
+        getTotalSize: () => count * (options.estimateSize?.() || 35),
+      };
+    }),
+  };
+});
+
 const mockApi = vi.hoisted(() => ({
   scanDirectory: vi.fn(),
   importIndexedFiles: vi.fn(),
@@ -466,10 +492,6 @@ describe("StatusBar", () => {
   });
 
   it("should navigate to settings when button is clicked", () => {
-    const mockNavigate = vi.fn();
-    vi.mock("react-router", () => ({
-      useNavigate: () => mockNavigate,
-    }));
     render(<StatusBar />);
     fireEvent.click(screen.getByText("Configurações"));
     expect(screen.getByText("Configurações")).toBeInTheDocument();

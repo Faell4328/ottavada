@@ -9,21 +9,25 @@ pub enum AppError {
     Io(#[from] std::io::Error),
 
     #[error("Arquivo não encontrado: {0}")]
+    #[allow(dead_code)]
     FileNotFound(String),
 
     #[error("Partitura não encontrada: {0}")]
+    #[allow(dead_code)]
     ScoreNotFound(String),
 
-    #[error("Versão não encontrada: {0}")]
+    #[error("Versão não encontrado: {0}")]
     VersionNotFound(String),
 
     #[error("Categoria não encontrada: {0}")]
+    #[allow(dead_code)]
     CategoryNotFound(String),
 
     #[error("Diretório inválido: {0}")]
     InvalidDirectory(String),
 
     #[error("Espaço insuficiente no destino")]
+    #[allow(dead_code)]
     InsufficientSpace,
 
     #[error("{0}")]
