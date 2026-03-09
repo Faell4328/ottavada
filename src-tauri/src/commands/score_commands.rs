@@ -253,3 +253,156 @@ pub async fn open_file(
     
     Ok(())
 }
+
+#[tauri::command]
+pub fn add_file_to_score(
+    db: State<'_, Database>,
+    app_handle: tauri::AppHandle,
+    score_id: String,
+    file: IndexedFile,
+) -> Result<ScoreListItem, AppError> {
+    // Obter a música para verificar se existe
+    let all_scores = db.get_all_scores()?;
+    let score = all_scores
+        .iter()
+        .find(|s| s.id == score_id)
+        .ok_or_else(|| AppError::Generic("Música não encontrada".into()))?;
+
+    // Verificar se o instrumento já existe para essa música (case-insensitive)
+    let instrument_exists = score.instruments.iter().any(|fi| {
+        match (&fi.instrument, &file.instrument) {
+            (Some(existing), Some(indexed)) => existing.eq_ignore_ascii_case(indexed),
+            (None, None) => true,
+            _ => false,
+        }
+    });
+
+    if instrument_exists {
+        return Err(AppError::Generic(format!(
+            "Um arquivo com o instrumento '{}' já existe para essa música",
+            file.instrument.as_deref().unwrap_or("Sem instrumento")
+        )));
+    }
+
+    let app_data_dir = app_handle
+        .path()
+        .app_data_dir()
+        .map_err(|_| AppError::Generic("Não foi possível obter diretório de dados".into()))?;
+
+    let settings = db.get_app_settings()?;
+    let now = Local::now().naive_local();
+
+    let file_id = uuid::Uuid::new_v4().to_string();
+    let hash = if settings.hash_enabled {
+        crate::services::hasher::hash_file(std::path::Path::new(&file.path)).ok()
+    } else {
+        None
+    };
+
+    let score_file = ScoreFile {
+        id: file_id.clone(),
+        score_id: score_id.clone(),
+        instrument: file.instrument.clone(),
+        original_path: file.path.clone(),
+        file_extension: file.extension.clone(),
+        file_size: file.size,
+        hash,
+        created_at: now,
+        updated_at: now,
+    };
+
+    db.insert_score_file(&score_file)?;
+
+    // Armazenar versão inicial
+    versioning::store_initial_version(&db, &app_data_dir, &score_file, settings.hash_enabled)?;
+
+    // Obter e retornar a música atualizada
+    let all_scores = db.get_all_scores()?;
+    all_scores
+        .into_iter()
+        .find(|s| s.id == score_id)
+        .ok_or_else(|| AppError::Generic("Erro ao recuperar música atualizada".into()))
+}
+
+#[tauri::command]
+pub fn add_files_to_score(
+    db: State<'_, Database>,
+    app_handle: tauri::AppHandle,
+    score_id: String,
+    files: Vec<IndexedFile>,
+) -> Result<ScoreListItem, AppError> {
+    // Obter a música para verificar se existe
+    let all_scores = db.get_all_scores()?;
+    let score = all_scores
+        .iter()
+        .find(|s| s.id == score_id)
+        .ok_or_else(|| AppError::Generic("Música não encontrada".into()))?;
+
+    let app_data_dir = app_handle
+        .path()
+        .app_data_dir()
+        .map_err(|_| AppError::Generic("Não foi possível obter diretório de dados".into()))?;
+
+    let settings = db.get_app_settings()?;
+    let now = Local::now().naive_local();
+
+    // Obter instrumentos existentes para essa música
+    let existing_instruments = score.instruments.clone();
+    let mut added_count = 0;
+
+    for file in files {
+        // Verificar se o instrumento já existe para essa música (case-insensitive)
+        let instrument_exists = existing_instruments.iter().any(|fi| {
+            match (&fi.instrument, &file.instrument) {
+                (Some(existing), Some(indexed)) => existing.eq_ignore_ascii_case(indexed),
+                (None, None) => true,
+                _ => false,
+            }
+        });
+
+        // Pular se o instrumento já existe
+        if instrument_exists {
+            continue;
+        }
+
+        let file_id = uuid::Uuid::new_v4().to_string();
+        let hash = if settings.hash_enabled {
+            crate::services::hasher::hash_file(std::path::Path::new(&file.path)).ok()
+        } else {
+            None
+        };
+
+        let score_file = ScoreFile {
+            id: file_id.clone(),
+            score_id: score_id.clone(),
+            instrument: file.instrument.clone(),
+            original_path: file.path.clone(),
+            file_extension: file.extension.clone(),
+            file_size: file.size,
+            hash,
+            created_at: now,
+            updated_at: now,
+        };
+
+        db.insert_score_file(&score_file)?;
+
+        // Armazenar versão inicial
+        versioning::store_initial_version(&db, &app_data_dir, &score_file, settings.hash_enabled)?;
+
+        added_count += 1;
+    }
+
+    // Se nenhum arquivo foi adicionado (todos já existiam), retornar erro
+    if added_count == 0 {
+        return Err(AppError::Generic(
+            "Todos os arquivos deste diretório já existem para essa música".into(),
+        ));
+    }
+
+    // Obter e retornar a música atualizada
+    let all_scores = db.get_all_scores()?;
+    all_scores
+        .into_iter()
+        .find(|s| s.id == score_id)
+        .ok_or_else(|| AppError::Generic("Erro ao recuperar música atualizada".into()))
+}

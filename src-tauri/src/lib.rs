@@ -43,6 +43,8 @@ pub fn run() {
             commands::score_commands::import_indexed_files,
             commands::score_commands::get_scores_by_category,
             commands::score_commands::create_score,
+            commands::score_commands::add_file_to_score,
+            commands::score_commands::add_files_to_score,
             commands::score_commands::open_file,
             // Versions
             commands::version_commands::get_versions,

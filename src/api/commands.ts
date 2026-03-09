@@ -50,6 +50,20 @@ export async function createScore(title: string): Promise<ScoreListItem> {
   return invoke("create_score", { title });
 }
 
+export async function addFileToScore(
+  scoreId: string,
+  file: IndexedFile
+): Promise<ScoreListItem> {
+  return invoke("add_file_to_score", { scoreId, file });
+}
+
+export async function addFilesToScore(
+  scoreId: string,
+  files: IndexedFile[]
+): Promise<ScoreListItem> {
+  return invoke("add_files_to_score", { scoreId, files });
+}
+
 export async function getSearchSuggestions(query: string, limit?: number): Promise<ScoreListItem[]> {
   return invoke("get_search_suggestions", { query, limit });
 }

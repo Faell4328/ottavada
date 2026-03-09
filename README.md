@@ -16,10 +16,7 @@ Aplicativo desktop para Windows e Linux que organiza partituras e arquivos music
 - Permitir que outros computadores atualizem a lista de partituras.
 - Estrutura de dados: cada "música" (ex.: "Serenade") contém arquivos por instrumento (os próprios arquivos representam os instrumentos).
 - O backup será realizado via API do Google Drive.
-- O sistema deve funcionar offline: haverá um diretório local onde os dados baixados do Google Drive serão armazenados.
-- À medida que o usuário adiciona informações (por exemplo: instrumento, compositor, arranjador etc.), o sistema as memoriza para sugeri‑las em futuras edições.
-
-O objetivo é lançar a versão 1.0 de forma simples e direta.
+- O sistema deve funcionar offline: haverá um diretório local onde os dados baixados do Google Drive serão armazenados, seguindo uma estrutura própria do sistema.
 
 ## Informações
 
@@ -47,26 +44,30 @@ O objetivo é lançar a versão 1.0 de forma simples e direta.
 
 ## Funcionalidades
 
-- Adicionar música (por arquivo ou diretório)
+- Adicionar música
+    - Manualmente
+    - Partitura/Instrumento
+    - Diretório
 - Editar música
-- Abrir partitura
-- Detectar/Verificar alterações
-- Realizar backup
+    - Música
+    - Partitura/Instrumento
+- Detectar alterações nos arquivos
+- Realizar backup no Google Drive
 - Configurações
 - Sugestão de músicas enquanto se digita na busca (contextual por escopo: todas, favoritas, categoria etc.)
 - Favoritos
 - Categorias (ex.: clássicas, "Harpa Cristã"); uma música pode pertencer a várias categorias
-- Listar rascunhos ativos
+- Listar rascunhos ativos, dos arquivos que tiveram alterações identificadas e estão pendentes de definição como "main".
 
 ## Fluxos detalhados
 
 **Primeira execução**
 
-Na primeira execução, o aplicativo solicita o nome do computador e a chave da API do Google Drive (Service Account). O campo de nome vem preenchido com um UUID que o usuário pode alterar.
+Na primeira execução, o aplicativo solicita o nome do computador e a chave da API do Google Drive (Service Account). O campo de nome vem preenchido com um UUID, que o usuário pode alterar.
 
 **Adicionar música (cabeçalho)**
 
-Ao clicar em "adicionar música", abre-se um modal solicitando o nome da música, com botões para cancelar e salvar.
+Ao clicar em "adicionar música", abre-se um modal para digitar o nome da música, com botões para cancelar e salvar.
 
 **Adicionar arquivo (cabeçalho)**
 
@@ -76,9 +77,17 @@ As informações de música e instrumento são obtidas a partir do nome do arqui
 
 Se a música já existe, o arquivo é anexado à música correspondente. Se a música e o instrumento já existem, o sistema indica o conflito e orienta a usar o ícone de lápis da música para atualizar a partitura. Quando tudo estiver correto, um modal exibe os dados extraídos (nome da música, nome do instrumento e caminho), que podem ser editados.
 
+**Adicionar arquivo (na música)**
+
+Assim como há o botão de favoritar, há o botão de adicionar. Ao clicar nele, será aberto um seletor com filtro para `.mus`, `.musx` e `.pdf`. O fluxo e as regras são praticamente os mesmos de adicionar arquivo no cabeçalho, com a diferença de que a música já está definida, não sendo necessário extrair o nome da música nem verificar sua existência. O arquivo será adicionado à música selecionada.
+
 **Adicionar diretório (cabeçalho)**
 
-Ao clicar em "adicionar diretório", abre‑se o seletor de pastas. Se o diretório não contiver arquivos `.mus`, `.musx` ou `.pdf`, o sistema solicita outra pasta. As informações são extraídas dos nomes dos arquivos dentro da pasta.
+Ao clicar em "adicionar diretório", abre‑se o seletor de pastas. Se o diretório não contiver arquivos `.mus`, `.musx` ou `.pdf`, o sistema solicitará outra pasta. As informações são extraídas dos nomes dos arquivos dentro da pasta.
+
+**Adicionar diretório (na música)**
+
+Parecido com a do "Adicionar diretório (cabeçalho)", mas com a diferença que já vai ser adicionado diretamente a música, extraindo do nome apenas o instrumento.
 
 **Adicionar arquivo dentro da música**
 

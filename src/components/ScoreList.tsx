@@ -1,17 +1,19 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { Search, ChevronDown, ChevronRight, Heart, FileMusic } from "lucide-react";
+import { Search, ChevronDown, ChevronRight, Heart, FileMusic, Plus, FolderPlus } from "lucide-react";
+import { open } from "@tauri-apps/plugin-dialog";
 import { useAppState } from "../context/AppContext";
 import * as api from "../api/commands";
 import toast from "react-hot-toast";
-import type { ScoreListItem, ScoreFileItem } from "../types";
+import type { ScoreListItem, ScoreFileItem, IndexedFile } from "../types";
 
 export default function ScoreList() {
-  const { state, setSearchQuery, selectScore, selectFile, toggleFavorite } =
+  const { state, setSearchQuery, selectScore, selectFile, toggleFavorite, loadScores } =
     useAppState();
   const [localQuery, setLocalQuery] = useState("");
   const [suggestions, setSuggestions] = useState<ScoreListItem[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [hoveredScoreId, setHoveredScoreId] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const parentRef = useRef<HTMLDivElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
@@ -110,6 +112,73 @@ export default function ScoreList() {
     setSearchQuery(score.title);
   };
 
+  function getDirectoryPath(path: string) {
+    const normalized = path.replace(/\\/g, "/");
+    const lastSlash = normalized.lastIndexOf("/");
+    if (lastSlash <= 0) {
+      return ".";
+    }
+    return normalized.slice(0, lastSlash);
+  }
+
+  async function handleAddFileToScore(scoreId: string) {
+    try {
+      const selected = await open({
+        directory: false,
+        multiple: false,
+        filters: [
+          {
+            name: "Partituras",
+            extensions: ["pdf", "mus", "musx"],
+          },
+        ],
+      });
+
+      if (!selected) {
+        return;
+      }
+
+      const selectedPath = Array.isArray(selected) ? selected[0] : selected;
+      const directory = getDirectoryPath(selectedPath);
+      const scannedFiles = await api.scanDirectory(directory);
+      const indexed = scannedFiles.filter((file) => file.path === selectedPath);
+
+      if (indexed.length > 0) {
+        await api.addFileToScore(scoreId, indexed[0]);
+        await loadScores();
+        toast.success("Arquivo adicionado com sucesso");
+      }
+    } catch (err) {
+      console.error("Failed to add file to score:", err);
+      toast.error("Erro ao adicionar arquivo");
+    }
+  }
+
+  async function handleAddDirectoryToScore(scoreId: string) {
+    try {
+      const selected = await open({ directory: true, multiple: false });
+      if (!selected) {
+        return;
+      }
+
+      const directory = selected as string;
+      const files = await api.scanDirectory(directory);
+
+      if (files.length === 0) {
+        toast.error("Nenhuma partitura encontrada neste diretório");
+        return;
+      }
+
+      await api.addFilesToScore(scoreId, files);
+      await loadScores();
+      toast.success(`${files.length} arquivo(s) adicionado(s) com sucesso`);
+    } catch (err) {
+      console.error("Failed to add directory to score:", err);
+      const errorMsg = err instanceof Error ? err.message : "Erro ao adicionar diretório";
+      toast.error(errorMsg);
+    }
+  }
+
   return (
     <section className="flex flex-1 flex-col gap-2.5 bg-[#edf1f6] p-3.5 border-r border-[#c8d1dc] overflow-hidden">
       <div className="flex items-center justify-between mb-1">
@@ -203,6 +272,7 @@ export default function ScoreList() {
                       <ScoreRow
                         score={item.score}
                         isExpanded={state.selectedScore?.id === item.score.id}
+                        isHovered={hoveredScoreId === item.score.id}
                         onToggle={() => {
                           selectScore(
                             state.selectedScore?.id === item.score?.id
@@ -213,6 +283,16 @@ export default function ScoreList() {
                         onToggleFavorite={() => {
                           if (item.score) toggleFavorite(item.score.id);
                         }}
+                        onAddFile={() => {
+                          if (item.score) handleAddFileToScore(item.score.id);
+                        }}
+                        onAddDirectory={() => {
+                          if (item.score) handleAddDirectoryToScore(item.score.id);
+                        }}
+                        onMouseEnter={() => {
+                          if (item.score) setHoveredScoreId(item.score.id);
+                        }}
+                        onMouseLeave={() => setHoveredScoreId(null)}
                       />
                     ) : item.type === "instrument" && item.instrument && item.score ? (
                       (() => {
@@ -246,13 +326,23 @@ export default function ScoreList() {
 function ScoreRow({
   score,
   isExpanded,
+  isHovered,
   onToggle,
   onToggleFavorite,
+  onAddFile,
+  onAddDirectory,
+  onMouseEnter,
+  onMouseLeave,
 }: {
   score: ScoreListItem;
   isExpanded: boolean;
+  isHovered: boolean;
   onToggle: () => void;
   onToggleFavorite: () => void;
+  onAddFile: () => void;
+  onAddDirectory: () => void;
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
 }) {
   const author = [score.composer, score.arranger].filter(Boolean).join(" / ");
 
@@ -262,30 +352,60 @@ function ScoreRow({
         isExpanded ? "bg-[#eef3f9] font-bold" : "hover:bg-[#f2f5fa]"
       } cursor-pointer transition-colors divide-y divide-[#d8e0ea]`}
       onClick={onToggle}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
     >
-      <span className="flex items-center gap-1.5">
+      <span className="flex items-center gap-2">
         {isExpanded ? (
-          <ChevronDown className="h-3.5 w-3.5 text-[#7b8da1]" />
+          <ChevronDown className="h-3.5 w-3.5 text-[#7b8da1] flex-shrink-0" />
         ) : (
-          <ChevronRight className="h-3.5 w-3.5 text-[#7b8da1]" />
+          <ChevronRight className="h-3.5 w-3.5 text-[#7b8da1] flex-shrink-0" />
         )}
-        <span className="font-bold">{score.title}</span>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleFavorite();
-          }}
-          className="ml-1 border-0 bg-transparent cursor-pointer p-0"
-        >
-          <Heart
-            className={`h-3.5 w-3.5 transition-colors ${
-              score.favorited
-                ? "fill-red-400 text-red-400"
-                : "text-[#b0bfcf] hover:text-red-300"
-            }`}
-          />
-        </button>
+        <span className="font-bold truncate">{score.title}</span>
+
+        {/* Action Buttons - só aparecem ao passar o mouse */}
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleFavorite();
+            }}
+            className="p-1 rounded transition-colors hover:bg-white/10"
+            title={score.favorited ? "Remover de favoritos" : "Adicionar aos favoritos"}
+          >
+            <Heart
+              className={`h-4 w-4 ${
+                score.favorited
+                  ? "fill-red-400 text-red-400"
+                  : "text-[#8b9db2] hover:text-red-300"
+              }`}
+            />
+          </button>
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onAddFile();
+            }}
+            className="p-1 rounded transition-colors hover:bg-white/10 hover:text-[#5c9ae6]"
+            title="Adicionar arquivo"
+          >
+            <Plus className="h-4 w-4 text-[#8b9db2]" />
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onAddDirectory();
+            }}
+            className="p-1 rounded transition-colors hover:bg-white/10 hover:text-[#5c9ae6]"
+            title="Adicionar diretório"
+          >
+            <FolderPlus className="h-4 w-4 text-[#8b9db2]" />
+          </button>
+        </div>
       </span>
       <span className="text-[#5c7089]">{author || "—"}</span>
       <span className="text-[#5c7089]">{formatDate(score.updated_at)}</span>
