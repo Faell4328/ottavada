@@ -21,13 +21,22 @@ pub fn is_first_run(db: State<'_, Database>) -> Result<bool, AppError> {
 }
 
 #[tauri::command]
+pub fn generate_computer_id() -> String {
+    uuid::Uuid::new_v4().to_string()
+}
+
+#[tauri::command]
 pub fn complete_first_run(
     db: State<'_, Database>,
+    computer_id: String,
     computer_name: String,
     _google_drive_mode: String,
     google_service_account_json: Option<String>,
 ) -> Result<(), AppError> {
     let mut settings = db.get_app_settings()?;
+    
+    // Set the computer ID
+    settings.computer_id = computer_id;
     settings.computer_name = Some(computer_name);
     
     // Parse and validate the service account

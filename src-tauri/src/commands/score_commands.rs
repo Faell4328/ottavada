@@ -133,6 +133,7 @@ pub fn import_indexed_files(
                 file_extension: indexed_file.extension.clone(),
                 file_size: indexed_file.size,
                 hash,
+                host_computer_id: settings.computer_id.clone(),
                 created_at: now,
                 updated_at: now,
             };
@@ -307,6 +308,7 @@ pub fn add_file_to_score(
         file_extension: file.extension.clone(),
         file_size: file.size,
         hash,
+        host_computer_id: settings.computer_id.clone(),
         created_at: now,
         updated_at: now,
     };
@@ -380,6 +382,7 @@ pub fn add_files_to_score(
             file_extension: file.extension.clone(),
             file_size: file.size,
             hash,
+            host_computer_id: settings.computer_id.clone(),
             created_at: now,
             updated_at: now,
         };

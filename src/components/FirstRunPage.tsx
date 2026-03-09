@@ -2,21 +2,14 @@ import { useState, useEffect } from "react";
 import { Music, Upload, AlertCircle, CheckCircle } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAppState } from "../context/AppContext";
+import * as api from "../api/commands";
 import type { GoogleServiceAccount } from "../types";
-
-function generateUUID(): string {
-  // Simple UUID v4 generator
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
-    const r = (Math.random() * 16) | 0;
-    const v = c === "x" ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
 
 type Step = "name" | "google-drive" | "confirm";
 
 export default function FirstRunPage() {
   const { completeFirstRun } = useAppState();
+  const [computerId, setComputerId] = useState("");
   const [computerName, setComputerName] = useState("");
   const [step, setStep] = useState<Step>("name");
   const [serviceAccount, setServiceAccount] = useState<GoogleServiceAccount | null>(null);
@@ -25,8 +18,12 @@ export default function FirstRunPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    // Generate a UUID for initial computer name
-    setComputerName(generateUUID().substring(0, 8).toUpperCase());
+    // Generate a UUID for the computer
+    api.generateComputerId()
+      .then(setComputerId)
+      .catch(() => {
+        toast.error("Erro ao gerar ID do computador");
+      });
   }, []);
 
   function handleFileSelect(event: React.ChangeEvent<HTMLInputElement>) {
@@ -96,10 +93,6 @@ export default function FirstRunPage() {
   }
 
   async function handleNameSubmit() {
-    if (!computerName.trim()) {
-      toast.error("Nome do computador é obrigatório");
-      return;
-    }
     setStep("google-drive");
   }
 
@@ -117,18 +110,13 @@ export default function FirstRunPage() {
   }
 
   async function handleConfirm() {
-    if (!computerName.trim()) {
-      toast.error("Nome do computador é obrigatório");
-      return;
-    }
-
     setIsLoading(true);
     try {
       const serviceAccountJson = useOfflineMode
         ? null
         : JSON.stringify(serviceAccount);
 
-      await completeFirstRun(computerName.trim(), "api", serviceAccountJson);
+      await completeFirstRun(computerId, computerName.trim(), "api", serviceAccountJson);
     } catch (error) {
       toast.error(
         `Erro: ${error instanceof Error ? error.message : "Erro desconhecido"}`
@@ -162,6 +150,20 @@ export default function FirstRunPage() {
 
             <div className="mb-6">
               <label className="block text-sm font-semibold text-[#34485d] mb-1.5">
+                ID do computador
+              </label>
+              <input
+                value={computerId}
+                disabled
+                className="w-full h-10 rounded-lg border border-[#c5cfdb] bg-[#f0f3f8] px-3 text-sm text-[#4d6075] outline-none cursor-not-allowed font-mono"
+              />
+              <p className="text-xs text-[#8b9db2] mt-1">
+                Identificador único gerado automaticamente. Será usado para sincronizar dados entre computadores.
+              </p>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-[#34485d] mb-1.5">
                 Nome do computador
               </label>
               <input
@@ -171,8 +173,7 @@ export default function FirstRunPage() {
                 placeholder="Ex: Estúdio, Home, Sala Ensaio..."
               />
               <p className="text-xs text-[#8b9db2] mt-1">
-                Identificador único deste computador. Você pode alterá-lo depois
-                nas configurações.
+                Nome descritivo para este computador. Você pode alterá-lo depois nas configurações.
               </p>
             </div>
 
@@ -319,9 +320,16 @@ export default function FirstRunPage() {
 
             <div className="space-y-4 mb-6">
               <div className="p-4 bg-[#f8fafd] rounded-lg border border-[#c5cfdb]">
+                <p className="text-xs text-[#8b9db2] mb-1">ID do computador</p>
+                <p className="text-sm font-mono text-[#34485d]">
+                  {computerId}
+                </p>
+              </div>
+
+              <div className="p-4 bg-[#f8fafd] rounded-lg border border-[#c5cfdb]">
                 <p className="text-xs text-[#8b9db2] mb-1">Nome do computador</p>
                 <p className="text-sm font-semibold text-[#34485d]">
-                  {computerName}
+                  {computerName || "(não preenchido)"}
                 </p>
               </div>
 

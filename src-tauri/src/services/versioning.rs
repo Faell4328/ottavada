@@ -153,6 +153,7 @@ mod tests {
             file_extension: "pdf".to_string(),
             file_size: 100,
             hash: None,
+            host_computer_id: "test-computer".to_string(),
             created_at: now,
             updated_at: now,
         };
@@ -247,6 +248,7 @@ mod tests {
             file_extension: "pdf".to_string(),
             file_size: 11,
             hash: None,
+            host_computer_id: "test-computer".to_string(),
             created_at: now,
             updated_at: now,
         };

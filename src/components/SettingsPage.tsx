@@ -9,6 +9,7 @@ export default function SettingsPage() {
   const navigate = useNavigate();
   const [settings, setSettings] = useState<AppSettings>(
     state.settings ?? {
+      computer_id: "",
       computer_name: null,
       logo_path: null,
       google_drive_mode: "Local",

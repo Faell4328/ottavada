@@ -22,7 +22,8 @@ Aplicativo desktop para Windows e Linux que organiza partituras e arquivos music
 
 **Computador**
 
-- Nome: inicia com um UUID gerado aleatoriamente; o usuário pode alterá-lo posteriormente.
+- id: é um UUID gerado aleatoriamente, usado para identificar o computador (pois o nome pode mudar).
+- Nome.
 - Dados para integração com o Google Drive.
 
 **Música**
@@ -39,7 +40,7 @@ Aplicativo desktop para Windows e Linux que organiza partituras e arquivos music
 - id da música
 - nome do instrumento
 - data/hora e tamanho do arquivo
-- computador host
+- id do computador host
 - caminho do arquivo
 
 ## Funcionalidades
@@ -65,7 +66,9 @@ Aplicativo desktop para Windows e Linux que organiza partituras e arquivos music
 
 **Primeira execução**
 
-Na primeira execução, o aplicativo solicita o nome do computador e a chave da API do Google Drive (Service Account). O campo de nome vem preenchido com um UUID, que o usuário pode alterar.
+Na primeira execução, o aplicativo solicita o nome do computador e a chave da API do Google Drive (Service Account).
+
+O nome deve estar em branco para o usuário preencher e deve estar visível o UUID que o computador recebe.
 
 **Adicionar música (cabeçalho)**
 

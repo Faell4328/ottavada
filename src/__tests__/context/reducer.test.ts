@@ -187,6 +187,7 @@ describe("AppContext Reducer", () => {
   describe("SET_SETTINGS", () => {
     it("should set app settings", () => {
       const settings: AppSettings = {
+        computer_id: "550e8400-e29b-41d4-a716-446655440000",
         computer_name: "Computador Teste",
         logo_path: null,
         google_drive_mode: "Local",

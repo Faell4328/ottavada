@@ -26,6 +26,7 @@ pub struct ScoreFile {
     pub file_extension: String,
     pub file_size: u64,
     pub hash: Option<String>,
+    pub host_computer_id: String,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
 }
@@ -86,6 +87,7 @@ pub struct Category {
 /// Configurações da aplicação
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppSettings {
+    pub computer_id: String,
     pub computer_name: Option<String>,
     pub logo_path: Option<String>,
     pub google_drive_mode: GoogleDriveMode,
@@ -97,6 +99,7 @@ pub struct AppSettings {
 impl Default for AppSettings {
     fn default() -> Self {
         Self {
+            computer_id: String::new(),
             computer_name: None,
             logo_path: None,
             google_drive_mode: GoogleDriveMode::Local,

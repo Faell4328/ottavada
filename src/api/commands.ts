@@ -124,9 +124,14 @@ export async function isFirstRun(): Promise<boolean> {
 }
 
 export async function completeFirstRun(
+  computerId: string,
   computerName: string,
   googleDriveMode: string,
   googleServiceAccountJson?: string | null
 ): Promise<void> {
-  return invoke("complete_first_run", { computerName, googleDriveMode, googleServiceAccountJson });
+  return invoke("complete_first_run", { computerId, computerName, googleDriveMode, googleServiceAccountJson });
+}
+
+export async function generateComputerId(): Promise<string> {
+  return invoke("generate_computer_id");
 }

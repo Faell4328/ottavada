@@ -66,6 +66,7 @@ impl Database {
                 file_extension TEXT NOT NULL,
                 file_size INTEGER NOT NULL DEFAULT 0,
                 hash TEXT,
+                host_computer_id TEXT NOT NULL,
                 created_at TEXT NOT NULL DEFAULT (datetime('now')),
                 updated_at TEXT NOT NULL DEFAULT (datetime('now'))
             );
@@ -123,6 +124,18 @@ impl Database {
         // Try to add google_service_account column if it doesn't exist (migration for old databases)
         let _ = conn.execute(
             "ALTER TABLE app_settings ADD COLUMN google_service_account TEXT",
+            [],
+        );
+
+        // Migration: add computer_id column to app_settings
+        let _ = conn.execute(
+            "ALTER TABLE app_settings ADD COLUMN computer_id TEXT",
+            [],
+        );
+
+        // Migration: add host_computer_id column to score_files
+        let _ = conn.execute(
+            "ALTER TABLE score_files ADD COLUMN host_computer_id TEXT",
             [],
         );
 
@@ -295,8 +308,8 @@ impl Database {
     pub fn insert_score_file(&self, file: &ScoreFile) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
         conn.execute(
-            "INSERT INTO score_files (id, score_id, instrument, original_path, file_extension, file_size, hash, created_at, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+            "INSERT INTO score_files (id, score_id, instrument, original_path, file_extension, file_size, hash, host_computer_id, created_at, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
             params![
                 file.id,
                 file.score_id,
@@ -305,6 +318,7 @@ impl Database {
                 file.file_extension,
                 file.file_size as i64,
                 file.hash,
+                file.host_computer_id,
                 file.created_at.format("%Y-%m-%d %H:%M:%S").to_string(),
                 file.updated_at.format("%Y-%m-%d %H:%M:%S").to_string(),
             ],
@@ -501,6 +515,7 @@ impl Database {
 
     pub fn get_app_settings(&self) -> Result<AppSettings, AppError> {
         let settings = AppSettings {
+            computer_id: self.get_setting("computer_id")?.unwrap_or_default(),
             computer_name: self.get_setting("computer_name")?,
             logo_path: self.get_setting("logo_path")?,
             google_drive_mode: match self.get_setting("google_drive_mode")?.as_deref() {
@@ -516,6 +531,7 @@ impl Database {
     }
 
     pub fn save_app_settings(&self, settings: &AppSettings) -> Result<(), AppError> {
+        self.set_setting("computer_id", &settings.computer_id)?;
         if let Some(ref name) = settings.computer_name {
             self.set_setting("computer_name", name)?;
         }

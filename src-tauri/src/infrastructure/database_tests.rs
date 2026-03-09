@@ -35,6 +35,7 @@ mod tests {
             file_extension: "pdf".to_string(),
             file_size: 1024,
             hash: None,
+            host_computer_id: "test-computer".to_string(),
             created_at: now(),
             updated_at: now(),
         }

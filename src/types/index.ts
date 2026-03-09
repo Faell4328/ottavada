@@ -39,6 +39,7 @@ export interface Category {
 }
 
 export interface AppSettings {
+  computer_id: string;
   computer_name: string | null;
   logo_path: string | null;
   google_drive_mode: "Local" | "Api";

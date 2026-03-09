@@ -126,6 +126,7 @@ interface AppContextValue {
   deleteCategory: (categoryId: string) => Promise<void>;
   saveSettings: (settings: AppSettings) => Promise<void>;
   completeFirstRun: (
+    computerId: string,
     computerName: string,
     googleDriveMode: string,
     googleServiceAccountJson?: string | null
@@ -332,9 +333,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 
   const handleCompleteFirstRun = useCallback(
-    async (computerName: string, googleDriveMode: string, googleServiceAccountJson?: string | null) => {
+    async (computerId: string, computerName: string, googleDriveMode: string, googleServiceAccountJson?: string | null) => {
       try {
-        await api.completeFirstRun(computerName, googleDriveMode, googleServiceAccountJson);
+        await api.completeFirstRun(computerId, computerName, googleDriveMode, googleServiceAccountJson);
         dispatch({ type: "SET_FIRST_RUN", payload: false });
         await Promise.all([loadScores(), loadCategories(), loadSettings()]);
         toast.success("Configuração inicial concluída!");
