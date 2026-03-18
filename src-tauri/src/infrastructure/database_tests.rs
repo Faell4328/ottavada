@@ -12,73 +12,52 @@ mod tests {
         Local::now().naive_local()
     }
 
-    fn make_score(id: &str, title: &str) -> Score {
-        Score {
+    fn make_song(id: &str, name: &str) -> Song {
+        Song {
             id: id.to_string(),
-            title: title.to_string(),
+            name: name.to_string(),
             composer: Some("Bach".to_string()),
             arranger: None,
-            category_id: None,
-            tags: vec!["classical".to_string()],
-            favorited: false,
-            created_at: now(),
+            is_favorite: false,
             updated_at: now(),
         }
     }
 
-    fn make_score_file(id: &str, score_id: &str, instrument: Option<&str>) -> ScoreFile {
-        ScoreFile {
+    fn make_score(id: &str, song_id: &str, name: Option<&str>) -> Score {
+        Score {
             id: id.to_string(),
-            score_id: score_id.to_string(),
-            instrument: instrument.map(|s| s.to_string()),
-            original_path: "/tmp/test.pdf".to_string(),
-            file_extension: "pdf".to_string(),
-            file_size: 1024,
-            hash: None,
-            host_computer_id: "test-computer".to_string(),
-            created_at: now(),
+            song_id: song_id.to_string(),
+            name: name.map(|s| s.to_string()),
+            host_id: "test-computer".to_string(),
+            file_path: "/tmp/test.pdf".to_string(),
             updated_at: now(),
+            status: ScoreStatus::Main,
         }
     }
 
-    fn make_version(id: &str, file_id: &str, num: i32, status: VersionStatus) -> FileVersion {
-        FileVersion {
-            id: id.to_string(),
-            score_file_id: file_id.to_string(),
-            version_number: num,
-            label: Some(format!("V{}", num)),
-            status,
-            file_path: format!("/tmp/versions/{}.pdf", id),
-            file_size: 2048,
-            hash: None,
-            is_compressed: false,
-            created_at: now(),
-        }
-    }
-
-    // ── Score CRUD ──
+    // ── Song CRUD ──
 
     #[test]
-    fn test_insert_and_get_all_scores() {
+    fn test_insert_and_get_all_songs() {
         let db = make_db();
-        db.insert_score(&make_score("s1", "Canon in D")).unwrap();
-        db.insert_score(&make_score("s2", "Moonlight Sonata")).unwrap();
+        db.insert_song(&make_song("s1", "Canon in D"), &[]).unwrap();
+        db.insert_song(&make_song("s2", "Moonlight Sonata"), &[]).unwrap();
 
-        let scores = db.get_all_scores().unwrap();
-        assert_eq!(scores.len(), 2);
+        let songs = db.get_all_songs().unwrap();
+        assert_eq!(songs.len(), 2);
     }
 
     #[test]
-    fn test_get_all_scores_empty() {
+    fn test_get_all_songs_empty() {
         let db = make_db();
-        let scores = db.get_all_scores().unwrap();
-        assert!(scores.is_empty());
+        let songs = db.get_all_songs().unwrap();
+        assert!(songs.is_empty());
     }
 
     #[test]
     fn test_toggle_favorite() {
         let db = make_db();
-        db.insert_score(&make_score("s1", "Canon")).unwrap();
+        db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
 
         let fav = db.toggle_favorite("s1").unwrap();
         assert!(fav);
@@ -88,13 +67,13 @@ mod tests {
     }
 
     #[test]
-    fn test_get_favorited_scores() {
+    fn test_get_favorited_songs() {
         let db = make_db();
-        db.insert_score(&make_score("s1", "Canon")).unwrap();
-        db.insert_score(&make_score("s2", "Moonlight")).unwrap();
+        db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
+        db.insert_song(&make_song("s2", "Moonlight"), &[]).unwrap();
         db.toggle_favorite("s1").unwrap();
 
-        let favs = db.get_favorited_scores().unwrap();
+        let favs = db.get_favorited_songs().unwrap();
         assert_eq!(favs.len(), 1);
         assert_eq!(favs[0].id, "s1");
     }
@@ -102,131 +81,81 @@ mod tests {
     // ── FTS5 Search ──
 
     #[test]
-    fn test_search_scores_fts5() {
+    fn test_search_songs_fts5() {
         let db = make_db();
-        db.insert_score(&make_score("s1", "Canon in D")).unwrap();
-        db.insert_score(&make_score("s2", "Moonlight Sonata")).unwrap();
+        db.insert_song(&make_song("s1", "Canon in D"), &[]).unwrap();
+        db.insert_song(&make_song("s2", "Moonlight Sonata"), &[]).unwrap();
 
-        let results = db.search_scores("Canon").unwrap();
+        let results = db.search_songs("Canon").unwrap();
         assert_eq!(results.len(), 1);
-        assert_eq!(results[0].title, "Canon in D");
+        assert_eq!(results[0].name, "Canon in D");
     }
 
     #[test]
-    fn test_search_scores_prefix() {
+    fn test_search_songs_prefix() {
         let db = make_db();
-        db.insert_score(&make_score("s1", "Canon in D")).unwrap();
+        db.insert_song(&make_song("s1", "Canon in D"), &[]).unwrap();
 
-        let results = db.search_scores("Can").unwrap();
+        let results = db.search_songs("Can").unwrap();
         assert_eq!(results.len(), 1);
     }
 
     #[test]
-    fn test_search_scores_no_results() {
+    fn test_search_songs_no_results() {
         let db = make_db();
-        db.insert_score(&make_score("s1", "Canon in D")).unwrap();
+        db.insert_song(&make_song("s1", "Canon in D"), &[]).unwrap();
 
-        let results = db.search_scores("Beethoven").unwrap();
+        let results = db.search_songs("Beethoven").unwrap();
         assert!(results.is_empty());
     }
 
     #[test]
     fn test_search_by_composer() {
         let db = make_db();
-        db.insert_score(&make_score("s1", "Canon in D")).unwrap();
+        db.insert_song(&make_song("s1", "Canon in D"), &[]).unwrap();
 
-        // Composer is "Bach" in make_score
-        let results = db.search_scores("Bach").unwrap();
+        let results = db.search_songs("Bach").unwrap();
         assert_eq!(results.len(), 1);
     }
 
-    // ── Score Files ──
+    // ── Scores ──
 
     #[test]
-    fn test_insert_score_file_and_list() {
+    fn test_insert_score_and_list() {
         let db = make_db();
-        db.insert_score(&make_score("s1", "Canon")).unwrap();
-        db.insert_score_file(&make_score_file("f1", "s1", Some("Violino 1"))).unwrap();
-        db.insert_score_file(&make_score_file("f2", "s1", Some("Piano"))).unwrap();
+        db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
+        db.insert_score(&make_score("sc1", "s1", Some("Violino 1"))).unwrap();
+        db.insert_score(&make_score("sc2", "s1", Some("Piano"))).unwrap();
 
-        let scores = db.get_all_scores().unwrap();
-        assert_eq!(scores.len(), 1);
-        assert_eq!(scores[0].instruments.len(), 2);
-    }
-
-    // ── Versions ──
-
-    #[test]
-    fn test_insert_and_get_versions() {
-        let db = make_db();
-        db.insert_score(&make_score("s1", "Canon")).unwrap();
-        db.insert_score_file(&make_score_file("f1", "s1", Some("Violino"))).unwrap();
-
-        let v1 = make_version("v1", "f1", 1, VersionStatus::Current);
-        db.insert_version(&v1).unwrap();
-
-        let versions = db.get_versions_for_file("f1").unwrap();
-        assert_eq!(versions.len(), 1);
-        assert_eq!(versions[0].version_number, 1);
-        assert_eq!(versions[0].status, VersionStatus::Current);
+        let songs = db.get_all_songs().unwrap();
+        assert_eq!(songs.len(), 1);
+        assert_eq!(songs[0].scores.len(), 2);
     }
 
     #[test]
-    fn test_promote_draft() {
+    fn test_score_status() {
         let db = make_db();
-        db.insert_score(&make_score("s1", "Canon")).unwrap();
-        db.insert_score_file(&make_score_file("f1", "s1", Some("Violino"))).unwrap();
+        db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
 
-        // Insert v1 as current
-        let v1 = make_version("v1", "f1", 1, VersionStatus::Current);
-        db.insert_version(&v1).unwrap();
+        let mut score = make_score("sc1", "s1", Some("Violino"));
+        score.status = ScoreStatus::Draft;
+        db.insert_score(&score).unwrap();
 
-        // Insert draft
-        let draft = make_version("d1", "f1", 0, VersionStatus::Draft);
-        db.insert_version(&draft).unwrap();
-
-        // Promote draft
-        db.promote_draft_to_version("d1").unwrap();
-
-        let versions = db.get_versions_for_file("f1").unwrap();
-        assert_eq!(versions.len(), 2);
-
-        let current = versions.iter().find(|v| v.status == VersionStatus::Current).unwrap();
-        assert_eq!(current.id, "d1");
-        assert_eq!(current.version_number, 2);
-
-        let previous = versions.iter().find(|v| v.status == VersionStatus::Previous).unwrap();
-        assert_eq!(previous.id, "v1");
+        let songs = db.get_all_songs().unwrap();
+        assert_eq!(songs[0].scores[0].status, ScoreStatus::Draft);
     }
 
     #[test]
-    fn test_delete_version_non_current() {
+    fn test_score_file_extension_derived() {
         let db = make_db();
-        db.insert_score(&make_score("s1", "Canon")).unwrap();
-        db.insert_score_file(&make_score_file("f1", "s1", None)).unwrap();
+        db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
 
-        let v1 = make_version("v1", "f1", 1, VersionStatus::Current);
-        let v_old = make_version("v0", "f1", 0, VersionStatus::Previous);
-        db.insert_version(&v1).unwrap();
-        db.insert_version(&v_old).unwrap();
+        let mut score = make_score("sc1", "s1", Some("Violino"));
+        score.file_path = "/tmp/Canon - Violino.musx".to_string();
+        db.insert_score(&score).unwrap();
 
-        db.delete_version("v0").unwrap();
-        let versions = db.get_versions_for_file("f1").unwrap();
-        assert_eq!(versions.len(), 1);
-        assert_eq!(versions[0].id, "v1");
-    }
-
-    #[test]
-    fn test_delete_current_version_fails() {
-        let db = make_db();
-        db.insert_score(&make_score("s1", "Canon")).unwrap();
-        db.insert_score_file(&make_score_file("f1", "s1", None)).unwrap();
-
-        let v1 = make_version("v1", "f1", 1, VersionStatus::Current);
-        db.insert_version(&v1).unwrap();
-
-        let result = db.delete_version("v1");
-        assert!(result.is_err());
+        let songs = db.get_all_songs().unwrap();
+        assert_eq!(songs[0].scores[0].file_extension, "musx");
     }
 
     // ── Categories ──
@@ -237,7 +166,6 @@ mod tests {
         let cat = Category {
             id: "c1".to_string(),
             name: "Harpa Cristã".to_string(),
-            created_at: now(),
         };
         db.insert_category(&cat).unwrap();
 
@@ -251,27 +179,79 @@ mod tests {
     }
 
     #[test]
-    fn test_scores_by_category() {
+    fn test_songs_by_category() {
         let db = make_db();
 
         let cat = Category {
             id: "c1".to_string(),
             name: "Hinos".to_string(),
-            created_at: now(),
         };
         db.insert_category(&cat).unwrap();
 
-        let mut s1 = make_score("s1", "Canon");
-        s1.category_id = Some("c1".to_string());
-        db.insert_score(&s1).unwrap();
+        db.insert_song(&make_song("s1", "Canon"), &["c1".to_string()]).unwrap();
+        db.insert_song(&make_song("s2", "Moonlight"), &[]).unwrap();
 
-        let mut s2 = make_score("s2", "Moonlight");
-        s2.category_id = None;
-        db.insert_score(&s2).unwrap();
+        let songs = db.get_songs_by_category("c1").unwrap();
+        assert_eq!(songs.len(), 1);
+        assert_eq!(songs[0].name, "Canon");
+    }
 
-        let scores = db.get_scores_by_category("c1").unwrap();
-        assert_eq!(scores.len(), 1);
-        assert_eq!(scores[0].title, "Canon");
+    #[test]
+    fn test_song_multiple_categories() {
+        let db = make_db();
+
+        let cat1 = Category { id: "c1".to_string(), name: "Hinos".to_string() };
+        let cat2 = Category { id: "c2".to_string(), name: "Clássicas".to_string() };
+        db.insert_category(&cat1).unwrap();
+        db.insert_category(&cat2).unwrap();
+
+        db.insert_song(&make_song("s1", "Canon"), &["c1".to_string(), "c2".to_string()]).unwrap();
+
+        let songs = db.get_all_songs().unwrap();
+        assert_eq!(songs[0].category_ids.len(), 2);
+
+        let by_c1 = db.get_songs_by_category("c1").unwrap();
+        assert_eq!(by_c1.len(), 1);
+
+        let by_c2 = db.get_songs_by_category("c2").unwrap();
+        assert_eq!(by_c2.len(), 1);
+    }
+
+    #[test]
+    fn test_category_delete_removes_relationship() {
+        let db = make_db();
+
+        let cat = Category { id: "c1".to_string(), name: "Hinos".to_string() };
+        db.insert_category(&cat).unwrap();
+
+        db.insert_song(&make_song("s1", "Canon"), &["c1".to_string()]).unwrap();
+        db.delete_category("c1").unwrap();
+
+        // Song should still exist but without category
+        let songs = db.get_all_songs().unwrap();
+        assert_eq!(songs.len(), 1);
+        assert!(songs[0].category_ids.is_empty());
+    }
+
+    // ── Songs with Drafts ──
+
+    #[test]
+    fn test_get_songs_with_drafts() {
+        let db = make_db();
+        db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
+        db.insert_song(&make_song("s2", "Moonlight"), &[]).unwrap();
+
+        // s1 has a draft score
+        let mut draft_score = make_score("sc1", "s1", Some("Violino"));
+        draft_score.status = ScoreStatus::Draft;
+        db.insert_score(&draft_score).unwrap();
+
+        // s2 has only a main score
+        db.insert_score(&make_score("sc2", "s2", Some("Piano"))).unwrap();
+
+        let drafts = db.get_songs_with_drafts().unwrap();
+        assert_eq!(drafts.len(), 1);
+        assert_eq!(drafts[0].name, "Canon");
     }
 
     // ── Settings ──
@@ -280,7 +260,6 @@ mod tests {
     fn test_settings_default() {
         let db = make_db();
         let settings = db.get_app_settings().unwrap();
-        assert!(!settings.hash_enabled);
         assert!(!settings.first_run_completed);
         assert_eq!(settings.google_drive_mode, GoogleDriveMode::Local);
         assert!(settings.computer_name.is_none());
@@ -292,9 +271,7 @@ mod tests {
         let settings = AppSettings {
             computer_id: "test-computer-id".to_string(),
             computer_name: Some("Computador Teste".to_string()),
-            logo_path: None,
             google_drive_mode: GoogleDriveMode::Api,
-            hash_enabled: true,
             first_run_completed: true,
             google_service_account: None,
         };
@@ -303,7 +280,6 @@ mod tests {
         let loaded = db.get_app_settings().unwrap();
         assert_eq!(loaded.computer_name, Some("Computador Teste".to_string()));
         assert_eq!(loaded.google_drive_mode, GoogleDriveMode::Api);
-        assert!(loaded.hash_enabled);
         assert!(loaded.first_run_completed);
     }
 
@@ -318,49 +294,77 @@ mod tests {
         assert!(missing.is_none());
     }
 
-    // ── Scores with Drafts ──
+    // ── Update Song ──
 
     #[test]
-    fn test_get_scores_with_drafts() {
+    fn test_update_song() {
         let db = make_db();
-        db.insert_score(&make_score("s1", "Canon")).unwrap();
-        db.insert_score(&make_score("s2", "Moonlight")).unwrap();
-        db.insert_score_file(&make_score_file("f1", "s1", Some("Violino"))).unwrap();
-        db.insert_score_file(&make_score_file("f2", "s2", Some("Piano"))).unwrap();
+        db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
 
-        // s1 has a draft
-        db.insert_version(&make_version("v1", "f1", 1, VersionStatus::Current)).unwrap();
-        db.insert_version(&make_version("d1", "f1", 0, VersionStatus::Draft)).unwrap();
+        let mut updated = make_song("s1", "Canon in D Major");
+        updated.composer = Some("Pachelbel".to_string());
+        db.update_song(&updated, &[]).unwrap();
 
-        // s2 has only a current version
-        db.insert_version(&make_version("v2", "f2", 1, VersionStatus::Current)).unwrap();
-
-        let drafts = db.get_scores_with_drafts().unwrap();
-        assert_eq!(drafts.len(), 1);
-        assert_eq!(drafts[0].title, "Canon");
+        let song = db.get_song_by_id("s1").unwrap();
+        assert_eq!(song.name, "Canon in D Major");
+        assert_eq!(song.composer, Some("Pachelbel".to_string()));
     }
 
-    // ── Cascade delete ──
+    #[test]
+    fn test_update_song_categories() {
+        let db = make_db();
+        let cat1 = Category { id: "c1".to_string(), name: "Hinos".to_string() };
+        let cat2 = Category { id: "c2".to_string(), name: "Clássicas".to_string() };
+        db.insert_category(&cat1).unwrap();
+        db.insert_category(&cat2).unwrap();
+
+        db.insert_song(&make_song("s1", "Canon"), &["c1".to_string()]).unwrap();
+
+        let songs = db.get_all_songs().unwrap();
+        assert_eq!(songs[0].category_ids.len(), 1);
+
+        // Update to have both categories
+        let song = make_song("s1", "Canon");
+        db.update_song(&song, &["c1".to_string(), "c2".to_string()]).unwrap();
+
+        let songs = db.get_all_songs().unwrap();
+        assert_eq!(songs[0].category_ids.len(), 2);
+    }
+
+    // ── Update Score ──
 
     #[test]
-    fn test_category_delete_sets_null() {
+    fn test_update_score() {
         let db = make_db();
+        db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
+        db.insert_score(&make_score("sc1", "s1", Some("Violino"))).unwrap();
 
-        let cat = Category {
-            id: "c1".to_string(),
-            name: "Hinos".to_string(),
-            created_at: now(),
-        };
-        db.insert_category(&cat).unwrap();
+        db.update_score("sc1", Some("Violino 1".to_string()), "/new/path.musx", now()).unwrap();
 
-        let mut score = make_score("s1", "Canon");
-        score.category_id = Some("c1".to_string());
+        let songs = db.get_all_songs().unwrap();
+        assert_eq!(songs[0].scores[0].name, Some("Violino 1".to_string()));
+        assert_eq!(songs[0].scores[0].file_path, "/new/path.musx");
+    }
+
+    // ── Get Score File Path ──
+
+    #[test]
+    fn test_get_score_file_path() {
+        let db = make_db();
+        db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
+
+        let mut score = make_score("sc1", "s1", Some("Violino"));
+        score.file_path = "/music/Canon - Violino.musx".to_string();
         db.insert_score(&score).unwrap();
 
-        db.delete_category("c1").unwrap();
+        let path = db.get_score_file_path("sc1").unwrap();
+        assert_eq!(path, "/music/Canon - Violino.musx");
+    }
 
-        // Score should still exist but with category_id = NULL
-        let scores = db.get_all_scores().unwrap();
-        assert_eq!(scores.len(), 1);
+    #[test]
+    fn test_get_score_file_path_not_found() {
+        let db = make_db();
+        let result = db.get_score_file_path("nonexistent");
+        assert!(result.is_err());
     }
 }

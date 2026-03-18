@@ -18,28 +18,6 @@ vi.mock("react-router", () => ({
   useNavigate: () => vi.fn(),
 }));
 
-// Mock react-virtual to avoid virtualization issues in tests
-vi.mock("@tanstack/react-virtual", async () => {
-  const actual = await vi.importActual("@tanstack/react-virtual");
-  return {
-    ...(actual as any),
-    useVirtualizer: vi.fn((options: any) => {
-      const count = options.count || 0;
-      const items = Array.from({ length: count }, (_, i) => ({
-        key: `item-${i}`,
-        index: i,
-        start: i * (options.estimateSize?.() || 35),
-        size: options.estimateSize?.() || 35,
-      }));
-      
-      return {
-        getVirtualItems: () => items,
-        getTotalSize: () => count * (options.estimateSize?.() || 35),
-      };
-    }),
-  };
-});
-
 const mockApi = vi.hoisted(() => ({
   scanDirectory: vi.fn(),
   importIndexedFiles: vi.fn(),
@@ -64,7 +42,7 @@ const baseState: AppState = {
 
 const mockAppState: {
   state: AppState;
-  loadScores: ReturnType<typeof vi.fn>;
+  loadSongs: ReturnType<typeof vi.fn>;
   loadCategories: ReturnType<typeof vi.fn>;
   loadSettings: ReturnType<typeof vi.fn>;
   setSidebarView: ReturnType<typeof vi.fn>;
@@ -79,9 +57,11 @@ const mockAppState: {
   deleteCategory: ReturnType<typeof vi.fn>;
   saveSettings: ReturnType<typeof vi.fn>;
   completeFirstRun: ReturnType<typeof vi.fn>;
+  updateScore: ReturnType<typeof vi.fn>;
+  updateScoreFile: ReturnType<typeof vi.fn>;
 } = {
   state: { ...baseState },
-  loadScores: vi.fn(),
+  loadSongs: vi.fn(),
   loadCategories: vi.fn(),
   loadSettings: vi.fn(),
   setSidebarView: vi.fn(),
@@ -96,6 +76,8 @@ const mockAppState: {
   deleteCategory: vi.fn(),
   saveSettings: vi.fn(),
   completeFirstRun: vi.fn(),
+  updateScore: vi.fn(),
+  updateScoreFile: vi.fn(),
 };
 
 vi.mock("../../context/AppContext", () => ({
@@ -105,13 +87,12 @@ vi.mock("../../context/AppContext", () => ({
 
 // ── Import components after mocks ──
 
-import ScoreList from "../../components/ScoreList";
+import SongsList from "../../components/SongsList";
 import Sidebar from "../../components/Sidebar";
-import VersionPanel from "../../components/VersionPanel";
 import StatusBar from "../../components/StatusBar";
 import TopBar from "../../components/TopBar";
 
-describe("ScoreList", () => {
+describe("SongsList", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockAppState.state = {
@@ -120,14 +101,14 @@ describe("ScoreList", () => {
   });
 
   it("should render empty state", () => {
-    render(<ScoreList />);
+    render(<SongsList />);
     expect(
       screen.getByText("Nenhuma partitura encontrada")
     ).toBeInTheDocument();
   });
 
   it("should show score count", () => {
-    render(<ScoreList />);
+    render(<SongsList />);
     expect(screen.getByText("0 partituras")).toBeInTheDocument();
   });
 
@@ -140,6 +121,7 @@ describe("ScoreList", () => {
         arranger: null,
         updated_at: "2024-01-01 12:00:00",
         favorited: false,
+        category_ids: [],
         instruments: [],
       },
       {
@@ -149,29 +131,30 @@ describe("ScoreList", () => {
         arranger: null,
         updated_at: "2024-01-02 12:00:00",
         favorited: true,
+        category_ids: [],
         instruments: [],
       },
     ];
-    render(<ScoreList />);
+    render(<SongsList />);
     expect(screen.getByText("Canon in D")).toBeInTheDocument();
     expect(screen.getByText("Moonlight Sonata")).toBeInTheDocument();
     expect(screen.getByText("2 partituras")).toBeInTheDocument();
   });
 
   it("should show correct label for All view", () => {
-    render(<ScoreList />);
+    render(<SongsList />);
     expect(screen.getByText("Todas as Partituras")).toBeInTheDocument();
   });
 
   it("should show correct label for Favorites view", () => {
     mockAppState.state.sidebarView = "favorites";
-    render(<ScoreList />);
+    render(<SongsList />);
     expect(screen.getByText("Favoritos")).toBeInTheDocument();
   });
 
   it("should show correct label for Drafts view", () => {
     mockAppState.state.sidebarView = "drafts";
-    render(<ScoreList />);
+    render(<SongsList />);
     expect(screen.getByText("Rascunhos Ativos")).toBeInTheDocument();
   });
 
@@ -181,12 +164,12 @@ describe("ScoreList", () => {
       id: "c1",
       name: "Harpa Cristã",
     };
-    render(<ScoreList />);
+    render(<SongsList />);
     expect(screen.getByText("Harpa Cristã")).toBeInTheDocument();
   });
 
   it("should have search input", () => {
-    render(<ScoreList />);
+    render(<SongsList />);
     const input = screen.getByPlaceholderText("Buscar partituras...");
     expect(input).toBeInTheDocument();
   });
@@ -199,11 +182,10 @@ describe("ScoreList", () => {
         composer: null,
         arranger: null,
         updated_at: "2024-01-01 12:00:00",
-        favorited: false,
-        instruments: [],
+        favorited: false,        category_ids: [],        instruments: [],
       },
     ];
-    render(<ScoreList />);
+    render(<SongsList />);
     expect(screen.getByText("1 partitura")).toBeInTheDocument();
   });
 });
@@ -272,7 +254,7 @@ describe("TopBar", () => {
     vi.clearAllMocks();
     mockApi.scanDirectory.mockResolvedValue([]);
     mockApi.importIndexedFiles.mockResolvedValue([]);
-    mockAppState.loadScores.mockResolvedValue(undefined);
+    mockAppState.loadSongs.mockResolvedValue(undefined);
   });
 
   it("should import selected files via add file", async () => {
@@ -300,9 +282,11 @@ describe("TopBar", () => {
           extension: "pdf",
           size: 123,
         },
-      ]);
+      ], []);
     });
-    expect(mockAppState.loadScores).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(mockAppState.loadSongs).toHaveBeenCalled();
+    });
   });
 
   it("should scan and import directory", async () => {
@@ -330,160 +314,8 @@ describe("TopBar", () => {
           extension: "musx",
           size: 321,
         },
-      ]);
+      ], []);
     });
-  });
-});
-
-describe("VersionPanel", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockAppState.state = {
-      ...baseState,
-    };
-  });
-
-  it("should show empty state when no file selected", () => {
-    render(<VersionPanel />);
-    expect(
-      screen.getByText(
-        "Selecione um instrumento para ver o histórico de versões"
-      )
-    ).toBeInTheDocument();
-  });
-
-  it("should show version history when file selected", () => {
-    mockAppState.state.selectedScore = {
-      id: "s1",
-      title: "Canon",
-      composer: null,
-      arranger: null,
-      updated_at: "2024-01-01 12:00:00",
-      favorited: false,
-      instruments: [],
-    };
-    mockAppState.state.selectedFile = {
-      id: "f1",
-      instrument: "Violino",
-      file_extension: "pdf",
-      original_path: "/path/to/file.pdf",
-      updated_at: "2024-01-01 12:00:00",
-      has_draft: false,
-      version_count: 1,
-    };
-    mockAppState.state.versions = [
-      {
-        id: "v1",
-        score_file_id: "f1",
-        version_number: 1,
-        label: "Versão Inicial",
-        status: "Current",
-        file_path: "/path",
-        file_size: 1024,
-        hash: null,
-        is_compressed: false,
-        created_at: "2024-01-01 12:00:00",
-      },
-    ];
-
-    render(<VersionPanel />);
-    expect(screen.getByText("Histórico de Versões:")).toBeInTheDocument();
-    expect(screen.getByText("Versão Inicial")).toBeInTheDocument();
-  });
-
-  it("should show instrument name", () => {
-    mockAppState.state.selectedScore = {
-      id: "s1",
-      title: "Canon",
-      composer: null,
-      arranger: null,
-      updated_at: "2024-01-01 12:00:00",
-      favorited: false,
-      instruments: [],
-    };
-    mockAppState.state.selectedFile = {
-      id: "f1",
-      instrument: "Piano",
-      file_extension: "pdf",
-      original_path: "/path/to/file.pdf",
-      updated_at: "2024-01-01 12:00:00",
-      has_draft: false,
-      version_count: 1,
-    };
-    render(<VersionPanel />);
-    expect(screen.getByText(/Piano/)).toBeInTheDocument();
-  });
-
-  it("should show promote button when drafts exist", () => {
-    mockAppState.state.selectedScore = {
-      id: "s1",
-      title: "Canon",
-      composer: null,
-      arranger: null,
-      updated_at: "2024-01-01 12:00:00",
-      favorited: false,
-      instruments: [],
-    };
-    mockAppState.state.selectedFile = {
-      id: "f1",
-      instrument: "Violino",
-      file_extension: "pdf",
-      original_path: "/path/to/file.pdf",
-      updated_at: "2024-01-01 12:00:00",
-      has_draft: true,
-      version_count: 2,
-    };
-    mockAppState.state.versions = [
-      {
-        id: "v1",
-        score_file_id: "f1",
-        version_number: 1,
-        label: "V1",
-        status: "Current",
-        file_path: "/p",
-        file_size: 1024,
-        hash: null,
-        is_compressed: false,
-        created_at: "2024-01-01 12:00:00",
-      },
-      {
-        id: "d1",
-        score_file_id: "f1",
-        version_number: 0,
-        label: "Rascunho",
-        status: "Draft",
-        file_path: "/p2",
-        file_size: 2048,
-        hash: null,
-        is_compressed: false,
-        created_at: "2024-01-02 12:00:00",
-      },
-    ];
-    render(<VersionPanel />);
-    expect(screen.getByText("Definir Nova Versão")).toBeInTheDocument();
-  });
-
-  it("should show no versions message", () => {
-    mockAppState.state.selectedScore = {
-      id: "s1",
-      title: "Canon",
-      composer: null,
-      arranger: null,
-      updated_at: "2024-01-01 12:00:00",
-      favorited: false,
-      instruments: [],
-    };
-    mockAppState.state.selectedFile = {
-      id: "f1",
-      instrument: "Violino",
-      file_extension: "pdf",
-      original_path: "/path/to/file.pdf",
-      updated_at: "2024-01-01 12:00:00",
-      has_draft: false,
-      version_count: 0,
-    };
-    render(<VersionPanel />);
-    expect(screen.getByText("Nenhuma versão registrada")).toBeInTheDocument();
   });
 });
 

@@ -4,7 +4,9 @@ import { useNavigate } from "react-router";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useAppState } from "../context/AppContext";
 import * as api from "../api/commands";
+import toast from "react-hot-toast";
 import type { IndexedFile } from "../types";
+import { getDirectoryPath } from "../utils/paths";
 
 interface TopBarProps {
   title?: string;
@@ -13,29 +15,42 @@ interface TopBarProps {
 export default function TopBar({
   title = "Score Maestro",
 }: TopBarProps) {
-  const { loadScores } = useAppState();
+  const { loadSongs, loadCategories } = useAppState();
   const navigate = useNavigate();
   const [showAddMusicModal, setShowAddMusicModal] = useState(false);
   const [musicTitle, setMusicTitle] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Forçar reload quando scores muda - isso garante que a UI atualiza
+  const handleScoresChange = async () => {
+    // Pequeno delay para garantir que backend processou tudo
+    await new Promise(resolve => setTimeout(resolve, 100));
+    await Promise.all([
+      loadSongs(),
+      loadCategories()
+    ]);
+  };
+
   async function importFiles(files: IndexedFile[]) {
     if (files.length === 0) {
+      toast.error("Nenhuma partitura encontrada no diretório selecionado");
       return;
     }
 
-    await api.importIndexedFiles(files);
-    await loadScores();
-  }
-
-  function getDirectoryPath(path: string) {
-    const normalized = path.replace(/\\/g, "/");
-    const lastSlash = normalized.lastIndexOf("/");
-    if (lastSlash <= 0) {
-      return ".";
+    try {
+      await api.importIndexedFiles(files, []);
+      await handleScoresChange();
+      toast.success(`${files.length} arquivo(s) processado(s) com sucesso`);
+    } catch (err) {
+      console.error("Failed to import files:", err);
+      const errorMsg =
+        typeof err === "string" ? err
+        : err instanceof Error ? err.message
+        : "Erro ao importar arquivos";
+      toast.error(errorMsg);
+      await handleScoresChange();
     }
-    return normalized.slice(0, lastSlash);
   }
 
   async function handleAddFile() {
@@ -102,10 +117,11 @@ export default function TopBar({
     setError(null);
 
     try {
-      await api.createScore(musicTitle.trim());
-      await loadScores();
+      await api.createSong(musicTitle.trim());
+      await loadSongs();
       setShowAddMusicModal(false);
       setMusicTitle("");
+      toast.success("Música criada com sucesso!");
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Erro ao criar música";
       setError(errorMessage);
@@ -176,7 +192,7 @@ export default function TopBar({
                 placeholder="Nome da música"
                 value={musicTitle}
                 onChange={(e) => setMusicTitle(e.target.value)}
-                onKeyPress={(e) => {
+                onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     handleCreateMusic();
                   }

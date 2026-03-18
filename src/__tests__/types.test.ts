@@ -1,8 +1,7 @@
 import { describe, it, expect } from "vitest";
 import type {
+  SongListItem,
   ScoreListItem,
-  ScoreFileItem,
-  FileVersion,
   Category,
   AppSettings,
   IndexedFile,
@@ -10,21 +9,22 @@ import type {
 } from "../types";
 
 describe("TypeScript Types", () => {
-  describe("ScoreListItem", () => {
+  describe("SongListItem", () => {
     it("should have required fields", () => {
-      const score: ScoreListItem = {
+      const score: SongListItem = {
         id: "s1",
-        title: "Canon in D",
+        name: "Canon in D",
         composer: "Pachelbel",
         arranger: null,
         updated_at: "2024-01-01 12:00:00",
-        favorited: false,
-        instruments: [],
+        is_favorite: false,
+        category_ids: [],
+        scores: [],
       };
       expect(score.id).toBe("s1");
-      expect(score.title).toBe("Canon in D");
-      expect(score.favorited).toBe(false);
-      expect(score.instruments).toEqual([]);
+      expect(score.name).toBe("Canon in D");
+      expect(score.is_favorite).toBe(false);
+      expect(score.scores).toEqual([]);
     });
   });
 

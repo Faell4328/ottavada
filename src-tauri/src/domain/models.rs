@@ -1,79 +1,55 @@
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 
-/// Representa uma partitura (música) no sistema.
-/// Uma partitura pode ter múltiplos instrumentos (ScoreFile).
+/// Representa uma música no sistema.
+/// Uma música pode ter múltiplas partituras (Score), cada uma para um instrumento.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Score {
+pub struct Song {
     pub id: String,
-    pub title: String,
+    pub name: String,
     pub composer: Option<String>,
     pub arranger: Option<String>,
-    pub category_id: Option<String>,
-    pub tags: Vec<String>,
-    pub favorited: bool,
-    pub created_at: NaiveDateTime,
+    pub is_favorite: bool,
     pub updated_at: NaiveDateTime,
 }
 
-/// Representa um arquivo de partitura (um instrumento específico de uma música).
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ScoreFile {
-    pub id: String,
-    pub score_id: String,
-    pub instrument: Option<String>,
-    pub original_path: String,
-    pub file_extension: String,
-    pub file_size: u64,
-    pub hash: Option<String>,
-    pub host_computer_id: String,
-    pub created_at: NaiveDateTime,
-    pub updated_at: NaiveDateTime,
-}
-
-/// Status de uma versão
+/// Status de uma partitura
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub enum VersionStatus {
-    Current,
-    Previous,
+pub enum ScoreStatus {
+    Main,
+    Pending,
     Draft,
-    Compressed,
 }
 
-impl VersionStatus {
+impl ScoreStatus {
     pub fn as_str(&self) -> &str {
         match self {
-            VersionStatus::Current => "current",
-            VersionStatus::Previous => "previous",
-            VersionStatus::Draft => "draft",
-            VersionStatus::Compressed => "compressed",
+            ScoreStatus::Main => "main",
+            ScoreStatus::Pending => "pending",
+            ScoreStatus::Draft => "draft",
         }
     }
 
     pub fn from_str(s: &str) -> Self {
         match s {
-            "current" => VersionStatus::Current,
-            "previous" => VersionStatus::Previous,
-            "draft" => VersionStatus::Draft,
-            "compressed" => VersionStatus::Compressed,
-            _ => VersionStatus::Previous,
+            "main" => ScoreStatus::Main,
+            "pending" => ScoreStatus::Pending,
+            "draft" => ScoreStatus::Draft,
+            _ => ScoreStatus::Main,
         }
     }
 }
 
-/// Representa uma versão de um arquivo de partitura.
+/// Representa uma partitura (instrumento específico de uma música).
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FileVersion {
+pub struct Score {
     pub id: String,
-    pub score_file_id: String,
-    pub version_number: i32,
-    pub label: Option<String>,
-    pub status: VersionStatus,
+    pub song_id: String,
+    pub name: Option<String>,
+    pub host_id: String,
     pub file_path: String,
-    pub file_size: u64,
-    pub hash: Option<String>,
-    pub is_compressed: bool,
-    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
+    pub status: ScoreStatus,
 }
 
 /// Categoria criada pelo usuário (ex: "Harpa Cristã")
@@ -81,7 +57,6 @@ pub struct FileVersion {
 pub struct Category {
     pub id: String,
     pub name: String,
-    pub created_at: NaiveDateTime,
 }
 
 /// Configurações da aplicação
@@ -89,9 +64,7 @@ pub struct Category {
 pub struct AppSettings {
     pub computer_id: String,
     pub computer_name: Option<String>,
-    pub logo_path: Option<String>,
     pub google_drive_mode: GoogleDriveMode,
-    pub hash_enabled: bool,
     pub first_run_completed: bool,
     pub google_service_account: Option<GoogleServiceAccount>,
 }
@@ -101,9 +74,7 @@ impl Default for AppSettings {
         Self {
             computer_id: String::new(),
             computer_name: None,
-            logo_path: None,
             google_drive_mode: GoogleDriveMode::Local,
-            hash_enabled: false,
             first_run_completed: false,
             google_service_account: None,
         }
@@ -150,27 +121,28 @@ impl GoogleServiceAccount {
     }
 }
 
-/// Dados retornados para a listagem de partituras no frontend
+/// Dados retornados para a listagem de músicas no frontend
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ScoreListItem {
+pub struct SongListItem {
     pub id: String,
-    pub title: String,
+    pub name: String,
     pub composer: Option<String>,
     pub arranger: Option<String>,
     pub updated_at: NaiveDateTime,
-    pub favorited: bool,
-    pub instruments: Vec<ScoreFileItem>,
+    pub is_favorite: bool,
+    pub category_ids: Vec<String>,
+    pub scores: Vec<ScoreListItem>,
 }
 
+/// Dados de uma partitura na listagem
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ScoreFileItem {
+pub struct ScoreListItem {
     pub id: String,
-    pub instrument: Option<String>,
+    pub name: Option<String>,
+    pub file_path: String,
     pub file_extension: String,
-    pub original_path: String,
     pub updated_at: NaiveDateTime,
-    pub has_draft: bool,
-    pub version_count: i32,
+    pub status: ScoreStatus,
 }
 
 /// Dados para indexação de um diretório
@@ -180,5 +152,4 @@ pub struct IndexedFile {
     pub name: String,
     pub instrument: Option<String>,
     pub extension: String,
-    pub size: u64,
 }

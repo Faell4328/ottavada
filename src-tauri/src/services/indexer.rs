@@ -38,14 +38,11 @@ pub fn scan_directory(dir_path: &Path) -> Vec<IndexedFile> {
 
         let (name, instrument) = parse_filename(&file_stem);
 
-        let size = path.metadata().map(|m| m.len()).unwrap_or(0);
-
         files.push(IndexedFile {
             path: path.to_string_lossy().to_string(),
             name,
             instrument,
             extension,
-            size,
         });
     }
 

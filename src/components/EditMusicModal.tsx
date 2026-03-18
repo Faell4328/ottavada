@@ -1,19 +1,19 @@
 import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { useAppState } from "../context/AppContext";
-import type { ScoreListItem } from "../types";
+import type { SongListItem } from "../types";
 
 interface EditMusicModalProps {
   isOpen: boolean;
-  score: ScoreListItem | null;
+  score: SongListItem | null;
   onClose: () => void;
-  onSave: (
-    scoreId: string,
-    title: string,
-    composer: string | null,
-    arranger: string | null,
-    categoryId: string | null
-  ) => Promise<void>;
+  onSave: (data: {
+    songId: string;
+    title: string;
+    composer: string | null;
+    arranger: string | null;
+    categoryIds: string[];
+  }) => Promise<void>;
 }
 
 export function EditMusicModal({
@@ -26,20 +26,28 @@ export function EditMusicModal({
   const [title, setTitle] = useState("");
   const [composer, setComposer] = useState("");
   const [arranger, setArranger] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
 
   // Initialize form with score data when modal opens
   useEffect(() => {
     if (isOpen && score) {
-      setTitle(score.title || "");
+      setTitle(score.name || "");
       setComposer(score.composer || "");
       setArranger(score.arranger || "");
-      setSelectedCategory(null); // Categories not tracked in ScoreListItem yet
+      setSelectedCategories(score.category_ids || []);
       setError("");
     }
-  }, [isOpen, score]);
+  }, [isOpen, score]); // Não incluir state.categories: causaria reset dos checkboxes ao criar nova categoria
+
+  const toggleCategory = (categoryId: string) => {
+    setSelectedCategories((prev) =>
+      prev.includes(categoryId)
+        ? prev.filter((id) => id !== categoryId)
+        : [...prev, categoryId]
+    );
+  };
 
   const handleSave = async () => {
     if (!score || !title.trim()) {
@@ -51,13 +59,13 @@ export function EditMusicModal({
     setError("");
 
     try {
-      await onSave(
-        score.id,
-        title.trim(),
-        composer.trim() || null,
-        arranger.trim() || null,
-        selectedCategory
-      );
+      await onSave({
+        songId: score.id,
+        title: title.trim(),
+        composer: composer.trim() || null,
+        arranger: arranger.trim() || null,
+        categoryIds: selectedCategories,
+      });
       onClose();
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Erro ao salvar";
@@ -131,10 +139,10 @@ export function EditMusicModal({
             />
           </div>
 
-          {/* Categories */}
+          {/* Categories - Multiple Selection */}
           <div>
             <label className="block text-sm font-medium text-[#344b61] mb-2">
-              Categoria
+              Categorias (múltiplas seleções)
             </label>
             <div className="space-y-2">
               {state.categories.length === 0 ? (
@@ -142,21 +150,25 @@ export function EditMusicModal({
                   Nenhuma categoria criada ainda
                 </p>
               ) : (
-                <select
-                  value={selectedCategory || ""}
-                  onChange={(e) =>
-                    setSelectedCategory(e.target.value || null)
-                  }
-                  className="w-full rounded border border-[#c5cfdb] px-3 py-2 text-sm text-[#344b61] outline-none focus:border-[#7ba0d4] focus:ring-1 focus:ring-[#7ba0d4]/30"
-                  disabled={isSaving}
-                >
-                  <option value="">Sem categoria</option>
+                <div className="space-y-2 border border-[#c5cfdb] rounded p-3 max-h-40 overflow-y-auto">
                   {state.categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
+                    <label
+                      key={category.id}
+                      className="flex items-center gap-2 cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedCategories.includes(category.id)}
+                        onChange={() => toggleCategory(category.id)}
+                        disabled={isSaving}
+                        className="rounded border-[#c5cfdb]"
+                      />
+                      <span className="text-sm text-[#344b61]">
+                        {category.name}
+                      </span>
+                    </label>
                   ))}
-                </select>
+                </div>
               )}
             </div>
           </div>

@@ -62,7 +62,7 @@ Um aplicativo desktop windows, para organizar, controlar status das partituras e
 - TypeScript
 - Vite
 - Tailwind CSS
-- `@tanstack/react-virtual` - Virtualização de listas longas
+
 - `react-router` - Navegação entre telas
 - `lucide-react` - Ícones
 - `react-hot-toast` - Notificações em tempo real
@@ -298,13 +298,14 @@ Ao clicar na música será expandido e mostrar uma lista de partituras/instrumen
 # Funcionalidades para cada versão
 
 ## Funcionalidades para v0.1 - base sólida
-- [ ] Corrigir inconsistências da interface
-	- [ ] Remover o `VersionPanel`.
-	- [ ] Alterar de `Modificado` para `Categorias` (listar as categorias que faz parte, ex: "Harpa", "Clássica")
-	- [ ] Remover os ícones de "favoritar", "adicionar partitura", "adicionar diretório" e "editar", passar tudo para um "overflow menu" com essas opções (com ícone de "...")
-	- [ ] Adicionar "overflow menu", no momento deixar apenas a opção "teste", ao clicar vai ter um `toast` com a mensagem "testado".
-- [ ] Atualizar estrutura do banco
-- [ ] Criar camada de validação
+- [x] Corrigir inconsistências da interface
+	- [x] Remover o `VersionPanel`.
+	- [x] Alterar de `Modificado` para `Categorias` (listar as categorias que faz parte, ex: "Harpa", "Clássica")
+	- [x] Remover os ícones de "favoritar", "adicionar partitura", "adicionar diretório" e "editar", passar tudo para um "overflow menu" com essas opções (com ícone de "...")
+	- [x] Adicionar "overflow menu" na partitura/instrumento, no momento deixar apenas a opção "teste", ao clicar vai ter um `toast` com a mensagem "testado".
+	- [x] Remover o efeito de seleção ao clicar em alguma partitura/instrumento dentro da música.
+	- [x] Atualizar o modal de edição das partituras. 
+- [x] Atualizar estrutura do banco
 - [ ] Revisar adicionar música/partitura
 - [ ] Revisar atualizar música
 - [ ] Revisar favoritos

@@ -35,17 +35,14 @@ pub fn complete_first_run(
 ) -> Result<(), AppError> {
     let mut settings = db.get_app_settings()?;
     
-    // Set the computer ID
     settings.computer_id = computer_id;
     settings.computer_name = Some(computer_name);
     
-    // Parse and validate the service account
     if let Some(json_str) = google_service_account_json {
         let service_account: crate::domain::models::GoogleServiceAccount = 
             serde_json::from_str(&json_str)
                 .map_err(|e| AppError::Generic(format!("JSON inválido: {}", e)))?;
         
-        // Validate required fields
         service_account.validate()
             .map_err(|e| AppError::Generic(e))?;
         

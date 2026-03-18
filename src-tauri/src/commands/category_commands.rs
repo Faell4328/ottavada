@@ -1,4 +1,3 @@
-use chrono::Local;
 use tauri::State;
 
 use crate::domain::errors::AppError;
@@ -15,7 +14,6 @@ pub fn create_category(db: State<'_, Database>, name: String) -> Result<Category
     let category = Category {
         id: uuid::Uuid::new_v4().to_string(),
         name,
-        created_at: Local::now().naive_local(),
     };
     db.insert_category(&category)?;
     Ok(category)

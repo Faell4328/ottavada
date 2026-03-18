@@ -4,145 +4,43 @@ import {
   useReducer,
   useEffect,
   useCallback,
+  useMemo,
   type ReactNode,
 } from "react";
 import toast from "react-hot-toast";
 import type {
+  SongListItem,
   ScoreListItem,
-  ScoreFileItem,
-  FileVersion,
-  Category,
   AppSettings,
   SidebarView,
 } from "../types";
 import * as api from "../api/commands";
-
-// ── State ──
-
-interface State {
-  scores: ScoreListItem[];
-  categories: Category[];
-  settings: AppSettings | null;
-  sidebarView: SidebarView;
-  selectedScore: ScoreListItem | null;
-  selectedFile: ScoreFileItem | null;
-  versions: FileVersion[];
-  searchQuery: string;
-  isFirstRun: boolean;
-  isLoading: boolean;
-}
-
-const initialState: State = {
-  scores: [],
-  categories: [],
-  settings: null,
-  sidebarView: "all",
-  selectedScore: null,
-  selectedFile: null,
-  versions: [],
-  searchQuery: "",
-  isFirstRun: false,
-  isLoading: true,
-};
-
-// ── Actions ──
-
-type Action =
-  | { type: "SET_SCORES"; payload: ScoreListItem[] }
-  | { type: "SET_CATEGORIES"; payload: Category[] }
-  | { type: "SET_SETTINGS"; payload: AppSettings }
-  | { type: "SET_SIDEBAR_VIEW"; payload: SidebarView }
-  | { type: "SET_SELECTED_SCORE"; payload: ScoreListItem | null }
-  | { type: "SET_SELECTED_FILE"; payload: ScoreFileItem | null }
-  | { type: "SET_VERSIONS"; payload: FileVersion[] }
-  | { type: "SET_SEARCH_QUERY"; payload: string }
-  | { type: "SET_FIRST_RUN"; payload: boolean }
-  | { type: "SET_LOADING"; payload: boolean }
-  | { type: "TOGGLE_FAVORITE"; payload: { scoreId: string; favorited: boolean } }
-  | { type: "UPDATE_SELECTED_SCORE"; payload: ScoreListItem };
-
-function reducer(state: State, action: Action): State {
-  switch (action.type) {
-    case "SET_SCORES":
-      return { ...state, scores: action.payload };
-    case "SET_CATEGORIES":
-      return { ...state, categories: action.payload };
-    case "SET_SETTINGS":
-      return { ...state, settings: action.payload };
-    case "SET_SIDEBAR_VIEW":
-      return {
-        ...state,
-        sidebarView: action.payload,
-        selectedScore: null,
-        selectedFile: null,
-        versions: [],
-      };
-    case "SET_SELECTED_SCORE":
-      return {
-        ...state,
-        selectedScore: action.payload,
-        selectedFile: null,
-        versions: [],
-      };
-    case "SET_SELECTED_FILE":
-      return { ...state, selectedFile: action.payload };
-    case "SET_VERSIONS":
-      return { ...state, versions: action.payload };
-    case "SET_SEARCH_QUERY":
-      return { ...state, searchQuery: action.payload };
-    case "SET_FIRST_RUN":
-      return { ...state, isFirstRun: action.payload };
-    case "SET_LOADING":
-      return { ...state, isLoading: action.payload };
-    case "TOGGLE_FAVORITE":
-      return {
-        ...state,
-        scores: state.scores.map((s) =>
-          s.id === action.payload.scoreId
-            ? { ...s, favorited: action.payload.favorited }
-            : s
-        ),
-      };
-    case "UPDATE_SELECTED_SCORE":
-      return {
-        ...state,
-        selectedScore: action.payload,
-        scores: state.scores.map((s) =>
-          s.id === action.payload.id ? action.payload : s
-        ),
-      };
-    default:
-      return state;
-  }
-}
+import { type State, initialState, reducer } from "./reducer";
 
 // ── Context ──
 
 interface AppContextValue {
   state: State;
-  loadScores: () => Promise<void>;
+  loadSongs: () => Promise<void>;
   loadCategories: () => Promise<void>;
   loadSettings: () => Promise<void>;
   setSidebarView: (view: SidebarView) => void;
+  selectSong: (song: SongListItem | null) => void;
   selectScore: (score: ScoreListItem | null) => void;
-  selectFile: (file: ScoreFileItem | null) => void;
-  loadVersions: (scoreFileId: string) => Promise<void>;
   setSearchQuery: (query: string) => void;
-  toggleFavorite: (scoreId: string) => Promise<void>;
-  promoteDraft: (versionId: string) => Promise<void>;
-  deleteVersion: (versionId: string) => Promise<void>;
+  toggleFavorite: (songId: string) => Promise<void>;
   createCategory: (name: string) => Promise<void>;
   deleteCategory: (categoryId: string) => Promise<void>;
   saveSettings: (settings: AppSettings) => Promise<void>;
-  updateScore: (
-    scoreId: string,
-    title: string,
+  updateSong: (
+    songId: string,
+    name: string,
     composer: string | null,
     arranger: string | null,
-    categoryId: string | null
+    categoryIds: string[]
   ) => Promise<void>;
-  updateScoreFile: (
-    scoreFileId: string,
+  updateScore: (
+    scoreId: string,
     instrumentName: string | null,
     filePath: string
   ) => Promise<void>;
@@ -167,26 +65,26 @@ export function useAppState() {
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
 
-  const loadScores = useCallback(async () => {
+  const loadSongs = useCallback(async () => {
     try {
-      let scores: ScoreListItem[];
+      let songs: SongListItem[];
       if (state.searchQuery.trim()) {
-        scores = await api.searchScores(state.searchQuery);
+        songs = await api.searchSongs(state.searchQuery);
       } else if (state.sidebarView === "favorites") {
-        scores = await api.getFavoritedScores();
+        songs = await api.getFavoritedSongs();
       } else if (state.sidebarView === "drafts") {
-        scores = await api.getScoresWithDrafts();
+        songs = await api.getSongsWithDrafts();
       } else if (
         typeof state.sidebarView === "object" &&
         state.sidebarView.type === "category"
       ) {
-        scores = await api.getScoresByCategory(state.sidebarView.id);
+        songs = await api.getSongsByCategory(state.sidebarView.id);
       } else {
-        scores = await api.getAllScores();
+        songs = await api.getAllSongs();
       }
-      dispatch({ type: "SET_SCORES", payload: scores });
+      dispatch({ type: "SET_SONGS", payload: songs });
     } catch (err) {
-      console.error("Failed to load scores:", err);
+      console.error("Failed to load songs:", err);
     }
   }, [state.sidebarView, state.searchQuery]);
 
@@ -208,15 +106,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const loadVersions = useCallback(async (scoreFileId: string) => {
-    try {
-      const versions = await api.getVersions(scoreFileId);
-      dispatch({ type: "SET_VERSIONS", payload: versions });
-    } catch (err) {
-      console.error("Failed to load versions:", err);
-    }
-  }, []);
-
   // Initialize app
   useEffect(() => {
     (async () => {
@@ -225,7 +114,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         dispatch({ type: "SET_FIRST_RUN", payload: firstRun });
 
         if (!firstRun) {
-          await Promise.all([loadScores(), loadCategories(), loadSettings()]);
+          await Promise.all([loadSongs(), loadCategories(), loadSettings()]);
         }
       } catch (err) {
         console.error("Failed to initialize app:", err);
@@ -235,78 +124,40 @@ export function AppProvider({ children }: { children: ReactNode }) {
     })();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Reload scores when sidebar view or search query changes
   useEffect(() => {
     if (!state.isFirstRun && !state.isLoading) {
-      loadScores();
+      loadSongs();
     }
-  }, [state.sidebarView, state.searchQuery]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [state.sidebarView, state.searchQuery, state.isFirstRun, state.isLoading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const setSidebarView = useCallback((view: SidebarView) => {
     dispatch({ type: "SET_SIDEBAR_VIEW", payload: view });
     dispatch({ type: "SET_SEARCH_QUERY", payload: "" });
   }, []);
 
+  const selectSong = useCallback((song: SongListItem | null) => {
+    dispatch({ type: "SET_SELECTED_SONG", payload: song });
+  }, []);
+
   const selectScore = useCallback((score: ScoreListItem | null) => {
     dispatch({ type: "SET_SELECTED_SCORE", payload: score });
   }, []);
-
-  const selectFile = useCallback(
-    (file: ScoreFileItem | null) => {
-      dispatch({ type: "SET_SELECTED_FILE", payload: file });
-      if (file) {
-        loadVersions(file.id);
-      } else {
-        dispatch({ type: "SET_VERSIONS", payload: [] });
-      }
-    },
-    [loadVersions]
-  );
 
   const setSearchQuery = useCallback((query: string) => {
     dispatch({ type: "SET_SEARCH_QUERY", payload: query });
   }, []);
 
-  const handleToggleFavorite = useCallback(async (scoreId: string) => {
+  const handleToggleFavorite = useCallback(async (songId: string) => {
     try {
-      const favorited = await api.toggleFavorite(scoreId);
+      const isFavorite = await api.toggleFavorite(songId);
       dispatch({
         type: "TOGGLE_FAVORITE",
-        payload: { scoreId, favorited },
+        payload: { songId, isFavorite },
       });
     } catch (err) {
       console.error("Failed to toggle favorite:", err);
     }
   }, []);
-
-  const handlePromoteDraft = useCallback(
-    async (versionId: string) => {
-      try {
-        await api.promoteDraft(versionId);
-        if (state.selectedFile) {
-          await loadVersions(state.selectedFile.id);
-        }
-        await loadScores();
-      } catch (err) {
-        console.error("Failed to promote draft:", err);
-      }
-    },
-    [state.selectedFile, loadVersions, loadScores]
-  );
-
-  const handleDeleteVersion = useCallback(
-    async (versionId: string) => {
-      try {
-        await api.deleteVersion(versionId);
-        if (state.selectedFile) {
-          await loadVersions(state.selectedFile.id);
-        }
-      } catch (err) {
-        console.error("Failed to delete version:", err);
-      }
-    },
-    [state.selectedFile, loadVersions]
-  );
 
   const handleCreateCategory = useCallback(
     async (name: string) => {
@@ -339,58 +190,56 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [loadCategories, state.sidebarView]
   );
 
-  const handleUpdateScore = useCallback(
+  const handleUpdateSong = useCallback(
     async (
-      scoreId: string,
-      title: string,
+      songId: string,
+      name: string,
       composer: string | null,
       arranger: string | null,
-      categoryId: string | null
+      categoryIds: string[]
     ) => {
       try {
-        const updatedScore = await api.updateScore(
-          scoreId,
-          title,
+        const updatedSong = await api.updateSong(
+          songId,
+          name,
           composer,
           arranger,
-          categoryId
+          categoryIds
         );
-        dispatch({ type: "UPDATE_SELECTED_SCORE", payload: updatedScore });
-        await loadScores();
+        dispatch({ type: "UPDATE_SELECTED_SONG", payload: updatedSong });
+        await Promise.all([loadSongs(), loadCategories()]);
         toast.success("Música atualizada com sucesso!");
       } catch (err) {
-        console.error("Failed to update score:", err);
+        console.error("Failed to update song:", err);
         const errorMsg = err instanceof Error ? err.message : "Erro ao atualizar música";
         toast.error(errorMsg);
         throw err;
       }
     },
-    [loadScores]
+    [loadSongs, loadCategories]
   );
 
-  const handleUpdateScoreFile = useCallback(
+  const handleUpdateScore = useCallback(
     async (
-      scoreFileId: string,
+      scoreId: string,
       instrumentName: string | null,
       filePath: string
     ) => {
       try {
-        await api.updateScoreFile(scoreFileId, instrumentName, filePath);
-        if (state.selectedFile?.id === scoreFileId) {
-          await loadScores();
-          dispatch({ type: "SET_SELECTED_FILE", payload: null });
-        } else {
-          await loadScores();
+        await api.updateScore(scoreId, instrumentName, filePath);
+        if (state.selectedScore?.id === scoreId) {
+          dispatch({ type: "SET_SELECTED_SCORE", payload: null });
         }
+        await loadSongs();
         toast.success("Partitura atualizada com sucesso!");
       } catch (err) {
-        console.error("Failed to update score file:", err);
+        console.error("Failed to update score:", err);
         const errorMsg = err instanceof Error ? err.message : "Erro ao atualizar partitura";
         toast.error(errorMsg);
         throw err;
       }
     },
-    [state.selectedFile, loadScores]
+    [state.selectedScore, loadSongs]
   );
 
   const handleSaveSettings = useCallback(
@@ -412,36 +261,52 @@ export function AppProvider({ children }: { children: ReactNode }) {
       try {
         await api.completeFirstRun(computerId, computerName, googleDriveMode, googleServiceAccountJson);
         dispatch({ type: "SET_FIRST_RUN", payload: false });
-        await Promise.all([loadScores(), loadCategories(), loadSettings()]);
+        await Promise.all([loadSongs(), loadCategories(), loadSettings()]);
         toast.success("Configuração inicial concluída!");
       } catch (err) {
         console.error("Failed to complete first run:", err);
         toast.error("Erro ao completar configuração inicial");
       }
     },
-    [loadScores, loadCategories, loadSettings]
+    [loadSongs, loadCategories, loadSettings]
   );
 
-  const value: AppContextValue = {
-    state,
-    loadScores,
-    loadCategories,
-    loadSettings,
-    setSidebarView,
-    selectScore,
-    selectFile,
-    loadVersions,
-    setSearchQuery,
-    toggleFavorite: handleToggleFavorite,
-    promoteDraft: handlePromoteDraft,
-    deleteVersion: handleDeleteVersion,
-    createCategory: handleCreateCategory,
-    deleteCategory: handleDeleteCategory,
-    updateScore: handleUpdateScore,
-    updateScoreFile: handleUpdateScoreFile,
-    saveSettings: handleSaveSettings,
-    completeFirstRun: handleCompleteFirstRun,
-  };
+  const value: AppContextValue = useMemo(
+    () => ({
+      state,
+      loadSongs,
+      loadCategories,
+      loadSettings,
+      setSidebarView,
+      selectSong,
+      selectScore,
+      setSearchQuery,
+      toggleFavorite: handleToggleFavorite,
+      createCategory: handleCreateCategory,
+      deleteCategory: handleDeleteCategory,
+      updateSong: handleUpdateSong,
+      updateScore: handleUpdateScore,
+      saveSettings: handleSaveSettings,
+      completeFirstRun: handleCompleteFirstRun,
+    }),
+    [
+      state,
+      loadSongs,
+      loadCategories,
+      loadSettings,
+      setSidebarView,
+      selectSong,
+      selectScore,
+      setSearchQuery,
+      handleToggleFavorite,
+      handleCreateCategory,
+      handleDeleteCategory,
+      handleUpdateSong,
+      handleUpdateScore,
+      handleSaveSettings,
+      handleCompleteFirstRun,
+    ]
+  );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

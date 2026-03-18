@@ -1,37 +1,40 @@
 import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { open } from "@tauri-apps/plugin-dialog";
-import type { ScoreListItem } from "../types";
+import type { SongListItem, ScoreListItem } from "../types";
 
-interface EditInstrumentModalProps {
+interface EditScoreModalProps {
   isOpen: boolean;
+  score: SongListItem | null;
   instrument: ScoreListItem | null;
   onClose: () => void;
-  onSave: (
-    scoreFileId: string,
-    instrumentName: string | null,
-    filePath: string
-  ) => Promise<void>;
+  onSave: (data: {
+    songId: string;
+    scoreFileId: string;
+    instrumentName: string | null;
+    filePath: string;
+  }) => Promise<void>;
 }
 
-export function EditInstrumentModal({
+export function EditScoreModal({
   isOpen,
+  score,
   instrument,
   onClose,
   onSave,
-}: EditInstrumentModalProps) {
+}: EditScoreModalProps) {
   const [instrumentName, setInstrumentName] = useState("");
   const [filePath, setFilePath] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (isOpen && instrument) {
-      setInstrumentName(instrument.instrument || "");
-      setFilePath(instrument.original_path || "");
+    if (isOpen && score && instrument) {
+      setInstrumentName(instrument.name || "");
+      setFilePath(instrument.file_path || "");
       setError("");
     }
-  }, [isOpen, instrument]);
+  }, [isOpen, score, instrument]);
 
   const handleSelectFile = async () => {
     try {
@@ -57,13 +60,10 @@ export function EditInstrumentModal({
   };
 
   const handleSave = async () => {
-    if (!instrument) return;
+    if (!score || !instrument) return;
 
-    // Usar o filePath atual (pode ser o original ou um novo selecionado)
-    const pathToSave = filePath || "";
-    
-    if (!pathToSave) {
-      setError("O arquivo está vazio. Selecione um arquivo válido.");
+    if (!filePath.trim()) {
+      setError("O arquivo é obrigatório");
       return;
     }
 
@@ -71,11 +71,12 @@ export function EditInstrumentModal({
     setError("");
 
     try {
-      await onSave(
-        instrument.id,
-        instrumentName.trim() || null,
-        pathToSave
-      );
+      await onSave({
+        songId: score.id,
+        scoreFileId: instrument.id,
+        instrumentName: instrumentName.trim() || null,
+        filePath: filePath.trim(),
+      });
       onClose();
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Erro ao salvar";
@@ -85,11 +86,11 @@ export function EditInstrumentModal({
     }
   };
 
-  if (!isOpen || !instrument) return null;
+  if (!isOpen || !score || !instrument) return null;
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-lg w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-lg shadow-lg w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-[#e0e8f0]">
           <h2 className="text-lg font-bold text-[#2f4259]">Editar Partitura</h2>
@@ -104,6 +105,26 @@ export function EditInstrumentModal({
 
         {/* Body */}
         <div className="p-4 space-y-4">
+          {/* Music Info - Read Only */}
+          <div>
+            <label className="block text-sm font-medium text-[#344b61] mb-1.5">
+              Música
+            </label>
+            <div className="rounded border border-[#c5cfdb] bg-[#f5f7fa] p-3">
+              <p className="text-sm text-[#344b61] font-medium">{score.name}</p>
+              {score.composer && (
+                <p className="text-xs text-[#8b9db2] mt-1">
+                  Compositor: {score.composer}
+                </p>
+              )}
+              {score.arranger && (
+                <p className="text-xs text-[#8b9db2]">
+                  Arranjador: {score.arranger}
+                </p>
+              )}
+            </div>
+          </div>
+
           {/* Instrument Name */}
           <div>
             <label className="block text-sm font-medium text-[#344b61] mb-1.5">
@@ -114,7 +135,7 @@ export function EditInstrumentModal({
               value={instrumentName}
               onChange={(e) => setInstrumentName(e.target.value)}
               className="w-full rounded border border-[#c5cfdb] px-3 py-2 text-sm text-[#344b61] placeholder-[#a3b5c7] outline-none focus:border-[#7ba0d4] focus:ring-1 focus:ring-[#7ba0d4]/30"
-              placeholder="Ex: Soprano, Alto Sax, Flauta..."
+              placeholder="Ex: Flauta, Violino, Piano"
               disabled={isSaving}
             />
           </div>
@@ -125,10 +146,9 @@ export function EditInstrumentModal({
               Caminho do Arquivo *
             </label>
             <div className="space-y-2">
-              {/* Display current path */}
               {filePath && (
                 <div className="rounded border border-[#c5cfdb] bg-[#f5f7fa] p-3 min-h-[2.5rem] overflow-auto max-h-24">
-                  <p className="text-xs text-[#344b61] whitespace-pre-wrap break-all word-break">
+                  <p className="text-xs text-[#344b61] whitespace-pre-wrap break-all">
                     {filePath}
                   </p>
                 </div>
@@ -144,9 +164,9 @@ export function EditInstrumentModal({
                 type="button"
                 onClick={handleSelectFile}
                 disabled={isSaving}
-                className="w-full px-4 py-2 rounded bg-[#5c9ae6] text-white text-sm font-medium hover:bg-[#4a84c7] transition-colors disabled:opacity-50"
+                className="w-full px-4 py-2 rounded bg-[#f2f5fa] border border-[#c5cfdb] text-sm font-medium text-[#344b61] hover:bg-[#eef2f6] transition-colors disabled:opacity-50"
               >
-                Procurar Arquivo
+                Alterar Arquivo
               </button>
             </div>
           </div>

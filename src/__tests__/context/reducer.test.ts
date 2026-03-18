@@ -1,144 +1,38 @@
 import { describe, it, expect } from "vitest";
 import type {
+  SongListItem,
   ScoreListItem,
-  ScoreFileItem,
-  FileVersion,
   Category,
   AppSettings,
   SidebarView,
 } from "../../types";
-
-// ── Replicate the reducer locally for unit testing ──
-// (The AppContext doesn't export the reducer directly)
-
-interface State {
-  scores: ScoreListItem[];
-  categories: Category[];
-  settings: AppSettings | null;
-  sidebarView: SidebarView;
-  selectedScore: ScoreListItem | null;
-  selectedFile: ScoreFileItem | null;
-  versions: FileVersion[];
-  searchQuery: string;
-  isFirstRun: boolean;
-  isLoading: boolean;
-}
-
-type Action =
-  | { type: "SET_SCORES"; payload: ScoreListItem[] }
-  | { type: "SET_CATEGORIES"; payload: Category[] }
-  | { type: "SET_SETTINGS"; payload: AppSettings }
-  | { type: "SET_SIDEBAR_VIEW"; payload: SidebarView }
-  | { type: "SET_SELECTED_SCORE"; payload: ScoreListItem | null }
-  | { type: "SET_SELECTED_FILE"; payload: ScoreFileItem | null }
-  | { type: "SET_VERSIONS"; payload: FileVersion[] }
-  | { type: "SET_SEARCH_QUERY"; payload: string }
-  | { type: "SET_FIRST_RUN"; payload: boolean }
-  | { type: "SET_LOADING"; payload: boolean }
-  | {
-      type: "TOGGLE_FAVORITE";
-      payload: { scoreId: string; favorited: boolean };
-    };
-
-const initialState: State = {
-  scores: [],
-  categories: [],
-  settings: null,
-  sidebarView: "all",
-  selectedScore: null,
-  selectedFile: null,
-  versions: [],
-  searchQuery: "",
-  isFirstRun: false,
-  isLoading: true,
-};
-
-function reducer(state: State, action: Action): State {
-  switch (action.type) {
-    case "SET_SCORES":
-      return { ...state, scores: action.payload };
-    case "SET_CATEGORIES":
-      return { ...state, categories: action.payload };
-    case "SET_SETTINGS":
-      return { ...state, settings: action.payload };
-    case "SET_SIDEBAR_VIEW":
-      return {
-        ...state,
-        sidebarView: action.payload,
-        selectedScore: null,
-        selectedFile: null,
-        versions: [],
-      };
-    case "SET_SELECTED_SCORE":
-      return {
-        ...state,
-        selectedScore: action.payload,
-        selectedFile: null,
-        versions: [],
-      };
-    case "SET_SELECTED_FILE":
-      return { ...state, selectedFile: action.payload };
-    case "SET_VERSIONS":
-      return { ...state, versions: action.payload };
-    case "SET_SEARCH_QUERY":
-      return { ...state, searchQuery: action.payload };
-    case "SET_FIRST_RUN":
-      return { ...state, isFirstRun: action.payload };
-    case "SET_LOADING":
-      return { ...state, isLoading: action.payload };
-    case "TOGGLE_FAVORITE":
-      return {
-        ...state,
-        scores: state.scores.map((s) =>
-          s.id === action.payload.scoreId
-            ? { ...s, favorited: action.payload.favorited }
-            : s
-        ),
-      };
-    default:
-      return state;
-  }
-}
+import { reducer, initialState } from "../../context/reducer";
 
 // ── Helpers ──
 
-function makeScore(id: string, title: string): ScoreListItem {
+function makeScore(id: string, name: string): SongListItem {
   return {
     id,
-    title,
+    name,
     composer: null,
     arranger: null,
     updated_at: "2024-01-01 12:00:00",
-    favorited: false,
-    instruments: [],
+    is_favorite: false,
+    category_ids: [],
+    scores: [],
   };
 }
 
-function makeFile(id: string): ScoreFileItem {
+function makeFile(id: string): ScoreListItem {
   return {
     id,
-    instrument: "Violino",
+    name: "Violino",
+    file_path: "/path/to/file.pdf",
     file_extension: "pdf",
-    original_path: "/path/to/file.pdf",
     updated_at: "2024-01-01 12:00:00",
-    has_draft: false,
-    version_count: 1,
+    status: "Main",
   };
 }
-
-function makeVersion(id: string): FileVersion {
-  return {
-    id,
-    score_file_id: "f1",
-    version_number: 1,
-    label: "V1",
-    status: "Current",
-    file_path: "/path",
-    file_size: 1024,
-    hash: null,
-    is_compressed: false,
-    created_at: "2024-01-01 12:00:00",
-  };
 }
 
 // ── Tests ──
@@ -358,6 +252,25 @@ describe("AppContext Reducer", () => {
         payload: { scoreId: "nonexistent", favorited: true },
       });
       expect(state.scores[0].favorited).toBe(false);
+    });
+  });
+
+  describe("UPDATE_SELECTED_SCORE", () => {
+    it("should update selected score and scores list", () => {
+      const original = makeScore("s1", "Canon");
+      const updated = { ...original, title: "Canon in D" };
+      const stateWithScores = {
+        ...initialState,
+        scores: [original, makeScore("s2", "Moonlight")],
+        selectedScore: original,
+      };
+      const state = reducer(stateWithScores, {
+        type: "UPDATE_SELECTED_SCORE",
+        payload: updated,
+      });
+      expect(state.selectedScore?.title).toBe("Canon in D");
+      expect(state.scores[0].title).toBe("Canon in D");
+      expect(state.scores[1].title).toBe("Moonlight");
     });
   });
 

@@ -3,8 +3,7 @@ import { Toaster } from "react-hot-toast";
 import {
   TopBar,
   Sidebar,
-  ScoreList,
-  VersionPanel,
+  SongsList,
   StatusBar,
   SettingsPage,
   FirstRunPage,
@@ -27,8 +26,7 @@ function MainPage() {
       <TopBar />
       <div className="flex flex-1 min-h-0">
         <Sidebar />
-        <ScoreList />
-        <VersionPanel />
+        <SongsList />
       </div>
       <StatusBar />
     </div>

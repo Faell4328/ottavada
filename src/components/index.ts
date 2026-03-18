@@ -1,7 +1,11 @@
 export { default as TopBar } from "./TopBar";
 export { default as Sidebar } from "./Sidebar";
-export { default as ScoreList } from "./ScoreList";
-export { default as VersionPanel } from "./VersionPanel";
+export { default as SongsList } from "./SongsList";
 export { default as StatusBar } from "./StatusBar";
 export { default as SettingsPage } from "./SettingsPage";
 export { default as FirstRunPage } from "./FirstRunPage";
+export { EditScoreModal } from "./EditScoreModal";
+export { EditMusicModal } from "./EditMusicModal";
+export { EditInstrumentModal } from "./EditInstrumentModal";
+export { MemoizedSongRow } from "./SongRow";
+export { MemoizedScoreRow } from "./ScoreRow";

@@ -32,27 +32,23 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            // Songs
+            commands::song_commands::get_all_songs,
+            commands::song_commands::get_favorited_songs,
+            commands::song_commands::get_songs_with_drafts,
+            commands::song_commands::search_songs,
+            commands::song_commands::get_search_suggestions,
+            commands::song_commands::toggle_favorite,
+            commands::song_commands::scan_directory,
+            commands::song_commands::import_indexed_files,
+            commands::song_commands::get_songs_by_category,
+            commands::song_commands::create_song,
+            commands::song_commands::update_song,
             // Scores
-            commands::score_commands::get_all_scores,
-            commands::score_commands::get_favorited_scores,
-            commands::score_commands::get_scores_with_drafts,
-            commands::score_commands::search_scores,
-            commands::score_commands::get_search_suggestions,
-            commands::score_commands::toggle_favorite,
-            commands::score_commands::scan_directory,
-            commands::score_commands::import_indexed_files,
-            commands::score_commands::get_scores_by_category,
-            commands::score_commands::create_score,
             commands::score_commands::update_score,
-            commands::score_commands::update_score_file,
-            commands::score_commands::add_file_to_score,
-            commands::score_commands::add_files_to_score,
+            commands::score_commands::add_score_to_song,
+            commands::score_commands::add_scores_to_song,
             commands::score_commands::open_file,
-            // Versions
-            commands::version_commands::get_versions,
-            commands::version_commands::promote_draft,
-            commands::version_commands::delete_version,
-            commands::version_commands::create_draft,
             // Categories
             commands::category_commands::get_categories,
             commands::category_commands::create_category,

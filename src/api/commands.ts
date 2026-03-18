@@ -1,32 +1,31 @@
 import { invoke } from "@tauri-apps/api/core";
 import type {
-  ScoreListItem,
-  FileVersion,
+  SongListItem,
   Category,
   AppSettings,
   IndexedFile,
 } from "../types";
 
-// ── Scores ──
+// ── Songs ──
 
-export async function getAllScores(): Promise<ScoreListItem[]> {
-  return invoke("get_all_scores");
+export async function getAllSongs(): Promise<SongListItem[]> {
+  return invoke("get_all_songs");
 }
 
-export async function getFavoritedScores(): Promise<ScoreListItem[]> {
-  return invoke("get_favorited_scores");
+export async function getFavoritedSongs(): Promise<SongListItem[]> {
+  return invoke("get_favorited_songs");
 }
 
-export async function getScoresWithDrafts(): Promise<ScoreListItem[]> {
-  return invoke("get_scores_with_drafts");
+export async function getSongsWithDrafts(): Promise<SongListItem[]> {
+  return invoke("get_songs_with_drafts");
 }
 
-export async function searchScores(query: string): Promise<ScoreListItem[]> {
-  return invoke("search_scores", { query });
+export async function searchSongs(query: string): Promise<SongListItem[]> {
+  return invoke("search_songs", { query });
 }
 
-export async function toggleFavorite(scoreId: string): Promise<boolean> {
-  return invoke("toggle_favorite", { scoreId });
+export async function toggleFavorite(songId: string): Promise<boolean> {
+  return invoke("toggle_favorite", { songId });
 }
 
 export async function scanDirectory(directory: string): Promise<IndexedFile[]> {
@@ -35,82 +34,59 @@ export async function scanDirectory(directory: string): Promise<IndexedFile[]> {
 
 export async function importIndexedFiles(
   files: IndexedFile[],
-  categoryId?: string
-): Promise<ScoreListItem[]> {
-  return invoke("import_indexed_files", { files, categoryId });
+  categoryIds: string[] = []
+): Promise<SongListItem[]> {
+  return invoke("import_indexed_files", { files, categoryIds });
 }
 
-export async function getScoresByCategory(
+export async function getSongsByCategory(
   categoryId: string
-): Promise<ScoreListItem[]> {
-  return invoke("get_scores_by_category", { categoryId });
+): Promise<SongListItem[]> {
+  return invoke("get_songs_by_category", { categoryId });
 }
 
-export async function createScore(title: string): Promise<ScoreListItem> {
-  return invoke("create_score", { title });
+export async function createSong(name: string): Promise<SongListItem> {
+  return invoke("create_song", { name });
+}
+
+export async function updateSong(
+  songId: string,
+  name: string,
+  composer: string | null,
+  arranger: string | null,
+  categoryIds: string[]
+): Promise<SongListItem> {
+  return invoke("update_song", { songId, name, composer, arranger, categoryIds });
 }
 
 export async function updateScore(
   scoreId: string,
-  title: string,
-  composer: string | null,
-  arranger: string | null,
-  categoryId: string | null
-): Promise<ScoreListItem> {
-  return invoke("update_score", { scoreId, title, composer, arranger, categoryId });
-}
-
-export async function updateScoreFile(
-  scoreFileId: string,
   instrumentName: string | null,
   filePath: string
 ): Promise<void> {
-  return invoke("update_score_file", { scoreFileId, instrumentName, filePath });
+  return invoke("update_score", { scoreId, instrumentName, filePath });
 }
 
-export async function addFileToScore(
-  scoreId: string,
+export async function addScoreToSong(
+  songId: string,
   file: IndexedFile
-): Promise<ScoreListItem> {
-  return invoke("add_file_to_score", { scoreId, file });
+): Promise<SongListItem> {
+  return invoke("add_score_to_song", { songId, file });
 }
 
-export async function addFilesToScore(
-  scoreId: string,
+export async function addScoresToSong(
+  songId: string,
   files: IndexedFile[]
-): Promise<ScoreListItem> {
-  return invoke("add_files_to_score", { scoreId, files });
+): Promise<SongListItem> {
+  return invoke("add_scores_to_song", { songId, files });
 }
 
-export async function getSearchSuggestions(query: string, limit?: number): Promise<ScoreListItem[]> {
+export async function getSearchSuggestions(query: string, limit?: number): Promise<SongListItem[]> {
   return invoke("get_search_suggestions", { query, limit });
 }
 
-export async function openFile(scoreFileId: string): Promise<void> {
-  return invoke("open_file", { scoreFileId });
-}
-
-// ── Versions ──
-
-export async function getVersions(
-  scoreFileId: string
-): Promise<FileVersion[]> {
-  return invoke("get_versions", { scoreFileId });
-}
-
-export async function promoteDraft(versionId: string): Promise<void> {
-  return invoke("promote_draft", { versionId });
-}
-
-export async function deleteVersion(versionId: string): Promise<void> {
-  return invoke("delete_version", { versionId });
-}
-
-export async function createDraft(
-  scoreFileId: string,
-  sourcePath: string
-): Promise<FileVersion> {
-  return invoke("create_draft", { scoreFileId, sourcePath });
+export async function openFile(scoreId: string): Promise<void> {
+  return invoke("open_file", { scoreId });
 }
 
 // ── Categories ──
