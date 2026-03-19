@@ -1,6 +1,7 @@
 use std::path::Path;
 use tauri::State;
 use chrono::Local;
+use tracing::{info, warn, error};
 
 use crate::domain::errors::AppError;
 use crate::domain::models::*;
@@ -13,8 +14,10 @@ pub fn update_score(
     instrument_name: Option<String>,
     file_path: String,
 ) -> Result<(), AppError> {
+    info!("Atualizando partitura: {} com arquivo: {}", score_id, file_path);
     let path = Path::new(&file_path);
     if !path.exists() || !path.is_file() {
+        warn!("Arquivo não encontrado: {}", file_path);
         return Err(AppError::Generic("Arquivo não encontrado".into()));
     }
 
@@ -26,13 +29,21 @@ pub fn update_score(
 
     let valid_extensions = ["pdf", "mus", "musx"];
     if !valid_extensions.contains(&extension.as_str()) {
+        warn!("Extensão de arquivo não suportada: {}", extension);
         return Err(AppError::Generic("Tipo de arquivo não suportado".into()));
     }
 
     let now = Local::now().naive_local();
-    db.update_score(&score_id, instrument_name, &file_path, now)?;
-
-    Ok(())
+    match db.update_score(&score_id, instrument_name.clone(), &file_path, now) {
+        Ok(_) => {
+            info!("Partitura atualizada com sucesso: {}", score_id);
+            Ok(())
+        }
+        Err(e) => {
+            error!("Erro ao atualizar partitura {}: {:?}", score_id, e);
+            Err(e)
+        }
+    }
 }
 
 #[tauri::command]

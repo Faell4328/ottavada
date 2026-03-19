@@ -1,4 +1,5 @@
 use tauri::State;
+use tracing::{info, error};
 
 use crate::domain::errors::AppError;
 use crate::domain::models::AppSettings;
@@ -6,23 +7,38 @@ use crate::infrastructure::database::Database;
 
 #[tauri::command]
 pub fn get_settings(db: State<'_, Database>) -> Result<AppSettings, AppError> {
+    info!("Buscando configurações");
     db.get_app_settings()
 }
 
 #[tauri::command]
 pub fn save_settings(db: State<'_, Database>, settings: AppSettings) -> Result<(), AppError> {
-    db.save_app_settings(&settings)
+    info!("Salvando configurações para computador: {}", settings.computer_id);
+    match db.save_app_settings(&settings) {
+        Ok(_) => {
+            info!("Configurações salvas com sucesso");
+            Ok(())
+        }
+        Err(e) => {
+            error!("Erro ao salvar configurações: {:?}", e);
+            Err(e)
+        }
+    }
 }
 
 #[tauri::command]
 pub fn is_first_run(db: State<'_, Database>) -> Result<bool, AppError> {
     let settings = db.get_app_settings()?;
-    Ok(!settings.first_run_completed)
+    let is_first = !settings.first_run_completed;
+    info!("Verificando primeira execução: {}", is_first);
+    Ok(is_first)
 }
 
 #[tauri::command]
 pub fn generate_computer_id() -> String {
-    uuid::Uuid::new_v4().to_string()
+    let id = uuid::Uuid::new_v4().to_string();
+    info!("ID do computador gerado: {}", id);
+    id
 }
 
 #[tauri::command]
@@ -33,12 +49,14 @@ pub fn complete_first_run(
     _google_drive_mode: String,
     google_service_account_json: Option<String>,
 ) -> Result<(), AppError> {
+    info!("Completando primeira execução para: {} ({})", computer_name, computer_id);
     let mut settings = db.get_app_settings()?;
     
     settings.computer_id = computer_id;
     settings.computer_name = Some(computer_name);
     
     if let Some(json_str) = google_service_account_json {
+        info!("Validando credenciais do Google Drive");
         let service_account: crate::domain::models::GoogleServiceAccount = 
             serde_json::from_str(&json_str)
                 .map_err(|e| AppError::Generic(format!("JSON inválido: {}", e)))?;
@@ -48,8 +66,10 @@ pub fn complete_first_run(
         
         settings.google_service_account = Some(service_account);
         settings.google_drive_mode = crate::domain::models::GoogleDriveMode::Api;
+        info!("Modo Google Drive: API");
     } else {
         settings.google_drive_mode = crate::domain::models::GoogleDriveMode::Local;
+        info!("Modo Google Drive: Local");
     }
     
     settings.first_run_completed = true;

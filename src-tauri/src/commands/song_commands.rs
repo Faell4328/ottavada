@@ -1,6 +1,7 @@
 use std::path::Path;
 use tauri::State;
 use chrono::Local;
+use tracing::{info, warn, error};
 
 use crate::domain::errors::AppError;
 use crate::domain::models::*;
@@ -9,7 +10,17 @@ use crate::services::indexer;
 
 #[tauri::command]
 pub fn get_all_songs(db: State<'_, Database>) -> Result<Vec<SongListItem>, AppError> {
-    db.get_all_songs()
+    info!("Buscando todas as músicas");
+    match db.get_all_songs() {
+        Ok(songs) => {
+            info!("Retornou {} músicas", songs.len());
+            Ok(songs)
+        }
+        Err(e) => {
+            error!("Erro ao buscar todas as músicas: {:?}", e);
+            Err(e)
+        }
+    }
 }
 
 #[tauri::command]
@@ -25,14 +36,35 @@ pub fn get_songs_with_drafts(db: State<'_, Database>) -> Result<Vec<SongListItem
 #[tauri::command]
 pub fn search_songs(db: State<'_, Database>, query: String) -> Result<Vec<SongListItem>, AppError> {
     if query.trim().is_empty() {
+        info!("Busca vazia, retornando todas as músicas");
         return db.get_all_songs();
     }
-    db.search_songs(&query)
+    info!("Buscando músicas com query: '{}'", query);
+    match db.search_songs(&query) {
+        Ok(songs) => {
+            info!("Busca retornou {} resultados", songs.len());
+            Ok(songs)
+        }
+        Err(e) => {
+            error!("Erro ao buscar músicas: {:?}", e);
+            Err(e)
+        }
+    }
 }
 
 #[tauri::command]
 pub fn toggle_favorite(db: State<'_, Database>, song_id: String) -> Result<bool, AppError> {
-    db.toggle_favorite(&song_id)
+    info!("Alternando favorito para música: {}", song_id);
+    match db.toggle_favorite(&song_id) {
+        Ok(is_now_favorite) => {
+            info!("Música {} agora é favorita: {}", song_id, is_now_favorite);
+            Ok(is_now_favorite)
+        }
+        Err(e) => {
+            error!("Erro ao alternar favorito para {}: {:?}", song_id, e);
+            Err(e)
+        }
+    }
 }
 
 #[tauri::command]
@@ -218,6 +250,7 @@ pub fn create_song(
     name: String,
 ) -> Result<SongListItem, AppError> {
     if name.trim().is_empty() {
+        warn!("Tentativa de criar música com nome vazio");
         return Err(AppError::Generic(
             "Nome da música não pode estar vazio".into(),
         ));
@@ -225,11 +258,13 @@ pub fn create_song(
 
     let all_songs = db.get_all_songs()?;
     if all_songs.iter().any(|s| s.name.eq_ignore_ascii_case(&name)) {
+        warn!("Tentativa de criar música que já existe: {}", name);
         return Err(AppError::Generic(
             "Uma música com esse nome já existe".into(),
         ));
     }
 
+    info!("Criando nova música: {}", name);
     let now = Local::now().naive_local();
     let song_id = uuid::Uuid::new_v4().to_string();
 
@@ -258,6 +293,7 @@ pub fn create_song_with_categories(
     category_ids: Vec<String>,
 ) -> Result<SongListItem, AppError> {
     if name.trim().is_empty() {
+        warn!("Tentativa de criar música com nome vazio");
         return Err(AppError::Generic(
             "Nome da música não pode estar vazio".into(),
         ));
@@ -265,11 +301,13 @@ pub fn create_song_with_categories(
 
     let all_songs = db.get_all_songs()?;
     if all_songs.iter().any(|s| s.name.eq_ignore_ascii_case(&name)) {
+        warn!("Tentativa de criar música que já existe: {}", name);
         return Err(AppError::Generic(
             "Uma música com esse nome já existe".into(),
         ));
     }
 
+    info!("Criando nova música com categorias: {} ({} categorias)", name, category_ids.len());
     let now = Local::now().naive_local();
     let song_id = uuid::Uuid::new_v4().to_string();
 
@@ -343,6 +381,7 @@ pub fn update_song(
     category_ids: Vec<String>,
 ) -> Result<SongListItem, AppError> {
     if name.trim().is_empty() {
+        warn!("Tentativa de atualizar música {} com nome vazio", song_id);
         return Err(AppError::Generic(
             "Nome da música não pode estar vazio".into(),
         ));
@@ -353,11 +392,13 @@ pub fn update_song(
         .iter()
         .any(|s| s.id != song_id && s.name.eq_ignore_ascii_case(&name))
     {
+        warn!("Tentativa de alterar música {} para nome que já existe: {}", song_id, name);
         return Err(AppError::Generic(
             "Uma música com esse nome já existe".into(),
         ));
     }
 
+    info!("Atualizando música: {} -> {}", song_id, name);
     let original_song = db.get_song_by_id(&song_id)?;
     let now = Local::now().naive_local();
 

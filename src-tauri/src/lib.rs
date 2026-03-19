@@ -1,10 +1,12 @@
 mod commands;
 mod domain;
 mod infrastructure;
+mod logger;
 mod services;
 
 use infrastructure::database::Database;
 use tauri::Manager;
+use tracing::info;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -23,6 +25,13 @@ pub fn run() {
 
             std::fs::create_dir_all(&app_data_dir)
                 .expect("Não foi possível criar diretório de dados");
+
+            // Inicializar logger
+            logger::init_logger(&app_data_dir)
+                .expect("Não foi possível inicializar o logger");
+
+            info!("Aplicação iniciada");
+            info!("Diretório de dados: {:?}", app_data_dir);
 
             let db_path = app_data_dir.join("score_maestro.db");
             let db = Database::new(&db_path)
