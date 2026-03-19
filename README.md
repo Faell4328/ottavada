@@ -45,6 +45,8 @@ Um aplicativo desktop windows, para organizar, controlar status das partituras e
 
 # Requisitos não funcionais
 
+- Não alterar o diretório e/ou arquivos do usuário sem a autorização direta dele.
+	- A ideia é simples, se o usuário não gostar, ele pode voltar ao método antigo sem dor de cabeça.
 - Os computadores não se comunicam entre si (diretamente).
 - Controle de concorrência não é necessário, já que não vai ser feito alterações toda hora de todo lugar.
 -  Não é necessário criptografar a API key do Google Drive, já que vai ser utilizado em computadores domésticos e não em servidores expostos na internet.
@@ -53,8 +55,10 @@ Um aplicativo desktop windows, para organizar, controlar status das partituras e
 - Caso aja conflito entre cliente e servidor (que é improvável, porque é pouco provável ambos fazerem alterações ao mesmo tempo). A preferência será o Servidor, descartando as alterações do Cliente.
 - Não será utilizado hash, devido a dificuldade de atualizar um arquivo no finale 14, é praticamente impossível "salvar sem querer". Então no momento não é necessário essa complicação. Sendo utilizado apenas a data e hora para saber que o arquivo foi alterado ou não.
 - O diretório local onde é baixado as informações é no `/user/score-maestro`.
-- Ao baixar os arquivos do Google Drive ele viram compactados, ao dar duplo clique em uma partitura de alguma música, ela deve ser descompactada em um diretório temporário do Sistema Operacional `C:\Windows\Temp`.
-- Tanto a varredura, quanto o update e download, deve ser feito em thread separada. Para não interferir no funcionamento dos outros compoentens.
+- Ao baixar os arquivos do Google Drive ele viram compactados, ao dar duplo clique em uma partitura de alguma música, ela deve ser descompactada em um diretório temporário do Sistema Operacional `C:\Users\<user>\AppData\Local\Temp`.
+- Tanto a varredura, quanto o update e download, deve ser feito em thread separada. Para não interferir no funcionamento dos outros componentes.
+- O `logs` deve ser salvo no mesmo diretório onde o `tauri-plugin-store` salva por padrão (`C:\Users\<seu-usuario>\AppData\Roaming\<nome-do-app>\`).
+- O update no Google Drive deve ser dessa forma: comprimir com o nome: `database.msgpack.xz.tmp` e depois renomear para `database.msgpack.xz` (no Google Drive), o mesmo vale para as partituras. Objetivo é evitar arquivos corrompidos.
 
 ## Front-end
 
@@ -62,7 +66,7 @@ Um aplicativo desktop windows, para organizar, controlar status das partituras e
 - TypeScript
 - Vite
 - Tailwind CSS
-
+- `@tanstack/react-virtual` - Virtualização de listas longas
 - `react-router` - Navegação entre telas
 - `lucide-react` - Ícones
 - `react-hot-toast` - Notificações em tempo real
@@ -71,7 +75,6 @@ Um aplicativo desktop windows, para organizar, controlar status das partituras e
 
 - Tauri (Rust)
 - Google Drive API (backup)
-- `notify` crate - Para monitoramento em arquivos de partitura (inotify no Linux, ReadDirectoryChangesW no Windows)
 - `xz` crate - Reduz tamanho para backup na nuvem
 - `rusqlite` crate - SQLite com suporte a FTS5
 - `serde` + `rmp-serde` - Leitura do arquivo `MessagePack`.
@@ -145,16 +148,24 @@ Será documentando em JSON, mas na aplicação real é utilizando `MessagePack`.
 - `composer`
 - `arranger`
 - `isFavorite` - booleano
-- `updatedAt` - timestamp
+- `updatedAt` - última alteração da música (sempre que um `score` é atualizando, ele atualiza aqui também). Objetivo é agiliza a comparação com o `MessagePack` no Google Drive.
+
+### Directory
+- `id`
+- `pathName`
 
 ### Scores
 - `id`
 - `songId`
 - `name`
 - `hostId` - computador que contém o arquivo original monitorado
-- `filePath`
-- `updatedAt` - timestamp
+- `directoryId`
+- `fileName`
+- `fileModifiedAt` - última alteração no arquivo
+- `fileSize` - tamanho do arquivo.
 - `status` - `draft`, `pending` e `main`.
+
+! A junção de `directory` + `fineName` é um único.
 
 ## `tauri-plugin-store`
 
@@ -162,7 +173,7 @@ Será documentando em JSON, mas na aplicação real é utilizando `MessagePack`.
 computer: {
 	"id": "lfajkdçf",
 	"name": "Faell",
-	"dataBaseUpdatedAt": 8021948012
+	"dataBaseUpdatedAt": 8021948012,
 	"apiKey": {
 		"Client ID / Secret": "Identifica a aplicação",
 		"Access Token": "Token usado para acessar recursos protegidos",
@@ -291,7 +302,7 @@ Ao clicar na música será expandido e mostrar uma lista de partituras/instrumen
 - Deve trazer os intrumentos, extensão e status (`draft` - borda laranja, `pending` - borda amarela e `main` - borda verde)
 
 ### Footer
-É um dos meios de comunicar com o usuário o que está sendo feito.
+É um dos meios de comunicar com o usuário o que está sendo feito. Ele deve ser sempre visível.
 - Status: data/hora do último backup
 - Se em progresso: barra de progresso e porcentagem
 
@@ -304,15 +315,17 @@ Ao clicar na música será expandido e mostrar uma lista de partituras/instrumen
 	- [x] Remover os ícones de "favoritar", "adicionar partitura", "adicionar diretório" e "editar", passar tudo para um "overflow menu" com essas opções (com ícone de "...")
 	- [x] Adicionar "overflow menu" na partitura/instrumento, no momento deixar apenas a opção "teste", ao clicar vai ter um `toast` com a mensagem "testado".
 	- [x] Remover o efeito de seleção ao clicar em alguma partitura/instrumento dentro da música.
-	- [x] Atualizar o modal de edição das partituras. 
 - [x] Atualizar estrutura do banco
-- [ ] Revisar adicionar música/partitura
-- [ ] Revisar atualizar música
-- [ ] Revisar favoritos
-- [ ] Adicionar sistema de log
+- [x] Revisar adicionar música/partitura
+- [x] Revisar atualizar música
+- [x] Revisar favoritos
+- [x] Verificar dependências do projeto (se tem alguma não utilizada e se tem todas instaladas)
+- [x] Adicionar sistema de log
+	- [x] Garantir que está salvando o `C:\Users\<seu-usuario>\AppData\Roaming\<nome-do-app>\`
 
 ## Funcionalidades para v0.2 - funcionamento local completo
-- [ ] Detectar alteração de arquivos (notify)
+- [ ] Mudar as informações do sistema do banco de dados para o `tauri-plugin-store`.
+- [ ] Implementar a função para detectar alteração no arquivo.
 - [ ] Implementar fluxo `draft` → `main`
 - [ ] Adicionar função para listar todos os rascunhos ativos
 - [ ] Adicionar testes
@@ -331,6 +344,20 @@ Ao clicar na música será expandido e mostrar uma lista de partituras/instrumen
 - [ ] Tratamento de falhas
 - [ ] Testes
 
+## Funcionalidade para v0.5 - colete de balas
+- [ ] Testar massivamente e corrigir qualquer problema relacionado a adição de música e partituras.
+- [ ] Testar massivamente e corrigir qualquer problema relacionado a detecção de arquivos modificados.
+- [ ] Testar massivamente e corrigir qualquer problema relacionado a backup (todas as etapas).
+
 ## Funcionalidades para v2 (apenas rascunho/ideias)
 
 - Backup utilizando pendrive ou outro meio local.
+
+# Anotações
+
+19-03-2026 - Estava cogitando utilizando o `notify`, mas, ele vai dar mais problema que benefício. Então estou buscando uma alternativa melhor e mais robusta.
+Solução:
+- Será criado outra tabela chamado "diretório", ao invés de salvar o caminho completo do arquivo, será salvo apenas o nome e a extensão do arquivo, e o caminho será salvo nessa tabela.
+- Esse problema não vai trazer otimizações significativas, mas vai trazer mais clareza e organização. Usando uma paginação por diretórios e ficando mais claro até para o usuário, ex: `analizando diretório: /musica/joel amarim`, também é bom para logs e debug.
+- Com isso a verificação será feita "manualmente", comparando o "size + timestamp" dos arquivos no diretório para ver se teve alteração ou não.
+- Caso seja encontrado um arquivo no diretório que não está no banco de dados, ele deve ser ignorado (pula).
