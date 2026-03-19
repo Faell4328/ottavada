@@ -16,10 +16,13 @@ interface TopBarProps {
 export default function TopBar({
   title = "Score Maestro",
 }: TopBarProps) {
-  const { loadSongs, loadCategories } = useAppState();
+  const { loadSongs, loadCategories, state } = useAppState();
   const navigate = useNavigate();
   const [showAddMusicModal, setShowAddMusicModal] = useState(false);
   const [musicTitle, setMusicTitle] = useState("");
+  const [musicComposer, setMusicComposer] = useState("");
+  const [musicArranger, setMusicArranger] = useState("");
+  const [selectedMusicCategories, setSelectedMusicCategories] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pendingFiles, setPendingFiles] = useState<IndexedFile[]>([]);
@@ -112,10 +115,18 @@ export default function TopBar({
     setError(null);
 
     try {
-      await api.createSong(musicTitle.trim());
+      await api.createSongWithMetadata(
+        musicTitle.trim(),
+        musicComposer.trim() || null,
+        musicArranger.trim() || null,
+        selectedMusicCategories
+      );
       await loadSongs();
       setShowAddMusicModal(false);
       setMusicTitle("");
+      setMusicComposer("");
+      setMusicArranger("");
+      setSelectedMusicCategories([]);
       toast.success("Música criada com sucesso!");
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Erro ao criar música";
@@ -126,9 +137,20 @@ export default function TopBar({
     }
   }
 
+  function toggleMusicCategory(categoryId: string) {
+    setSelectedMusicCategories((prev) =>
+      prev.includes(categoryId)
+        ? prev.filter((id) => id !== categoryId)
+        : [...prev, categoryId]
+    );
+  }
+
   function handleCloseModal() {
     setShowAddMusicModal(false);
     setMusicTitle("");
+    setMusicComposer("");
+    setMusicArranger("");
+    setSelectedMusicCategories([]);
     setError(null);
   }
 
@@ -180,7 +202,7 @@ export default function TopBar({
 
       {showAddMusicModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-sm rounded-lg bg-[#1e2836] p-6 shadow-xl border border-white/15">
+          <div className="w-full max-w-sm rounded-lg bg-[#1e2836] p-6 shadow-xl border border-white/15 max-h-[90vh] overflow-y-auto">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-bold text-white">Adicionar Música</h2>
               <button
@@ -192,29 +214,85 @@ export default function TopBar({
               </button>
             </div>
 
-            <div className="mb-4">
-              <input
-                type="text"
-                placeholder="Nome da música"
-                value={musicTitle}
-                onChange={(e) => setMusicTitle(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    handleCreateMusic();
-                  }
-                }}
-                className="w-full rounded border border-white/20 bg-white/5 px-3 py-2 text-white placeholder-white/40 outline-none focus:border-white/40 focus:bg-white/10 transition-colors"
-                autoFocus
-              />
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-white/80 mb-1">
+                  Nome da Música *
+                </label>
+                <input
+                  type="text"
+                  placeholder="Nome da música"
+                  value={musicTitle}
+                  onChange={(e) => setMusicTitle(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleCreateMusic();
+                    }
+                  }}
+                  className="w-full rounded border border-white/20 bg-white/5 px-3 py-2 text-white placeholder-white/40 outline-none focus:border-white/40 focus:bg-white/10 transition-colors"
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-white/80 mb-1">
+                  Compositor
+                </label>
+                <input
+                  type="text"
+                  placeholder="Nome do compositor"
+                  value={musicComposer}
+                  onChange={(e) => setMusicComposer(e.target.value)}
+                  className="w-full rounded border border-white/20 bg-white/5 px-3 py-2 text-white placeholder-white/40 outline-none focus:border-white/40 focus:bg-white/10 transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-white/80 mb-1">
+                  Arranjador
+                </label>
+                <input
+                  type="text"
+                  placeholder="Nome do arranjador"
+                  value={musicArranger}
+                  onChange={(e) => setMusicArranger(e.target.value)}
+                  className="w-full rounded border border-white/20 bg-white/5 px-3 py-2 text-white placeholder-white/40 outline-none focus:border-white/40 focus:bg-white/10 transition-colors"
+                />
+              </div>
+
+              {/* Categorias */}
+              {state.categories && state.categories.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-white/80 mb-2">
+                    Categorias
+                  </label>
+                  <div className="space-y-2">
+                    {state.categories.map((category) => (
+                      <label
+                        key={category.id}
+                        className="flex items-center gap-2 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedMusicCategories.includes(category.id)}
+                          onChange={() => toggleMusicCategory(category.id)}
+                          className="rounded border border-white/20 bg-white/5 w-4 h-4 cursor-pointer accent-blue-600"
+                        />
+                        <span className="text-sm text-white/90">{category.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {error && (
+                <div className="rounded bg-red-500/20 px-3 py-2 text-sm text-red-300">
+                  {error}
+                </div>
+              )}
             </div>
 
-            {error && (
-              <div className="mb-4 rounded bg-red-500/20 px-3 py-2 text-sm text-red-300">
-                {error}
-              </div>
-            )}
-
-            <div className="flex justify-end gap-2">
+            <div className="mt-6 flex justify-end gap-2">
               <button
                 type="button"
                 onClick={handleCloseModal}

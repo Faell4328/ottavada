@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X } from "lucide-react";
+import { X, Trash2 } from "lucide-react";
 import { useAppState } from "../context/AppContext";
 import type { IndexedFile } from "../types";
 import * as api from "../api/commands";
@@ -25,6 +25,7 @@ export function AddFilesModal({
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
   const [instrumentNames, setInstrumentNames] = useState<Record<number, string>>({});
+  const [removedFileIndices, setRemovedFileIndices] = useState<Set<number>>(new Set());
 
   // Extrair nome base da música do primeiro arquivo
   useEffect(() => {
@@ -34,6 +35,7 @@ export function AddFilesModal({
       setArranger("");
       setSelectedCategories([]);
       setError("");
+      setRemovedFileIndices(new Set());
       
       // Inicializar nomes dos instrumentos
       const names: Record<number, string> = {};
@@ -59,14 +61,24 @@ export function AddFilesModal({
     }));
   };
 
+  const removeFile = (idx: number) => {
+    setRemovedFileIndices((prev) => {
+      const newSet = new Set(prev);
+      newSet.add(idx);
+      return newSet;
+    });
+  };
+
   const handleSave = async () => {
     if (!title.trim()) {
       setError("O título da música é obrigatório");
       return;
     }
 
-    if (files.length === 0) {
-      setError("Nenhum arquivo para adicionar");
+    const activeFiles = files.filter((_, idx) => !removedFileIndices.has(idx));
+    
+    if (activeFiles.length === 0) {
+      setError("Adicione pelo menos um arquivo");
       return;
     }
 
@@ -74,13 +86,17 @@ export function AddFilesModal({
     setError("");
 
     try {
-      // Mapear arquivos com nomes de instrumentos editados
-      const filteredFiles = files.map((f, idx) => ({
-        path: f.path,
-        name: title.trim(),
-        instrument: instrumentNames[idx] || f.instrument,
-        extension: f.extension,
-      }));
+      // Mapear arquivos ativos com nomes de instrumentos editados
+      const filteredFiles = activeFiles.map((f, idx) => {
+        // Encontrar o índice original do arquivo
+        const originalIdx = files.indexOf(f);
+        return {
+          path: f.path,
+          name: title.trim(),
+          instrument: instrumentNames[originalIdx] || f.instrument,
+          extension: f.extension,
+        };
+      });
 
       await api.importIndexedFilesWithMetadata(
         filteredFiles,
@@ -101,7 +117,8 @@ export function AddFilesModal({
 
   if (!isOpen || files.length === 0) return null;
 
-  const instrumentCount = files.length;
+  const activeFiles = files.filter((_, idx) => !removedFileIndices.has(idx));
+  const instrumentCount = activeFiles.length;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -192,21 +209,35 @@ export function AddFilesModal({
               <label className="block text-sm font-medium text-white/80 mb-2">
                 Instrumentos a adicionar ({instrumentCount})
               </label>
-              <div className="rounded border border-white/20 bg-white/5 p-3 space-y-2 max-h-40 overflow-y-auto">
-                {files.map((file, idx) => (
-                  <div key={idx} className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={instrumentNames[idx] || ""}
-                      onChange={(e) => updateInstrumentName(idx, e.target.value)}
-                      placeholder="Nome do instrumento"
-                      className="flex-1 rounded border border-white/20 bg-white/5 px-2 py-1.5 text-sm text-white placeholder-white/40 outline-none focus:border-white/40 focus:bg-white/10 transition-colors"
-                    />
-                    <span className="text-xs text-white/40 flex-shrink-0 font-medium">
-                      {file.extension.toUpperCase()}
-                    </span>
-                  </div>
-                ))}
+              <div className="rounded border border-white/20 bg-white/5 p-3 space-y-4 max-h-75 overflow-y-auto">
+                {files.map((file, idx) => {
+                  if (removedFileIndices.has(idx)) return null;
+                  
+                  return (
+                    <div key={idx} className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs text-white/60 font-medium truncate">
+                          {file.path.split('/').pop()}
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => removeFile(idx)}
+                          className="p-1 text-white/60 hover:text-red-400 transition-colors"
+                          title="Remover arquivo"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                      <input
+                        type="text"
+                        value={instrumentNames[idx] || ""}
+                        onChange={(e) => updateInstrumentName(idx, e.target.value)}
+                        placeholder="Nome do instrumento"
+                        className="w-full rounded border border-white/20 bg-white/5 px-2 py-1.5 text-sm text-white placeholder-white/40 outline-none focus:border-white/40 focus:bg-white/10 transition-colors"
+                      />
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

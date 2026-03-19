@@ -248,7 +248,89 @@ pub fn create_song(
     all_songs
         .into_iter()
         .find(|s| s.id == song_id)
-        .ok_or_else(|| AppError::Generic("Erro ao recuperar música criada".into()))
+        .ok_or_else(|| AppError::Generic("Falha ao recuperar música criada".into()))
+}
+
+#[tauri::command]
+pub fn create_song_with_categories(
+    db: State<'_, Database>,
+    name: String,
+    category_ids: Vec<String>,
+) -> Result<SongListItem, AppError> {
+    if name.trim().is_empty() {
+        return Err(AppError::Generic(
+            "Nome da música não pode estar vazio".into(),
+        ));
+    }
+
+    let all_songs = db.get_all_songs()?;
+    if all_songs.iter().any(|s| s.name.eq_ignore_ascii_case(&name)) {
+        return Err(AppError::Generic(
+            "Uma música com esse nome já existe".into(),
+        ));
+    }
+
+    let now = Local::now().naive_local();
+    let song_id = uuid::Uuid::new_v4().to_string();
+
+    let song = Song {
+        id: song_id.clone(),
+        name: name.trim().to_string(),
+        composer: None,
+        arranger: None,
+        is_favorite: false,
+        updated_at: now,
+    };
+
+    db.insert_song(&song, &category_ids)?;
+
+    let all_songs = db.get_all_songs()?;
+    all_songs
+        .into_iter()
+        .find(|s| s.id == song_id)
+        .ok_or_else(|| AppError::Generic("Falha ao recuperar música criada".into()))
+}
+
+#[tauri::command]
+pub fn create_song_with_metadata(
+    db: State<'_, Database>,
+    name: String,
+    composer: Option<String>,
+    arranger: Option<String>,
+    category_ids: Vec<String>,
+) -> Result<SongListItem, AppError> {
+    if name.trim().is_empty() {
+        return Err(AppError::Generic(
+            "Nome da música não pode estar vazio".into(),
+        ));
+    }
+
+    let all_songs = db.get_all_songs()?;
+    if all_songs.iter().any(|s| s.name.eq_ignore_ascii_case(&name)) {
+        return Err(AppError::Generic(
+            "Uma música com esse nome já existe".into(),
+        ));
+    }
+
+    let now = Local::now().naive_local();
+    let song_id = uuid::Uuid::new_v4().to_string();
+
+    let song = Song {
+        id: song_id.clone(),
+        name: name.trim().to_string(),
+        composer,
+        arranger,
+        is_favorite: false,
+        updated_at: now,
+    };
+
+    db.insert_song(&song, &category_ids)?;
+
+    let all_songs = db.get_all_songs()?;
+    all_songs
+        .into_iter()
+        .find(|s| s.id == song_id)
+        .ok_or_else(|| AppError::Generic("Falha ao recuperar música criada".into()))
 }
 
 #[tauri::command]

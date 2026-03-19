@@ -63,6 +63,27 @@ export async function createSong(name: string): Promise<SongListItem> {
   return invoke("create_song", { name });
 }
 
+export async function createSongWithCategories(
+  name: string,
+  categoryIds: string[]
+): Promise<SongListItem> {
+  return invoke("create_song_with_categories", { name, categoryIds });
+}
+
+export async function createSongWithMetadata(
+  name: string,
+  composer: string | null,
+  arranger: string | null,
+  categoryIds: string[]
+): Promise<SongListItem> {
+  return invoke("create_song_with_metadata", {
+    name,
+    composer,
+    arranger,
+    categoryIds,
+  });
+}
+
 export async function updateSong(
   songId: string,
   name: string,
