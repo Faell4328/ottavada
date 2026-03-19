@@ -1,0 +1,176 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { EditMusicModal } from "../../components/EditMusicModal";
+import { AppProvider } from "../../context/AppContext";
+import type { SongListItem } from "../../types";
+
+// Mock Tauri APIs
+vi.mock("@tauri-apps/api/core", () => ({
+  invoke: vi.fn(async (cmd: string) => {
+    switch (cmd) {
+      case "is_first_run":
+        return false;
+      case "get_all_songs":
+        return [];
+      case "get_categories":
+        return [
+          { id: "c1", name: "Harpa Cristã" },
+          { id: "c2", name: "Clássicas" },
+        ];
+      case "get_settings":
+        return {
+          computer_id: "test-id",
+          computer_name: "Test",
+          google_drive_mode: "Local",
+          first_run_completed: true,
+          google_service_account: null,
+        };
+      case "scan_files_for_changes":
+        return { changed_files: [], failed_files: [] };
+      default:
+        return null;
+    }
+  }),
+}));
+
+vi.mock("@tauri-apps/plugin-dialog", () => ({
+  open: vi.fn(),
+}));
+
+vi.mock("@tauri-apps/plugin-store", () => ({
+  load: vi.fn(),
+}));
+
+vi.mock("react-hot-toast", () => ({
+  default: {
+    success: vi.fn(),
+    error: vi.fn(),
+  },
+}));
+
+const sampleSong: SongListItem = {
+  id: "s1",
+  name: "Canon in D",
+  composer: "Pachelbel",
+  arranger: "Modern Arranged",
+  updated_at: "2024-01-01 12:00:00",
+  is_favorite: false,
+  category_ids: ["c1"],
+  scores: [],
+};
+
+function renderWithProvider(ui: React.ReactElement) {
+  return render(<AppProvider>{ui}</AppProvider>);
+}
+
+describe("EditMusicModal", () => {
+  const mockOnClose = vi.fn();
+  const mockOnSave = vi.fn();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockOnSave.mockResolvedValue(undefined);
+  });
+
+  it("should not render when isOpen is false", () => {
+    renderWithProvider(
+      <EditMusicModal isOpen={false} score={sampleSong} onClose={mockOnClose} onSave={mockOnSave} />
+    );
+    expect(screen.queryByText("Editar Música")).not.toBeInTheDocument();
+  });
+
+  it("should not render when score is null", () => {
+    renderWithProvider(
+      <EditMusicModal isOpen={true} score={null} onClose={mockOnClose} onSave={mockOnSave} />
+    );
+    expect(screen.queryByText("Editar Música")).not.toBeInTheDocument();
+  });
+
+  it("should render with song data pre-filled", () => {
+    renderWithProvider(
+      <EditMusicModal isOpen={true} score={sampleSong} onClose={mockOnClose} onSave={mockOnSave} />
+    );
+
+    expect(screen.getByText("Editar Música")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Canon in D")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Pachelbel")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Modern Arranged")).toBeInTheDocument();
+  });
+
+  it("should show error when title is empty", async () => {
+    renderWithProvider(
+      <EditMusicModal isOpen={true} score={sampleSong} onClose={mockOnClose} onSave={mockOnSave} />
+    );
+
+    const titleInput = screen.getByDisplayValue("Canon in D");
+    fireEvent.change(titleInput, { target: { value: "" } });
+    fireEvent.click(screen.getByText("Salvar"));
+
+    await waitFor(() => {
+      expect(screen.getByText("O título é obrigatório")).toBeInTheDocument();
+    });
+    expect(mockOnSave).not.toHaveBeenCalled();
+  });
+
+  it("should call onSave with updated data", async () => {
+    renderWithProvider(
+      <EditMusicModal isOpen={true} score={sampleSong} onClose={mockOnClose} onSave={mockOnSave} />
+    );
+
+    const titleInput = screen.getByDisplayValue("Canon in D");
+    fireEvent.change(titleInput, { target: { value: "Canon in D Major" } });
+    fireEvent.click(screen.getByText("Salvar"));
+
+    await waitFor(() => {
+      expect(mockOnSave).toHaveBeenCalledWith({
+        songId: "s1",
+        title: "Canon in D Major",
+        composer: "Pachelbel",
+        arranger: "Modern Arranged",
+        categoryIds: ["c1"],
+      });
+    });
+  });
+
+  it("should call onClose when cancel is clicked", () => {
+    renderWithProvider(
+      <EditMusicModal isOpen={true} score={sampleSong} onClose={mockOnClose} onSave={mockOnSave} />
+    );
+
+    fireEvent.click(screen.getByText("Cancelar"));
+    expect(mockOnClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("should show error when onSave rejects", async () => {
+    mockOnSave.mockRejectedValueOnce(new Error("Falha na atualização"));
+
+    renderWithProvider(
+      <EditMusicModal isOpen={true} score={sampleSong} onClose={mockOnClose} onSave={mockOnSave} />
+    );
+
+    fireEvent.click(screen.getByText("Salvar"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Falha na atualização")).toBeInTheDocument();
+    });
+  });
+
+  it("should send null for empty composer", async () => {
+    const songNoComposer = { ...sampleSong, composer: null, arranger: null };
+
+    renderWithProvider(
+      <EditMusicModal isOpen={true} score={songNoComposer} onClose={mockOnClose} onSave={mockOnSave} />
+    );
+
+    fireEvent.click(screen.getByText("Salvar"));
+
+    await waitFor(() => {
+      expect(mockOnSave).toHaveBeenCalledWith(
+        expect.objectContaining({
+          composer: null,
+          arranger: null,
+        })
+      );
+    });
+  });
+});

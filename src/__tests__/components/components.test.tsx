@@ -1,8 +1,12 @@
 import { describe, it, expect } from "vitest";
 
-// Placeholder test file - component tests pending
+// Component tests are now in individual test files:
+// - AddMusicModal.test.tsx
+// - AddFilesModal.test.tsx
+// - EditMusicModal.test.tsx
+// - EditInstrumentModal.test.tsx
 describe("Components", () => {
-  it("should compile without errors", () => {
+  it("test suite is organized in individual files", () => {
     expect(true).toBe(true);
   });
 });

@@ -108,7 +108,7 @@ Será documentando em JSON, mas na aplicação real é utilizando `MessagePack`.
 
 ```json
 {
-  "dataBaseUpdatedAt": 1710684000,
+  "version": 1,
   "songs": [
     {
       "id": "abc123",
@@ -333,8 +333,9 @@ Ao clicar na música será expandido e mostrar uma lista de partituras/instrumen
 - [x] Implementar fluxo `draft` → `main`
 	- [x] No overflow menu das partituras, deve ter a opção (Definir como `main` - aparecer e funcionar apenas se tiver `draft`). Ao clicar deve abrir um modal de confirmação, "você realmente deseja mudar o arquivo para `main`?"
 	- [x] Também no overflow menu das partituras deve ter a opção (Definir como `draft` - aparecer e funcionar apenas se tiver como `main`). Ao clicar deve abrir um modal de confirmação, "você realmente deseja mudar o arquivo para `draft`?"
-- [ ] Adicionar função para listar todos os rascunhos ativos
-- [ ] Adicionar testes
+- [x] Adicionar função para listar todos os rascunhos ativos
+- [ ] Refatoração e adicionar testes
+- [ ] Atualizar o banco de dados (back e front), adicionando a tabela de `directory`
 - [ ] Adicionar suporte Cliente/Servidor
 
 ## Funcionalidades para v0.3 - sincronização offline-ready

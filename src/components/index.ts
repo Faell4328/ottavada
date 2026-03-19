@@ -8,5 +8,6 @@ export { EditScoreModal } from "./EditScoreModal";
 export { EditMusicModal } from "./EditMusicModal";
 export { EditInstrumentModal } from "./EditInstrumentModal";
 export { AddFilesModal } from "./AddFilesModal";
+export { AddMusicModal } from "./AddMusicModal";
 export { MemoizedSongRow } from "./SongRow";
 export { MemoizedScoreRow } from "./ScoreRow";

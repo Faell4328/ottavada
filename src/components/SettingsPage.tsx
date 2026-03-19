@@ -27,17 +27,17 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-gradient-to-b from-white via-slate-50 to-slate-100 select-none">
+    <div className="flex min-h-screen flex-col bg-gradient-to-b from-[#edf1f6] via-[#f2f5fa] to-[#f8fafd] select-none">
       {/* Header */}
-      <div className="flex items-center gap-3 border-b border-[#e6eef9] bg-white/6 px-4 py-3">
+      <div className="flex items-center gap-3 border-b border-[#d8e0ea] bg-[#eef2f6] px-4 py-3">
         <button
           type="button"
           onClick={() => navigate("/")}
-          className="flex h-8 w-8 items-center justify-center rounded border border-white/25 bg-white/8 hover:bg-white/15 transition-colors cursor-pointer"
+          className="flex h-8 w-8 items-center justify-center rounded border border-[#c5cfdb] bg-white hover:bg-[#f2f5fa] transition-colors cursor-pointer"
         >
-          <ArrowLeft className="h-4 w-4 text-slate-700" />
+          <ArrowLeft className="h-4 w-4 text-[#344b61]" />
         </button>
-        <h1 className="text-lg font-bold text-slate-800">Configurações</h1>
+        <h1 className="text-lg font-bold text-[#2f4259]">Configurações</h1>
       </div>
 
       <div className="flex-1 p-6 max-w-2xl mx-auto w-full">

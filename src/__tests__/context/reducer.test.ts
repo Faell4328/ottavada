@@ -207,5 +207,150 @@ describe("AppContext Reducer", () => {
       });
       expect(state.selectedSong?.name).toBe("Canon Updated");
     });
+
+    it("should also update the song in the songs list", () => {
+      const song1 = makeSong("s1", "Canon");
+      const song2 = makeSong("s2", "Moonlight");
+      const stateWithSongs = {
+        ...initialState,
+        songs: [song1, song2],
+        selectedSong: song1,
+      };
+      const updatedSong = { ...song1, name: "Canon Revised", composer: "Pachelbel" };
+      const state = reducer(stateWithSongs, {
+        type: "UPDATE_SELECTED_SONG",
+        payload: updatedSong,
+      });
+      expect(state.songs[0].name).toBe("Canon Revised");
+      expect(state.songs[0].composer).toBe("Pachelbel");
+      expect(state.songs[1].name).toBe("Moonlight");
+    });
+  });
+
+  describe("SET_SIDEBAR_VIEW", () => {
+    it("should reset selectedSong and selectedScore when changing view", () => {
+      const stateWithSelections = {
+        ...initialState,
+        selectedSong: makeSong("s1", "Canon"),
+        selectedScore: makeScore("f1", "Violino"),
+        sidebarView: "all" as const,
+      };
+      const state = reducer(stateWithSelections, {
+        type: "SET_SIDEBAR_VIEW",
+        payload: "favorites",
+      });
+      expect(state.sidebarView).toBe("favorites");
+      expect(state.selectedSong).toBeNull();
+      expect(state.selectedScore).toBeNull();
+    });
+
+    it("should support category view object", () => {
+      const categoryView = { type: "category" as const, id: "c1", name: "Hinos" };
+      const state = reducer(initialState, {
+        type: "SET_SIDEBAR_VIEW",
+        payload: categoryView,
+      });
+      expect(state.sidebarView).toEqual(categoryView);
+    });
+
+    it("should support drafts view", () => {
+      const state = reducer(initialState, {
+        type: "SET_SIDEBAR_VIEW",
+        payload: "drafts",
+      });
+      expect(state.sidebarView).toBe("drafts");
+    });
+  });
+
+  describe("SET_SELECTED_SONG", () => {
+    it("should reset selectedScore when selecting a new song", () => {
+      const stateWithScore = {
+        ...initialState,
+        selectedScore: makeScore("f1", "Violino"),
+      };
+      const state = reducer(stateWithScore, {
+        type: "SET_SELECTED_SONG",
+        payload: makeSong("s1", "Canon"),
+      });
+      expect(state.selectedSong?.name).toBe("Canon");
+      expect(state.selectedScore).toBeNull();
+    });
+  });
+
+  describe("TOGGLE_FAVORITE", () => {
+    it("should not affect other songs", () => {
+      const stateWithSongs = {
+        ...initialState,
+        songs: [makeSong("s1", "Canon"), makeSong("s2", "Moonlight")],
+      };
+      const state = reducer(stateWithSongs, {
+        type: "TOGGLE_FAVORITE",
+        payload: { songId: "s1", isFavorite: true },
+      });
+      expect(state.songs[0].is_favorite).toBe(true);
+      expect(state.songs[1].is_favorite).toBe(false);
+    });
+
+    it("should handle unfavoriting", () => {
+      const favoriteSong = { ...makeSong("s1", "Canon"), is_favorite: true };
+      const stateWithFavorite = {
+        ...initialState,
+        songs: [favoriteSong],
+      };
+      const state = reducer(stateWithFavorite, {
+        type: "TOGGLE_FAVORITE",
+        payload: { songId: "s1", isFavorite: false },
+      });
+      expect(state.songs[0].is_favorite).toBe(false);
+    });
+  });
+
+  describe("SET_SCANNING_FILES", () => {
+    it("should set scanning state", () => {
+      const state = reducer(initialState, {
+        type: "SET_SCANNING_FILES",
+        payload: true,
+      });
+      expect(state.isScanningFiles).toBe(true);
+    });
+
+    it("should turn off scanning state", () => {
+      const scanningState = { ...initialState, isScanningFiles: true };
+      const state = reducer(scanningState, {
+        type: "SET_SCANNING_FILES",
+        payload: false,
+      });
+      expect(state.isScanningFiles).toBe(false);
+    });
+  });
+
+  describe("SET_SCAN_PROGRESS", () => {
+    it("should update scan progress", () => {
+      const progress = { total: 50, completed: 25, changedFiles: 3 };
+      const state = reducer(initialState, {
+        type: "SET_SCAN_PROGRESS",
+        payload: progress,
+      });
+      expect(state.scanProgress).toEqual(progress);
+    });
+
+    it("should reset scan progress", () => {
+      const stateWithProgress = {
+        ...initialState,
+        scanProgress: { total: 50, completed: 50, changedFiles: 5 },
+      };
+      const state = reducer(stateWithProgress, {
+        type: "SET_SCAN_PROGRESS",
+        payload: { total: 0, completed: 0, changedFiles: 0 },
+      });
+      expect(state.scanProgress).toEqual({ total: 0, completed: 0, changedFiles: 0 });
+    });
+  });
+
+  describe("unknown action", () => {
+    it("should return the same state for unknown actions", () => {
+      const state = reducer(initialState, { type: "UNKNOWN_ACTION" } as never);
+      expect(state).toBe(initialState);
+    });
   });
 });

@@ -79,7 +79,7 @@ export function EditMusicModal({
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-lg w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
+      <div className="bg-[#f8fafd] rounded-lg shadow-xl border border-[#c5cfdb] w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-[#e0e8f0]">
           <h2 className="text-lg font-bold text-[#2f4259]">Editar Música</h2>
@@ -192,7 +192,7 @@ export function EditMusicModal({
           </button>
           <button
             onClick={handleSave}
-            className="flex-1 rounded bg-[#5c9ae6] px-3 py-2 text-sm font-medium text-white hover:bg-[#4a84c7] transition-colors disabled:opacity-50"
+            className="flex-1 rounded bg-[#4f84d7] px-3 py-2 text-sm font-medium text-white hover:bg-[#3d6fb8] transition-colors disabled:opacity-50"
             disabled={isSaving}
           >
             {isSaving ? "Salvando..." : "Salvar"}

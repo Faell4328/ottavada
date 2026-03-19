@@ -1,22 +1,23 @@
 import { useState, useEffect } from "react";
-import { X, Trash2 } from "lucide-react";
+import { X } from "lucide-react";
 import { useAppState } from "../context/AppContext";
-import type { IndexedFile } from "../types";
-import * as api from "../api/commands";
 
-interface AddFilesModalProps {
+interface AddMusicModalProps {
   isOpen: boolean;
-  files: IndexedFile[];
   onClose: () => void;
-  onSuccess: () => Promise<void>;
+  onSave: (data: {
+    title: string;
+    composer: string | null;
+    arranger: string | null;
+    categoryIds: string[];
+  }) => Promise<void>;
 }
 
-export function AddFilesModal({
+export function AddMusicModal({
   isOpen,
-  files,
   onClose,
-  onSuccess,
-}: AddFilesModalProps) {
+  onSave,
+}: AddMusicModalProps) {
   const { state } = useAppState();
   const [title, setTitle] = useState("");
   const [composer, setComposer] = useState("");
@@ -24,27 +25,16 @@ export function AddFilesModal({
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
-  const [instrumentNames, setInstrumentNames] = useState<Record<number, string>>({});
-  const [removedFileIndices, setRemovedFileIndices] = useState<Set<number>>(new Set());
 
-  // Extrair nome base da música do primeiro arquivo
   useEffect(() => {
-    if (isOpen && files.length > 0) {
-      setTitle(files[0].name || "");
+    if (isOpen) {
+      setTitle("");
       setComposer("");
       setArranger("");
       setSelectedCategories([]);
       setError("");
-      setRemovedFileIndices(new Set());
-      
-      // Inicializar nomes dos instrumentos
-      const names: Record<number, string> = {};
-      files.forEach((file, idx) => {
-        names[idx] = file.instrument || "";
-      });
-      setInstrumentNames(names);
     }
-  }, [isOpen, files]);
+  }, [isOpen]);
 
   const toggleCategory = (categoryId: string) => {
     setSelectedCategories((prev) =>
@@ -54,31 +44,9 @@ export function AddFilesModal({
     );
   };
 
-  const updateInstrumentName = (idx: number, name: string) => {
-    setInstrumentNames((prev) => ({
-      ...prev,
-      [idx]: name,
-    }));
-  };
-
-  const removeFile = (idx: number) => {
-    setRemovedFileIndices((prev) => {
-      const newSet = new Set(prev);
-      newSet.add(idx);
-      return newSet;
-    });
-  };
-
   const handleSave = async () => {
     if (!title.trim()) {
-      setError("O título da música é obrigatório");
-      return;
-    }
-
-    const activeFiles = files.filter((_, idx) => !removedFileIndices.has(idx));
-    
-    if (activeFiles.length === 0) {
-      setError("Adicione pelo menos um arquivo");
+      setError("Digite o título da música");
       return;
     }
 
@@ -86,46 +54,29 @@ export function AddFilesModal({
     setError("");
 
     try {
-      // Mapear arquivos ativos com nomes de instrumentos editados
-      const filteredFiles = activeFiles.map((f) => {
-        // Encontrar o índice original do arquivo
-        const originalIdx = files.indexOf(f);
-        return {
-          path: f.path,
-          name: title.trim(),
-          instrument: instrumentNames[originalIdx] || f.instrument,
-          extension: f.extension,
-        };
+      await onSave({
+        title: title.trim(),
+        composer: composer.trim() || null,
+        arranger: arranger.trim() || null,
+        categoryIds: selectedCategories,
       });
-
-      await api.importIndexedFilesWithMetadata(
-        filteredFiles,
-        selectedCategories,
-        composer.trim() || null,
-        arranger.trim() || null
-      );
-
-      await onSuccess();
       onClose();
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Erro ao salvar";
+      const errorMsg = err instanceof Error ? err.message : "Erro ao criar música";
       setError(errorMsg);
     } finally {
       setIsSaving(false);
     }
   };
 
-  if (!isOpen || files.length === 0) return null;
-
-  const activeFiles = files.filter((_, idx) => !removedFileIndices.has(idx));
-  const instrumentCount = activeFiles.length;
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="w-full max-w-lg rounded-lg bg-[#f8fafd] shadow-xl border border-[#c5cfdb] max-h-[90vh] overflow-y-auto">
+      <div className="w-full max-w-sm rounded-lg bg-[#f8fafd] shadow-xl border border-[#c5cfdb] max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-[#d8e0ea]">
-          <h2 className="text-lg font-bold text-[#2f4259]">Adicionar Partitura(s)</h2>
+          <h2 className="text-lg font-bold text-[#2f4259]">Adicionar Música</h2>
           <button
             type="button"
             onClick={onClose}
@@ -137,7 +88,6 @@ export function AddFilesModal({
 
         {/* Body */}
         <div className="p-4 space-y-4">
-          {/* Nome da Música */}
           <div>
             <label className="block text-sm font-medium text-[#344b61] mb-1.5">
               Nome da Música *
@@ -147,12 +97,16 @@ export function AddFilesModal({
               placeholder="Nome da música"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleSave();
+                }
+              }}
               className="w-full rounded border border-[#c5cfdb] bg-white px-3 py-2 text-sm text-[#344b61] placeholder-[#a3b5c7] outline-none focus:border-[#7ba0d4] focus:ring-1 focus:ring-[#7ba0d4]/30"
               autoFocus
             />
           </div>
 
-          {/* Compositor */}
           <div>
             <label className="block text-sm font-medium text-[#344b61] mb-1.5">
               Compositor
@@ -166,7 +120,6 @@ export function AddFilesModal({
             />
           </div>
 
-          {/* Arranjador */}
           <div>
             <label className="block text-sm font-medium text-[#344b61] mb-1.5">
               Arranjador
@@ -205,46 +158,7 @@ export function AddFilesModal({
             </div>
           )}
 
-          {/* Instrumentos a adicionar */}
-          {instrumentCount > 0 && (
-            <div>
-              <label className="block text-sm font-medium text-[#344b61] mb-2">
-                Instrumentos a adicionar ({instrumentCount})
-              </label>
-              <div className="rounded border border-[#c5cfdb] bg-white p-3 space-y-4 max-h-75 overflow-y-auto">
-                {files.map((file, idx) => {
-                  if (removedFileIndices.has(idx)) return null;
-                  
-                  return (
-                    <div key={idx} className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <label className="text-xs text-[#8b9db2] font-medium truncate">
-                          {file.path.split('/').pop()}
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => removeFile(idx)}
-                          className="p-1 text-[#8b9db2] hover:text-red-500 transition-colors"
-                          title="Remover arquivo"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                      <input
-                        type="text"
-                        value={instrumentNames[idx] || ""}
-                        onChange={(e) => updateInstrumentName(idx, e.target.value)}
-                        placeholder="Nome do instrumento"
-                        className="w-full rounded border border-[#c5cfdb] bg-[#f8fafd] px-2 py-1.5 text-sm text-[#344b61] placeholder-[#a3b5c7] outline-none focus:border-[#7ba0d4] focus:ring-1 focus:ring-[#7ba0d4]/30"
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Erro */}
+          {/* Error */}
           {error && (
             <div className="rounded bg-red-50 border border-red-200 p-2.5">
               <p className="text-xs text-red-600">{error}</p>
@@ -268,7 +182,7 @@ export function AddFilesModal({
             disabled={isSaving}
             className="flex-1 rounded bg-[#4f84d7] px-3 py-2 text-sm font-medium text-white hover:bg-[#3d6fb8] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isSaving ? "Salvando..." : "Salvar"}
+            {isSaving ? "Criando..." : "Salvar"}
           </button>
         </div>
       </div>
