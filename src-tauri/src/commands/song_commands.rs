@@ -124,6 +124,87 @@ pub fn import_indexed_files(
 }
 
 #[tauri::command]
+pub fn import_indexed_files_with_metadata(
+    db: State<'_, Database>,
+    files: Vec<IndexedFile>,
+    category_ids: Vec<String>,
+    composer: Option<String>,
+    arranger: Option<String>,
+) -> Result<Vec<SongListItem>, AppError> {
+    let settings = db.get_app_settings()?;
+    let now = Local::now().naive_local();
+
+    // Agrupar arquivos por nome (uma mesma música pode ter vários instrumentos)
+    let mut groups: std::collections::HashMap<String, Vec<&IndexedFile>> =
+        std::collections::HashMap::new();
+    for file in &files {
+        groups.entry(file.name.clone()).or_default().push(file);
+    }
+
+    // Obter todas as músicas existentes para verificação de duplicatas
+    let all_songs = db.get_all_songs()?;
+
+    for (song_name, group_files) in &groups {
+        // Verificar se a música já existe (case-insensitive)
+        let existing_song = all_songs
+            .iter()
+            .find(|s| s.name.eq_ignore_ascii_case(song_name));
+
+        let song_id = if let Some(existing) = existing_song {
+            existing.id.clone()
+        } else {
+            let new_song_id = uuid::Uuid::new_v4().to_string();
+            let song = Song {
+                id: new_song_id.clone(),
+                name: song_name.clone(),
+                composer: composer.clone(),
+                arranger: arranger.clone(),
+                is_favorite: false,
+                updated_at: now,
+            };
+            db.insert_song(&song, &category_ids)?;
+            new_song_id
+        };
+
+        // Obter partituras existentes para essa música
+        let existing_scores = all_songs
+            .iter()
+            .find(|s| s.id == song_id)
+            .map(|s| s.scores.clone())
+            .unwrap_or_default();
+
+        for indexed_file in group_files {
+            // Verificar se o instrumento já existe (case-insensitive)
+            let score_exists = existing_scores.iter().any(|sc| {
+                match (&sc.name, &indexed_file.instrument) {
+                    (Some(existing), Some(indexed)) => existing.eq_ignore_ascii_case(indexed),
+                    (None, None) => sc.file_path == indexed_file.path,
+                    _ => false,
+                }
+            });
+
+            if score_exists {
+                continue;
+            }
+
+            let score = Score {
+                id: uuid::Uuid::new_v4().to_string(),
+                song_id: song_id.clone(),
+                name: indexed_file.instrument.clone(),
+                host_id: settings.computer_id.clone(),
+                file_path: indexed_file.path.clone(),
+                updated_at: now,
+                status: ScoreStatus::Main,
+            };
+
+            db.insert_score(&score)?;
+        }
+    }
+
+    db.get_all_songs()
+}
+
+#[tauri::command]
 pub fn get_songs_by_category(
     db: State<'_, Database>,
     category_id: String,

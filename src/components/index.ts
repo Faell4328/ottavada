@@ -7,5 +7,6 @@ export { default as FirstRunPage } from "./FirstRunPage";
 export { EditScoreModal } from "./EditScoreModal";
 export { EditMusicModal } from "./EditMusicModal";
 export { EditInstrumentModal } from "./EditInstrumentModal";
+export { AddFilesModal } from "./AddFilesModal";
 export { MemoizedSongRow } from "./SongRow";
 export { MemoizedScoreRow } from "./ScoreRow";

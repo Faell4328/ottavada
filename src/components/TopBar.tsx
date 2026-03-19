@@ -7,6 +7,7 @@ import * as api from "../api/commands";
 import toast from "react-hot-toast";
 import type { IndexedFile } from "../types";
 import { getDirectoryPath } from "../utils/paths";
+import { AddFilesModal } from "./AddFilesModal";
 
 interface TopBarProps {
   title?: string;
@@ -21,6 +22,8 @@ export default function TopBar({
   const [musicTitle, setMusicTitle] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pendingFiles, setPendingFiles] = useState<IndexedFile[]>([]);
+  const [showAddFilesModal, setShowAddFilesModal] = useState(false);
 
   // Forçar reload quando scores muda - isso garante que a UI atualiza
   const handleScoresChange = async () => {
@@ -31,27 +34,6 @@ export default function TopBar({
       loadCategories()
     ]);
   };
-
-  async function importFiles(files: IndexedFile[]) {
-    if (files.length === 0) {
-      toast.error("Nenhuma partitura encontrada no diretório selecionado");
-      return;
-    }
-
-    try {
-      await api.importIndexedFiles(files, []);
-      await handleScoresChange();
-      toast.success(`${files.length} arquivo(s) processado(s) com sucesso`);
-    } catch (err) {
-      console.error("Failed to import files:", err);
-      const errorMsg =
-        typeof err === "string" ? err
-        : err instanceof Error ? err.message
-        : "Erro ao importar arquivos";
-      toast.error(errorMsg);
-      await handleScoresChange();
-    }
-  }
 
   async function handleAddFile() {
     try {
@@ -84,9 +66,16 @@ export default function TopBar({
         .flat()
         .filter((file) => selectedSet.has(file.path));
 
-      await importFiles(indexed);
+      if (indexed.length === 0) {
+        toast.error("Nenhuma partitura encontrada");
+        return;
+      }
+
+      setPendingFiles(indexed);
+      setShowAddFilesModal(true);
     } catch (err) {
       console.error("Failed to add file:", err);
+      toast.error("Erro ao selecionar arquivo");
     }
   }
 
@@ -95,10 +84,16 @@ export default function TopBar({
       const selected = await open({ directory: true, multiple: false });
       if (selected) {
         const files = await api.scanDirectory(selected as string);
-        await importFiles(files);
+        if (files.length === 0) {
+          toast.error("Nenhuma partitura encontrada no diretório selecionado");
+          return;
+        }
+        setPendingFiles(files);
+        setShowAddFilesModal(true);
       }
     } catch (err) {
       console.error("Failed to scan directory:", err);
+      toast.error("Erro ao escanear diretório");
     }
   }
 
@@ -135,6 +130,17 @@ export default function TopBar({
     setShowAddMusicModal(false);
     setMusicTitle("");
     setError(null);
+  }
+
+  function handleCloseAddFilesModal() {
+    setShowAddFilesModal(false);
+    setPendingFiles([]);
+  }
+
+  async function handleAddFilesModalSuccess() {
+    toast.success(`${pendingFiles.length} arquivo(s) adicionado(s) com sucesso`);
+    handleCloseAddFilesModal();
+    await handleScoresChange();
   }
 
   return (
@@ -229,6 +235,13 @@ export default function TopBar({
           </div>
         </div>
       )}
+
+      <AddFilesModal
+        isOpen={showAddFilesModal}
+        files={pendingFiles}
+        onClose={handleCloseAddFilesModal}
+        onSuccess={handleAddFilesModalSuccess}
+      />
     </>
   );
 }

@@ -39,6 +39,20 @@ export async function importIndexedFiles(
   return invoke("import_indexed_files", { files, categoryIds });
 }
 
+export async function importIndexedFilesWithMetadata(
+  files: IndexedFile[],
+  categoryIds: string[] = [],
+  composer: string | null = null,
+  arranger: string | null = null
+): Promise<SongListItem[]> {
+  return invoke("import_indexed_files_with_metadata", {
+    files,
+    categoryIds,
+    composer,
+    arranger,
+  });
+}
+
 export async function getSongsByCategory(
   categoryId: string
 ): Promise<SongListItem[]> {

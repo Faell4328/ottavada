@@ -33,7 +33,6 @@ function makeFile(id: string): ScoreListItem {
     status: "Main",
   };
 }
-}
 
 // ── Tests ──
 
