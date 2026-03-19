@@ -29,13 +29,15 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 rusqlite = { version = "0.31", features = ["bundled"] }
 notify = "6"
-blake3 = "1"
-zstd = "0.13"
 walkdir = "2"
-chrono = { version = "0.4", features = ["serde"] }
-thiserror = "1"
-uuid = { version = "1", features = ["v4"] }
-fs2 = "0.4"
+xz2 = "0.1.7"
+fs2 = "0.4.3"
+uuid = { version = "1.22.0", features = ["v4"] }
+chrono = { version = "0.4.44", features = ["serde"] }
+thiserror = "2.0.18"
+tracing = "0.1.44"
+tracing-subscriber = "0.3.23"
+tracing-appender = "0.2.4"
 
 [dev-dependencies]
 tempfile = "3"
