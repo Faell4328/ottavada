@@ -123,6 +123,10 @@ export async function addScoresToSong(
   return invoke("add_scores_to_song", { songId, files });
 }
 
+export async function deleteScore(scoreId: string): Promise<void> {
+  return invoke("delete_score", { scoreId });
+}
+
 export async function getSearchSuggestions(query: string, limit?: number): Promise<SongListItem[]> {
   return invoke("get_search_suggestions", { query, limit });
 }

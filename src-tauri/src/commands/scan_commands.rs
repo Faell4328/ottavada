@@ -41,8 +41,8 @@ pub fn scan_files_for_changes(db: State<'_, Database>) -> Result<ScanResult, App
                 if detector.has_changed() {
                     info!("Alteração detectada em: {}", file_path);
                     
-                    // Atualizar status para draft
-                    if let Err(e) = db.set_score_status_to_draft(&score_id) {
+                    // Atualizar status para draft com os novos metadados
+                    if let Err(e) = db.set_score_status_to_draft(&score_id, current_size, current_modified_at) {
                         warn!("Erro ao atualizar status para draft: {:?}", e);
                         failed_files.push((file_path.clone(), format!("Erro ao atualizar: {:?}", e)));
                     } else {

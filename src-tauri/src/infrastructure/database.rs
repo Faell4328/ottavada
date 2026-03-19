@@ -33,12 +33,16 @@ impl Database {
 
     fn run_migrations(&self) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
+        Self::run_migrations_with_conn(&conn)
+    }
 
+    fn run_migrations_with_conn(conn: &Connection) -> Result<(), AppError> {
         conn.execute_batch("
             PRAGMA journal_mode=WAL;
             PRAGMA foreign_keys=ON;
         ")?;
 
+        // Tabelas base (sem dependência)
         conn.execute_batch("
             CREATE TABLE IF NOT EXISTS categories (
                 id TEXT PRIMARY KEY,
@@ -61,19 +65,40 @@ impl Database {
                 UNIQUE(category_id, song_id)
             );
 
-            CREATE TABLE IF NOT EXISTS scores (
+            CREATE TABLE IF NOT EXISTS directories (
                 id TEXT PRIMARY KEY,
-                song_id TEXT NOT NULL REFERENCES songs(id) ON DELETE CASCADE,
-                name TEXT,
-                host_id TEXT NOT NULL,
-                file_path TEXT NOT NULL,
-                file_size INTEGER NOT NULL DEFAULT 0,
-                file_modified_at TEXT NOT NULL DEFAULT (datetime('now')),
-                updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-                status TEXT NOT NULL DEFAULT 'main'
+                path_name TEXT NOT NULL UNIQUE
             );
+        ")?;
 
-            -- FTS5 para busca textual em músicas
+        // Verificar se a tabela scores precisa de migração (file_path → directory_id + file_name)
+        let columns = Self::get_table_columns(conn, "scores");
+        let has_old_schema = columns.contains(&"file_path".to_string());
+        let has_new_schema = columns.contains(&"directory_id".to_string());
+
+        if has_old_schema && !has_new_schema {
+            Self::migrate_scores_to_directory_schema(conn)?;
+        } else if !has_new_schema {
+            // Tabela não existe ou schema desconhecido - criar do zero
+            conn.execute_batch("
+                CREATE TABLE IF NOT EXISTS scores (
+                    id TEXT PRIMARY KEY,
+                    song_id TEXT NOT NULL REFERENCES songs(id) ON DELETE CASCADE,
+                    name TEXT,
+                    host_id TEXT NOT NULL,
+                    directory_id TEXT NOT NULL REFERENCES directories(id),
+                    file_name TEXT NOT NULL,
+                    file_size INTEGER NOT NULL DEFAULT 0,
+                    file_modified_at TEXT NOT NULL DEFAULT (datetime('now')),
+                    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+                    status TEXT NOT NULL DEFAULT 'main',
+                    UNIQUE(directory_id, file_name)
+                );
+            ")?;
+        }
+
+        // FTS5 para busca textual em músicas
+        conn.execute_batch("
             CREATE VIRTUAL TABLE IF NOT EXISTS songs_fts USING fts5(
                 name, composer, arranger,
                 content='songs',
@@ -97,24 +122,189 @@ impl Database {
                 INSERT INTO songs_fts(rowid, name, composer, arranger)
                 VALUES (new.rowid, new.name, new.composer, new.arranger);
             END;
+        ")?;
 
+        // Índices
+        conn.execute_batch("
             CREATE INDEX IF NOT EXISTS idx_scores_song_id ON scores(song_id);
+            CREATE INDEX IF NOT EXISTS idx_scores_directory_id ON scores(directory_id);
             CREATE INDEX IF NOT EXISTS idx_categories_songs_song_id ON categories_songs(song_id);
             CREATE INDEX IF NOT EXISTS idx_categories_songs_category_id ON categories_songs(category_id);
             CREATE INDEX IF NOT EXISTS idx_songs_is_favorite ON songs(is_favorite);
         ")?;
 
-        // Migrations - adicionar colunas se não existirem (após CREATE TABLE)
-        let _ = conn.execute(
-            "ALTER TABLE scores ADD COLUMN file_size INTEGER NOT NULL DEFAULT 0",
-            [],
-        );
-        let _ = conn.execute(
-            "ALTER TABLE scores ADD COLUMN file_modified_at TEXT NOT NULL DEFAULT (datetime('now'))",
-            [],
+        Ok(())
+    }
+
+    /// Obtém os nomes das colunas de uma tabela
+    fn get_table_columns(conn: &Connection, table: &str) -> Vec<String> {
+        // Apenas nomes de tabelas hardcooded são passados aqui
+        let sql = format!("PRAGMA table_info({})", table);
+        match conn.prepare(&sql) {
+            Ok(mut stmt) => {
+                stmt.query_map([], |row| row.get::<_, String>(1))
+                    .map(|rows| rows.filter_map(|r| r.ok()).collect())
+                    .unwrap_or_default()
+            }
+            Err(_) => Vec::new(),
+        }
+    }
+
+    /// Migra a tabela scores do schema antigo (file_path) para o novo (directory_id + file_name)
+    fn migrate_scores_to_directory_schema(conn: &Connection) -> Result<(), AppError> {
+        conn.execute_batch("PRAGMA foreign_keys=OFF;")?;
+
+        // 1. Ler todos os scores com file_path
+        let mut stmt = conn.prepare(
+            "SELECT id, song_id, name, host_id, file_path, file_size, file_modified_at, updated_at, status FROM scores"
+        )?;
+
+        struct OldScore {
+            id: String,
+            song_id: String,
+            name: Option<String>,
+            host_id: String,
+            file_path: String,
+            file_size: u64,
+            file_modified_at: String,
+            updated_at: String,
+            status: String,
+        }
+
+        let old_scores: Vec<OldScore> = stmt.query_map([], |row| {
+            Ok(OldScore {
+                id: row.get(0)?,
+                song_id: row.get(1)?,
+                name: row.get(2)?,
+                host_id: row.get(3)?,
+                file_path: row.get(4)?,
+                file_size: row.get(5)?,
+                file_modified_at: row.get(6)?,
+                updated_at: row.get(7)?,
+                status: row.get(8)?,
+            })
+        })?.filter_map(|r| r.ok()).collect();
+
+        // 2. Extrair diretórios únicos e inserir
+        let mut dir_map: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+        for score in &old_scores {
+            let (dir_path, _) = crate::services::indexer::split_file_path(&score.file_path);
+            if !dir_map.contains_key(&dir_path) {
+                let id = uuid::Uuid::new_v4().to_string();
+                conn.execute(
+                    "INSERT OR IGNORE INTO directories (id, path_name) VALUES (?1, ?2)",
+                    params![id, dir_path],
+                )?;
+                // Buscar o id real (pode já existir)
+                let real_id: String = conn.query_row(
+                    "SELECT id FROM directories WHERE path_name = ?1",
+                    params![dir_path],
+                    |row| row.get(0),
+                )?;
+                dir_map.insert(dir_path, real_id);
+            }
+        }
+
+        // 3. Criar nova tabela scores
+        conn.execute_batch("
+            CREATE TABLE scores_new (
+                id TEXT PRIMARY KEY,
+                song_id TEXT NOT NULL REFERENCES songs(id) ON DELETE CASCADE,
+                name TEXT,
+                host_id TEXT NOT NULL,
+                directory_id TEXT NOT NULL REFERENCES directories(id),
+                file_name TEXT NOT NULL,
+                file_size INTEGER NOT NULL DEFAULT 0,
+                file_modified_at TEXT NOT NULL DEFAULT (datetime('now')),
+                updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+                status TEXT NOT NULL DEFAULT 'main',
+                UNIQUE(directory_id, file_name)
+            );
+        ")?;
+
+        // 4. Copiar dados com directory_id e file_name calculados
+        for score in &old_scores {
+            let (dir_path, file_name) = crate::services::indexer::split_file_path(&score.file_path);
+            let dir_id = dir_map.get(&dir_path)
+                .ok_or_else(|| AppError::Generic(format!("Diretório não encontrado na migração: {}", dir_path)))?;
+
+            conn.execute(
+                "INSERT INTO scores_new (id, song_id, name, host_id, directory_id, file_name, file_size, file_modified_at, updated_at, status)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+                params![
+                    score.id,
+                    score.song_id,
+                    score.name,
+                    score.host_id,
+                    dir_id,
+                    file_name,
+                    score.file_size,
+                    score.file_modified_at,
+                    score.updated_at,
+                    score.status,
+                ],
+            )?;
+        }
+
+        // 5. Substituir tabela
+        conn.execute_batch("
+            DROP TABLE scores;
+            ALTER TABLE scores_new RENAME TO scores;
+        ")?;
+
+        conn.execute_batch("PRAGMA foreign_keys=ON;")?;
+        Ok(())
+    }
+
+    // ── Directories ──
+
+    /// Insere um diretório ou retorna o ID do existente
+    pub fn insert_or_get_directory(&self, path_name: &str) -> Result<String, AppError> {
+        let conn = self.conn.lock().unwrap();
+        Self::insert_or_get_directory_with_conn(&conn, path_name)
+    }
+
+    fn insert_or_get_directory_with_conn(conn: &Connection, path_name: &str) -> Result<String, AppError> {
+        let result = conn.query_row(
+            "SELECT id FROM directories WHERE path_name = ?1",
+            params![path_name],
+            |row| row.get::<_, String>(0),
         );
 
-        Ok(())
+        match result {
+            Ok(id) => Ok(id),
+            Err(rusqlite::Error::QueryReturnedNoRows) => {
+                let id = uuid::Uuid::new_v4().to_string();
+                conn.execute(
+                    "INSERT INTO directories (id, path_name) VALUES (?1, ?2)",
+                    params![id, path_name],
+                )?;
+                Ok(id)
+            }
+            Err(e) => Err(AppError::Database(e)),
+        }
+    }
+
+    /// Resolve um caminho de arquivo em (directory_id, file_name)
+    pub fn resolve_directory_for_path(&self, file_path: &str) -> Result<(String, String), AppError> {
+        let (dir_path, file_name) = crate::services::indexer::split_file_path(file_path);
+        let directory_id = self.insert_or_get_directory(&dir_path)?;
+        Ok((directory_id, file_name))
+    }
+
+    #[allow(dead_code)]
+    pub fn get_all_directories(&self) -> Result<Vec<Directory>, AppError> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare("SELECT id, path_name FROM directories ORDER BY path_name")?;
+
+        let dirs = stmt.query_map([], |row| {
+            Ok(Directory {
+                id: row.get(0)?,
+                path_name: row.get(1)?,
+            })
+        })?.filter_map(|r| r.ok()).collect();
+
+        Ok(dirs)
     }
 
     // ── Songs ──
@@ -200,6 +390,36 @@ impl Database {
         })
     }
 
+    /// Busca uma música completa (com scores e categorias) pelo ID
+    pub fn get_song_list_item_by_id(&self, song_id: &str) -> Result<SongListItem, AppError> {
+        let conn = self.conn.lock().unwrap();
+
+        let mut song = conn.query_row(
+            "SELECT id, name, composer, arranger, updated_at, is_favorite FROM songs WHERE id = ?1",
+            params![song_id],
+            |row| {
+                Ok(SongListItem {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    composer: row.get(2)?,
+                    arranger: row.get(3)?,
+                    updated_at: parse_datetime(&row.get::<_, String>(4)?),
+                    is_favorite: row.get::<_, i32>(5)? != 0,
+                    category_ids: Vec::new(),
+                    scores: Vec::new(),
+                })
+            },
+        ).map_err(|e| match e {
+            rusqlite::Error::QueryReturnedNoRows => AppError::SongNotFound(song_id.to_string()),
+            other => AppError::Database(other),
+        })?;
+
+        song.scores = Self::get_scores_for_song(&conn, &song.id)?;
+        song.category_ids = Self::get_category_ids(&conn, &song.id)?;
+
+        Ok(song)
+    }
+
     pub fn get_all_songs(&self) -> Result<Vec<SongListItem>, AppError> {
         let conn = self.conn.lock().unwrap();
 
@@ -224,8 +444,8 @@ impl Database {
 
         let mut result = Vec::with_capacity(songs.len());
         for mut song in songs {
-            song.scores = self.get_scores_for_song(&conn, &song.id)?;
-            song.category_ids = self.get_category_ids(&conn, &song.id)?;
+            song.scores = Self::get_scores_for_song(&conn, &song.id)?;
+            song.category_ids = Self::get_category_ids(&conn, &song.id)?;
             result.push(song);
         }
 
@@ -256,8 +476,8 @@ impl Database {
 
         let mut result = Vec::with_capacity(songs.len());
         for mut song in songs {
-            song.scores = self.get_scores_for_song(&conn, &song.id)?;
-            song.category_ids = self.get_category_ids(&conn, &song.id)?;
+            song.scores = Self::get_scores_for_song(&conn, &song.id)?;
+            song.category_ids = Self::get_category_ids(&conn, &song.id)?;
             result.push(song);
         }
 
@@ -307,8 +527,8 @@ impl Database {
 
         let mut result = Vec::with_capacity(songs.len());
         for mut song in songs {
-            song.scores = self.get_scores_for_song(&conn, &song.id)?;
-            song.category_ids = self.get_category_ids(&conn, &song.id)?;
+            song.scores = Self::get_scores_for_song(&conn, &song.id)?;
+            song.category_ids = Self::get_category_ids(&conn, &song.id)?;
             result.push(song);
         }
 
@@ -341,8 +561,8 @@ impl Database {
 
         let mut result = Vec::with_capacity(songs.len());
         for mut song in songs {
-            song.scores = self.get_scores_for_song(&conn, &song.id)?;
-            song.category_ids = self.get_category_ids(&conn, &song.id)?;
+            song.scores = Self::get_scores_for_song(&conn, &song.id)?;
+            song.category_ids = Self::get_category_ids(&conn, &song.id)?;
             result.push(song);
         }
 
@@ -375,8 +595,8 @@ impl Database {
 
         let mut result = Vec::with_capacity(songs.len());
         for mut song in songs {
-            song.scores = self.get_scores_for_song(&conn, &song.id)?;
-            song.category_ids = self.get_category_ids(&conn, &song.id)?;
+            song.scores = Self::get_scores_for_song(&conn, &song.id)?;
+            song.category_ids = Self::get_category_ids(&conn, &song.id)?;
             result.push(song);
         }
 
@@ -388,14 +608,15 @@ impl Database {
     pub fn insert_score(&self, score: &Score) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
         conn.execute(
-            "INSERT INTO scores (id, song_id, name, host_id, file_path, file_size, file_modified_at, updated_at, status)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+            "INSERT INTO scores (id, song_id, name, host_id, directory_id, file_name, file_size, file_modified_at, updated_at, status)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
             params![
                 score.id,
                 score.song_id,
                 score.name,
                 score.host_id,
-                score.file_path,
+                score.directory_id,
+                score.file_name,
                 score.file_size,
                 score.file_modified_at.format("%Y-%m-%d %H:%M:%S").to_string(),
                 score.updated_at.format("%Y-%m-%d %H:%M:%S").to_string(),
@@ -409,17 +630,19 @@ impl Database {
         &self,
         score_id: &str,
         name: Option<String>,
-        file_path: &str,
+        directory_id: &str,
+        file_name: &str,
         file_size: u64,
         file_modified_at: chrono::NaiveDateTime,
         now: chrono::NaiveDateTime,
     ) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
         conn.execute(
-            "UPDATE scores SET name = ?1, file_path = ?2, file_size = ?3, file_modified_at = ?4, updated_at = ?5 WHERE id = ?6",
+            "UPDATE scores SET name = ?1, directory_id = ?2, file_name = ?3, file_size = ?4, file_modified_at = ?5, updated_at = ?6 WHERE id = ?7",
             params![
                 name,
-                file_path,
+                directory_id,
+                file_name,
                 file_size,
                 file_modified_at.format("%Y-%m-%d %H:%M:%S").to_string(),
                 now.format("%Y-%m-%d %H:%M:%S").to_string(),
@@ -429,44 +652,80 @@ impl Database {
         Ok(())
     }
 
+    pub fn delete_score(&self, score_id: &str) -> Result<(), AppError> {
+        let conn = self.conn.lock().unwrap();
+        let affected = conn.execute("DELETE FROM scores WHERE id = ?1", params![score_id])?;
+        if affected == 0 {
+            return Err(AppError::ScoreNotFound(score_id.to_string()));
+        }
+        Ok(())
+    }
+
+    /// Reconstrói o caminho completo do arquivo a partir de directory + file_name
     pub fn get_score_file_path(&self, score_id: &str) -> Result<String, AppError> {
         let conn = self.conn.lock().unwrap();
         conn.query_row(
-            "SELECT file_path FROM scores WHERE id = ?1",
+            "SELECT d.path_name, s.file_name
+             FROM scores s
+             JOIN directories d ON d.id = s.directory_id
+             WHERE s.id = ?1",
             params![score_id],
-            |row| row.get(0),
+            |row| {
+                let dir_path: String = row.get(0)?;
+                let file_name: String = row.get(1)?;
+                Ok(std::path::PathBuf::from(&dir_path)
+                    .join(&file_name)
+                    .to_string_lossy()
+                    .to_string())
+            },
         ).map_err(|e| match e {
             rusqlite::Error::QueryReturnedNoRows => AppError::ScoreNotFound(score_id.to_string()),
             other => AppError::Database(other),
         })
     }
 
-    /// Obtém todos os scores com seus metadados para detecção de alterações
+    /// Obtém todos os scores com metadados para detecção de alterações
+    /// Retorna: (score_id, file_path_completo, file_size, file_modified_at)
     pub fn get_all_scores_with_metadata(&self) -> Result<Vec<(String, String, u64, String)>, AppError> {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
-            "SELECT id, file_path, file_size, file_modified_at FROM scores"
+            "SELECT s.id, d.path_name, s.file_name, s.file_size, s.file_modified_at
+             FROM scores s
+             JOIN directories d ON d.id = s.directory_id"
         )?;
 
-        let scores: Vec<(String, String, u64, String)> = stmt.query_map([], |row| {
+        let scores = stmt.query_map([], |row| {
+            let dir_path: String = row.get(1)?;
+            let file_name: String = row.get(2)?;
+            let file_path = std::path::PathBuf::from(&dir_path)
+                .join(&file_name)
+                .to_string_lossy()
+                .to_string();
             Ok((
                 row.get::<_, String>(0)?,
-                row.get::<_, String>(1)?,
-                row.get::<_, u64>(2)?,
-                row.get::<_, String>(3)?,
+                file_path,
+                row.get::<_, u64>(3)?,
+                row.get::<_, String>(4)?,
             ))
         })?.filter_map(|r| r.ok()).collect();
 
         Ok(scores)
     }
 
-    /// Atualiza o status de um score para draft
-    pub fn set_score_status_to_draft(&self, score_id: &str) -> Result<(), AppError> {
+    /// Atualiza o status de um score para draft, atualizando também os metadados do arquivo
+    pub fn set_score_status_to_draft(
+        &self,
+        score_id: &str,
+        file_size: u64,
+        file_modified_at: chrono::NaiveDateTime,
+    ) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
         conn.execute(
-            "UPDATE scores SET status = ?1, updated_at = ?2 WHERE id = ?3",
+            "UPDATE scores SET status = ?1, file_size = ?2, file_modified_at = ?3, updated_at = ?4 WHERE id = ?5",
             params![
                 ScoreStatus::Draft.as_str(),
+                file_size,
+                file_modified_at.format("%Y-%m-%d %H:%M:%S").to_string(),
                 chrono::Local::now().naive_local().format("%Y-%m-%d %H:%M:%S").to_string(),
                 score_id,
             ],
@@ -488,17 +747,24 @@ impl Database {
         Ok(())
     }
 
-    fn get_scores_for_song(&self, conn: &Connection, song_id: &str) -> Result<Vec<ScoreListItem>, AppError> {
+    /// Busca scores de uma música com caminho completo reconstruído
+    fn get_scores_for_song(conn: &Connection, song_id: &str) -> Result<Vec<ScoreListItem>, AppError> {
         let mut stmt = conn.prepare(
-            "SELECT id, name, file_path, file_size, file_modified_at, updated_at, status
-             FROM scores
-             WHERE song_id = ?1
-             ORDER BY name"
+            "SELECT s.id, s.name, d.path_name, s.file_name, s.updated_at, s.status
+             FROM scores s
+             JOIN directories d ON d.id = s.directory_id
+             WHERE s.song_id = ?1
+             ORDER BY s.name"
         )?;
 
         let scores = stmt.query_map(params![song_id], |row| {
-            let file_path: String = row.get(2)?;
-            let file_extension = file_path
+            let dir_path: String = row.get(2)?;
+            let file_name: String = row.get(3)?;
+            let file_path = std::path::PathBuf::from(&dir_path)
+                .join(&file_name)
+                .to_string_lossy()
+                .to_string();
+            let file_extension = file_name
                 .rsplit('.')
                 .next()
                 .unwrap_or("")
@@ -509,15 +775,15 @@ impl Database {
                 name: row.get(1)?,
                 file_path,
                 file_extension,
-                updated_at: parse_datetime(&row.get::<_, String>(5)?),
-                status: ScoreStatus::from_str(&row.get::<_, String>(6)?),
+                updated_at: parse_datetime(&row.get::<_, String>(4)?),
+                status: ScoreStatus::from_str(&row.get::<_, String>(5)?),
             })
         })?.filter_map(|r| r.ok()).collect();
 
         Ok(scores)
     }
 
-    fn get_category_ids(&self, conn: &Connection, song_id: &str) -> Result<Vec<String>, AppError> {
+    fn get_category_ids(conn: &Connection, song_id: &str) -> Result<Vec<String>, AppError> {
         let mut stmt = conn.prepare(
             "SELECT category_id FROM categories_songs WHERE song_id = ?1"
         )?;

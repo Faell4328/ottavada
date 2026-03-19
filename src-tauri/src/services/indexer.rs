@@ -67,6 +67,23 @@ fn parse_filename(file_stem: &str) -> (String, Option<String>) {
     }
 }
 
+/// Separa um caminho completo de arquivo em (diretório, nome_do_arquivo)
+pub fn split_file_path(file_path: &str) -> (String, String) {
+    let last_sep = file_path.rfind(|c: char| c == '/' || c == '\\');
+    match last_sep {
+        Some(idx) => {
+            let dir = &file_path[..idx];
+            let name = &file_path[idx + 1..];
+            if dir.is_empty() {
+                (".".to_string(), name.to_string())
+            } else {
+                (dir.to_string(), name.to_string())
+            }
+        }
+        None => (".".to_string(), file_path.to_string()),
+    }
+}
+
 /// Obtém os metadados do arquivo (size e modified_at)
 pub fn get_file_metadata(file_path: &Path) -> Result<(u64, NaiveDateTime), std::io::Error> {
     let metadata = std::fs::metadata(file_path)?;
@@ -198,5 +215,35 @@ mod tests {
         assert_eq!(files[0].name, "Canon in D");
         assert_eq!(files[0].instrument, Some("Violino 1".to_string()));
         assert_eq!(files[0].extension, "pdf");
+    }
+
+    // ── split_file_path tests ──
+
+    #[test]
+    fn test_split_file_path_unix() {
+        let (dir, name) = split_file_path("/home/user/music/Canon - Violino.musx");
+        assert_eq!(dir, "/home/user/music");
+        assert_eq!(name, "Canon - Violino.musx");
+    }
+
+    #[test]
+    fn test_split_file_path_windows() {
+        let (dir, name) = split_file_path("C:\\Users\\user\\music\\Canon.musx");
+        assert_eq!(dir, "C:\\Users\\user\\music");
+        assert_eq!(name, "Canon.musx");
+    }
+
+    #[test]
+    fn test_split_file_path_no_directory() {
+        let (dir, name) = split_file_path("Canon.musx");
+        assert_eq!(dir, ".");
+        assert_eq!(name, "Canon.musx");
+    }
+
+    #[test]
+    fn test_split_file_path_root() {
+        let (dir, name) = split_file_path("/Canon.musx");
+        assert_eq!(dir, ".");
+        assert_eq!(name, "Canon.musx");
     }
 }

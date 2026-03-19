@@ -25,6 +25,7 @@ Um aplicativo desktop windows, para organizar, controlar status das partituras e
 - **Main:** versão sincronizável, autorizada para backup no Google Drive (definida pelo usuário)
 - **Pending**: quando o cliente faz uma atualização e está pendente o server autorizar.
 - **Draft:** rascunho automático quando arquivo é alterado (não é feito o backup no Google Drive)
+- **Not Found**: partitura não encontrada (pode ter sido deletada ou renomeada)
 - **Monitoramento:** detecta mudanças e converte automaticamente para draft (apenas no servidor)
 
 ## Google Drive
@@ -108,7 +109,7 @@ Será documentando em JSON, mas na aplicação real é utilizando `MessagePack`.
 
 ```json
 {
-  "version": 1,
+  "updatedAt": 1,
   "songs": [
     {
       "id": "abc123",
@@ -123,7 +124,7 @@ Será documentando em JSON, mas na aplicação real é utilizando `MessagePack`.
 		      "id": "xyz123",
 		      "name": "Flauta",
 		      "status": "main",
-		      "updatedAt": 1710684000
+		      "fileModifiedAt": 1710684000
 	      }
       ]
     }
@@ -164,7 +165,7 @@ Será documentando em JSON, mas na aplicação real é utilizando `MessagePack`.
 - `fileName`
 - `fileModifiedAt` - última alteração no arquivo
 - `fileSize` - tamanho do arquivo.
-- `status` - `draft`, `pending` e `main`.
+- `status` - `draft`, `pending`, `not found` e `main`.
 
 ! A junção de `directory` + `fineName` é um único.
 
@@ -300,7 +301,7 @@ Não é permitido no cliente. Devido a ele não ter indexação de diretório, n
 
 #### Listagem de partituras
 Ao clicar na música será expandido e mostrar uma lista de partituras/instrumentos.
-- Deve trazer os intrumentos, extensão e status (`draft` - borda laranja, `pending` - borda amarela e `main` - borda verde)
+- Deve trazer os intrumentos, extensão e status (`draft` - borda laranja, `pending` - borda amarela, `main` - borda verde, `not found` - borda vermelha)
 
 ### Footer
 É um dos meios de comunicar com o usuário o que está sendo feito. Ele deve ser sempre visível.
@@ -323,6 +324,8 @@ Ao clicar na música será expandido e mostrar uma lista de partituras/instrumen
 - [x] Verificar dependências do projeto (se tem alguma não utilizada e se tem todas instaladas)
 - [x] Adicionar sistema de log
 	- [x] Garantir que está salvando o `C:\Users\<seu-usuario>\AppData\Roaming\<nome-do-app>\`
+- [ ] Deletar partitura  (apenas no programa).
+	- [ ] O programa deve abrir um modal de confirmação (igual para alterar o status da partitura).
 
 ## Funcionalidades para v0.2 - funcionamento local completo
 - [x] Mudar as informações do sistema do banco de dados para o `tauri-plugin-store`
@@ -334,12 +337,14 @@ Ao clicar na música será expandido e mostrar uma lista de partituras/instrumen
 	- [x] No overflow menu das partituras, deve ter a opção (Definir como `main` - aparecer e funcionar apenas se tiver `draft`). Ao clicar deve abrir um modal de confirmação, "você realmente deseja mudar o arquivo para `main`?"
 	- [x] Também no overflow menu das partituras deve ter a opção (Definir como `draft` - aparecer e funcionar apenas se tiver como `main`). Ao clicar deve abrir um modal de confirmação, "você realmente deseja mudar o arquivo para `draft`?"
 - [x] Adicionar função para listar todos os rascunhos ativos
-- [ ] Refatoração e adicionar testes
-- [ ] Atualizar o banco de dados (back e front), adicionando a tabela de `directory`
+- [x] Refatoração e adicionar testes
+	- [x] Refatorar e adicionar teste no front
+	- [x] Refatorar e adicionar teste no back
+- [x] Atualizar o banco de dados (back e front), adicionando a tabela de `directory`
+- [ ] Adicionar o status e funcionalidade do `not found`
 - [ ] Adicionar suporte Cliente/Servidor
 
 ## Funcionalidades para v0.3 - sincronização offline-ready
-- [ ] Deletar partitura  (apenas no programa)
 - [ ] Criar MessagePack
 - [ ] Ler e comparar MessagePack
 - [ ] Versionamento do schema

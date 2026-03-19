@@ -23,6 +23,13 @@
     }
   },
   "bundle": {
+    "windows": {
+      "nsis": {
+        "displayLanguageSelector": true,
+        "installerIcon": "icons/icon.ico",
+        "installMode": "currentUser"
+      }
+    },
     "active": true,
     "targets": "all",
     "icon": [

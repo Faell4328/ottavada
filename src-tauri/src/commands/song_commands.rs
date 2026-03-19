@@ -77,28 +77,28 @@ pub fn scan_directory(directory: String) -> Result<Vec<IndexedFile>, AppError> {
     Ok(indexer::scan_directory(path))
 }
 
-#[tauri::command]
-pub fn import_indexed_files(
-    db: State<'_, Database>,
-    store: State<'_, SystemStore>,
-    files: Vec<IndexedFile>,
-    category_ids: Vec<String>,
+/// Importa arquivos indexados, agrupando por nome da música.
+/// Músicas existentes (case-insensitive) não são duplicadas.
+fn import_files_core(
+    db: &Database,
+    host_id: &str,
+    files: &[IndexedFile],
+    category_ids: &[String],
+    composer: Option<&str>,
+    arranger: Option<&str>,
 ) -> Result<Vec<SongListItem>, AppError> {
-    let settings = store.get_app_settings()?;
     let now = Local::now().naive_local();
 
-    // Agrupar arquivos por nome (uma mesma música pode ter vários instrumentos)
+    // Agrupar arquivos por nome da música
     let mut groups: std::collections::HashMap<String, Vec<&IndexedFile>> =
         std::collections::HashMap::new();
-    for file in &files {
+    for file in files {
         groups.entry(file.name.clone()).or_default().push(file);
     }
 
-    // Obter todas as músicas existentes para verificação de duplicatas
     let all_songs = db.get_all_songs()?;
 
     for (song_name, group_files) in &groups {
-        // Verificar se a música já existe (case-insensitive)
         let existing_song = all_songs
             .iter()
             .find(|s| s.name.eq_ignore_ascii_case(song_name));
@@ -110,16 +110,15 @@ pub fn import_indexed_files(
             let song = Song {
                 id: new_song_id.clone(),
                 name: song_name.clone(),
-                composer: None,
-                arranger: None,
+                composer: composer.map(|s| s.to_string()),
+                arranger: arranger.map(|s| s.to_string()),
                 is_favorite: false,
                 updated_at: now,
             };
-            db.insert_song(&song, &category_ids)?;
+            db.insert_song(&song, category_ids)?;
             new_song_id
         };
 
-        // Obter partituras existentes para essa música
         let existing_scores = all_songs
             .iter()
             .find(|s| s.id == song_id)
@@ -127,7 +126,6 @@ pub fn import_indexed_files(
             .unwrap_or_default();
 
         for indexed_file in group_files {
-            // Verificar se o instrumento já existe (case-insensitive)
             let score_exists = existing_scores.iter().any(|sc| {
                 match (&sc.name, &indexed_file.instrument) {
                     (Some(existing), Some(indexed)) => existing.eq_ignore_ascii_case(indexed),
@@ -140,7 +138,6 @@ pub fn import_indexed_files(
                 continue;
             }
 
-            // Obter metadados do arquivo
             let (file_size, file_modified_at) = match get_file_metadata(Path::new(&indexed_file.path)) {
                 Ok(metadata) => metadata,
                 Err(e) => {
@@ -149,12 +146,15 @@ pub fn import_indexed_files(
                 }
             };
 
+            let (directory_id, file_name) = db.resolve_directory_for_path(&indexed_file.path)?;
+
             let score = Score {
                 id: uuid::Uuid::new_v4().to_string(),
                 song_id: song_id.clone(),
                 name: indexed_file.instrument.clone(),
-                host_id: settings.computer_id.clone(),
-                file_path: indexed_file.path.clone(),
+                host_id: host_id.to_string(),
+                directory_id,
+                file_name,
                 file_size,
                 file_modified_at,
                 updated_at: now,
@@ -169,6 +169,17 @@ pub fn import_indexed_files(
 }
 
 #[tauri::command]
+pub fn import_indexed_files(
+    db: State<'_, Database>,
+    store: State<'_, SystemStore>,
+    files: Vec<IndexedFile>,
+    category_ids: Vec<String>,
+) -> Result<Vec<SongListItem>, AppError> {
+    let settings = store.get_app_settings()?;
+    import_files_core(&db, &settings.computer_id, &files, &category_ids, None, None)
+}
+
+#[tauri::command]
 pub fn import_indexed_files_with_metadata(
     db: State<'_, Database>,
     store: State<'_, SystemStore>,
@@ -178,87 +189,14 @@ pub fn import_indexed_files_with_metadata(
     arranger: Option<String>,
 ) -> Result<Vec<SongListItem>, AppError> {
     let settings = store.get_app_settings()?;
-    let now = Local::now().naive_local();
-
-    // Agrupar arquivos por nome (uma mesma música pode ter vários instrumentos)
-    let mut groups: std::collections::HashMap<String, Vec<&IndexedFile>> =
-        std::collections::HashMap::new();
-    for file in &files {
-        groups.entry(file.name.clone()).or_default().push(file);
-    }
-
-    // Obter todas as músicas existentes para verificação de duplicatas
-    let all_songs = db.get_all_songs()?;
-
-    for (song_name, group_files) in &groups {
-        // Verificar se a música já existe (case-insensitive)
-        let existing_song = all_songs
-            .iter()
-            .find(|s| s.name.eq_ignore_ascii_case(song_name));
-
-        let song_id = if let Some(existing) = existing_song {
-            existing.id.clone()
-        } else {
-            let new_song_id = uuid::Uuid::new_v4().to_string();
-            let song = Song {
-                id: new_song_id.clone(),
-                name: song_name.clone(),
-                composer: composer.clone(),
-                arranger: arranger.clone(),
-                is_favorite: false,
-                updated_at: now,
-            };
-            db.insert_song(&song, &category_ids)?;
-            new_song_id
-        };
-
-        // Obter partituras existentes para essa música
-        let existing_scores = all_songs
-            .iter()
-            .find(|s| s.id == song_id)
-            .map(|s| s.scores.clone())
-            .unwrap_or_default();
-
-        for indexed_file in group_files {
-            // Verificar se o instrumento já existe (case-insensitive)
-            let score_exists = existing_scores.iter().any(|sc| {
-                match (&sc.name, &indexed_file.instrument) {
-                    (Some(existing), Some(indexed)) => existing.eq_ignore_ascii_case(indexed),
-                    (None, None) => sc.file_path == indexed_file.path,
-                    _ => false,
-                }
-            });
-
-            if score_exists {
-                continue;
-            }
-
-            // Obter metadados do arquivo
-            let (file_size, file_modified_at) = match get_file_metadata(Path::new(&indexed_file.path)) {
-                Ok(metadata) => metadata,
-                Err(e) => {
-                    warn!("Erro ao obter metadados do arquivo {}: {:?}", indexed_file.path, e);
-                    (0, now)
-                }
-            };
-
-            let score = Score {
-                id: uuid::Uuid::new_v4().to_string(),
-                song_id: song_id.clone(),
-                name: indexed_file.instrument.clone(),
-                host_id: settings.computer_id.clone(),
-                file_path: indexed_file.path.clone(),
-                file_size,
-                file_modified_at,
-                updated_at: now,
-                status: ScoreStatus::Main,
-            };
-
-            db.insert_score(&score)?;
-        }
-    }
-
-    db.get_all_songs()
+    import_files_core(
+        &db,
+        &settings.computer_id,
+        &files,
+        &category_ids,
+        composer.as_deref(),
+        arranger.as_deref(),
+    )
 }
 
 #[tauri::command]
@@ -303,12 +241,7 @@ pub fn create_song(
     };
 
     db.insert_song(&song, &[])?;
-
-    let all_songs = db.get_all_songs()?;
-    all_songs
-        .into_iter()
-        .find(|s| s.id == song_id)
-        .ok_or_else(|| AppError::Generic("Falha ao recuperar música criada".into()))
+    db.get_song_list_item_by_id(&song_id)
 }
 
 #[tauri::command]
@@ -346,12 +279,7 @@ pub fn create_song_with_categories(
     };
 
     db.insert_song(&song, &category_ids)?;
-
-    let all_songs = db.get_all_songs()?;
-    all_songs
-        .into_iter()
-        .find(|s| s.id == song_id)
-        .ok_or_else(|| AppError::Generic("Falha ao recuperar música criada".into()))
+    db.get_song_list_item_by_id(&song_id)
 }
 
 #[tauri::command]
@@ -388,12 +316,7 @@ pub fn create_song_with_metadata(
     };
 
     db.insert_song(&song, &category_ids)?;
-
-    let all_songs = db.get_all_songs()?;
-    all_songs
-        .into_iter()
-        .find(|s| s.id == song_id)
-        .ok_or_else(|| AppError::Generic("Falha ao recuperar música criada".into()))
+    db.get_song_list_item_by_id(&song_id)
 }
 
 #[tauri::command]
@@ -441,12 +364,7 @@ pub fn update_song(
     };
 
     db.update_song(&updated_song, &category_ids)?;
-
-    let all_songs = db.get_all_songs()?;
-    all_songs
-        .into_iter()
-        .find(|s| s.id == song_id)
-        .ok_or_else(|| AppError::Generic("Erro ao recuperar música atualizada".into()))
+    db.get_song_list_item_by_id(&song_id)
 }
 
 #[tauri::command]

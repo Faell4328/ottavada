@@ -36,15 +36,16 @@ pub fn update_score(
     }
 
     let now = Local::now().naive_local();
-    
-    // Obter metadados do arquivo
+
     let (file_size, file_modified_at) = get_file_metadata(path)
         .map_err(|e| {
             error!("Erro ao obter metadados do arquivo: {:?}", e);
             AppError::Generic(format!("Erro ao ler arquivo: {}", e))
         })?;
 
-    match db.update_score(&score_id, instrument_name.clone(), &file_path, file_size, file_modified_at, now) {
+    let (directory_id, file_name) = db.resolve_directory_for_path(&file_path)?;
+
+    match db.update_score(&score_id, instrument_name.clone(), &directory_id, &file_name, file_size, file_modified_at, now) {
         Ok(_) => {
             info!("Partitura atualizada com sucesso: {}", score_id);
             Ok(())
@@ -63,11 +64,7 @@ pub fn add_score_to_song(
     song_id: String,
     file: IndexedFile,
 ) -> Result<SongListItem, AppError> {
-    let all_songs = db.get_all_songs()?;
-    let song = all_songs
-        .iter()
-        .find(|s| s.id == song_id)
-        .ok_or_else(|| AppError::Generic("Música não encontrada".into()))?;
+    let song = db.get_song_list_item_by_id(&song_id)?;
 
     // Verificar se o instrumento já existe (case-insensitive)
     let score_exists = song.scores.iter().any(|sc| {
@@ -88,19 +85,21 @@ pub fn add_score_to_song(
     let settings = store.get_app_settings()?;
     let now = Local::now().naive_local();
 
-    // Obter metadados do arquivo
     let (file_size, file_modified_at) = get_file_metadata(Path::new(&file.path))
         .map_err(|e| {
             error!("Erro ao obter metadados do arquivo: {:?}", e);
             AppError::Generic(format!("Erro ao ler arquivo: {}", e))
         })?;
 
+    let (directory_id, file_name) = db.resolve_directory_for_path(&file.path)?;
+
     let score = Score {
         id: uuid::Uuid::new_v4().to_string(),
         song_id: song_id.clone(),
         name: file.instrument.clone(),
         host_id: settings.computer_id.clone(),
-        file_path: file.path.clone(),
+        directory_id,
+        file_name,
         file_size,
         file_modified_at,
         updated_at: now,
@@ -108,12 +107,7 @@ pub fn add_score_to_song(
     };
 
     db.insert_score(&score)?;
-
-    let all_songs = db.get_all_songs()?;
-    all_songs
-        .into_iter()
-        .find(|s| s.id == song_id)
-        .ok_or_else(|| AppError::Generic("Erro ao recuperar música atualizada".into()))
+    db.get_song_list_item_by_id(&song_id)
 }
 
 #[tauri::command]
@@ -123,11 +117,7 @@ pub fn add_scores_to_song(
     song_id: String,
     files: Vec<IndexedFile>,
 ) -> Result<SongListItem, AppError> {
-    let all_songs = db.get_all_songs()?;
-    let song = all_songs
-        .iter()
-        .find(|s| s.id == song_id)
-        .ok_or_else(|| AppError::Generic("Música não encontrada".into()))?;
+    let song = db.get_song_list_item_by_id(&song_id)?;
 
     let settings = store.get_app_settings()?;
     let now = Local::now().naive_local();
@@ -147,19 +137,21 @@ pub fn add_scores_to_song(
             continue;
         }
 
-        // Obter metadados do arquivo
         let (file_size, file_modified_at) = get_file_metadata(Path::new(&file.path))
             .map_err(|e| {
                 error!("Erro ao obter metadados do arquivo: {:?}", e);
                 AppError::Generic(format!("Erro ao ler arquivo: {}", e))
             })?;
 
+        let (directory_id, file_name) = db.resolve_directory_for_path(&file.path)?;
+
         let score = Score {
             id: uuid::Uuid::new_v4().to_string(),
             song_id: song_id.clone(),
             name: file.instrument.clone(),
             host_id: settings.computer_id.clone(),
-            file_path: file.path.clone(),
+            directory_id,
+            file_name,
             file_size,
             file_modified_at,
             updated_at: now,
@@ -176,11 +168,7 @@ pub fn add_scores_to_song(
         ));
     }
 
-    let all_songs = db.get_all_songs()?;
-    all_songs
-        .into_iter()
-        .find(|s| s.id == song_id)
-        .ok_or_else(|| AppError::Generic("Erro ao recuperar música atualizada".into()))
+    db.get_song_list_item_by_id(&song_id)
 }
 
 #[tauri::command]
@@ -224,7 +212,7 @@ pub fn update_score_status(
     status: String,
 ) -> Result<SongListItem, AppError> {
     info!("Atualizando status da partitura: {} para: {}", score_id, status);
-    
+
     let score_status = match status.to_lowercase().as_str() {
         "main" => ScoreStatus::Main,
         "draft" => ScoreStatus::Draft,
@@ -235,7 +223,6 @@ pub fn update_score_status(
         }
     };
 
-    // Atualizar o status do score
     db.set_score_status(&score_id, score_status)?;
 
     // Buscar a música que contém este score
@@ -247,4 +234,22 @@ pub fn update_score_status(
 
     info!("Status da partitura {} atualizado com sucesso para {}", score_id, status);
     Ok(song.clone())
+}
+
+#[tauri::command]
+pub fn delete_score(
+    db: State<'_, Database>,
+    score_id: String,
+) -> Result<(), AppError> {
+    info!("Deletando partitura: {}", score_id);
+    match db.delete_score(&score_id) {
+        Ok(_) => {
+            info!("Partitura deletada com sucesso: {}", score_id);
+            Ok(())
+        }
+        Err(e) => {
+            error!("Erro ao deletar partitura: {:?}", e);
+            Err(e)
+        }
+    }
 }

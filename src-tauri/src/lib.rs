@@ -66,7 +66,7 @@ pub fn run() {
                             );
 
                             if detector.has_changed() {
-                                if db.set_score_status_to_draft(&score_id).is_ok() {
+                                if db.set_score_status_to_draft(&score_id, current_size, current_modified_at).is_ok() {
                                     changed_count += 1;
                                     info!("Status atualizado para draft (inicialização): {}", file_path);
                                 }
@@ -110,6 +110,7 @@ pub fn run() {
             commands::score_commands::add_scores_to_song,
             commands::score_commands::open_file,
             commands::score_commands::update_score_status,
+            commands::score_commands::delete_score,
             // Categories
             commands::category_commands::get_categories,
             commands::category_commands::create_category,

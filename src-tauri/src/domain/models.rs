@@ -40,6 +40,14 @@ impl ScoreStatus {
     }
 }
 
+/// Representa um diretório onde partituras são armazenadas
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
+pub struct Directory {
+    pub id: String,
+    pub path_name: String,
+}
+
 /// Representa uma partitura (instrumento específico de uma música).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Score {
@@ -47,7 +55,8 @@ pub struct Score {
     pub song_id: String,
     pub name: Option<String>,
     pub host_id: String,
-    pub file_path: String,
+    pub directory_id: String,
+    pub file_name: String,
     pub file_size: u64,
     pub file_modified_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
