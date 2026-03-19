@@ -60,6 +60,10 @@ function ScoreRow({
 
   const handleDoubleClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (score.status === "NotFound") {
+      toast.error("Arquivo não encontrado");
+      return;
+    }
     setIsOpening(true);
     try {
       await api.openFile(score.id);
@@ -142,8 +146,14 @@ function ScoreRow({
           e.stopPropagation();
           onSelectScore();
         }}
-        onDoubleClick={handleDoubleClick}
-        title={isOpening ? "Abrindo arquivo..." : "Duplo clique para abrir"}
+        onDoubleClick={score.status === "NotFound" ? undefined : handleDoubleClick}
+        title={
+          isOpening
+            ? "Abrindo arquivo..."
+            : score.status === "NotFound"
+            ? "Arquivo não encontrado"
+            : "Duplo clique para abrir"
+        }
         className={`border-b border-[#d8e0ea] text-sm text-[#4a6278] cursor-pointer transition-colors ${isOpening ? "opacity-60" : ""}`}
       >
         <td className="px-3.5 py-1.5 pl-9">
