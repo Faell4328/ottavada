@@ -19,6 +19,7 @@ pub enum ScoreStatus {
     Main,
     Pending,
     Draft,
+    NotFound,
 }
 
 impl ScoreStatus {
@@ -27,6 +28,7 @@ impl ScoreStatus {
             ScoreStatus::Main => "main",
             ScoreStatus::Pending => "pending",
             ScoreStatus::Draft => "draft",
+            ScoreStatus::NotFound => "not_found",
         }
     }
 
@@ -35,6 +37,7 @@ impl ScoreStatus {
             "main" => ScoreStatus::Main,
             "pending" => ScoreStatus::Pending,
             "draft" => ScoreStatus::Draft,
+            "not_found" => ScoreStatus::NotFound,
             _ => ScoreStatus::Main,
         }
     }

@@ -341,7 +341,7 @@ Ao clicar na música será expandido e mostrar uma lista de partituras/instrumen
 	- [x] Refatorar e adicionar teste no front
 	- [x] Refatorar e adicionar teste no back
 - [x] Atualizar o banco de dados (back e front), adicionando a tabela de `directory`
-- [ ] Adicionar o status e funcionalidade do `not found`
+- [x] Adicionar o status e funcionamento do `not found`
 - [ ] Adicionar suporte Cliente/Servidor
 
 ## Funcionalidades para v0.3 - sincronização offline-ready

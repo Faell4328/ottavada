@@ -51,6 +51,8 @@ function ScoreRow({
         return "Pendente";
       case "Main":
         return "Principal";
+      case "NotFound":
+        return "Não Encontrado";
       default:
         return score.status;
     }
@@ -158,6 +160,7 @@ function ScoreRow({
                 ${score.status === "Draft" && "bg-orange-100 p-2 rounded-full"}
                 ${score.status === "Pending" && "bg-yellow-100 p-2 rounded-full"}
                 ${score.status === "Main" && "bg-green-100 p-2 rounded-full"}
+                ${score.status === "NotFound" && "bg-red-100 p-2 rounded-full"}
               `}>
               {getStatusLabel()}
             </span>
@@ -177,6 +180,7 @@ function ScoreRow({
                     handleDoubleClick(e);
                     onMenuClose();
                   }}
+                  disabled={score.status === "NotFound"}
                 />
                 {score.status === "Draft" && (
                   <ContextMenuItem

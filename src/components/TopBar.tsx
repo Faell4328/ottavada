@@ -129,7 +129,7 @@ export default function TopBar({
   return (
     <>
       <header
-        className="flex h-[70px] items-center justify-between bg-gradient-to-b from-[#33465d] to-[#23364b] px-4 text-white border-b border-white/15"
+        className="fixed top-0 left-0 right-0 w-full flex h-[70px] items-center justify-between bg-gradient-to-b from-[#33465d] to-[#23364b] px-4 text-white border-b border-white/15 z-50"
         data-tauri-drag-region
       >
         <div className="flex items-center gap-3">

@@ -8,6 +8,8 @@ use infrastructure::database::Database;
 use infrastructure::store::SystemStore;
 use tauri::Manager;
 use tracing::info;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -39,52 +41,76 @@ pub fn run() {
             let db = Database::new(&db_path)
                 .expect("Não foi possível inicializar o banco de dados");
 
-            // Executar scan inicial ao ligar
-            info!("Executando verificação inicial de alterações");
-            match db.get_all_scores_with_metadata() {
-                Ok(scores) => {
-                    let mut changed_count = 0;
-                    for (score_id, file_path, stored_size, stored_modified_at_str) in scores {
-                        let path = std::path::Path::new(&file_path);
-
-                        if !path.exists() || !path.is_file() {
-                            continue;
-                        }
-
-                        if let Ok((current_size, current_modified_at)) = 
-                            services::indexer::get_file_metadata(path) {
-                            let stored_modified_at = chrono::NaiveDateTime::parse_from_str(
-                                &stored_modified_at_str,
-                                "%Y-%m-%d %H:%M:%S",
-                            ).unwrap_or_else(|_| chrono::Local::now().naive_local());
-
-                            let detector = services::indexer::FileChangeDetector::new(
-                                current_size,
-                                current_modified_at,
-                                stored_size,
-                                stored_modified_at,
-                            );
-
-                            if detector.has_changed() {
-                                if db.set_score_status_to_draft(&score_id, current_size, current_modified_at).is_ok() {
-                                    changed_count += 1;
-                                    info!("Status atualizado para draft (inicialização): {}", file_path);
-                                }
-                            }
-                        }
-                    }
-                    info!("Verificação inicial concluída: {} alterações", changed_count);
-                }
-                Err(e) => {
-                    eprintln!("Erro na verificação inicial: {:?}", e);
-                }
-            }
+            // Estado para rastrear se o scan inicial terminou
+            let initial_scan_completed = Arc::new(AtomicBool::new(false));
 
             app.manage(db.clone());
+            app.manage(initial_scan_completed.clone());
 
             // Inicializar store de configurações
             let store = SystemStore::new(app_data_dir);
             app.manage(store);
+
+            // Executar scan inicial em thread separada
+            let db_clone = db.clone();
+            let scan_completed_flag = initial_scan_completed.clone();
+            
+            std::thread::spawn(move || {
+                info!("Executando verificação inicial de alterações em thread separada");
+                match db_clone.get_all_scores_with_metadata() {
+                    Ok(scores) => {
+                        let mut changed_count = 0;
+                        let mut not_found_count = 0;
+                        
+                        info!("Total de arquivos para verificar: {}", scores.len());
+                        
+                        for (score_id, file_path, stored_size, stored_modified_at_str) in scores {
+                            let path = std::path::Path::new(&file_path);
+
+                            // Verificar se arquivo não existe
+                            if !path.exists() || !path.is_file() {
+                                if db_clone.set_score_status_to_not_found(&score_id).is_ok() {
+                                    not_found_count += 1;
+                                    info!("✓ Status atualizado para not_found: {}", file_path);
+                                }
+                                continue;
+                            }
+
+                            // Se existe, verificar alterações
+                            if let Ok((current_size, current_modified_at)) = 
+                                services::indexer::get_file_metadata(path) {
+                                let stored_modified_at = chrono::NaiveDateTime::parse_from_str(
+                                    &stored_modified_at_str,
+                                    "%Y-%m-%d %H:%M:%S",
+                                ).unwrap_or_else(|_| chrono::Local::now().naive_local());
+
+                                let detector = services::indexer::FileChangeDetector::new(
+                                    current_size,
+                                    current_modified_at,
+                                    stored_size,
+                                    stored_modified_at,
+                                );
+
+                                if detector.has_changed() {
+                                    if db_clone.set_score_status_to_draft(&score_id, current_size, current_modified_at).is_ok() {
+                                        changed_count += 1;
+                                        info!("✓ Status atualizado para draft: {}", file_path);
+                                    }
+                                }
+                            }
+                        }
+                        info!("Verificação inicial concluída: {} alterações, {} não encontrados", changed_count, not_found_count);
+                        
+                        // Sinalizar que o scan terminou
+                        scan_completed_flag.store(true, Ordering::SeqCst);
+                        info!("✓ Flag 'initial_scan_completed' setada para true");
+                    }
+                    Err(e) => {
+                        eprintln!("Erro na verificação inicial: {:?}", e);
+                        scan_completed_flag.store(true, Ordering::SeqCst);
+                    }
+                }
+            });
 
             Ok(())
         })
@@ -121,6 +147,7 @@ pub fn run() {
             commands::settings_commands::is_first_run,
             commands::settings_commands::complete_first_run,
             commands::settings_commands::generate_computer_id,
+            commands::settings_commands::is_initial_scan_completed,
             // Scan
             commands::scan_commands::scan_files_for_changes,
         ])

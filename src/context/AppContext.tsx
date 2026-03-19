@@ -119,11 +119,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
         dispatch({ type: "SET_FIRST_RUN", payload: firstRun });
 
         if (!firstRun) {
+          // Carregar dados imediatamente
           await Promise.all([loadSongs(), loadCategories(), loadSettings()]);
-          // Iniciar verificação de alterações após carregar os dados
-          setTimeout(() => {
-            handleScanFilesForChanges(true);
-          }, 500);
+          
+          // Fazer polling para aguardar scan inicial terminar
+          const checkScanCompleted = async () => {
+            let attempts = 0;
+            const maxAttempts = 60; // 60 segundos máximo
+            
+            while (attempts < maxAttempts) {
+              const completed = await api.isInitialScanCompleted();
+              if (completed) {
+                console.log("Initial scan completed, reloading data...");
+                await loadSongs();
+                break;
+              }
+              attempts++;
+              await new Promise(resolve => setTimeout(resolve, 1000)); // Verificar a cada 1 segundo
+            }
+          };
+          
+          checkScanCompleted();
         }
       } catch (err) {
         console.error("Failed to initialize app:", err);
@@ -133,6 +149,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     })();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Re-load songs when sidebar or search changes
   useEffect(() => {
     if (!state.isFirstRun && !state.isLoading) {
       loadSongs();
@@ -330,6 +347,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
           },
         });
 
+        // Verificar se há arquivos recuperados (não mais not_found)
+        if (result.recovered_files && result.recovered_files.length > 0) {
+          if (!isAutomatic) {
+            toast.success(
+              `✓ ${result.recovered_files.length} arquivo(s) encontrado(s) novamente`
+            );
+          }
+          await loadSongs(); // Recarregar para atualizar UI
+        }
+
+        // Verificar se há arquivos não encontrados (marcados como not_found)
+        if (result.not_found_files && result.not_found_files.length > 0) {
+          if (!isAutomatic) {
+            toast.warning(
+              `⚠ ${result.not_found_files.length} arquivo(s) não encontrado(s)`
+            );
+          }
+          await loadSongs(); // Recarregar para atualizar UI com status not_found
+        }
+
         if (result.changed_files.length > 0) {
           if (!isAutomatic) {
             toast.success(
@@ -337,7 +374,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             );
           }
           await loadSongs();
-        } else if (!isAutomatic) {
+        } else if (!isAutomatic && !(result.recovered_files && result.recovered_files.length > 0) && !(result.not_found_files && result.not_found_files.length > 0)) {
           toast.success("Nenhuma alteração detectada");
         }
 
@@ -350,7 +387,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
 
         // Limpar progresso após tempo apropriado
-        const delay = result.changed_files.length > 0 ? 3000 : 1500;
+        const delay = result.changed_files.length > 0 || (result.recovered_files && result.recovered_files.length > 0) ? 3000 : 1500;
         setTimeout(() => {
           dispatch({ type: "SET_SCANNING_FILES", payload: false });
           dispatch({

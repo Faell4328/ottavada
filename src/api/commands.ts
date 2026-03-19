@@ -177,10 +177,16 @@ export async function completeFirstRun(
   });
 }
 
+export async function isInitialScanCompleted(): Promise<boolean> {
+  return invoke("is_initial_scan_completed");
+}
+
 // ── File Scanning ──
 
 export interface ScanResult {
   changed_files: string[];
+  not_found_files: string[];
+  recovered_files: string[];
   failed_files: Array<[string, string]>;
 }
 

@@ -712,6 +712,35 @@ impl Database {
         Ok(scores)
     }
 
+    /// Obtém todos os scores com status "not_found"
+    /// Retorna: (score_id, file_path_completo, file_size, file_modified_at)
+    pub fn get_not_found_scores(&self) -> Result<Vec<(String, String, u64, String)>, AppError> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT s.id, d.path_name, s.file_name, s.file_size, s.file_modified_at
+             FROM scores s
+             JOIN directories d ON d.id = s.directory_id
+             WHERE s.status = ?1"
+        )?;
+
+        let scores = stmt.query_map([ScoreStatus::NotFound.as_str()], |row| {
+            let dir_path: String = row.get(1)?;
+            let file_name: String = row.get(2)?;
+            let file_path = std::path::PathBuf::from(&dir_path)
+                .join(&file_name)
+                .to_string_lossy()
+                .to_string();
+            Ok((
+                row.get::<_, String>(0)?,
+                file_path,
+                row.get::<_, u64>(3)?,
+                row.get::<_, String>(4)?,
+            ))
+        })?.filter_map(|r| r.ok()).collect();
+
+        Ok(scores)
+    }
+
     /// Atualiza o status de um score para draft, atualizando também os metadados do arquivo
     pub fn set_score_status_to_draft(
         &self,
@@ -724,6 +753,36 @@ impl Database {
             "UPDATE scores SET status = ?1, file_size = ?2, file_modified_at = ?3, updated_at = ?4 WHERE id = ?5",
             params![
                 ScoreStatus::Draft.as_str(),
+                file_size,
+                file_modified_at.format("%Y-%m-%d %H:%M:%S").to_string(),
+                chrono::Local::now().naive_local().format("%Y-%m-%d %H:%M:%S").to_string(),
+                score_id,
+            ],
+        )?;
+        Ok(())
+    }
+
+    /// Atualiza o status de um score para not_found
+    pub fn set_score_status_to_not_found(&self, score_id: &str) -> Result<(), AppError> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "UPDATE scores SET status = ?1, updated_at = ?2 WHERE id = ?3",
+            params![
+                ScoreStatus::NotFound.as_str(),
+                chrono::Local::now().naive_local().format("%Y-%m-%d %H:%M:%S").to_string(),
+                score_id,
+            ],
+        )?;
+        Ok(())
+    }
+
+    /// Recupera um score do status not_found para main
+    pub fn set_score_status_to_main(&self, score_id: &str, file_size: u64, file_modified_at: chrono::NaiveDateTime) -> Result<(), AppError> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "UPDATE scores SET status = ?1, file_size = ?2, file_modified_at = ?3, updated_at = ?4 WHERE id = ?5",
+            params![
+                ScoreStatus::Main.as_str(),
                 file_size,
                 file_modified_at.format("%Y-%m-%d %H:%M:%S").to_string(),
                 chrono::Local::now().naive_local().format("%Y-%m-%d %H:%M:%S").to_string(),

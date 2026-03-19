@@ -17,7 +17,7 @@ export interface ScoreListItem {
   file_path: string;
   file_extension: string;
   updated_at: string;
-  status: "Main" | "Pending" | "Draft";
+  status: "Main" | "Pending" | "Draft" | "NotFound";
 }
 
 export interface Category {

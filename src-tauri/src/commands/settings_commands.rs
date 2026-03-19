@@ -1,5 +1,7 @@
 use tauri::State;
 use tracing::{info, error};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 use crate::domain::errors::AppError;
 use crate::domain::models::AppSettings;
@@ -74,4 +76,11 @@ pub fn complete_first_run(
     
     settings.first_run_completed = true;
     store.save_app_settings(&settings)
+}
+
+#[tauri::command]
+pub fn is_initial_scan_completed(
+    scan_flag: State<'_, Arc<AtomicBool>>,
+) -> bool {
+    scan_flag.load(Ordering::SeqCst)
 }

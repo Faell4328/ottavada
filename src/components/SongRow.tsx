@@ -132,17 +132,20 @@ function ContextMenuItem({
   label,
   onClick,
   isLast,
+  disabled,
 }: {
   label: string;
   onClick: (e: React.MouseEvent) => void;
   isLast?: boolean;
+  disabled?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
+      disabled={disabled}
       className={`w-full text-left px-3 py-2 hover:bg-[#f2f5fa] text-sm text-[#344b61] transition-colors ${
         isLast ? "" : "border-b border-[#e8ecf0]"
-      }`}
+      } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
     >
       {label}
     </button>
