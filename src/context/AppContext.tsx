@@ -44,6 +44,10 @@ interface AppContextValue {
     instrumentName: string | null,
     filePath: string
   ) => Promise<void>;
+  updateScoreStatus: (
+    scoreId: string,
+    status: "Main" | "Draft" | "Pending"
+  ) => Promise<void>;
   completeFirstRun: (
     computerId: string,
     computerName: string,
@@ -247,6 +251,35 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [state.selectedScore, loadSongs]
   );
 
+  const handleUpdateScoreStatus = useCallback(
+    async (
+      scoreId: string,
+      status: "Main" | "Draft" | "Pending"
+    ) => {
+      try {
+        const updatedSong = await api.updateScoreStatus(scoreId, status);
+        
+        // Atualizar a música selecionada com os dados atualizados
+        dispatch({ type: "UPDATE_SELECTED_SONG", payload: updatedSong });
+        
+        // Atualizar a lista de músicas
+        const updatedSongs = state.songs.map((song) =>
+          song.id === updatedSong.id ? updatedSong : song
+        );
+        dispatch({ type: "SET_SONGS", payload: updatedSongs });
+        
+        const statusLabel = status === "Main" ? "Principal" : status === "Draft" ? "Rascunho" : "Pendente";
+        toast.success(`Partitura definida como ${statusLabel}!`);
+      } catch (err) {
+        console.error("Failed to update score status:", err);
+        const errorMsg = err instanceof Error ? err.message : "Erro ao atualizar status da partitura";
+        toast.error(errorMsg);
+        throw err;
+      }
+    },
+    [state.songs]
+  );
+
   const handleSaveSettings = useCallback(
     async (settings: AppSettings) => {
       try {
@@ -351,6 +384,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       deleteCategory: handleDeleteCategory,
       updateSong: handleUpdateSong,
       updateScore: handleUpdateScore,
+      updateScoreStatus: handleUpdateScoreStatus,
       saveSettings: handleSaveSettings,
       completeFirstRun: handleCompleteFirstRun,
       scanFilesForChanges: handleScanFilesForChanges,

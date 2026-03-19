@@ -216,3 +216,35 @@ pub async fn open_file(
 
     Ok(())
 }
+
+#[tauri::command]
+pub fn update_score_status(
+    db: State<'_, Database>,
+    score_id: String,
+    status: String,
+) -> Result<SongListItem, AppError> {
+    info!("Atualizando status da partitura: {} para: {}", score_id, status);
+    
+    let score_status = match status.to_lowercase().as_str() {
+        "main" => ScoreStatus::Main,
+        "draft" => ScoreStatus::Draft,
+        "pending" => ScoreStatus::Pending,
+        _ => {
+            warn!("Status inválido: {}", status);
+            return Err(AppError::Generic(format!("Status inválido: {}", status)));
+        }
+    };
+
+    // Atualizar o status do score
+    db.set_score_status(&score_id, score_status)?;
+
+    // Buscar a música que contém este score
+    let all_songs = db.get_all_songs()?;
+    let song = all_songs
+        .iter()
+        .find(|s| s.scores.iter().any(|sc| sc.id == score_id))
+        .ok_or_else(|| AppError::Generic("Score não encontrado".into()))?;
+
+    info!("Status da partitura {} atualizado com sucesso para {}", score_id, status);
+    Ok(song.clone())
+}

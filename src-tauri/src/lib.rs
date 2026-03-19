@@ -109,6 +109,7 @@ pub fn run() {
             commands::score_commands::add_score_to_song,
             commands::score_commands::add_scores_to_song,
             commands::score_commands::open_file,
+            commands::score_commands::update_score_status,
             // Categories
             commands::category_commands::get_categories,
             commands::category_commands::create_category,

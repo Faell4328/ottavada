@@ -474,6 +474,20 @@ impl Database {
         Ok(())
     }
 
+    /// Atualiza o status de um score para um status específico
+    pub fn set_score_status(&self, score_id: &str, status: ScoreStatus) -> Result<(), AppError> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "UPDATE scores SET status = ?1, updated_at = ?2 WHERE id = ?3",
+            params![
+                status.as_str(),
+                chrono::Local::now().naive_local().format("%Y-%m-%d %H:%M:%S").to_string(),
+                score_id,
+            ],
+        )?;
+        Ok(())
+    }
+
     fn get_scores_for_song(&self, conn: &Connection, song_id: &str) -> Result<Vec<ScoreListItem>, AppError> {
         let mut stmt = conn.prepare(
             "SELECT id, name, file_path, file_size, file_modified_at, updated_at, status

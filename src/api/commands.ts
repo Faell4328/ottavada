@@ -102,6 +102,13 @@ export async function updateScore(
   return invoke("update_score", { scoreId, instrumentName, filePath });
 }
 
+export async function updateScoreStatus(
+  scoreId: string,
+  status: "Main" | "Draft" | "Pending"
+): Promise<SongListItem> {
+  return invoke("update_score_status", { scoreId, status });
+}
+
 export async function addScoreToSong(
   songId: string,
   file: IndexedFile

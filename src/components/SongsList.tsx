@@ -12,7 +12,7 @@ import toast from "react-hot-toast";
 import type { SongListItem, ScoreListItem } from "../types";
 
 export default function SongsList() {
-  const { state, setSearchQuery, selectSong, selectScore, toggleFavorite, loadSongs, updateSong, updateScore } =
+  const { state, setSearchQuery, selectSong, selectScore, toggleFavorite, loadSongs, updateSong, updateScore, updateScoreStatus } =
     useAppState();
   const [localQuery, setLocalQuery] = useState("");
   const [suggestions, setSuggestions] = useState<SongListItem[]>([]);
@@ -262,6 +262,7 @@ export default function SongsList() {
                             setEditingScore(score);
                             setIsEditScoreModalOpen(true);
                           }}
+                          onStatusChange={updateScoreStatus}
                         />
                       ))}
                   </React.Fragment>

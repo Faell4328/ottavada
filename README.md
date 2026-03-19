@@ -330,9 +330,9 @@ Ao clicar na música será expandido e mostrar uma lista de partituras/instrumen
 	- [x] Implementar no Rust
 	- [x] Implementar no Front
 	- [x] Testar
-- [ ] Implementar fluxo `draft` → `main`
-	- [ ] No overflow menu das partituras, deve ter a opção (Definir como `main` - aparecer e funcionar apenas se tiver `draft`). Ao clicar deve abrir um modal de confirmação, "você realmente deseja mudar o arquivo para `main`?"
-	- [ ] Também no overflow menu das partituras deve ter a opção (Definir como `draft` - aparecer e funcionar apenas se tiver como `main`). Ao clicar deve abrir um modal de confirmação, "você realmente deseja mudar o arquivo para `draft`?"
+- [x] Implementar fluxo `draft` → `main`
+	- [x] No overflow menu das partituras, deve ter a opção (Definir como `main` - aparecer e funcionar apenas se tiver `draft`). Ao clicar deve abrir um modal de confirmação, "você realmente deseja mudar o arquivo para `main`?"
+	- [x] Também no overflow menu das partituras deve ter a opção (Definir como `draft` - aparecer e funcionar apenas se tiver como `main`). Ao clicar deve abrir um modal de confirmação, "você realmente deseja mudar o arquivo para `draft`?"
 - [ ] Adicionar função para listar todos os rascunhos ativos
 - [ ] Adicionar testes
 - [ ] Adicionar suporte Cliente/Servidor
