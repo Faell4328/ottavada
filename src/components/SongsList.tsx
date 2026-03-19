@@ -209,7 +209,7 @@ export default function SongsList() {
               <tr className="border-b border-[#ced7e3] bg-[#eef2f6] text-xs font-bold text-[#34485d] sticky top-0">
                 <th className="text-left px-3.5 py-2.5 font-bold w-1/3">Título</th>
                 <th className="text-left px-3.5 py-2.5 font-bold w-1/3">Compositor / Arranjador</th>
-                <th className="text-left px-3.5 py-2.5 font-bold w-1/3">Ações</th>
+                <th className="text-left px-3.5 py-2.5 font-bold w-1/3"></th>
               </tr>
             </thead>
             <tbody>
@@ -250,7 +250,6 @@ export default function SongsList() {
                         <MemoizedScoreRow
                           key={score.id}
                           score={score}
-                          isSelected={state.selectedScore?.id === score.id}
                           onSelectScore={() => {
                             selectScore(state.selectedScore?.id === score.id ? null : score);
                             closeAllMenus();

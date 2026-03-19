@@ -1,4 +1,4 @@
-import { Music, FolderSearch, Plus, Settings, X } from "lucide-react";
+import { Music, FolderSearch, Plus, Settings, X, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -16,7 +16,7 @@ interface TopBarProps {
 export default function TopBar({
   title = "Score Maestro",
 }: TopBarProps) {
-  const { loadSongs, loadCategories, state } = useAppState();
+  const { loadSongs, loadCategories, state, scanFilesForChanges } = useAppState();
   const navigate = useNavigate();
   const [showAddMusicModal, setShowAddMusicModal] = useState(false);
   const [musicTitle, setMusicTitle] = useState("");
@@ -172,7 +172,7 @@ export default function TopBar({
         data-tauri-drag-region
       >
         <div className="flex items-center gap-3">
-          <img src="public/logo.png" alt="Logo" className="h-auto w-[70px] rounded-full" />
+          <img src="/logo.png" alt="Logo" className="h-auto w-[70px] rounded-full" />
           <span className="text-xl font-bold tracking-tight">{title}</span>
         </div>
 
@@ -191,6 +191,12 @@ export default function TopBar({
             icon={<FolderSearch className="h-4 w-4" />}
             title="Indexar diretório"
             onClick={handleScanDirectory}
+          />
+          <ActionButton
+            icon={<RefreshCw className={`h-4 w-4 ${state.isScanningFiles ? 'animate-spin' : ''}`} />}
+            title="Verificar alterações"
+            onClick={scanFilesForChanges}
+            disabled={state.isScanningFiles}
           />
           <ActionButton
             icon={<Settings className="h-4 w-4" />}
@@ -328,17 +334,24 @@ function ActionButton({
   icon,
   title,
   onClick,
+  disabled = false,
 }: {
   icon: React.ReactNode;
   title: string;
   onClick?: () => void;
+  disabled?: boolean;
 }) {
   return (
     <button
       type="button"
       title={title}
       onClick={onClick}
-      className="flex h-8 w-9 items-center justify-center rounded border border-white/25 bg-white/8 text-white/90 hover:bg-white/15 transition-colors cursor-pointer"
+      disabled={disabled}
+      className={`flex h-8 w-9 items-center justify-center rounded border border-white/25 text-white/90 transition-colors cursor-pointer ${
+        disabled
+          ? "bg-white/5 opacity-50 cursor-not-allowed"
+          : "bg-white/8 hover:bg-white/15"
+      }`}
     >
       {icon}
     </button>

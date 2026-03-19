@@ -57,6 +57,7 @@ Um aplicativo desktop windows, para organizar, controlar status das partituras e
 - O diretório local onde é baixado as informações é no `/user/score-maestro`.
 - Ao baixar os arquivos do Google Drive ele viram compactados, ao dar duplo clique em uma partitura de alguma música, ela deve ser descompactada em um diretório temporário do Sistema Operacional `C:\Users\<user>\AppData\Local\Temp`.
 - Tanto a varredura, quanto o update e download, deve ser feito em thread separada. Para não interferir no funcionamento dos outros componentes.
+- O computador deve fazer a verificação de alteração sempre quando ligar e quando o usuário clicar no botão.
 - O `logs` deve ser salvo no mesmo diretório onde o `tauri-plugin-store` salva por padrão (`C:\Users\<seu-usuario>\AppData\Roaming\<nome-do-app>\`).
 - O update no Google Drive deve ser dessa forma: comprimir com o nome: `database.msgpack.xz.tmp` e depois renomear para `database.msgpack.xz` (no Google Drive), o mesmo vale para as partituras. Objetivo é evitar arquivos corrompidos.
 
@@ -324,18 +325,23 @@ Ao clicar na música será expandido e mostrar uma lista de partituras/instrumen
 	- [x] Garantir que está salvando o `C:\Users\<seu-usuario>\AppData\Roaming\<nome-do-app>\`
 
 ## Funcionalidades para v0.2 - funcionamento local completo
-- [x] Mudar as informações do sistema do banco de dados para o `tauri-plugin-store`.
-- [ ] Implementar a função para detectar alteração no arquivo.
+- [x] Mudar as informações do sistema do banco de dados para o `tauri-plugin-store`
+- [x] Implementar a função para detectar alteração no arquivo
+	- [x] Implementar no Rust
+	- [x] Implementar no Front
+	- [x] Testar
 - [ ] Implementar fluxo `draft` → `main`
+	- [ ] No overflow menu das partituras, deve ter a opção (Definir como `main` - aparecer e funcionar apenas se tiver `draft`). Ao clicar deve abrir um modal de confirmação, "você realmente deseja mudar o arquivo para `main`?"
+	- [ ] Também no overflow menu das partituras deve ter a opção (Definir como `draft` - aparecer e funcionar apenas se tiver como `main`). Ao clicar deve abrir um modal de confirmação, "você realmente deseja mudar o arquivo para `draft`?"
 - [ ] Adicionar função para listar todos os rascunhos ativos
 - [ ] Adicionar testes
 - [ ] Adicionar suporte Cliente/Servidor
 
 ## Funcionalidades para v0.3 - sincronização offline-ready
-- [ ] Deletar partitura  
-- [ ] Criar MessagePack  
-- [ ] Ler e comparar MessagePack  
-- [ ] Versionamento do schema  
+- [ ] Deletar partitura  (apenas no programa)
+- [ ] Criar MessagePack
+- [ ] Ler e comparar MessagePack
+- [ ] Versionamento do schema
 - [ ] Testes
 
 ## Funcionalidades para v0.4 - cloud

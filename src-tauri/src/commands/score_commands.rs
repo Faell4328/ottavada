@@ -7,6 +7,7 @@ use crate::domain::errors::AppError;
 use crate::domain::models::*;
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
+use crate::services::indexer::get_file_metadata;
 
 #[tauri::command]
 pub fn update_score(
@@ -35,7 +36,15 @@ pub fn update_score(
     }
 
     let now = Local::now().naive_local();
-    match db.update_score(&score_id, instrument_name.clone(), &file_path, now) {
+    
+    // Obter metadados do arquivo
+    let (file_size, file_modified_at) = get_file_metadata(path)
+        .map_err(|e| {
+            error!("Erro ao obter metadados do arquivo: {:?}", e);
+            AppError::Generic(format!("Erro ao ler arquivo: {}", e))
+        })?;
+
+    match db.update_score(&score_id, instrument_name.clone(), &file_path, file_size, file_modified_at, now) {
         Ok(_) => {
             info!("Partitura atualizada com sucesso: {}", score_id);
             Ok(())
@@ -79,12 +88,21 @@ pub fn add_score_to_song(
     let settings = store.get_app_settings()?;
     let now = Local::now().naive_local();
 
+    // Obter metadados do arquivo
+    let (file_size, file_modified_at) = get_file_metadata(Path::new(&file.path))
+        .map_err(|e| {
+            error!("Erro ao obter metadados do arquivo: {:?}", e);
+            AppError::Generic(format!("Erro ao ler arquivo: {}", e))
+        })?;
+
     let score = Score {
         id: uuid::Uuid::new_v4().to_string(),
         song_id: song_id.clone(),
         name: file.instrument.clone(),
         host_id: settings.computer_id.clone(),
         file_path: file.path.clone(),
+        file_size,
+        file_modified_at,
         updated_at: now,
         status: ScoreStatus::Main,
     };
@@ -129,12 +147,21 @@ pub fn add_scores_to_song(
             continue;
         }
 
+        // Obter metadados do arquivo
+        let (file_size, file_modified_at) = get_file_metadata(Path::new(&file.path))
+            .map_err(|e| {
+                error!("Erro ao obter metadados do arquivo: {:?}", e);
+                AppError::Generic(format!("Erro ao ler arquivo: {}", e))
+            })?;
+
         let score = Score {
             id: uuid::Uuid::new_v4().to_string(),
             song_id: song_id.clone(),
             name: file.instrument.clone(),
             host_id: settings.computer_id.clone(),
             file_path: file.path.clone(),
+            file_size,
+            file_modified_at,
             updated_at: now,
             status: ScoreStatus::Main,
         };

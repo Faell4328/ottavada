@@ -30,6 +30,8 @@ mod tests {
             name: name.map(|s| s.to_string()),
             host_id: "test-computer".to_string(),
             file_path: "/tmp/test.pdf".to_string(),
+            file_size: 1024,
+            file_modified_at: now(),
             updated_at: now(),
             status: ScoreStatus::Main,
         }
@@ -299,7 +301,7 @@ mod tests {
         db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
         db.insert_score(&make_score("sc1", "s1", Some("Violino"))).unwrap();
 
-        db.update_score("sc1", Some("Violino 1".to_string()), "/new/path.musx", now()).unwrap();
+        db.update_score("sc1", Some("Violino 1".to_string()), "/new/path.musx", 2048, now(), now()).unwrap();
 
         let songs = db.get_all_songs().unwrap();
         assert_eq!(songs[0].scores[0].name, Some("Violino 1".to_string()));

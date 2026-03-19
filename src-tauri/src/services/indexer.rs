@@ -1,5 +1,6 @@
 use std::path::Path;
 use walkdir::WalkDir;
+use chrono::NaiveDateTime;
 
 use crate::domain::models::IndexedFile;
 
@@ -63,6 +64,53 @@ fn parse_filename(file_stem: &str) -> (String, Option<String>) {
         }
     } else {
         (file_stem.to_string(), None)
+    }
+}
+
+/// Obtém os metadados do arquivo (size e modified_at)
+pub fn get_file_metadata(file_path: &Path) -> Result<(u64, NaiveDateTime), std::io::Error> {
+    let metadata = std::fs::metadata(file_path)?;
+    let file_size = metadata.len();
+    let modified_at = metadata
+        .modified()?
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| {
+            let timestamp = d.as_secs() as i64;
+            chrono::DateTime::from_timestamp(timestamp, 0)
+                .map(|dt| dt.naive_utc())
+                .unwrap_or_else(|| chrono::Local::now().naive_local())
+        })
+        .unwrap_or_else(|_| chrono::Local::now().naive_local());
+    
+    Ok((file_size, modified_at))
+}
+
+/// Detecta alterações no arquivo comparando size e modified_at
+pub struct FileChangeDetector {
+    pub current_size: u64,
+    pub current_modified_at: NaiveDateTime,
+    pub stored_size: u64,
+    pub stored_modified_at: NaiveDateTime,
+}
+
+impl FileChangeDetector {
+    pub fn new(
+        current_size: u64,
+        current_modified_at: NaiveDateTime,
+        stored_size: u64,
+        stored_modified_at: NaiveDateTime,
+    ) -> Self {
+        Self {
+            current_size,
+            current_modified_at,
+            stored_size,
+            stored_modified_at,
+        }
+    }
+
+    /// Verifica se o arquivo foi alterado
+    pub fn has_changed(&self) -> bool {
+        self.current_size != self.stored_size || self.current_modified_at != self.stored_modified_at
     }
 }
 

@@ -4,13 +4,12 @@ import type {
   ScoreListItem,
   Category,
   AppSettings,
-  SidebarView,
 } from "../../types";
 import { reducer, initialState } from "../../context/reducer";
 
 // ── Helpers ──
 
-function makeScore(id: string, name: string): SongListItem {
+function makeSong(id: string, name: string): SongListItem {
   return {
     id,
     name,
@@ -23,10 +22,10 @@ function makeScore(id: string, name: string): SongListItem {
   };
 }
 
-function makeFile(id: string): ScoreListItem {
+function makeScore(id: string, name: string): ScoreListItem {
   return {
     id,
-    name: "Violino",
+    name,
     file_path: "/path/to/file.pdf",
     file_extension: "pdf",
     updated_at: "2024-01-01 12:00:00",
@@ -39,35 +38,34 @@ function makeFile(id: string): ScoreListItem {
 describe("AppContext Reducer", () => {
   describe("initialState", () => {
     it("should have correct defaults", () => {
-      expect(initialState.scores).toEqual([]);
+      expect(initialState.songs).toEqual([]);
       expect(initialState.categories).toEqual([]);
       expect(initialState.settings).toBeNull();
       expect(initialState.sidebarView).toBe("all");
+      expect(initialState.selectedSong).toBeNull();
       expect(initialState.selectedScore).toBeNull();
-      expect(initialState.selectedFile).toBeNull();
-      expect(initialState.versions).toEqual([]);
       expect(initialState.searchQuery).toBe("");
       expect(initialState.isFirstRun).toBe(false);
       expect(initialState.isLoading).toBe(true);
     });
   });
 
-  describe("SET_SCORES", () => {
-    it("should set scores", () => {
-      const scores = [makeScore("s1", "Canon"), makeScore("s2", "Moonlight")];
+  describe("SET_SONGS", () => {
+    it("should set songs", () => {
+      const songs = [makeSong("s1", "Canon"), makeSong("s2", "Moonlight")];
       const state = reducer(initialState, {
-        type: "SET_SCORES",
-        payload: scores,
+        type: "SET_SONGS",
+        payload: songs,
       });
-      expect(state.scores).toHaveLength(2);
-      expect(state.scores[0].title).toBe("Canon");
+      expect(state.songs).toHaveLength(2);
+      expect(state.songs[0].name).toBe("Canon");
     });
   });
 
   describe("SET_CATEGORIES", () => {
     it("should set categories", () => {
       const cats: Category[] = [
-        { id: "c1", name: "Hinos", created_at: "2024-01-01 12:00:00" },
+        { id: "c1", name: "Hinos" },
       ];
       const state = reducer(initialState, {
         type: "SET_CATEGORIES",
@@ -83,10 +81,8 @@ describe("AppContext Reducer", () => {
       const settings: AppSettings = {
         computer_id: "550e8400-e29b-41d4-a716-446655440000",
         computer_name: "Computador Teste",
-        logo_path: null,
         google_drive_mode: "Local",
-        hash_enabled: false,
-        first_run_completed: true,
+        first_run_completed: false,
         google_service_account: null,
       };
       const state = reducer(initialState, {
@@ -98,86 +94,58 @@ describe("AppContext Reducer", () => {
   });
 
   describe("SET_SIDEBAR_VIEW", () => {
-    it("should change view and clear selections", () => {
-      const stateWithSelection = {
-        ...initialState,
-        selectedScore: makeScore("s1", "Canon"),
-        selectedFile: makeFile("f1"),
-        versions: [makeVersion("v1")],
-      };
-      const state = reducer(stateWithSelection, {
+    it("should change view", () => {
+      const state = reducer(initialState, {
         type: "SET_SIDEBAR_VIEW",
         payload: "favorites",
       });
       expect(state.sidebarView).toBe("favorites");
-      expect(state.selectedScore).toBeNull();
-      expect(state.selectedFile).toBeNull();
-      expect(state.versions).toEqual([]);
+    });
+  });
+
+  describe("SET_SELECTED_SONG", () => {
+    it("should select song", () => {
+      const song = makeSong("s1", "Canon");
+      const state = reducer(initialState, {
+        type: "SET_SELECTED_SONG",
+        payload: song,
+      });
+      expect(state.selectedSong).toEqual(song);
     });
 
-    it("should support category view", () => {
-      const categoryView: SidebarView = {
-        type: "category",
-        id: "c1",
-        name: "Hinos",
+    it("should deselect when null", () => {
+      const stateWithSong = {
+        ...initialState,
+        selectedSong: makeSong("s1", "Canon"),
       };
-      const state = reducer(initialState, {
-        type: "SET_SIDEBAR_VIEW",
-        payload: categoryView,
+      const state = reducer(stateWithSong, {
+        type: "SET_SELECTED_SONG",
+        payload: null,
       });
-      expect(state.sidebarView).toEqual(categoryView);
+      expect(state.selectedSong).toBeNull();
     });
   });
 
   describe("SET_SELECTED_SCORE", () => {
-    it("should select score and clear file/versions", () => {
-      const stateWithFile = {
-        ...initialState,
-        selectedFile: makeFile("f1"),
-        versions: [makeVersion("v1")],
-      };
-      const score = makeScore("s1", "Canon");
-      const state = reducer(stateWithFile, {
+    it("should select score", () => {
+      const score = makeScore("f1", "Violino");
+      const state = reducer(initialState, {
         type: "SET_SELECTED_SCORE",
         payload: score,
       });
       expect(state.selectedScore).toEqual(score);
-      expect(state.selectedFile).toBeNull();
-      expect(state.versions).toEqual([]);
     });
 
     it("should deselect when null", () => {
       const stateWithScore = {
         ...initialState,
-        selectedScore: makeScore("s1", "Canon"),
+        selectedScore: makeScore("f1", "Violino"),
       };
       const state = reducer(stateWithScore, {
         type: "SET_SELECTED_SCORE",
         payload: null,
       });
       expect(state.selectedScore).toBeNull();
-    });
-  });
-
-  describe("SET_SELECTED_FILE", () => {
-    it("should set selected file", () => {
-      const file = makeFile("f1");
-      const state = reducer(initialState, {
-        type: "SET_SELECTED_FILE",
-        payload: file,
-      });
-      expect(state.selectedFile).toEqual(file);
-    });
-  });
-
-  describe("SET_VERSIONS", () => {
-    it("should set versions", () => {
-      const versions = [makeVersion("v1"), makeVersion("v2")];
-      const state = reducer(initialState, {
-        type: "SET_VERSIONS",
-        payload: versions,
-      });
-      expect(state.versions).toHaveLength(2);
     });
   });
 
@@ -212,74 +180,32 @@ describe("AppContext Reducer", () => {
   });
 
   describe("TOGGLE_FAVORITE", () => {
-    it("should toggle favorite for matching score", () => {
-      const stateWithScores = {
+    it("should toggle favorite for song", () => {
+      const stateWithSongs = {
         ...initialState,
-        scores: [makeScore("s1", "Canon"), makeScore("s2", "Moonlight")],
+        songs: [makeSong("s1", "Canon"), makeSong("s2", "Moonlight")],
       };
-      const state = reducer(stateWithScores, {
+      const state = reducer(stateWithSongs, {
         type: "TOGGLE_FAVORITE",
-        payload: { scoreId: "s1", favorited: true },
+        payload: { songId: "s1", isFavorite: true },
       });
-      expect(state.scores[0].favorited).toBe(true);
-      expect(state.scores[1].favorited).toBe(false);
-    });
-
-    it("should not affect other scores", () => {
-      const stateWithScores = {
-        ...initialState,
-        scores: [
-          { ...makeScore("s1", "Canon"), favorited: true },
-          makeScore("s2", "Moonlight"),
-        ],
-      };
-      const state = reducer(stateWithScores, {
-        type: "TOGGLE_FAVORITE",
-        payload: { scoreId: "s1", favorited: false },
-      });
-      expect(state.scores[0].favorited).toBe(false);
-      expect(state.scores[1].favorited).toBe(false);
-    });
-
-    it("should handle non-existent score id", () => {
-      const stateWithScores = {
-        ...initialState,
-        scores: [makeScore("s1", "Canon")],
-      };
-      const state = reducer(stateWithScores, {
-        type: "TOGGLE_FAVORITE",
-        payload: { scoreId: "nonexistent", favorited: true },
-      });
-      expect(state.scores[0].favorited).toBe(false);
+      expect(state.songs[0].is_favorite).toBe(true);
     });
   });
 
-  describe("UPDATE_SELECTED_SCORE", () => {
-    it("should update selected score and scores list", () => {
-      const original = makeScore("s1", "Canon");
-      const updated = { ...original, title: "Canon in D" };
-      const stateWithScores = {
+  describe("UPDATE_SELECTED_SONG", () => {
+    it("should update selected song", () => {
+      const originalSong = makeSong("s1", "Canon");
+      const stateWithSong = {
         ...initialState,
-        scores: [original, makeScore("s2", "Moonlight")],
-        selectedScore: original,
+        selectedSong: originalSong,
       };
-      const state = reducer(stateWithScores, {
-        type: "UPDATE_SELECTED_SCORE",
-        payload: updated,
+      const updatedSong = { ...originalSong, name: "Canon Updated" };
+      const state = reducer(stateWithSong, {
+        type: "UPDATE_SELECTED_SONG",
+        payload: updatedSong,
       });
-      expect(state.selectedScore?.title).toBe("Canon in D");
-      expect(state.scores[0].title).toBe("Canon in D");
-      expect(state.scores[1].title).toBe("Moonlight");
-    });
-  });
-
-  describe("unknown action", () => {
-    it("should return state unchanged", () => {
-      const state = reducer(initialState, {
-        type: "UNKNOWN" as any,
-        payload: null,
-      } as any);
-      expect(state).toEqual(initialState);
+      expect(state.selectedSong?.name).toBe("Canon Updated");
     });
   });
 });

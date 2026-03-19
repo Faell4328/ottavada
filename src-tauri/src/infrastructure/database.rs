@@ -1,19 +1,20 @@
 use rusqlite::{Connection, params};
 use std::path::Path;
-use std::sync::Mutex;
+use std::sync::{Mutex, Arc};
 
 use crate::domain::errors::AppError;
 use crate::domain::models::*;
 
+#[derive(Clone)]
 pub struct Database {
-    pub conn: Mutex<Connection>,
+    pub conn: Arc<Mutex<Connection>>,
 }
 
 impl Database {
     pub fn new(db_path: &Path) -> Result<Self, AppError> {
         let conn = Connection::open(db_path)?;
         let db = Self {
-            conn: Mutex::new(conn),
+            conn: Arc::new(Mutex::new(conn)),
         };
         db.run_migrations()?;
         Ok(db)
@@ -24,7 +25,7 @@ impl Database {
         let conn = Connection::open_in_memory()
             .map_err(|e| AppError::Database(e))?;
         let db = Self {
-            conn: Mutex::new(conn),
+            conn: Arc::new(Mutex::new(conn)),
         };
         db.run_migrations()?;
         Ok(db)
@@ -66,6 +67,8 @@ impl Database {
                 name TEXT,
                 host_id TEXT NOT NULL,
                 file_path TEXT NOT NULL,
+                file_size INTEGER NOT NULL DEFAULT 0,
+                file_modified_at TEXT NOT NULL DEFAULT (datetime('now')),
                 updated_at TEXT NOT NULL DEFAULT (datetime('now')),
                 status TEXT NOT NULL DEFAULT 'main'
             );
@@ -100,6 +103,16 @@ impl Database {
             CREATE INDEX IF NOT EXISTS idx_categories_songs_category_id ON categories_songs(category_id);
             CREATE INDEX IF NOT EXISTS idx_songs_is_favorite ON songs(is_favorite);
         ")?;
+
+        // Migrations - adicionar colunas se não existirem (após CREATE TABLE)
+        let _ = conn.execute(
+            "ALTER TABLE scores ADD COLUMN file_size INTEGER NOT NULL DEFAULT 0",
+            [],
+        );
+        let _ = conn.execute(
+            "ALTER TABLE scores ADD COLUMN file_modified_at TEXT NOT NULL DEFAULT (datetime('now'))",
+            [],
+        );
 
         Ok(())
     }
@@ -375,14 +388,16 @@ impl Database {
     pub fn insert_score(&self, score: &Score) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
         conn.execute(
-            "INSERT INTO scores (id, song_id, name, host_id, file_path, updated_at, status)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            "INSERT INTO scores (id, song_id, name, host_id, file_path, file_size, file_modified_at, updated_at, status)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
             params![
                 score.id,
                 score.song_id,
                 score.name,
                 score.host_id,
                 score.file_path,
+                score.file_size,
+                score.file_modified_at.format("%Y-%m-%d %H:%M:%S").to_string(),
                 score.updated_at.format("%Y-%m-%d %H:%M:%S").to_string(),
                 score.status.as_str(),
             ],
@@ -395,14 +410,18 @@ impl Database {
         score_id: &str,
         name: Option<String>,
         file_path: &str,
+        file_size: u64,
+        file_modified_at: chrono::NaiveDateTime,
         now: chrono::NaiveDateTime,
     ) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
         conn.execute(
-            "UPDATE scores SET name = ?1, file_path = ?2, updated_at = ?3 WHERE id = ?4",
+            "UPDATE scores SET name = ?1, file_path = ?2, file_size = ?3, file_modified_at = ?4, updated_at = ?5 WHERE id = ?6",
             params![
                 name,
                 file_path,
+                file_size,
+                file_modified_at.format("%Y-%m-%d %H:%M:%S").to_string(),
                 now.format("%Y-%m-%d %H:%M:%S").to_string(),
                 score_id,
             ],
@@ -422,9 +441,42 @@ impl Database {
         })
     }
 
+    /// Obtém todos os scores com seus metadados para detecção de alterações
+    pub fn get_all_scores_with_metadata(&self) -> Result<Vec<(String, String, u64, String)>, AppError> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT id, file_path, file_size, file_modified_at FROM scores"
+        )?;
+
+        let scores: Vec<(String, String, u64, String)> = stmt.query_map([], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, u64>(2)?,
+                row.get::<_, String>(3)?,
+            ))
+        })?.filter_map(|r| r.ok()).collect();
+
+        Ok(scores)
+    }
+
+    /// Atualiza o status de um score para draft
+    pub fn set_score_status_to_draft(&self, score_id: &str) -> Result<(), AppError> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "UPDATE scores SET status = ?1, updated_at = ?2 WHERE id = ?3",
+            params![
+                ScoreStatus::Draft.as_str(),
+                chrono::Local::now().naive_local().format("%Y-%m-%d %H:%M:%S").to_string(),
+                score_id,
+            ],
+        )?;
+        Ok(())
+    }
+
     fn get_scores_for_song(&self, conn: &Connection, song_id: &str) -> Result<Vec<ScoreListItem>, AppError> {
         let mut stmt = conn.prepare(
-            "SELECT id, name, file_path, updated_at, status
+            "SELECT id, name, file_path, file_size, file_modified_at, updated_at, status
              FROM scores
              WHERE song_id = ?1
              ORDER BY name"
@@ -443,8 +495,8 @@ impl Database {
                 name: row.get(1)?,
                 file_path,
                 file_extension,
-                updated_at: parse_datetime(&row.get::<_, String>(3)?),
-                status: ScoreStatus::from_str(&row.get::<_, String>(4)?),
+                updated_at: parse_datetime(&row.get::<_, String>(5)?),
+                status: ScoreStatus::from_str(&row.get::<_, String>(6)?),
             })
         })?.filter_map(|r| r.ok()).collect();
 

@@ -87,7 +87,7 @@ export function AddFilesModal({
 
     try {
       // Mapear arquivos ativos com nomes de instrumentos editados
-      const filteredFiles = activeFiles.map((f, idx) => {
+      const filteredFiles = activeFiles.map((f) => {
         // Encontrar o índice original do arquivo
         const originalIdx = files.indexOf(f);
         return {

@@ -39,7 +39,48 @@ pub fn run() {
             let db = Database::new(&db_path)
                 .expect("Não foi possível inicializar o banco de dados");
 
-            app.manage(db);
+            // Executar scan inicial ao ligar
+            info!("Executando verificação inicial de alterações");
+            match db.get_all_scores_with_metadata() {
+                Ok(scores) => {
+                    let mut changed_count = 0;
+                    for (score_id, file_path, stored_size, stored_modified_at_str) in scores {
+                        let path = std::path::Path::new(&file_path);
+
+                        if !path.exists() || !path.is_file() {
+                            continue;
+                        }
+
+                        if let Ok((current_size, current_modified_at)) = 
+                            services::indexer::get_file_metadata(path) {
+                            let stored_modified_at = chrono::NaiveDateTime::parse_from_str(
+                                &stored_modified_at_str,
+                                "%Y-%m-%d %H:%M:%S",
+                            ).unwrap_or_else(|_| chrono::Local::now().naive_local());
+
+                            let detector = services::indexer::FileChangeDetector::new(
+                                current_size,
+                                current_modified_at,
+                                stored_size,
+                                stored_modified_at,
+                            );
+
+                            if detector.has_changed() {
+                                if db.set_score_status_to_draft(&score_id).is_ok() {
+                                    changed_count += 1;
+                                    info!("Status atualizado para draft (inicialização): {}", file_path);
+                                }
+                            }
+                        }
+                    }
+                    info!("Verificação inicial concluída: {} alterações", changed_count);
+                }
+                Err(e) => {
+                    eprintln!("Erro na verificação inicial: {:?}", e);
+                }
+            }
+
+            app.manage(db.clone());
 
             // Inicializar store de configurações
             let store = SystemStore::new(app_data_dir);
@@ -78,6 +119,8 @@ pub fn run() {
             commands::settings_commands::is_first_run,
             commands::settings_commands::complete_first_run,
             commands::settings_commands::generate_computer_id,
+            // Scan
+            commands::scan_commands::scan_files_for_changes,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

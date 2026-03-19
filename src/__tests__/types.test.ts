@@ -11,7 +11,7 @@ import type {
 describe("TypeScript Types", () => {
   describe("SongListItem", () => {
     it("should have required fields", () => {
-      const score: SongListItem = {
+      const song: SongListItem = {
         id: "s1",
         name: "Canon in D",
         composer: "Pachelbel",
@@ -21,67 +21,36 @@ describe("TypeScript Types", () => {
         category_ids: [],
         scores: [],
       };
-      expect(score.id).toBe("s1");
-      expect(score.name).toBe("Canon in D");
-      expect(score.is_favorite).toBe(false);
-      expect(score.scores).toEqual([]);
+      expect(song.id).toBe("s1");
+      expect(song.name).toBe("Canon in D");
+      expect(song.is_favorite).toBe(false);
+      expect(song.scores).toEqual([]);
     });
   });
 
-  describe("ScoreFileItem", () => {
+  describe("ScoreListItem", () => {
     it("should represent a score file", () => {
-      const file: ScoreFileItem = {
+      const score: ScoreListItem = {
         id: "f1",
-        instrument: "Violino 1",
+        name: "Violino 1",
         file_extension: "pdf",
-        original_path: "/path/to/file.pdf",
+        file_path: "/path/to/file.pdf",
         updated_at: "2024-01-01 12:00:00",
-        has_draft: true,
-        version_count: 3,
+        status: "Main",
       };
-      expect(file.instrument).toBe("Violino 1");
-      expect(file.has_draft).toBe(true);
-      expect(file.version_count).toBe(3);
+      expect(score.name).toBe("Violino 1");
+      expect(score.status).toBe("Main");
     });
 
-    it("should allow null instrument", () => {
-      const file: ScoreFileItem = {
-        id: "f2",
-        instrument: null,
-        file_extension: "mus",
-        original_path: "/path/to/file.mus",
-        updated_at: "2024-01-01 12:00:00",
-        has_draft: false,
-        version_count: 1,
-      };
-      expect(file.instrument).toBeNull();
-    });
-  });
-
-  describe("FileVersion", () => {
-    it("should have valid status values", () => {
-      const statuses: FileVersion["status"][] = [
-        "Current",
-        "Previous",
-        "Draft",
-        "Compressed",
+    it("should support status values", () => {
+      const scores: ScoreListItem[] = [
+        { id: "1", name: "V1", file_extension: "pdf", file_path: "/v1.pdf", updated_at: "2024-01-01 12:00:00", status: "Main" },
+        { id: "2", name: "V2", file_extension: "pdf", file_path: "/v2.pdf", updated_at: "2024-01-01 12:00:00", status: "Pending" },
+        { id: "3", name: "V3", file_extension: "pdf", file_path: "/v3.pdf", updated_at: "2024-01-01 12:00:00", status: "Draft" },
       ];
-      expect(statuses).toHaveLength(4);
-
-      const version: FileVersion = {
-        id: "v1",
-        score_file_id: "f1",
-        version_number: 1,
-        label: "V1",
-        status: "Current",
-        file_path: "/path/to/file",
-        file_size: 2048,
-        hash: "abc123",
-        is_compressed: false,
-        created_at: "2024-01-01 12:00:00",
-      };
-      expect(version.status).toBe("Current");
-      expect(version.is_compressed).toBe(false);
+      expect(scores[0].status).toBe("Main");
+      expect(scores[1].status).toBe("Pending");
+      expect(scores[2].status).toBe("Draft");
     });
   });
 
@@ -90,7 +59,6 @@ describe("TypeScript Types", () => {
       const cat: Category = {
         id: "c1",
         name: "Harpa Cristã",
-        created_at: "2024-01-01 12:00:00",
       };
       expect(cat.name).toBe("Harpa Cristã");
     });
@@ -101,13 +69,10 @@ describe("TypeScript Types", () => {
       const settings: AppSettings = {
         computer_id: "550e8400-e29b-41d4-a716-446655440000",
         computer_name: null,
-        logo_path: null,
         google_drive_mode: "Local",
-        hash_enabled: false,
         first_run_completed: false,
         google_service_account: null,
       };
-      expect(settings.hash_enabled).toBe(false);
       expect(settings.google_drive_mode).toBe("Local");
     });
 
@@ -115,14 +80,11 @@ describe("TypeScript Types", () => {
       const settings: AppSettings = {
         computer_id: "550e8400-e29b-41d4-a716-446655440000",
         computer_name: "Computador Teste",
-        logo_path: null,
         google_drive_mode: "Api",
-        hash_enabled: true,
         first_run_completed: true,
         google_service_account: null,
       };
       expect(settings.google_drive_mode).toBe("Api");
-      expect(settings.hash_enabled).toBe(true);
     });
   });
 
@@ -133,7 +95,6 @@ describe("TypeScript Types", () => {
         name: "Canon",
         instrument: "Violino",
         extension: "pdf",
-        size: 1024,
       };
       expect(file.name).toBe("Canon");
       expect(file.instrument).toBe("Violino");

@@ -48,6 +48,8 @@ pub struct Score {
     pub name: Option<String>,
     pub host_id: String,
     pub file_path: String,
+    pub file_size: u64,
+    pub file_modified_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
     pub status: ScoreStatus,
 }

@@ -7,7 +7,7 @@ use crate::domain::errors::AppError;
 use crate::domain::models::*;
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
-use crate::services::indexer;
+use crate::services::indexer::{self, get_file_metadata};
 
 #[tauri::command]
 pub fn get_all_songs(db: State<'_, Database>) -> Result<Vec<SongListItem>, AppError> {
@@ -140,12 +140,23 @@ pub fn import_indexed_files(
                 continue;
             }
 
+            // Obter metadados do arquivo
+            let (file_size, file_modified_at) = match get_file_metadata(Path::new(&indexed_file.path)) {
+                Ok(metadata) => metadata,
+                Err(e) => {
+                    warn!("Erro ao obter metadados do arquivo {}: {:?}", indexed_file.path, e);
+                    (0, now)
+                }
+            };
+
             let score = Score {
                 id: uuid::Uuid::new_v4().to_string(),
                 song_id: song_id.clone(),
                 name: indexed_file.instrument.clone(),
                 host_id: settings.computer_id.clone(),
                 file_path: indexed_file.path.clone(),
+                file_size,
+                file_modified_at,
                 updated_at: now,
                 status: ScoreStatus::Main,
             };
@@ -222,12 +233,23 @@ pub fn import_indexed_files_with_metadata(
                 continue;
             }
 
+            // Obter metadados do arquivo
+            let (file_size, file_modified_at) = match get_file_metadata(Path::new(&indexed_file.path)) {
+                Ok(metadata) => metadata,
+                Err(e) => {
+                    warn!("Erro ao obter metadados do arquivo {}: {:?}", indexed_file.path, e);
+                    (0, now)
+                }
+            };
+
             let score = Score {
                 id: uuid::Uuid::new_v4().to_string(),
                 song_id: song_id.clone(),
                 name: indexed_file.instrument.clone(),
                 host_id: settings.computer_id.clone(),
                 file_path: indexed_file.path.clone(),
+                file_size,
+                file_modified_at,
                 updated_at: now,
                 status: ScoreStatus::Main,
             };

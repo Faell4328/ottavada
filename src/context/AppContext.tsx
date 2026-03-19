@@ -50,6 +50,7 @@ interface AppContextValue {
     googleDriveMode: string,
     googleServiceAccountJson?: string | null
   ) => Promise<void>;
+  scanFilesForChanges: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -115,6 +116,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
         if (!firstRun) {
           await Promise.all([loadSongs(), loadCategories(), loadSettings()]);
+          // Iniciar verificação de alterações após carregar os dados
+          setTimeout(() => {
+            handleScanFilesForChanges(true);
+          }, 500);
         }
       } catch (err) {
         console.error("Failed to initialize app:", err);
@@ -271,6 +276,66 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [loadSongs, loadCategories, loadSettings]
   );
 
+  const handleScanFilesForChanges = useCallback(
+    async (isAutomatic: boolean = false) => {
+      try {
+        dispatch({ type: "SET_SCANNING_FILES", payload: true });
+        dispatch({
+          type: "SET_SCAN_PROGRESS",
+          payload: { total: 0, completed: 0, changedFiles: 0 },
+        });
+
+        const result = await api.scanFilesForChanges();
+
+        const totalFiles = result.changed_files.length + result.failed_files.length;
+        dispatch({
+          type: "SET_SCAN_PROGRESS",
+          payload: {
+            total: totalFiles,
+            completed: totalFiles,
+            changedFiles: result.changed_files.length,
+          },
+        });
+
+        if (result.changed_files.length > 0) {
+          if (!isAutomatic) {
+            toast.success(
+              `${result.changed_files.length} arquivo(s) alterado(s) detectado(s)`
+            );
+          }
+          await loadSongs();
+        } else if (!isAutomatic) {
+          toast.success("Nenhuma alteração detectada");
+        }
+
+        if (result.failed_files.length > 0) {
+          if (!isAutomatic) {
+            toast.error(
+              `${result.failed_files.length} arquivo(s) falharam durante verificação`
+            );
+          }
+        }
+
+        // Limpar progresso após tempo apropriado
+        const delay = result.changed_files.length > 0 ? 3000 : 1500;
+        setTimeout(() => {
+          dispatch({ type: "SET_SCANNING_FILES", payload: false });
+          dispatch({
+            type: "SET_SCAN_PROGRESS",
+            payload: { total: 0, completed: 0, changedFiles: 0 },
+          });
+        }, delay);
+      } catch (err) {
+        console.error("Failed to scan files for changes:", err);
+        if (!isAutomatic) {
+          toast.error("Erro ao verificar alterações nos arquivos");
+        }
+        dispatch({ type: "SET_SCANNING_FILES", payload: false });
+      }
+    },
+    [loadSongs]
+  );
+
   const value: AppContextValue = useMemo(
     () => ({
       state,
@@ -288,6 +353,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       updateScore: handleUpdateScore,
       saveSettings: handleSaveSettings,
       completeFirstRun: handleCompleteFirstRun,
+      scanFilesForChanges: handleScanFilesForChanges,
     }),
     [
       state,
@@ -305,6 +371,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       handleUpdateScore,
       handleSaveSettings,
       handleCompleteFirstRun,
+      handleScanFilesForChanges,
     ]
   );
 

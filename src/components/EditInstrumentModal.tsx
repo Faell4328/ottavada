@@ -27,8 +27,8 @@ export function EditInstrumentModal({
 
   useEffect(() => {
     if (isOpen && instrument) {
-      setInstrumentName(instrument.instrument || "");
-      setFilePath(instrument.original_path || "");
+      setInstrumentName(instrument.name || "");
+      setFilePath(instrument.file_path || "");
       setError("");
     }
   }, [isOpen, instrument]);

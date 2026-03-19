@@ -18,6 +18,12 @@ export interface State {
   searchQuery: string;
   isFirstRun: boolean;
   isLoading: boolean;
+  isScanningFiles: boolean;
+  scanProgress: {
+    total: number;
+    completed: number;
+    changedFiles: number;
+  };
 }
 
 export const initialState: State = {
@@ -30,6 +36,12 @@ export const initialState: State = {
   searchQuery: "",
   isFirstRun: false,
   isLoading: true,
+  isScanningFiles: false,
+  scanProgress: {
+    total: 0,
+    completed: 0,
+    changedFiles: 0,
+  },
 };
 
 // ── Actions ──
@@ -45,7 +57,12 @@ export type Action =
   | { type: "SET_FIRST_RUN"; payload: boolean }
   | { type: "SET_LOADING"; payload: boolean }
   | { type: "TOGGLE_FAVORITE"; payload: { songId: string; isFavorite: boolean } }
-  | { type: "UPDATE_SELECTED_SONG"; payload: SongListItem };
+  | { type: "UPDATE_SELECTED_SONG"; payload: SongListItem }
+  | { type: "SET_SCANNING_FILES"; payload: boolean }
+  | {
+      type: "SET_SCAN_PROGRESS";
+      payload: { total: number; completed: number; changedFiles: number };
+    };
 
 // ── Reducer ──
 
@@ -95,6 +112,10 @@ export function reducer(state: State, action: Action): State {
           s.id === action.payload.id ? action.payload : s
         ),
       };
+    case "SET_SCANNING_FILES":
+      return { ...state, isScanningFiles: action.payload };
+    case "SET_SCAN_PROGRESS":
+      return { ...state, scanProgress: action.payload };
     default:
       return state;
   }

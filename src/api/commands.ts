@@ -158,7 +158,23 @@ export async function completeFirstRun(
   googleDriveMode: string,
   googleServiceAccountJson?: string | null
 ): Promise<void> {
-  return invoke("complete_first_run", { computerId, computerName, googleDriveMode, googleServiceAccountJson });
+  return invoke("complete_first_run", {
+    computerId,
+    computerName,
+    googleDriveMode,
+    googleServiceAccountJson,
+  });
+}
+
+// ── File Scanning ──
+
+export interface ScanResult {
+  changed_files: string[];
+  failed_files: Array<[string, string]>;
+}
+
+export async function scanFilesForChanges(): Promise<ScanResult> {
+  return invoke("scan_files_for_changes");
 }
 
 export async function generateComputerId(): Promise<string> {
