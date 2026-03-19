@@ -5,6 +5,7 @@ mod logger;
 mod services;
 
 use infrastructure::database::Database;
+use infrastructure::store::SystemStore;
 use tauri::Manager;
 use tracing::info;
 
@@ -33,11 +34,17 @@ pub fn run() {
             info!("Aplicação iniciada");
             info!("Diretório de dados: {:?}", app_data_dir);
 
+            // Inicializar banco de dados
             let db_path = app_data_dir.join("score_maestro.db");
             let db = Database::new(&db_path)
                 .expect("Não foi possível inicializar o banco de dados");
 
             app.manage(db);
+
+            // Inicializar store de configurações
+            let store = SystemStore::new(app_data_dir);
+            app.manage(store);
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

@@ -70,11 +70,6 @@ impl Database {
                 status TEXT NOT NULL DEFAULT 'main'
             );
 
-            CREATE TABLE IF NOT EXISTS app_settings (
-                key TEXT PRIMARY KEY,
-                value TEXT NOT NULL
-            );
-
             -- FTS5 para busca textual em músicas
             CREATE VIRTUAL TABLE IF NOT EXISTS songs_fts USING fts5(
                 name, composer, arranger,
@@ -496,65 +491,6 @@ impl Database {
     pub fn delete_category(&self, category_id: &str) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
         conn.execute("DELETE FROM categories WHERE id = ?1", params![category_id])?;
-        Ok(())
-    }
-
-    // ── Settings ──
-
-    pub fn get_setting(&self, key: &str) -> Result<Option<String>, AppError> {
-        let conn = self.conn.lock().unwrap();
-        let result = conn.query_row(
-            "SELECT value FROM app_settings WHERE key = ?1",
-            params![key],
-            |row| row.get(0),
-        );
-
-        match result {
-            Ok(value) => Ok(Some(value)),
-            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
-            Err(e) => Err(AppError::Database(e)),
-        }
-    }
-
-    pub fn set_setting(&self, key: &str, value: &str) -> Result<(), AppError> {
-        let conn = self.conn.lock().unwrap();
-        conn.execute(
-            "INSERT OR REPLACE INTO app_settings (key, value) VALUES (?1, ?2)",
-            params![key, value],
-        )?;
-        Ok(())
-    }
-
-    pub fn get_app_settings(&self) -> Result<AppSettings, AppError> {
-        let settings = AppSettings {
-            computer_id: self.get_setting("computer_id")?.unwrap_or_default(),
-            computer_name: self.get_setting("computer_name")?,
-            google_drive_mode: match self.get_setting("google_drive_mode")?.as_deref() {
-                Some("api") => GoogleDriveMode::Api,
-                _ => GoogleDriveMode::Local,
-            },
-            first_run_completed: self.get_setting("first_run_completed")?.as_deref() == Some("true"),
-            google_service_account: self.get_setting("google_service_account")?
-                .and_then(|json| serde_json::from_str(&json).ok()),
-        };
-        Ok(settings)
-    }
-
-    pub fn save_app_settings(&self, settings: &AppSettings) -> Result<(), AppError> {
-        self.set_setting("computer_id", &settings.computer_id)?;
-        if let Some(ref name) = settings.computer_name {
-            self.set_setting("computer_name", name)?;
-        }
-        if let Some(ref service_account) = settings.google_service_account {
-            if let Ok(json) = serde_json::to_string(service_account) {
-                self.set_setting("google_service_account", &json)?;
-            }
-        }
-        self.set_setting("google_drive_mode", match settings.google_drive_mode {
-            GoogleDriveMode::Local => "local",
-            GoogleDriveMode::Api => "api",
-        })?;
-        self.set_setting("first_run_completed", if settings.first_run_completed { "true" } else { "false" })?;
         Ok(())
     }
 }

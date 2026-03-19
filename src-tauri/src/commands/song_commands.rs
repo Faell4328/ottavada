@@ -6,6 +6,7 @@ use tracing::{info, warn, error};
 use crate::domain::errors::AppError;
 use crate::domain::models::*;
 use crate::infrastructure::database::Database;
+use crate::infrastructure::store::SystemStore;
 use crate::services::indexer;
 
 #[tauri::command]
@@ -79,10 +80,11 @@ pub fn scan_directory(directory: String) -> Result<Vec<IndexedFile>, AppError> {
 #[tauri::command]
 pub fn import_indexed_files(
     db: State<'_, Database>,
+    store: State<'_, SystemStore>,
     files: Vec<IndexedFile>,
     category_ids: Vec<String>,
 ) -> Result<Vec<SongListItem>, AppError> {
-    let settings = db.get_app_settings()?;
+    let settings = store.get_app_settings()?;
     let now = Local::now().naive_local();
 
     // Agrupar arquivos por nome (uma mesma música pode ter vários instrumentos)
@@ -158,12 +160,13 @@ pub fn import_indexed_files(
 #[tauri::command]
 pub fn import_indexed_files_with_metadata(
     db: State<'_, Database>,
+    store: State<'_, SystemStore>,
     files: Vec<IndexedFile>,
     category_ids: Vec<String>,
     composer: Option<String>,
     arranger: Option<String>,
 ) -> Result<Vec<SongListItem>, AppError> {
-    let settings = db.get_app_settings()?;
+    let settings = store.get_app_settings()?;
     let now = Local::now().naive_local();
 
     // Agrupar arquivos por nome (uma mesma música pode ter vários instrumentos)

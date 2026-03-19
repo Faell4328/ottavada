@@ -254,46 +254,6 @@ mod tests {
         assert_eq!(drafts[0].name, "Canon");
     }
 
-    // ── Settings ──
-
-    #[test]
-    fn test_settings_default() {
-        let db = make_db();
-        let settings = db.get_app_settings().unwrap();
-        assert!(!settings.first_run_completed);
-        assert_eq!(settings.google_drive_mode, GoogleDriveMode::Local);
-        assert!(settings.computer_name.is_none());
-    }
-
-    #[test]
-    fn test_save_and_get_settings() {
-        let db = make_db();
-        let settings = AppSettings {
-            computer_id: "test-computer-id".to_string(),
-            computer_name: Some("Computador Teste".to_string()),
-            google_drive_mode: GoogleDriveMode::Api,
-            first_run_completed: true,
-            google_service_account: None,
-        };
-        db.save_app_settings(&settings).unwrap();
-
-        let loaded = db.get_app_settings().unwrap();
-        assert_eq!(loaded.computer_name, Some("Computador Teste".to_string()));
-        assert_eq!(loaded.google_drive_mode, GoogleDriveMode::Api);
-        assert!(loaded.first_run_completed);
-    }
-
-    #[test]
-    fn test_set_and_get_setting() {
-        let db = make_db();
-        db.set_setting("custom_key", "custom_value").unwrap();
-        let val = db.get_setting("custom_key").unwrap();
-        assert_eq!(val, Some("custom_value".to_string()));
-
-        let missing = db.get_setting("nonexistent").unwrap();
-        assert!(missing.is_none());
-    }
-
     // ── Update Song ──
 
     #[test]

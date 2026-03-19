@@ -324,7 +324,7 @@ Ao clicar na música será expandido e mostrar uma lista de partituras/instrumen
 	- [x] Garantir que está salvando o `C:\Users\<seu-usuario>\AppData\Roaming\<nome-do-app>\`
 
 ## Funcionalidades para v0.2 - funcionamento local completo
-- [ ] Mudar as informações do sistema do banco de dados para o `tauri-plugin-store`.
+- [x] Mudar as informações do sistema do banco de dados para o `tauri-plugin-store`.
 - [ ] Implementar a função para detectar alteração no arquivo.
 - [ ] Implementar fluxo `draft` → `main`
 - [ ] Adicionar função para listar todos os rascunhos ativos

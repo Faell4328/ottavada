@@ -6,6 +6,7 @@ use tracing::{info, warn, error};
 use crate::domain::errors::AppError;
 use crate::domain::models::*;
 use crate::infrastructure::database::Database;
+use crate::infrastructure::store::SystemStore;
 
 #[tauri::command]
 pub fn update_score(
@@ -49,6 +50,7 @@ pub fn update_score(
 #[tauri::command]
 pub fn add_score_to_song(
     db: State<'_, Database>,
+    store: State<'_, SystemStore>,
     song_id: String,
     file: IndexedFile,
 ) -> Result<SongListItem, AppError> {
@@ -74,7 +76,7 @@ pub fn add_score_to_song(
         )));
     }
 
-    let settings = db.get_app_settings()?;
+    let settings = store.get_app_settings()?;
     let now = Local::now().naive_local();
 
     let score = Score {
@@ -99,6 +101,7 @@ pub fn add_score_to_song(
 #[tauri::command]
 pub fn add_scores_to_song(
     db: State<'_, Database>,
+    store: State<'_, SystemStore>,
     song_id: String,
     files: Vec<IndexedFile>,
 ) -> Result<SongListItem, AppError> {
@@ -108,7 +111,7 @@ pub fn add_scores_to_song(
         .find(|s| s.id == song_id)
         .ok_or_else(|| AppError::Generic("Música não encontrada".into()))?;
 
-    let settings = db.get_app_settings()?;
+    let settings = store.get_app_settings()?;
     let now = Local::now().naive_local();
     let existing_scores = song.scores.clone();
     let mut added_count = 0;

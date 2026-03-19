@@ -3,18 +3,18 @@ use tracing::{info, error};
 
 use crate::domain::errors::AppError;
 use crate::domain::models::AppSettings;
-use crate::infrastructure::database::Database;
+use crate::infrastructure::store::SystemStore;
 
 #[tauri::command]
-pub fn get_settings(db: State<'_, Database>) -> Result<AppSettings, AppError> {
+pub fn get_settings(store: State<'_, SystemStore>) -> Result<AppSettings, AppError> {
     info!("Buscando configurações");
-    db.get_app_settings()
+    store.get_app_settings()
 }
 
 #[tauri::command]
-pub fn save_settings(db: State<'_, Database>, settings: AppSettings) -> Result<(), AppError> {
+pub fn save_settings(store: State<'_, SystemStore>, settings: AppSettings) -> Result<(), AppError> {
     info!("Salvando configurações para computador: {}", settings.computer_id);
-    match db.save_app_settings(&settings) {
+    match store.save_app_settings(&settings) {
         Ok(_) => {
             info!("Configurações salvas com sucesso");
             Ok(())
@@ -27,8 +27,8 @@ pub fn save_settings(db: State<'_, Database>, settings: AppSettings) -> Result<(
 }
 
 #[tauri::command]
-pub fn is_first_run(db: State<'_, Database>) -> Result<bool, AppError> {
-    let settings = db.get_app_settings()?;
+pub fn is_first_run(store: State<'_, SystemStore>) -> Result<bool, AppError> {
+    let settings = store.get_app_settings()?;
     let is_first = !settings.first_run_completed;
     info!("Verificando primeira execução: {}", is_first);
     Ok(is_first)
@@ -43,14 +43,14 @@ pub fn generate_computer_id() -> String {
 
 #[tauri::command]
 pub fn complete_first_run(
-    db: State<'_, Database>,
+    store: State<'_, SystemStore>,
     computer_id: String,
     computer_name: String,
     _google_drive_mode: String,
     google_service_account_json: Option<String>,
 ) -> Result<(), AppError> {
     info!("Completando primeira execução para: {} ({})", computer_name, computer_id);
-    let mut settings = db.get_app_settings()?;
+    let mut settings = store.get_app_settings()?;
     
     settings.computer_id = computer_id;
     settings.computer_name = Some(computer_name);
@@ -73,5 +73,5 @@ pub fn complete_first_run(
     }
     
     settings.first_run_completed = true;
-    db.save_app_settings(&settings)
+    store.save_app_settings(&settings)
 }
