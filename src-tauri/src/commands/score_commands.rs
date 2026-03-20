@@ -5,6 +5,7 @@ use tracing::{info, warn, error};
 
 use crate::domain::errors::AppError;
 use crate::domain::models::*;
+use crate::domain::models::OperationGuard;
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
 use crate::services::indexer::get_file_metadata;
@@ -52,9 +53,9 @@ pub fn update_score(
     match db.update_score(&score_id, instrument_name.clone(), &directory_id, &file_name, file_size, file_modified_at, now) {
         Ok(_) => {
             // Buscar e atualizar o score para marcar como pending se for cliente
-            if settings.computer_type == crate::domain::models::ComputerType::Client {
+            if settings.computer_type == ComputerType::Client {
                 info!("Cliente editando partitura, marcando como pending");
-                let _ = db.set_score_status(&score_id, ScoreStatus::Pending, &settings.computer_id);
+                let _ = db.update_score_status(&score_id, ScoreStatus::Pending, &settings.computer_id, None);
             }
             info!("Partitura atualizada com sucesso: {}", score_id);
             Ok(())
@@ -92,7 +93,6 @@ pub fn add_score_to_song(
     }
 
     let settings = store.get_app_settings()?;
-    let now = Local::now().naive_local();
 
     let (file_size, file_modified_at) = get_file_metadata(Path::new(&file.path))
         .map_err(|e| {
@@ -102,19 +102,14 @@ pub fn add_score_to_song(
 
     let (directory_id, file_name) = db.resolve_directory_for_path(&file.path)?;
 
-    let score = Score {
-        id: uuid::Uuid::new_v4().to_string(),
-        song_id: song_id.clone(),
-        name: file.instrument.clone(),
-        host_id: settings.computer_id.clone(),
+    let score = Score::new_from_file(
+        song_id.clone(),
+        settings.computer_id.clone(),
+        &file,
         directory_id,
         file_name,
-        file_size,
-        file_modified_at,
-        updated_at: now,
-        status: ScoreStatus::Main,
-        updated_by: settings.computer_id.clone(),
-    };
+        (file_size, file_modified_at),
+    );
 
     db.insert_score(&score)?;
     db.get_song_list_item_by_id(&song_id)
@@ -130,7 +125,6 @@ pub fn add_scores_to_song(
     let song = db.get_song_list_item_by_id(&song_id)?;
 
     let settings = store.get_app_settings()?;
-    let now = Local::now().naive_local();
     let existing_scores = song.scores.clone();
     let mut added_count = 0;
 
@@ -155,19 +149,14 @@ pub fn add_scores_to_song(
 
         let (directory_id, file_name) = db.resolve_directory_for_path(&file.path)?;
 
-        let score = Score {
-            id: uuid::Uuid::new_v4().to_string(),
-            song_id: song_id.clone(),
-            name: file.instrument.clone(),
-            host_id: settings.computer_id.clone(),
+        let score = Score::new_from_file(
+            song_id.clone(),
+            settings.computer_id.clone(),
+            &file,
             directory_id,
             file_name,
-            file_size,
-            file_modified_at,
-            updated_at: now,
-            status: ScoreStatus::Main,
-            updated_by: settings.computer_id.clone(),
-        };
+            (file_size, file_modified_at),
+        );
 
         db.insert_score(&score)?;
         added_count += 1;
@@ -224,16 +213,9 @@ pub fn update_score_status(
     status: String,
 ) -> Result<SongListItem, AppError> {
     let settings = store.get_app_settings()?;
+    settings.require_server_only()?;
     
-    // Bloquear clientes de mudar status
-    if settings.computer_type == crate::domain::models::ComputerType::Client {
-        warn!("Cliente tentou mudar status da partitura: operação não permitida");
-        return Err(AppError::ClientOperationNotAllowed);
-    }
-
     info!("Atualizando status da partitura: {} para: {}", score_id, status);
-
-    let updated_by = settings.computer_id.clone();
 
     let score_status = match status.to_lowercase().as_str() {
         "main" => ScoreStatus::Main,
@@ -245,17 +227,11 @@ pub fn update_score_status(
         }
     };
 
-    db.set_score_status(&score_id, score_status, &updated_by)?;
+    db.update_score_status(&score_id, score_status, &settings.computer_id, None)?;
 
-    // Buscar a música que contém este score
-    let all_songs = db.get_all_songs()?;
-    let song = all_songs
-        .iter()
-        .find(|s| s.scores.iter().any(|sc| sc.id == score_id))
-        .ok_or_else(|| AppError::Generic("Score não encontrado".into()))?;
-
+    let song_id = db.get_song_id_for_score(&score_id)?;
     info!("Status da partitura {} atualizado com sucesso para {}", score_id, status);
-    Ok(song.clone())
+    db.get_song_list_item_by_id(&song_id)
 }
 
 #[tauri::command]
@@ -265,13 +241,8 @@ pub fn delete_score(
     score_id: String,
 ) -> Result<(), AppError> {
     let settings = store.get_app_settings()?;
+    settings.require_server_only()?;
     
-    // Bloquear clientes de deletar partitura
-    if settings.computer_type == crate::domain::models::ComputerType::Client {
-        warn!("Cliente tentou deletar partitura: operação não permitida");
-        return Err(AppError::ClientOperationNotAllowed);
-    }
-
     info!("Deletando partitura: {}", score_id);
     match db.delete_score(&score_id) {
         Ok(_) => {

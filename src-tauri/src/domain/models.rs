@@ -69,6 +69,32 @@ pub struct Score {
     pub updated_by: String,
 }
 
+impl Score {
+    /// Factory method para criar uma nova partitura a partir de um arquivo indexado
+    pub fn new_from_file(
+        song_id: String,
+        host_id: String,
+        indexed_file: &IndexedFile,
+        directory_id: String,
+        file_name: String,
+        file_metadata: (u64, NaiveDateTime),
+    ) -> Self {
+        Self {
+            id: uuid::Uuid::new_v4().to_string(),
+            song_id,
+            name: indexed_file.instrument.clone(),
+            host_id: host_id.clone(),
+            directory_id,
+            file_name,
+            file_size: file_metadata.0,
+            file_modified_at: file_metadata.1,
+            updated_at: chrono::Local::now().naive_local(),
+            status: ScoreStatus::Main,
+            updated_by: host_id,
+        }
+    }
+}
+
 /// Categoria criada pelo usuário (ex: "Harpa Cristã")
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Category {
@@ -103,6 +129,47 @@ impl Default for AppSettings {
             backup_database_step: None,
             backup_songs_step: None,
         }
+    }
+}
+
+/// Trait para validar permissões de operação baseado na configuração do computador
+pub trait OperationGuard {
+    fn require_server_only(&self) -> Result<(), crate::domain::errors::AppError>;
+    fn require_host_match(&self, host_id: &str) -> Result<(), crate::domain::errors::AppError>;
+}
+
+impl OperationGuard for AppSettings {
+    fn require_server_only(&self) -> Result<(), crate::domain::errors::AppError> {
+        if self.computer_type == ComputerType::Client {
+            return Err(crate::domain::errors::AppError::ClientOperationNotAllowed);
+        }
+        Ok(())
+    }
+
+    fn require_host_match(&self, host_id: &str) -> Result<(), crate::domain::errors::AppError> {
+        if self.computer_id != host_id {
+            return Err(crate::domain::errors::AppError::Generic(
+                format!("Operação não permitida para este computador"),
+            ));
+        }
+        Ok(())
+    }
+}
+
+/// Constantes e funções para formatação de data/hora
+pub mod datetime_utils {
+    use chrono::NaiveDateTime;
+    
+    pub const DATETIME_FORMAT: &str = "%Y-%m-%d %H:%M:%S";
+    
+    /// Formata uma data/hora no padrão da aplicação
+    pub fn format_datetime(dt: NaiveDateTime) -> String {
+        dt.format(DATETIME_FORMAT).to_string()
+    }
+    
+    /// Formata a data/hora atual no padrão da aplicação
+    pub fn format_now() -> String {
+        format_datetime(chrono::Local::now().naive_local())
     }
 }
 

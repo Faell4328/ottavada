@@ -3,6 +3,7 @@ use tauri::State;
 use tracing::{info, warn};
 
 use crate::domain::errors::AppError;
+use crate::domain::models::ScoreStatus;
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
 use crate::services::indexer::{get_file_metadata, FileChangeDetector};
@@ -36,7 +37,7 @@ pub fn scan_files_for_changes(
             warn!("Arquivo não encontrado: {}", file_path);
             
             // Marcar score como not_found (se não estiver já)
-            if let Err(e) = db.set_score_status_to_not_found(&score_id, &updated_by) {
+            if let Err(e) = db.update_score_status(&score_id, ScoreStatus::NotFound, &updated_by, None) {
                 warn!("Erro ao atualizar status para not_found: {:?}", e);
                 failed_files.push((file_path.clone(), format!("Erro ao marcar como não encontrado: {:?}", e)));
             } else {
@@ -62,7 +63,7 @@ pub fn scan_files_for_changes(
                     info!("Alteração detectada em: {}", file_path);
                     
                     // Atualizar status para draft com os novos metadados
-                    if let Err(e) = db.set_score_status_to_draft(&score_id, current_size, current_modified_at, &updated_by) {
+                    if let Err(e) = db.update_score_status(&score_id, ScoreStatus::Draft, &updated_by, Some((current_size, current_modified_at))) {
                         warn!("Erro ao atualizar status para draft: {:?}", e);
                         failed_files.push((file_path.clone(), format!("Erro ao atualizar: {:?}", e)));
                     } else {
@@ -90,7 +91,7 @@ pub fn scan_files_for_changes(
                 
                 match get_file_metadata(path) {
                     Ok((current_size, current_modified_at)) => {
-                        if let Err(e) = db.set_score_status_to_main(&score_id, current_size, current_modified_at, &updated_by) {
+                        if let Err(e) = db.update_score_status(&score_id, ScoreStatus::Main, &updated_by, Some((current_size, current_modified_at))) {
                             warn!("Erro ao recuperar arquivo para main: {:?}", e);
                             failed_files.push((file_path.clone(), format!("Erro ao recuperar: {:?}", e)));
                         } else {

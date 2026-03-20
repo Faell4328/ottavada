@@ -4,7 +4,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use crate::domain::errors::AppError;
-use crate::domain::models::AppSettings;
+use crate::domain::models::{AppSettings, ComputerType, GoogleDriveMode, GoogleServiceAccount};
 use crate::infrastructure::store::SystemStore;
 
 #[tauri::command]
@@ -57,11 +57,11 @@ pub fn complete_first_run(
     
     settings.computer_id = computer_id;
     settings.computer_name = Some(computer_name);
-    settings.computer_type = crate::domain::models::ComputerType::from_str(&computer_type);
+    settings.computer_type = ComputerType::from_str(&computer_type);
     
     if let Some(json_str) = google_service_account_json {
         info!("Validando credenciais do Google Drive");
-        let service_account: crate::domain::models::GoogleServiceAccount = 
+        let service_account: GoogleServiceAccount = 
             serde_json::from_str(&json_str)
                 .map_err(|e| AppError::Generic(format!("JSON inválido: {}", e)))?;
         
@@ -69,10 +69,10 @@ pub fn complete_first_run(
             .map_err(|e| AppError::Generic(e))?;
         
         settings.google_service_account = Some(service_account);
-        settings.google_drive_mode = crate::domain::models::GoogleDriveMode::Api;
+        settings.google_drive_mode = GoogleDriveMode::Api;
         info!("Modo Google Drive: API");
     } else {
-        settings.google_drive_mode = crate::domain::models::GoogleDriveMode::Local;
+        settings.google_drive_mode = GoogleDriveMode::Local;
         info!("Modo Google Drive: Local");
     }
     
@@ -95,8 +95,8 @@ pub fn toggle_computer_type(
     let mut settings = store.get_app_settings()?;
     
     let new_type = match settings.computer_type {
-        crate::domain::models::ComputerType::Server => crate::domain::models::ComputerType::Client,
-        crate::domain::models::ComputerType::Client => crate::domain::models::ComputerType::Server,
+        ComputerType::Server => ComputerType::Client,
+        ComputerType::Client => ComputerType::Server,
     };
     
     info!("Alternar tipo de computador de {} para {}", 

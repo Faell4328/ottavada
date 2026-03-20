@@ -4,6 +4,7 @@ use std::sync::{Mutex, Arc};
 
 use crate::domain::errors::AppError;
 use crate::domain::models::*;
+use crate::domain::models::datetime_utils;
 
 #[derive(Clone)]
 pub struct Database {
@@ -350,7 +351,7 @@ impl Database {
                 song.arranger,
                 song.is_favorite as i32,
                 song.status.as_str(),
-                song.updated_at.format("%Y-%m-%d %H:%M:%S").to_string(),
+                datetime_utils::format_datetime(song.updated_at),
                 song.updated_by,
             ],
         )?;
@@ -378,7 +379,7 @@ impl Database {
                 song.arranger,
                 song.is_favorite as i32,
                 song.status.as_str(),
-                song.updated_at.format("%Y-%m-%d %H:%M:%S").to_string(),
+                datetime_utils::format_datetime(song.updated_at),
                 song.updated_by,
                 song.id,
             ],
@@ -427,43 +428,23 @@ impl Database {
     /// Busca uma música completa (com scores e categorias) pelo ID
     pub fn get_song_list_item_by_id(&self, song_id: &str) -> Result<SongListItem, AppError> {
         let conn = self.conn.lock().unwrap();
-
-        let mut song = conn.query_row(
+        let mut items = Self::query_song_list_items(
+            &conn,
             "SELECT id, name, composer, arranger, updated_at, is_favorite FROM songs WHERE id = ?1",
-            params![song_id],
-            |row| {
-                Ok(SongListItem {
-                    id: row.get(0)?,
-                    name: row.get(1)?,
-                    composer: row.get(2)?,
-                    arranger: row.get(3)?,
-                    updated_at: parse_datetime(&row.get::<_, String>(4)?),
-                    is_favorite: row.get::<_, i32>(5)? != 0,
-                    category_ids: Vec::new(),
-                    scores: Vec::new(),
-                })
-            },
-        ).map_err(|e| match e {
-            rusqlite::Error::QueryReturnedNoRows => AppError::SongNotFound(song_id.to_string()),
-            other => AppError::Database(other),
-        })?;
-
-        song.scores = Self::get_scores_for_song(&conn, &song.id)?;
-        song.category_ids = Self::get_category_ids(&conn, &song.id)?;
-
-        Ok(song)
+            &[&song_id as &dyn rusqlite::ToSql],
+        )?;
+        items.pop().ok_or_else(|| AppError::SongNotFound(song_id.to_string()))
     }
 
-    pub fn get_all_songs(&self) -> Result<Vec<SongListItem>, AppError> {
-        let conn = self.conn.lock().unwrap();
+    /// Executa uma query que retorna SongListItem com scores e categorias carregados
+    fn query_song_list_items(
+        conn: &Connection,
+        sql: &str,
+        params: &[&dyn rusqlite::ToSql],
+    ) -> Result<Vec<SongListItem>, AppError> {
+        let mut stmt = conn.prepare(sql)?;
 
-        let mut stmt = conn.prepare(
-            "SELECT id, name, composer, arranger, updated_at, is_favorite
-             FROM songs
-             ORDER BY updated_at DESC"
-        )?;
-
-        let songs: Vec<SongListItem> = stmt.query_map([], |row| {
+        let songs: Vec<SongListItem> = stmt.query_map(rusqlite::params_from_iter(params), |row| {
             Ok(SongListItem {
                 id: row.get(0)?,
                 name: row.get(1)?,
@@ -478,44 +459,32 @@ impl Database {
 
         let mut result = Vec::with_capacity(songs.len());
         for mut song in songs {
-            song.scores = Self::get_scores_for_song(&conn, &song.id)?;
-            song.category_ids = Self::get_category_ids(&conn, &song.id)?;
+            song.scores = Self::get_scores_for_song(conn, &song.id)?;
+            song.category_ids = Self::get_category_ids(conn, &song.id)?;
             result.push(song);
         }
 
         Ok(result)
     }
 
+    pub fn get_all_songs(&self) -> Result<Vec<SongListItem>, AppError> {
+        let conn = self.conn.lock().unwrap();
+        Self::query_song_list_items(
+            &conn,
+            "SELECT id, name, composer, arranger, updated_at, is_favorite
+             FROM songs ORDER BY updated_at DESC",
+            &[],
+        )
+    }
+
     pub fn get_favorited_songs(&self) -> Result<Vec<SongListItem>, AppError> {
         let conn = self.conn.lock().unwrap();
-
-        let mut stmt = conn.prepare(
+        Self::query_song_list_items(
+            &conn,
             "SELECT id, name, composer, arranger, updated_at, is_favorite
-             FROM songs WHERE is_favorite = 1
-             ORDER BY updated_at DESC"
-        )?;
-
-        let songs: Vec<SongListItem> = stmt.query_map([], |row| {
-            Ok(SongListItem {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                composer: row.get(2)?,
-                arranger: row.get(3)?,
-                updated_at: parse_datetime(&row.get::<_, String>(4)?),
-                is_favorite: true,
-                category_ids: Vec::new(),
-                scores: Vec::new(),
-            })
-        })?.filter_map(|r| r.ok()).collect();
-
-        let mut result = Vec::with_capacity(songs.len());
-        for mut song in songs {
-            song.scores = Self::get_scores_for_song(&conn, &song.id)?;
-            song.category_ids = Self::get_category_ids(&conn, &song.id)?;
-            result.push(song);
-        }
-
-        Ok(result)
+             FROM songs WHERE is_favorite = 1 ORDER BY updated_at DESC",
+            &[],
+        )
     }
 
     pub fn toggle_favorite(&self, song_id: &str) -> Result<bool, AppError> {
@@ -537,139 +506,55 @@ impl Database {
     pub fn search_songs(&self, query: &str) -> Result<Vec<SongListItem>, AppError> {
         let conn = self.conn.lock().unwrap();
         let fts_query = format!("{}*", query);
-
-        let mut stmt = conn.prepare(
+        Self::query_song_list_items(
+            &conn,
             "SELECT s.id, s.name, s.composer, s.arranger, s.updated_at, s.is_favorite
              FROM songs s
              INNER JOIN songs_fts ON songs_fts.rowid = s.rowid
              WHERE songs_fts MATCH ?1
-             ORDER BY rank"
-        )?;
-
-        let songs: Vec<SongListItem> = stmt.query_map(params![fts_query], |row| {
-            Ok(SongListItem {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                composer: row.get(2)?,
-                arranger: row.get(3)?,
-                updated_at: parse_datetime(&row.get::<_, String>(4)?),
-                is_favorite: row.get::<_, i32>(5)? != 0,
-                category_ids: Vec::new(),
-                scores: Vec::new(),
-            })
-        })?.filter_map(|r| r.ok()).collect();
-
-        let mut result = Vec::with_capacity(songs.len());
-        for mut song in songs {
-            song.scores = Self::get_scores_for_song(&conn, &song.id)?;
-            song.category_ids = Self::get_category_ids(&conn, &song.id)?;
-            result.push(song);
-        }
-
-        Ok(result)
+             ORDER BY rank",
+            &[&fts_query as &dyn rusqlite::ToSql],
+        )
     }
 
     pub fn get_songs_by_category(&self, category_id: &str) -> Result<Vec<SongListItem>, AppError> {
         let conn = self.conn.lock().unwrap();
-
-        let mut stmt = conn.prepare(
+        Self::query_song_list_items(
+            &conn,
             "SELECT s.id, s.name, s.composer, s.arranger, s.updated_at, s.is_favorite
              FROM songs s
              INNER JOIN categories_songs cs ON cs.song_id = s.id
              WHERE cs.category_id = ?1
-             ORDER BY s.updated_at DESC"
-        )?;
-
-        let songs: Vec<SongListItem> = stmt.query_map(params![category_id], |row| {
-            Ok(SongListItem {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                composer: row.get(2)?,
-                arranger: row.get(3)?,
-                updated_at: parse_datetime(&row.get::<_, String>(4)?),
-                is_favorite: row.get::<_, i32>(5)? != 0,
-                category_ids: Vec::new(),
-                scores: Vec::new(),
-            })
-        })?.filter_map(|r| r.ok()).collect();
-
-        let mut result = Vec::with_capacity(songs.len());
-        for mut song in songs {
-            song.scores = Self::get_scores_for_song(&conn, &song.id)?;
-            song.category_ids = Self::get_category_ids(&conn, &song.id)?;
-            result.push(song);
-        }
-
-        Ok(result)
+             ORDER BY s.updated_at DESC",
+            &[&category_id as &dyn rusqlite::ToSql],
+        )
     }
 
     pub fn get_songs_with_drafts(&self) -> Result<Vec<SongListItem>, AppError> {
         let conn = self.conn.lock().unwrap();
-
-        let mut stmt = conn.prepare(
+        Self::query_song_list_items(
+            &conn,
             "SELECT DISTINCT s.id, s.name, s.composer, s.arranger, s.updated_at, s.is_favorite
              FROM songs s
              INNER JOIN scores sc ON sc.song_id = s.id
              WHERE sc.status = 'draft'
-             ORDER BY s.updated_at DESC"
-        )?;
-
-        let songs: Vec<SongListItem> = stmt.query_map([], |row| {
-            Ok(SongListItem {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                composer: row.get(2)?,
-                arranger: row.get(3)?,
-                updated_at: parse_datetime(&row.get::<_, String>(4)?),
-                is_favorite: row.get::<_, i32>(5)? != 0,
-                category_ids: Vec::new(),
-                scores: Vec::new(),
-            })
-        })?.filter_map(|r| r.ok()).collect();
-
-        let mut result = Vec::with_capacity(songs.len());
-        for mut song in songs {
-            song.scores = Self::get_scores_for_song(&conn, &song.id)?;
-            song.category_ids = Self::get_category_ids(&conn, &song.id)?;
-            result.push(song);
-        }
-
-        Ok(result)
+             ORDER BY s.updated_at DESC",
+            &[],
+        )
     }
 
     #[allow(dead_code)]
     pub fn get_songs_with_not_found(&self) -> Result<Vec<SongListItem>, AppError> {
         let conn = self.conn.lock().unwrap();
-
-        let mut stmt = conn.prepare(
+        Self::query_song_list_items(
+            &conn,
             "SELECT DISTINCT s.id, s.name, s.composer, s.arranger, s.updated_at, s.is_favorite
              FROM songs s
              INNER JOIN scores sc ON sc.song_id = s.id
              WHERE sc.status = 'not_found'
-             ORDER BY s.updated_at DESC"
-        )?;
-
-        let songs: Vec<SongListItem> = stmt.query_map([], |row| {
-            Ok(SongListItem {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                composer: row.get(2)?,
-                arranger: row.get(3)?,
-                updated_at: parse_datetime(&row.get::<_, String>(4)?),
-                is_favorite: row.get::<_, i32>(5)? != 0,
-                category_ids: Vec::new(),
-                scores: Vec::new(),
-            })
-        })?.filter_map(|r| r.ok()).collect();
-
-        let mut result = Vec::with_capacity(songs.len());
-        for mut song in songs {
-            song.scores = Self::get_scores_for_song(&conn, &song.id)?;
-            song.category_ids = Self::get_category_ids(&conn, &song.id)?;
-            result.push(song);
-        }
-
-        Ok(result)
+             ORDER BY s.updated_at DESC",
+            &[],
+        )
     }
 
     // ── Scores ──
@@ -687,8 +572,8 @@ impl Database {
                 score.directory_id,
                 score.file_name,
                 score.file_size,
-                score.file_modified_at.format("%Y-%m-%d %H:%M:%S").to_string(),
-                score.updated_at.format("%Y-%m-%d %H:%M:%S").to_string(),
+                datetime_utils::format_datetime(score.file_modified_at),
+                datetime_utils::format_datetime(score.updated_at),
                 score.status.as_str(),
                 score.updated_by,
             ],
@@ -714,8 +599,8 @@ impl Database {
                 directory_id,
                 file_name,
                 file_size,
-                file_modified_at.format("%Y-%m-%d %H:%M:%S").to_string(),
-                now.format("%Y-%m-%d %H:%M:%S").to_string(),
+                datetime_utils::format_datetime(file_modified_at),
+                datetime_utils::format_datetime(now),
                 score_id,
             ],
         )?;
@@ -754,19 +639,15 @@ impl Database {
         })
     }
 
-    /// Obtém todos os scores com metadados para detecção de alterações
-    /// Retorna: (score_id, file_path_completo, file_size, file_modified_at)
-    pub fn get_all_scores_with_metadata(&self) -> Result<Vec<(String, String, u64, String)>, AppError> {
-        let conn = self.conn.lock().unwrap();
-        let mut stmt = conn.prepare(
-            "SELECT s.id, d.path_name, s.file_name, s.file_size, s.file_modified_at
-             FROM scores s
-             JOIN directories d ON d.id = s.directory_id"
-        )?;
-
-        // Retorna todos os scores sem filtrar por host_id
-        // Para filtrar por host específico, use get_all_scores_with_metadata_by_host()
-        let scores = stmt.query_map([], |row| {
+    /// Helper: busca metadados de scores com query e params
+    /// Retorna: Vec<(score_id, file_path_completo, file_size, file_modified_at)>
+    fn query_score_metadata(
+        conn: &Connection,
+        sql: &str,
+        params: &[&dyn rusqlite::ToSql],
+    ) -> Result<Vec<(String, String, u64, String)>, AppError> {
+        let mut stmt = conn.prepare(sql)?;
+        let scores = stmt.query_map(rusqlite::params_from_iter(params), |row| {
             let dir_path: String = row.get(1)?;
             let file_name: String = row.get(2)?;
             let file_path = std::path::PathBuf::from(&dir_path)
@@ -780,165 +661,103 @@ impl Database {
                 row.get::<_, String>(4)?,
             ))
         })?.filter_map(|r| r.ok()).collect();
-
         Ok(scores)
+    }
+
+    /// Obtém todos os scores com metadados para detecção de alterações
+    #[allow(dead_code)]
+    pub fn get_all_scores_with_metadata(&self) -> Result<Vec<(String, String, u64, String)>, AppError> {
+        let conn = self.conn.lock().unwrap();
+        Self::query_score_metadata(
+            &conn,
+            "SELECT s.id, d.path_name, s.file_name, s.file_size, s.file_modified_at
+             FROM scores s JOIN directories d ON d.id = s.directory_id",
+            &[],
+        )
     }
 
     /// Obtém todos os scores de um host específico com seus metadados
-    /// Retorna: (score_id, file_path_completo, file_size, file_modified_at)
     pub fn get_all_scores_with_metadata_by_host(&self, host_id: &str) -> Result<Vec<(String, String, u64, String)>, AppError> {
         let conn = self.conn.lock().unwrap();
-        let mut stmt = conn.prepare(
+        Self::query_score_metadata(
+            &conn,
             "SELECT s.id, d.path_name, s.file_name, s.file_size, s.file_modified_at
-             FROM scores s
-             JOIN directories d ON d.id = s.directory_id
-             WHERE s.host_id = ?1"
-        )?;
-
-        let scores = stmt.query_map([host_id], |row| {
-            let dir_path: String = row.get(1)?;
-            let file_name: String = row.get(2)?;
-            let file_path = std::path::PathBuf::from(&dir_path)
-                .join(&file_name)
-                .to_string_lossy()
-                .to_string();
-            Ok((
-                row.get::<_, String>(0)?,
-                file_path,
-                row.get::<_, u64>(3)?,
-                row.get::<_, String>(4)?,
-            ))
-        })?.filter_map(|r| r.ok()).collect();
-
-        Ok(scores)
+             FROM scores s JOIN directories d ON d.id = s.directory_id
+             WHERE s.host_id = ?1",
+            &[&host_id as &dyn rusqlite::ToSql],
+        )
     }
 
     /// Obtém todos os scores com status "not_found" de um host específico
-    /// Retorna: (score_id, file_path_completo, file_size, file_modified_at)
     pub fn get_not_found_scores_by_host(&self, host_id: &str) -> Result<Vec<(String, String, u64, String)>, AppError> {
         let conn = self.conn.lock().unwrap();
-        let mut stmt = conn.prepare(
+        let status = ScoreStatus::NotFound.as_str();
+        Self::query_score_metadata(
+            &conn,
             "SELECT s.id, d.path_name, s.file_name, s.file_size, s.file_modified_at
-             FROM scores s
-             JOIN directories d ON d.id = s.directory_id
-             WHERE s.status = ?1 AND s.host_id = ?2"
-        )?;
-
-        let scores = stmt.query_map([ScoreStatus::NotFound.as_str(), host_id], |row| {
-            let dir_path: String = row.get(1)?;
-            let file_name: String = row.get(2)?;
-            let file_path = std::path::PathBuf::from(&dir_path)
-                .join(&file_name)
-                .to_string_lossy()
-                .to_string();
-            Ok((
-                row.get::<_, String>(0)?,
-                file_path,
-                row.get::<_, u64>(3)?,
-                row.get::<_, String>(4)?,
-            ))
-        })?.filter_map(|r| r.ok()).collect();
-
-        Ok(scores)
+             FROM scores s JOIN directories d ON d.id = s.directory_id
+             WHERE s.status = ?1 AND s.host_id = ?2",
+            &[&status as &dyn rusqlite::ToSql, &host_id as &dyn rusqlite::ToSql],
+        )
     }
 
     /// Obtém todos os scores com status "not_found"
-    /// Retorna: (score_id, file_path_completo, file_size, file_modified_at)
+    #[allow(dead_code)]
     pub fn get_not_found_scores(&self) -> Result<Vec<(String, String, u64, String)>, AppError> {
         let conn = self.conn.lock().unwrap();
-        let mut stmt = conn.prepare(
+        let status = ScoreStatus::NotFound.as_str();
+        Self::query_score_metadata(
+            &conn,
             "SELECT s.id, d.path_name, s.file_name, s.file_size, s.file_modified_at
-             FROM scores s
-             JOIN directories d ON d.id = s.directory_id
-             WHERE s.status = ?1"
-        )?;
-
-        let scores = stmt.query_map([ScoreStatus::NotFound.as_str()], |row| {
-            let dir_path: String = row.get(1)?;
-            let file_name: String = row.get(2)?;
-            let file_path = std::path::PathBuf::from(&dir_path)
-                .join(&file_name)
-                .to_string_lossy()
-                .to_string();
-            Ok((
-                row.get::<_, String>(0)?,
-                file_path,
-                row.get::<_, u64>(3)?,
-                row.get::<_, String>(4)?,
-            ))
-        })?.filter_map(|r| r.ok()).collect();
-
-        Ok(scores)
+             FROM scores s JOIN directories d ON d.id = s.directory_id
+             WHERE s.status = ?1",
+            &[&status as &dyn rusqlite::ToSql],
+        )
     }
 
-    /// Atualiza o status de um score para draft, atualizando também os metadados do arquivo
-    pub fn set_score_status_to_draft(
+    /// Atualiza o status de um score com metadados opcionais do arquivo
+    pub fn update_score_status(
         &self,
         score_id: &str,
-        file_size: u64,
-        file_modified_at: chrono::NaiveDateTime,
+        status: ScoreStatus,
         updated_by: &str,
+        file_metadata: Option<(u64, chrono::NaiveDateTime)>,
     ) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
-        conn.execute(
-            "UPDATE scores SET status = ?1, file_size = ?2, file_modified_at = ?3, updated_at = ?4, updated_by = ?5 WHERE id = ?6",
-            params![
-                ScoreStatus::Draft.as_str(),
-                file_size,
-                file_modified_at.format("%Y-%m-%d %H:%M:%S").to_string(),
-                chrono::Local::now().naive_local().format("%Y-%m-%d %H:%M:%S").to_string(),
-                updated_by,
-                score_id,
-            ],
-        )?;
+        let now_str = datetime_utils::format_now();
+
+        if let Some((file_size, file_modified_at)) = file_metadata {
+            conn.execute(
+                "UPDATE scores SET status = ?1, file_size = ?2, file_modified_at = ?3, updated_at = ?4, updated_by = ?5 WHERE id = ?6",
+                params![
+                    status.as_str(),
+                    file_size,
+                    datetime_utils::format_datetime(file_modified_at),
+                    now_str,
+                    updated_by,
+                    score_id,
+                ],
+            )?;
+        } else {
+            conn.execute(
+                "UPDATE scores SET status = ?1, updated_at = ?2, updated_by = ?3 WHERE id = ?4",
+                params![status.as_str(), now_str, updated_by, score_id],
+            )?;
+        }
         Ok(())
     }
 
-    /// Atualiza o status de um score para not_found
-    pub fn set_score_status_to_not_found(&self, score_id: &str, updated_by: &str) -> Result<(), AppError> {
+    /// Obtém o song_id de um score
+    pub fn get_song_id_for_score(&self, score_id: &str) -> Result<String, AppError> {
         let conn = self.conn.lock().unwrap();
-        conn.execute(
-            "UPDATE scores SET status = ?1, updated_at = ?2, updated_by = ?3 WHERE id = ?4",
-            params![
-                ScoreStatus::NotFound.as_str(),
-                chrono::Local::now().naive_local().format("%Y-%m-%d %H:%M:%S").to_string(),
-                updated_by,
-                score_id,
-            ],
-        )?;
-        Ok(())
-    }
-
-    /// Recupera um score do status not_found para main
-    pub fn set_score_status_to_main(&self, score_id: &str, file_size: u64, file_modified_at: chrono::NaiveDateTime, updated_by: &str) -> Result<(), AppError> {
-        let conn = self.conn.lock().unwrap();
-        conn.execute(
-            "UPDATE scores SET status = ?1, file_size = ?2, file_modified_at = ?3, updated_at = ?4, updated_by = ?5 WHERE id = ?6",
-            params![
-                ScoreStatus::Main.as_str(),
-                file_size,
-                file_modified_at.format("%Y-%m-%d %H:%M:%S").to_string(),
-                chrono::Local::now().naive_local().format("%Y-%m-%d %H:%M:%S").to_string(),
-                updated_by,
-                score_id,
-            ],
-        )?;
-        Ok(())
-    }
-
-    /// Atualiza o status de um score para um status específico
-    pub fn set_score_status(&self, score_id: &str, status: ScoreStatus, updated_by: &str) -> Result<(), AppError> {
-        let conn = self.conn.lock().unwrap();
-        conn.execute(
-            "UPDATE scores SET status = ?1, updated_at = ?2, updated_by = ?3 WHERE id = ?4",
-            params![
-                status.as_str(),
-                chrono::Local::now().naive_local().format("%Y-%m-%d %H:%M:%S").to_string(),
-                updated_by,
-                score_id,
-            ],
-        )?;
-        Ok(())
+        conn.query_row(
+            "SELECT song_id FROM scores WHERE id = ?1",
+            params![score_id],
+            |row| row.get(0),
+        ).map_err(|e| match e {
+            rusqlite::Error::QueryReturnedNoRows => AppError::ScoreNotFound(score_id.to_string()),
+            other => AppError::Database(other),
+        })
     }
 
     /// Busca scores de uma música com caminho completo reconstruído

@@ -57,73 +57,19 @@ pub fn run() {
             let scan_completed_flag = initial_scan_completed.clone();
             
             std::thread::spawn(move || {
-                info!("Executando verificação inicial de alterações em thread separada");
-                
-                // Criar uma nova instância do store para a thread
                 let store = SystemStore::new(app_data_dir_clone);
-                // Obter computer_id do store
                 let host_id = match store.get_app_settings() {
                     Ok(settings) => settings.computer_id,
                     Err(e) => {
-                        eprintln!("Erro ao obter settings para obter computer_id: {:?}", e);
-                        String::new()
+                        tracing::error!("Erro ao obter settings para scan inicial: {:?}", e);
+                        scan_completed_flag.store(true, Ordering::SeqCst);
+                        return;
                     }
                 };
-                
-                // Obter scores apenas deste computador (host_id)
-                match db_clone.get_all_scores_with_metadata_by_host(&host_id) {
-                    Ok(scores) => {
-                        let mut changed_count = 0;
-                        let mut not_found_count = 0;
-                        
-                        info!("Total de arquivos para verificar: {}", scores.len());
-                        
-                        for (score_id, file_path, stored_size, stored_modified_at_str) in scores {
-                            let path = std::path::Path::new(&file_path);
 
-                            // Verificar se arquivo não existe
-                            if !path.exists() || !path.is_file() {
-                                if db_clone.set_score_status_to_not_found(&score_id, &host_id).is_ok() {
-                                    not_found_count += 1;
-                                    info!("✓ Status atualizado para not_found: {}", file_path);
-                                }
-                                continue;
-                            }
-
-                            // Se existe, verificar alterações
-                            if let Ok((current_size, current_modified_at)) = 
-                                services::indexer::get_file_metadata(path) {
-                                let stored_modified_at = chrono::NaiveDateTime::parse_from_str(
-                                    &stored_modified_at_str,
-                                    "%Y-%m-%d %H:%M:%S",
-                                ).unwrap_or_else(|_| chrono::Local::now().naive_local());
-
-                                let detector = services::indexer::FileChangeDetector::new(
-                                    current_size,
-                                    current_modified_at,
-                                    stored_size,
-                                    stored_modified_at,
-                                );
-
-                                if detector.has_changed() {
-                                    if db_clone.set_score_status_to_draft(&score_id, current_size, current_modified_at, &host_id).is_ok() {
-                                        changed_count += 1;
-                                        info!("✓ Status atualizado para draft: {}", file_path);
-                                    }
-                                }
-                            }
-                        }
-                        info!("Verificação inicial concluída: {} alterações, {} não encontrados", changed_count, not_found_count);
-                        
-                        // Sinalizar que o scan terminou
-                        scan_completed_flag.store(true, Ordering::SeqCst);
-                        info!("✓ Flag 'initial_scan_completed' setada para true");
-                    }
-                    Err(e) => {
-                        eprintln!("Erro na verificação inicial: {:?}", e);
-                        scan_completed_flag.store(true, Ordering::SeqCst);
-                    }
-                }
+                services::background_scanner::run_initial_scan(&db_clone, &host_id);
+                scan_completed_flag.store(true, Ordering::SeqCst);
+                info!("✓ Flag 'initial_scan_completed' setada para true");
             });
 
             Ok(())

@@ -19,7 +19,9 @@ mod tests {
             composer: Some("Bach".to_string()),
             arranger: None,
             is_favorite: false,
+            status: ScoreStatus::Main,
             updated_at: now(),
+            updated_by: "test-computer".to_string(),
         }
     }
 
@@ -36,6 +38,7 @@ mod tests {
             file_modified_at: now(),
             updated_at: now(),
             status: ScoreStatus::Main,
+            updated_by: "test-computer".to_string(),
         }
     }
 
@@ -286,6 +289,7 @@ mod tests {
             file_modified_at: now(),
             updated_at: now(),
             status: ScoreStatus::Main,
+            updated_by: "test-computer".to_string(),
         };
         db.insert_score(&score).unwrap();
 
@@ -310,6 +314,7 @@ mod tests {
             file_modified_at: now(),
             updated_at: now(),
             status: ScoreStatus::Main,
+            updated_by: "test-computer".to_string(),
         };
         db.insert_score(&score).unwrap();
 
@@ -368,6 +373,7 @@ mod tests {
             file_modified_at: now(),
             updated_at: now(),
             status: ScoreStatus::Main,
+            updated_by: "test-computer".to_string(),
         };
         db.insert_score(&score).unwrap();
 
@@ -386,25 +392,25 @@ mod tests {
     // ── Score Status ──
 
     #[test]
-    fn test_set_score_status() {
+    fn test_update_score_status() {
         let db = make_db();
         db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
         db.insert_score(&make_score(&db, "sc1", "s1", Some("Violino"))).unwrap();
 
-        db.set_score_status("sc1", ScoreStatus::Draft).unwrap();
+        db.update_score_status("sc1", ScoreStatus::Draft, "test-computer", None).unwrap();
 
         let songs = db.get_all_songs().unwrap();
         assert_eq!(songs[0].scores[0].status, ScoreStatus::Draft);
     }
 
     #[test]
-    fn test_set_score_status_to_draft_with_metadata() {
+    fn test_update_score_status_with_metadata() {
         let db = make_db();
         db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
         db.insert_score(&make_score(&db, "sc1", "s1", Some("Violino"))).unwrap();
 
         let new_modified_at = now();
-        db.set_score_status_to_draft("sc1", 4096, new_modified_at).unwrap();
+        db.update_score_status("sc1", ScoreStatus::Draft, "test-computer", Some((4096, new_modified_at))).unwrap();
 
         let songs = db.get_all_songs().unwrap();
         assert_eq!(songs[0].scores[0].status, ScoreStatus::Draft);
@@ -451,6 +457,7 @@ mod tests {
             file_modified_at: now(),
             updated_at: now(),
             status: ScoreStatus::Main,
+            updated_by: "test-computer".to_string(),
         };
 
         let score2 = Score {
@@ -464,6 +471,7 @@ mod tests {
             file_modified_at: now(),
             updated_at: now(),
             status: ScoreStatus::Main,
+            updated_by: "test-computer".to_string(),
         };
 
         db.insert_score(&score1).unwrap();
@@ -494,6 +502,7 @@ mod tests {
             file_modified_at: now(),
             updated_at: now(),
             status: ScoreStatus::Main,
+            updated_by: "test-computer".to_string(),
         };
 
         let score2 = Score {
@@ -507,6 +516,7 @@ mod tests {
             file_modified_at: now(),
             updated_at: now(),
             status: ScoreStatus::Main,
+            updated_by: "test-computer".to_string(),
         };
 
         db.insert_score(&score1).unwrap();
@@ -533,6 +543,7 @@ mod tests {
             file_modified_at: now(),
             updated_at: now(),
             status: ScoreStatus::Main,
+            updated_by: "test-computer".to_string(),
         };
 
         let score2 = Score {
@@ -546,6 +557,7 @@ mod tests {
             file_modified_at: now(),
             updated_at: now(),
             status: ScoreStatus::Main,
+            updated_by: "test-computer".to_string(),
         };
 
         db.insert_score(&score1).unwrap();
