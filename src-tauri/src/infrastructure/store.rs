@@ -3,7 +3,7 @@ use std::fs;
 use tracing::info;
 
 use crate::domain::errors::AppError;
-use crate::domain::models::{AppSettings, ComputerType, GoogleDriveMode, GoogleServiceAccount};
+use crate::domain::models::{AppSettings, BackupDatabaseStep, BackupStatus, ComputerType, GoogleDriveMode, GoogleServiceAccount, SongBackupStatus};
 
 const STORE_FILENAME: &str = "app-store.json";
 
@@ -43,6 +43,37 @@ impl SystemStore {
     pub fn get_app_settings(&self) -> Result<AppSettings, AppError> {
         let store = self.load_store()?;
 
+        // Parse backup database step
+        let backup_database_step = store
+            .get("backup_database_step")
+            .and_then(|v| {
+                let status_str = v.get("status")?.as_str()?;
+                let updated_at = v.get("updated_at")?.as_i64()?;
+                Some(BackupDatabaseStep {
+                    status: BackupStatus::from_str(status_str),
+                    updated_at,
+                })
+            });
+
+        // Parse backup songs step
+        let backup_songs_step = store
+            .get("backup_songs_step")
+            .and_then(|v| v.as_array())
+            .map(|songs| {
+                songs.iter()
+                    .filter_map(|song| {
+                        let id = song.get("id")?.as_str()?.to_string();
+                        let song_id = song.get("song_id")?.as_str()?.to_string();
+                        let status_str = song.get("status")?.as_str()?;
+                        Some(SongBackupStatus {
+                            id,
+                            song_id,
+                            status: BackupStatus::from_str(status_str),
+                        })
+                    })
+                    .collect()
+            });
+
         let settings = AppSettings {
             computer_id: store
                 .get("computer_id")
@@ -70,6 +101,11 @@ impl SystemStore {
             google_service_account: store
                 .get("google_service_account")
                 .and_then(|v| serde_json::from_value::<GoogleServiceAccount>(v.clone()).ok()),
+            database_local: store
+                .get("database_local")
+                .and_then(|v: &serde_json::Value| v.as_u64()),
+            backup_database_step,
+            backup_songs_step,
         };
 
         Ok(settings)
@@ -104,6 +140,33 @@ impl SystemStore {
             store["google_service_account"] = account_json;
         } else {
             store.as_object_mut().map(|obj| obj.remove("google_service_account"));
+        }
+
+        if let Some(database_local) = settings.database_local {
+            store["database_local"] = serde_json::json!(database_local);
+        } else {
+            store.as_object_mut().map(|obj| obj.remove("database_local"));
+        }
+
+        if let Some(ref backup_db_step) = settings.backup_database_step {
+            store["backup_database_step"] = serde_json::json!({
+                "status": backup_db_step.status.as_str(),
+                "updated_at": backup_db_step.updated_at
+            });
+        } else {
+            store.as_object_mut().map(|obj| obj.remove("backup_database_step"));
+        }
+
+        if let Some(ref backup_songs) = settings.backup_songs_step {
+            store["backup_songs_step"] = serde_json::json!(
+                backup_songs.iter().map(|s| serde_json::json!({
+                    "id": s.id,
+                    "song_id": s.song_id,
+                    "status": s.status.as_str()
+                })).collect::<Vec<_>>()
+            );
+        } else {
+            store.as_object_mut().map(|obj| obj.remove("backup_songs_step"));
         }
 
         self.save_store(&store)?;

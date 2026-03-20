@@ -55,7 +55,9 @@ impl Database {
                 composer TEXT,
                 arranger TEXT,
                 is_favorite INTEGER NOT NULL DEFAULT 0,
-                updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+                status TEXT NOT NULL DEFAULT 'main',
+                updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+                updated_by TEXT NOT NULL DEFAULT ''
             );
 
             CREATE TABLE IF NOT EXISTS categories_songs (
@@ -92,9 +94,33 @@ impl Database {
                     file_modified_at TEXT NOT NULL DEFAULT (datetime('now')),
                     updated_at TEXT NOT NULL DEFAULT (datetime('now')),
                     status TEXT NOT NULL DEFAULT 'main',
+                    updated_by TEXT NOT NULL DEFAULT '',
                     UNIQUE(directory_id, file_name)
                 );
             ")?;
+        }
+
+        // Migration: Adicionar status e updated_by em tabelas existentes
+        let songs_columns = Self::get_table_columns(conn, "songs");
+        if !songs_columns.contains(&"status".to_string()) {
+            conn.execute(
+                "ALTER TABLE songs ADD COLUMN status TEXT NOT NULL DEFAULT 'main'",
+                [],
+            ).ok(); // Ignore error if column already exists
+        }
+        if !songs_columns.contains(&"updated_by".to_string()) {
+            conn.execute(
+                "ALTER TABLE songs ADD COLUMN updated_by TEXT NOT NULL DEFAULT ''",
+                [],
+            ).ok(); // Ignore error if column already exists
+        }
+
+        let scores_columns = Self::get_table_columns(conn, "scores");
+        if !scores_columns.contains(&"updated_by".to_string()) {
+            conn.execute(
+                "ALTER TABLE scores ADD COLUMN updated_by TEXT NOT NULL DEFAULT ''",
+                [],
+            ).ok(); // Ignore error if column already exists
         }
 
         // FTS5 para busca textual em músicas
@@ -218,6 +244,7 @@ impl Database {
                 file_modified_at TEXT NOT NULL DEFAULT (datetime('now')),
                 updated_at TEXT NOT NULL DEFAULT (datetime('now')),
                 status TEXT NOT NULL DEFAULT 'main',
+                updated_by TEXT NOT NULL DEFAULT '',
                 UNIQUE(directory_id, file_name)
             );
         ")?;
@@ -229,8 +256,8 @@ impl Database {
                 .ok_or_else(|| AppError::Generic(format!("Diretório não encontrado na migração: {}", dir_path)))?;
 
             conn.execute(
-                "INSERT INTO scores_new (id, song_id, name, host_id, directory_id, file_name, file_size, file_modified_at, updated_at, status)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+                "INSERT INTO scores_new (id, song_id, name, host_id, directory_id, file_name, file_size, file_modified_at, updated_at, status, updated_by)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
                 params![
                     score.id,
                     score.song_id,
@@ -242,6 +269,7 @@ impl Database {
                     score.file_modified_at,
                     score.updated_at,
                     score.status,
+                    "", // updated_by default empty
                 ],
             )?;
         }
@@ -313,15 +341,17 @@ impl Database {
         let conn = self.conn.lock().unwrap();
 
         conn.execute(
-            "INSERT INTO songs (id, name, composer, arranger, is_favorite, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            "INSERT INTO songs (id, name, composer, arranger, is_favorite, status, updated_at, updated_by)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
             params![
                 song.id,
                 song.name,
                 song.composer,
                 song.arranger,
                 song.is_favorite as i32,
+                song.status.as_str(),
                 song.updated_at.format("%Y-%m-%d %H:%M:%S").to_string(),
+                song.updated_by,
             ],
         )?;
 
@@ -340,14 +370,16 @@ impl Database {
         let conn = self.conn.lock().unwrap();
 
         conn.execute(
-            "UPDATE songs SET name = ?1, composer = ?2, arranger = ?3, is_favorite = ?4, updated_at = ?5
-             WHERE id = ?6",
+            "UPDATE songs SET name = ?1, composer = ?2, arranger = ?3, is_favorite = ?4, status = ?5, updated_at = ?6, updated_by = ?7
+             WHERE id = ?8",
             params![
                 song.name,
                 song.composer,
                 song.arranger,
                 song.is_favorite as i32,
+                song.status.as_str(),
                 song.updated_at.format("%Y-%m-%d %H:%M:%S").to_string(),
+                song.updated_by,
                 song.id,
             ],
         )?;
@@ -372,7 +404,7 @@ impl Database {
         let conn = self.conn.lock().unwrap();
 
         conn.query_row(
-            "SELECT id, name, composer, arranger, is_favorite, updated_at FROM songs WHERE id = ?1",
+            "SELECT id, name, composer, arranger, is_favorite, status, updated_at, updated_by FROM songs WHERE id = ?1",
             params![song_id],
             |row| {
                 Ok(Song {
@@ -381,7 +413,9 @@ impl Database {
                     composer: row.get(2)?,
                     arranger: row.get(3)?,
                     is_favorite: row.get::<_, i32>(4)? != 0,
-                    updated_at: parse_datetime(&row.get::<_, String>(5)?),
+                    status: ScoreStatus::from_str(&row.get::<_, String>(5)?),
+                    updated_at: parse_datetime(&row.get::<_, String>(6)?),
+                    updated_by: row.get(7)?,
                 })
             },
         ).map_err(|e| match e {
@@ -643,8 +677,8 @@ impl Database {
     pub fn insert_score(&self, score: &Score) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
         conn.execute(
-            "INSERT INTO scores (id, song_id, name, host_id, directory_id, file_name, file_size, file_modified_at, updated_at, status)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+            "INSERT INTO scores (id, song_id, name, host_id, directory_id, file_name, file_size, file_modified_at, updated_at, status, updated_by)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
             params![
                 score.id,
                 score.song_id,
@@ -656,6 +690,7 @@ impl Database {
                 score.file_modified_at.format("%Y-%m-%d %H:%M:%S").to_string(),
                 score.updated_at.format("%Y-%m-%d %H:%M:%S").to_string(),
                 score.status.as_str(),
+                score.updated_by,
             ],
         )?;
         Ok(())
@@ -782,15 +817,17 @@ impl Database {
         score_id: &str,
         file_size: u64,
         file_modified_at: chrono::NaiveDateTime,
+        updated_by: &str,
     ) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
         conn.execute(
-            "UPDATE scores SET status = ?1, file_size = ?2, file_modified_at = ?3, updated_at = ?4 WHERE id = ?5",
+            "UPDATE scores SET status = ?1, file_size = ?2, file_modified_at = ?3, updated_at = ?4, updated_by = ?5 WHERE id = ?6",
             params![
                 ScoreStatus::Draft.as_str(),
                 file_size,
                 file_modified_at.format("%Y-%m-%d %H:%M:%S").to_string(),
                 chrono::Local::now().naive_local().format("%Y-%m-%d %H:%M:%S").to_string(),
+                updated_by,
                 score_id,
             ],
         )?;
@@ -798,13 +835,14 @@ impl Database {
     }
 
     /// Atualiza o status de um score para not_found
-    pub fn set_score_status_to_not_found(&self, score_id: &str) -> Result<(), AppError> {
+    pub fn set_score_status_to_not_found(&self, score_id: &str, updated_by: &str) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
         conn.execute(
-            "UPDATE scores SET status = ?1, updated_at = ?2 WHERE id = ?3",
+            "UPDATE scores SET status = ?1, updated_at = ?2, updated_by = ?3 WHERE id = ?4",
             params![
                 ScoreStatus::NotFound.as_str(),
                 chrono::Local::now().naive_local().format("%Y-%m-%d %H:%M:%S").to_string(),
+                updated_by,
                 score_id,
             ],
         )?;
@@ -812,15 +850,16 @@ impl Database {
     }
 
     /// Recupera um score do status not_found para main
-    pub fn set_score_status_to_main(&self, score_id: &str, file_size: u64, file_modified_at: chrono::NaiveDateTime) -> Result<(), AppError> {
+    pub fn set_score_status_to_main(&self, score_id: &str, file_size: u64, file_modified_at: chrono::NaiveDateTime, updated_by: &str) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
         conn.execute(
-            "UPDATE scores SET status = ?1, file_size = ?2, file_modified_at = ?3, updated_at = ?4 WHERE id = ?5",
+            "UPDATE scores SET status = ?1, file_size = ?2, file_modified_at = ?3, updated_at = ?4, updated_by = ?5 WHERE id = ?6",
             params![
                 ScoreStatus::Main.as_str(),
                 file_size,
                 file_modified_at.format("%Y-%m-%d %H:%M:%S").to_string(),
                 chrono::Local::now().naive_local().format("%Y-%m-%d %H:%M:%S").to_string(),
+                updated_by,
                 score_id,
             ],
         )?;
@@ -828,13 +867,14 @@ impl Database {
     }
 
     /// Atualiza o status de um score para um status específico
-    pub fn set_score_status(&self, score_id: &str, status: ScoreStatus) -> Result<(), AppError> {
+    pub fn set_score_status(&self, score_id: &str, status: ScoreStatus, updated_by: &str) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
         conn.execute(
-            "UPDATE scores SET status = ?1, updated_at = ?2 WHERE id = ?3",
+            "UPDATE scores SET status = ?1, updated_at = ?2, updated_by = ?3 WHERE id = ?4",
             params![
                 status.as_str(),
                 chrono::Local::now().naive_local().format("%Y-%m-%d %H:%M:%S").to_string(),
+                updated_by,
                 score_id,
             ],
         )?;

@@ -24,7 +24,7 @@ Um aplicativo desktop windows, para organizar, controlar status das partituras e
 
 - **Main:** versão sincronizável, autorizada para backup no Google Drive (definida pelo usuário)
 - **Pending**: quando o cliente faz uma atualização e está pendente o server autorizar.
-	- Pode fazer backup no Google Drive, mas a forma de tratar ele pelo servidor é totalmente diferente. Ainda não elaborei como vai ser.
+	- Faz o backup para o Google Drive, mas, ele precisa ser autorizado pelo servidor.
 - **Draft:** rascunho automático quando arquivo é alterado (não é feito o backup no Google Drive)
 - **Not Found**: partitura não encontrada (pode ter sido deletada ou renomeada)
 
@@ -111,22 +111,37 @@ Será documentando em JSON, mas na aplicação real é utilizando `MessagePack`.
 
 ```json
 {
-  "updatedAt": 1,
+  // Versão do shema
+  "schemaVersion": 1,
+  // Quando foi gerado
+  "updatedAt": 1710684000,
+  // Lista as músicas
   "songs": [
     {
       "id": "abc123",
-      "name": "Amazing Grace",
-      "composerId": "flçasdf",
-      "arrangerId": "fdasjkfkl",
-      "categoriesId": ["fadslkçf1", "flçka1"],
-      "isFavorite": true,
+      "name": "Nome música",
+      "composer": "Nome compositor",
+      "arranger": "Nome arranjador",
+      "categoriesId": ["Categoria 1", "Categoria 2"],
+      "status": "main",
+      // Quando foi atualizado por último
       "updatedAt": 1710684000,
+      // Quem atualizou
+      "updatedBy": "computerId",
+      // Lista as partituras
       "scores": [
 	      {
 		      "id": "xyz123",
 		      "name": "Flauta",
 		      "status": "main",
-		      "fileModifiedAt": 1710684000
+		      // Quando foi atualizado por último
+		      "updatedAt": 1710684000,
+		      // Quem atualizou
+		      "updatedBy": "computerId",
+		      // Timestamp da última alteração do arquivo
+		      "fileModifiedAt": 1710684000,
+		      // Tamanho do arquivo (um inteiro que significa a quantidade de bytes)
+		      "fileSize": 123124
 	      }
       ]
     }
@@ -134,8 +149,6 @@ Será documentando em JSON, mas na aplicação real é utilizando `MessagePack`.
 }
 ```
 ## Banco de dados
-
-- Essa estrutura é tanto para o Servidor, quanto para o Cliente. A diferença que o cliente não terá todas as informações, como: `filePath`, já que não possui necessidade.
 
 ### Categories
 - `id`
@@ -145,18 +158,22 @@ Será documentando em JSON, mas na aplicação real é utilizando `MessagePack`.
 - `id`
 - `categoryId`
 - `songsId`
+! É uma relação N:N.
 
 ### Songs
 - `id`
 - `name`
 - `composer`
 - `arranger`
+- `status` - `draft`, `pending`, `not found` e `main`.
 - `isFavorite` - booleano
 - `updatedAt` - última alteração da música (sempre que um `score` é atualizando, ele atualiza aqui também). Objetivo é agiliza a comparação com o `MessagePack` no Google Drive.
+- `updatedBy` - quem atualizou por último.
 
 ### Directory
 - `id`
 - `pathName`
+! É uma relação 1:N.
 
 ### Scores
 - `id`
@@ -166,10 +183,26 @@ Será documentando em JSON, mas na aplicação real é utilizando `MessagePack`.
 - `directoryId`
 - `fileName`
 - `fileModifiedAt` - última alteração no arquivo
-- `fileSize` - tamanho do arquivo.
+- `fileSize` - tamanho do arquivo  (um inteiro que significa a quantidade de bytes)
 - `status` - `draft`, `pending`, `not found` e `main`.
+- `updatedBy` - quem atualizou por último.
 
 ! A junção de `directory` + `fineName` é um único.
+
+### changeList  
+- `id`
+- `entityType` - o que foi alterado, ex: `song`, `score` e etc.
+- `entityId` - id do elemento que foi alterado
+- `createdBy` - quem alterou
+- `createdAt`  - quando alterou
+  
+### changes
+- `id`
+- `changeListId`
+- `field` - campo que foi alterado, ex: (`name`, `compositor`, `file` e etc)
+- `oldValue`
+- `newValue`
+! Deve ter suporte a arquivo também.
 
 ## `tauri-plugin-store`
 
@@ -178,18 +211,18 @@ computer: {
 	"id": "lfajkdçf",
 	"name": "Faell",
 	"type": "Client" | "Server",
-	"dataBaseUpdatedAt": 8021948012,
+	"dataBaseLocal": 8021948012,
 	"apiKey": {
 		"Client ID / Secret": "Identifica a aplicação",
 		"Access Token": "Token usado para acessar recursos protegidos",
 		
 	}
 }
-backupDatabase: {
+backupDataBaseStep: {
 	"status": "pending" || "compressed" || "ok" || "error",
 	"updatedAt": timestamp
 }
-backupSongs: [
+backupSongsStep: [
 	{
 		"id": "jfkladsf",
 		"songsId": "lkaf123",
@@ -197,6 +230,7 @@ backupSongs: [
 	}
 ]
 ```
+
 - `none` - nada foi feito, pronto para ser comprimido
 - `compressed` - arquivo já comprimido, pronto para ser feito o update.
 - `ok` - tudo certo, compressão e update feito.
@@ -274,15 +308,7 @@ backupSongs: [
 ## Computador Cliente
 
 ### Abrindo o aplicativo:
-1. Verifica se tem acesso a internet.
-	1. Caso não tenha acesso a internet, emite um alerta com `toast`, avisando que as informações pode está desatualizadas e não segue o fluxo abaixo.
-2. Faz uma varredura das partituras verificando se teve alguma alteração.
-	1. As partituras que tiverem alteração, tem seu `status` alterado para `draft`.
-3. Baixa o arquivo `DataBase.msgpack` do Google Drive.
-	1. Vai descompactar em um diretório temporário, depois verifica o timestamp do `dataBaseUpdatedAt` do arquivo com o do banco local.
-		1. Caso igual, o software não precisa baixar e atualizar nada. Ele está na versão recente.
-		2. Caso seja diferente, o software verifica se o timestamp do arquivo é mais recente que o local. Caso seja, ele varre todas as música e procura a(s) música(s) que foram alteradas, logo em seguida baixado elas e substituindo as antigas pela atual.
-		- Será procurado apenas no `Songs`, já que compacta a música com todas as partituras dentro, não sendo necessário identificar qual partitura isolada foi alterada.
+A ser desenvolvido
 
 ### Adicionar música:
 Não é permitido no cliente. Devido a ele não ter indexação de diretório, não faria sentido.
@@ -346,13 +372,26 @@ Ao clicar na música será expandido e mostrar uma lista de partituras/instrumen
 - [x] Atualizar o banco de dados (back e front), adicionando a tabela de `directory`
 - [x] Adicionar o status e funcionalidade do `not found`
 - [x] Adicione "Partituras não encontradas" na Sidebar.
+- [x] Atualizar banco de dados, para ficar igual o documento. Também atualize o `tauri-plugin-store`.
+- [x] Adicione um bloquei para que o usuário não fique clicando várias vezes em "verificar alterações".
 - [x] Adicionar suporte Cliente/Servidor
 	- [x] Atualizar o `tauri-plugin-store` adicionando o `type`. 
 	- [x] Atualizar página de primeiro acesso (é preciso adicionar a opção para o usuário escolher entre "Cliente" e "Servidor"). Coloque um textinho orientando o que cada um faz.
 	- [x] Adicione nas configurações a opção para alterar (quando for marcada deve pedi confirmação, tipo para deletar uma partitura), não é para atualizar no back, deve emitir um toast avisando que a funcionalidade não está disponível no momento.
-	- [ ] Implementar restrições.
+	- [ ] Implementar restrições (toda restrição deve ser implementada no front e back).
 		- [ ] Não permitir que o cliente adicione música diretamente (adicionar nova música, adicionar arquivo e indexar diretório).
-		- [ ] Tudo que o Cliente atualizar deve ficar com o status `pending`.
+		- [ ] Não permitir que o cliente delete uma partitura.
+		- [ ] Não permitir que o cliente muda o status da partitura.
+		- [ ] Alterar o status para `pending`.
+			- [ ] Caso o Cliente altere informações da música, a música deve ficar com status de `pending`.
+			- [ ] Caso o Cliente altere informação da partitura, a música deve ficar com status de `pending`.
+			- [ ] Caso o Cliente adicione uma categoria não é necessário atualizar, mas caso ele mude a categoria ou adicione uma nova categoria a uma música, a música deve ficar com status `pending`.
+		- [ ] Adicionar alterações nas tabelas de alterações.
+		- Um detalhe importante, quando for arquivo, não vai ter `oldValue` e `newValue`, vai ter apenas `field` com o valor `file`.
+	- [ ] O botão de "verificar alterações" no Cliente, deve ter o comportamento diferente. No Servidor ele busca nos diretórios e depois vai buscar no Drive (não implementado), no Cliente é apenas no Drive (não implementando), então quando o usuário com tipo Cliente clicar no botão, deve aparecer um `toast` falando: "funcionalidade não implementada".
+- [ ] Refatoração
+	- [ ] Refatorar front
+	- [ ] Refatorar back
 
 ## Funcionalidades para v0.3 - sincronização offline-ready
 - [ ] Criar MessagePack
@@ -371,6 +410,7 @@ Ao clicar na música será expandido e mostrar uma lista de partituras/instrumen
 - [ ] Testar massivamente e corrigir qualquer problema relacionado a detecção de arquivos modificados.
 - [ ] Testar massivamente e corrigir qualquer problema relacionado a backup (todas as etapas).
 - [ ] Testar massivamente os possíveis e altamente prováveis problemas entre Cliente e Servidor.
+- [ ] Adicionar um diretório de backup para os arquivos `MessagePack`.
 
 ## Funcionalidades para v2 (apenas rascunho/ideias)
 
@@ -384,3 +424,17 @@ Solução:
 - Esse problema não vai trazer otimizações significativas, mas vai trazer mais clareza e organização. Usando uma paginação por diretórios e ficando mais claro até para o usuário, ex: `analizando diretório: /musica/joel amarim`, também é bom para logs e debug.
 - Com isso a verificação será feita "manualmente", comparando o "size + timestamp" dos arquivos no diretório para ver se teve alteração ou não.
 - Caso seja encontrado um arquivo no diretório que não está no banco de dados, ele deve ser ignorado (pula).
+
+20-03-2026 - Estou com dúvida em como integrar o Cliente e Servidor na aplicação. Não sei como vai ser o fluxo, o banco de dados e etc.
+- A ideia é simples: o cliente altera, o sistema deve marcar que foi alterado. Vou partir do principio de confiança, já que é um software local e que pessoas leigas iram utilizar.
+- Solução:
+	- Criar um tabela para as alterações. Nessa tabela deve ter as informações antigas e novas.
+	- Com base nisso, vai ter um modal ou página, que vai listar todas as alterações pendentes (para servidor) que foi feita pelo cliente, ele vai aprovar ou recusar.
+	- Os que foram aprovados são aplicados na tabela definitiva, os que são recusados vão ser descartados.
+	- Caso seja um arquivo, deve ter a opção para o usuário clicar para ver o original e o alterado.
+- ! Atenção: Quando a alteração (`field`) for  `file`, preciso tomar cuidado e elaborar um bom plano para que não dê conflito ou fique desorganizado. 
+
+20-03-2026 - Problemas futuros que preciso ter resolvido ou pensando em uma solução para resolver.
+- Alterações grandes no banco dados.
+- Alterações grande no shema (MessagePack).
+- Melhor resolução de conflitos (vários computadores atualizando ao mesmo tempo)

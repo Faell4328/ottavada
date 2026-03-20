@@ -48,15 +48,28 @@ pub fn run() {
             app.manage(initial_scan_completed.clone());
 
             // Inicializar store de configurações
-            let store = SystemStore::new(app_data_dir);
+            let store = SystemStore::new(app_data_dir.clone());
             app.manage(store);
 
             // Executar scan inicial em thread separada
             let db_clone = db.clone();
+            let app_data_dir_clone = app_data_dir.clone();
             let scan_completed_flag = initial_scan_completed.clone();
             
             std::thread::spawn(move || {
                 info!("Executando verificação inicial de alterações em thread separada");
+                
+                // Criar uma nova instância do store para a thread
+                let store = SystemStore::new(app_data_dir_clone);
+                // Obter computer_id do store
+                let updated_by = match store.get_app_settings() {
+                    Ok(settings) => settings.computer_id,
+                    Err(e) => {
+                        eprintln!("Erro ao obter settings para obter computer_id: {:?}", e);
+                        String::new()
+                    }
+                };
+                
                 match db_clone.get_all_scores_with_metadata() {
                     Ok(scores) => {
                         let mut changed_count = 0;
@@ -69,7 +82,7 @@ pub fn run() {
 
                             // Verificar se arquivo não existe
                             if !path.exists() || !path.is_file() {
-                                if db_clone.set_score_status_to_not_found(&score_id).is_ok() {
+                                if db_clone.set_score_status_to_not_found(&score_id, &updated_by).is_ok() {
                                     not_found_count += 1;
                                     info!("✓ Status atualizado para not_found: {}", file_path);
                                 }
@@ -92,7 +105,7 @@ pub fn run() {
                                 );
 
                                 if detector.has_changed() {
-                                    if db_clone.set_score_status_to_draft(&score_id, current_size, current_modified_at).is_ok() {
+                                    if db_clone.set_score_status_to_draft(&score_id, current_size, current_modified_at, &updated_by).is_ok() {
                                         changed_count += 1;
                                         info!("✓ Status atualizado para draft: {}", file_path);
                                     }

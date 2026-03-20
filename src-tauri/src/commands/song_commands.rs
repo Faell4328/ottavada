@@ -119,7 +119,9 @@ fn import_files_core(
                 composer: composer.map(|s| s.to_string()),
                 arranger: arranger.map(|s| s.to_string()),
                 is_favorite: false,
+                status: ScoreStatus::Main,
                 updated_at: now,
+                updated_by: host_id.to_string(),
             };
             db.insert_song(&song, category_ids)?;
             new_song_id
@@ -165,6 +167,7 @@ fn import_files_core(
                 file_modified_at,
                 updated_at: now,
                 status: ScoreStatus::Main,
+                updated_by: host_id.to_string(),
             };
 
             db.insert_score(&score)?;
@@ -216,6 +219,7 @@ pub fn get_songs_by_category(
 #[tauri::command]
 pub fn create_song(
     db: State<'_, Database>,
+    store: State<'_, SystemStore>,
     name: String,
 ) -> Result<SongListItem, AppError> {
     if name.trim().is_empty() {
@@ -224,6 +228,9 @@ pub fn create_song(
             "Nome da música não pode estar vazio".into(),
         ));
     }
+
+    let settings = store.get_app_settings()?;
+    let updated_by = settings.computer_id.clone();
 
     let all_songs = db.get_all_songs()?;
     if all_songs.iter().any(|s| s.name.eq_ignore_ascii_case(&name)) {
@@ -243,7 +250,9 @@ pub fn create_song(
         composer: None,
         arranger: None,
         is_favorite: false,
+        status: ScoreStatus::Main,
         updated_at: now,
+        updated_by,
     };
 
     db.insert_song(&song, &[])?;
@@ -253,6 +262,7 @@ pub fn create_song(
 #[tauri::command]
 pub fn create_song_with_categories(
     db: State<'_, Database>,
+    store: State<'_, SystemStore>,
     name: String,
     category_ids: Vec<String>,
 ) -> Result<SongListItem, AppError> {
@@ -262,6 +272,9 @@ pub fn create_song_with_categories(
             "Nome da música não pode estar vazio".into(),
         ));
     }
+
+    let settings = store.get_app_settings()?;
+    let updated_by = settings.computer_id.clone();
 
     let all_songs = db.get_all_songs()?;
     if all_songs.iter().any(|s| s.name.eq_ignore_ascii_case(&name)) {
@@ -281,7 +294,9 @@ pub fn create_song_with_categories(
         composer: None,
         arranger: None,
         is_favorite: false,
+        status: ScoreStatus::Main,
         updated_at: now,
+        updated_by,
     };
 
     db.insert_song(&song, &category_ids)?;
@@ -291,6 +306,7 @@ pub fn create_song_with_categories(
 #[tauri::command]
 pub fn create_song_with_metadata(
     db: State<'_, Database>,
+    store: State<'_, SystemStore>,
     name: String,
     composer: Option<String>,
     arranger: Option<String>,
@@ -301,6 +317,9 @@ pub fn create_song_with_metadata(
             "Nome da música não pode estar vazio".into(),
         ));
     }
+
+    let settings = store.get_app_settings()?;
+    let updated_by = settings.computer_id.clone();
 
     let all_songs = db.get_all_songs()?;
     if all_songs.iter().any(|s| s.name.eq_ignore_ascii_case(&name)) {
@@ -318,7 +337,9 @@ pub fn create_song_with_metadata(
         composer,
         arranger,
         is_favorite: false,
+        status: ScoreStatus::Main,
         updated_at: now,
+        updated_by,
     };
 
     db.insert_song(&song, &category_ids)?;
@@ -328,6 +349,7 @@ pub fn create_song_with_metadata(
 #[tauri::command]
 pub fn update_song(
     db: State<'_, Database>,
+    store: State<'_, SystemStore>,
     song_id: String,
     name: String,
     composer: Option<String>,
@@ -340,6 +362,9 @@ pub fn update_song(
             "Nome da música não pode estar vazio".into(),
         ));
     }
+
+    let settings = store.get_app_settings()?;
+    let updated_by = settings.computer_id.clone();
 
     let all_songs = db.get_all_songs()?;
     if all_songs
@@ -366,7 +391,9 @@ pub fn update_song(
             .map(|a| a.trim().to_string())
             .filter(|a| !a.is_empty()),
         is_favorite: original_song.is_favorite,
+        status: original_song.status,
         updated_at: now,
+        updated_by,
     };
 
     db.update_song(&updated_song, &category_ids)?;

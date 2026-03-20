@@ -10,7 +10,9 @@ pub struct Song {
     pub composer: Option<String>,
     pub arranger: Option<String>,
     pub is_favorite: bool,
+    pub status: ScoreStatus,
     pub updated_at: NaiveDateTime,
+    pub updated_by: String,
 }
 
 /// Status de uma partitura
@@ -64,6 +66,7 @@ pub struct Score {
     pub file_modified_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
     pub status: ScoreStatus,
+    pub updated_by: String,
 }
 
 /// Categoria criada pelo usuário (ex: "Harpa Cristã")
@@ -82,6 +85,9 @@ pub struct AppSettings {
     pub google_drive_mode: GoogleDriveMode,
     pub first_run_completed: bool,
     pub google_service_account: Option<GoogleServiceAccount>,
+    pub database_local: Option<u64>,
+    pub backup_database_step: Option<BackupDatabaseStep>,
+    pub backup_songs_step: Option<Vec<SongBackupStatus>>,
 }
 
 impl Default for AppSettings {
@@ -93,6 +99,9 @@ impl Default for AppSettings {
             google_drive_mode: GoogleDriveMode::Local,
             first_run_completed: false,
             google_service_account: None,
+            database_local: None,
+            backup_database_step: None,
+            backup_songs_step: None,
         }
     }
 }
@@ -164,6 +173,51 @@ impl GoogleServiceAccount {
         }
         Ok(())
     }
+}
+
+/// Status de um backup
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum BackupStatus {
+    Pending,
+    Compressed,
+    Ok,
+    Error,
+}
+
+impl BackupStatus {
+    pub fn as_str(&self) -> &str {
+        match self {
+            BackupStatus::Pending => "pending",
+            BackupStatus::Compressed => "compressed",
+            BackupStatus::Ok => "ok",
+            BackupStatus::Error => "error",
+        }
+    }
+
+    pub fn from_str(s: &str) -> Self {
+        match s {
+            "pending" => BackupStatus::Pending,
+            "compressed" => BackupStatus::Compressed,
+            "ok" => BackupStatus::Ok,
+            "error" => BackupStatus::Error,
+            _ => BackupStatus::Pending,
+        }
+    }
+}
+
+/// Status do backup do banco de dados
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BackupDatabaseStep {
+    pub status: BackupStatus,
+    pub updated_at: i64,
+}
+
+/// Status do backup de uma música
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SongBackupStatus {
+    pub id: String,
+    pub song_id: String,
+    pub status: BackupStatus,
 }
 
 /// Dados retornados para a listagem de músicas no frontend

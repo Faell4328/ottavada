@@ -4,6 +4,7 @@ use tracing::{info, warn};
 
 use crate::domain::errors::AppError;
 use crate::infrastructure::database::Database;
+use crate::infrastructure::store::SystemStore;
 use crate::services::indexer::{get_file_metadata, FileChangeDetector};
 
 /// Verifica se há alterações nos arquivos de partituras
@@ -11,8 +12,14 @@ use crate::services::indexer::{get_file_metadata, FileChangeDetector};
 /// Se um arquivo não foi encontrado, o status é mudado para not_found
 /// Se um arquivo not_found é encontrado novamente, o status volta para main
 #[tauri::command]
-pub fn scan_files_for_changes(db: State<'_, Database>) -> Result<ScanResult, AppError> {
+pub fn scan_files_for_changes(
+    db: State<'_, Database>,
+    store: State<'_, SystemStore>,
+) -> Result<ScanResult, AppError> {
     info!("Iniciando verificação de alterações nos arquivos de partituras");
+
+    let settings = store.get_app_settings()?;
+    let updated_by = settings.computer_id.clone();
 
     let scores = db.get_all_scores_with_metadata()?;
     let mut changed_files = Vec::new();
@@ -28,7 +35,7 @@ pub fn scan_files_for_changes(db: State<'_, Database>) -> Result<ScanResult, App
             warn!("Arquivo não encontrado: {}", file_path);
             
             // Marcar score como not_found (se não estiver já)
-            if let Err(e) = db.set_score_status_to_not_found(&score_id) {
+            if let Err(e) = db.set_score_status_to_not_found(&score_id, &updated_by) {
                 warn!("Erro ao atualizar status para not_found: {:?}", e);
                 failed_files.push((file_path.clone(), format!("Erro ao marcar como não encontrado: {:?}", e)));
             } else {
@@ -54,7 +61,7 @@ pub fn scan_files_for_changes(db: State<'_, Database>) -> Result<ScanResult, App
                     info!("Alteração detectada em: {}", file_path);
                     
                     // Atualizar status para draft com os novos metadados
-                    if let Err(e) = db.set_score_status_to_draft(&score_id, current_size, current_modified_at) {
+                    if let Err(e) = db.set_score_status_to_draft(&score_id, current_size, current_modified_at, &updated_by) {
                         warn!("Erro ao atualizar status para draft: {:?}", e);
                         failed_files.push((file_path.clone(), format!("Erro ao atualizar: {:?}", e)));
                     } else {
@@ -82,7 +89,7 @@ pub fn scan_files_for_changes(db: State<'_, Database>) -> Result<ScanResult, App
                 
                 match get_file_metadata(path) {
                     Ok((current_size, current_modified_at)) => {
-                        if let Err(e) = db.set_score_status_to_main(&score_id, current_size, current_modified_at) {
+                        if let Err(e) = db.set_score_status_to_main(&score_id, current_size, current_modified_at, &updated_by) {
                             warn!("Erro ao recuperar arquivo para main: {:?}", e);
                             failed_files.push((file_path.clone(), format!("Erro ao recuperar: {:?}", e)));
                         } else {

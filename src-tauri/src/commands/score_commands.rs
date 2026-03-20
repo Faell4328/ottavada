@@ -104,6 +104,7 @@ pub fn add_score_to_song(
         file_modified_at,
         updated_at: now,
         status: ScoreStatus::Main,
+        updated_by: settings.computer_id.clone(),
     };
 
     db.insert_score(&score)?;
@@ -156,6 +157,7 @@ pub fn add_scores_to_song(
             file_modified_at,
             updated_at: now,
             status: ScoreStatus::Main,
+            updated_by: settings.computer_id.clone(),
         };
 
         db.insert_score(&score)?;
@@ -208,10 +210,14 @@ pub async fn open_file(
 #[tauri::command]
 pub fn update_score_status(
     db: State<'_, Database>,
+    store: State<'_, SystemStore>,
     score_id: String,
     status: String,
 ) -> Result<SongListItem, AppError> {
     info!("Atualizando status da partitura: {} para: {}", score_id, status);
+
+    let settings = store.get_app_settings()?;
+    let updated_by = settings.computer_id.clone();
 
     let score_status = match status.to_lowercase().as_str() {
         "main" => ScoreStatus::Main,
@@ -223,7 +229,7 @@ pub fn update_score_status(
         }
     };
 
-    db.set_score_status(&score_id, score_status)?;
+    db.set_score_status(&score_id, score_status, &updated_by)?;
 
     // Buscar a música que contém este score
     let all_songs = db.get_all_songs()?;
