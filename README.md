@@ -412,9 +412,9 @@ Ao clicar na música será expandido e mostrar uma lista de partituras/instrumen
 - Deve ser um modal e não um confirm genérico.
 - Para a pessoa mudar, ela precisa esperar 5 segundos (botão desativado com contagem de tempo).
 - O modal deve transmitir o impactado da mudança, tendo uma grande exclamação no topo.
-- [ ] Refatoração
-	- [ ] Refatorar front
-	- [ ] Refatorar back
+- [x] Refatoração
+	- [x] Refatorar front
+	- [x] Refatorar back
 
 ## Funcionalidades para v0.3 - cloud
 - [ ] Criar MessagePack com base nas informações do banco de dados.
