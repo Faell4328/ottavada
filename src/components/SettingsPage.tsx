@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAppState } from "../context/AppContext";
 import * as api from "../api/commands";
+import { ChangeComputerTypeModal } from "./ChangeComputerTypeModal";
 import type { AppSettings } from "../types";
 
 export default function SettingsPage() {
@@ -20,19 +21,17 @@ export default function SettingsPage() {
     }
   );
   const [isTogglingType, setIsTogglingType] = useState(false);
+  const [isChangeComputerTypeModalOpen, setIsChangeComputerTypeModalOpen] = useState(false);
 
   function update(partial: Partial<AppSettings>) {
     setSettings((prev) => ({ ...prev, ...partial }));
   }
 
-  async function handleComputerTypeChange() {
-    const newType = settings.computer_type === "Server" ? "Cliente" : "Servidor";
-    const confirmed = window.confirm(
-      `Você realmente deseja alternar para ${newType}?\n\nNota: Isso mudará quais partituras serão verificadas nas próximas verificações.`
-    );
-    
-    if (!confirmed) return;
+  function handleComputerTypeChange() {
+    setIsChangeComputerTypeModalOpen(true);
+  }
 
+  async function handleConfirmComputerTypeChange() {
     setIsTogglingType(true);
     try {
       const result = await api.toggleComputerType();
@@ -131,6 +130,14 @@ export default function SettingsPage() {
           )
         }
       </div>
+
+      {/* Change Computer Type Modal */}
+      <ChangeComputerTypeModal
+        isOpen={isChangeComputerTypeModalOpen}
+        currentType={settings.computer_type as "Server" | "Client"}
+        onClose={() => setIsChangeComputerTypeModalOpen(false)}
+        onConfirm={handleConfirmComputerTypeChange}
+      />
     </div>
   );
 }

@@ -406,12 +406,13 @@ Ao clicar na música será expandido e mostrar uma lista de partituras/instrumen
 			- [x] Caso o Cliente adicione uma categoria não é necessário atualizar, mas caso ele mude a categoria ou adicione uma nova categoria a uma música, a música deve ficar com status `pending`.
 		- [x] Adicionar alterações nas tabelas de alterações.
 		- Um detalhe importante, quando for arquivo, não vai ter `oldValue` e `newValue`, vai ter apenas `field` com o valor `file`.
-	- [x] O botão de "verificar alterações" no Cliente, deve ter o comportamento diferente. No Servidor ele busca nos diretórios e depois vai buscar no Drive (não implementado), no Cliente é apenas no Drive (não implementando), então quando o usuário com tipo Cliente clicar no botão, deve aparecer um `toast` falando: "funcionalidade não implementada".
-- [ ] Adicionar modal para confirmar alteração de tipo do computador.
+	- [x] O botão de "verificar alterações" no Cliente, deve ter o comportamento diferente. No Servidor ele busca nos diretórios e depois vai buscar no Drive (não implementado), no Cliente é apenas no Drive (não implementando).
+- [x] Adicionar modal para confirmar alteração de tipo do computador.
 - Em hipótese alguma deve alterar antes do usuário confirmar no modal.
 - Deve ser um modal e não um confirm genérico.
 - Para a pessoa mudar, ela precisa esperar 5 segundos (botão desativado com contagem de tempo).
 - O modal deve transmitir o impactado da mudança, tendo uma grande exclamação no topo.
+- [ ] Adicionar no "Sidebar" todas as músicas/partituras com status `pending`.
 - [ ] Refatoração
 	- [ ] Refatorar front
 	- [ ] Refatorar back

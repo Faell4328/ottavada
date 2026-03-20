@@ -9,5 +9,6 @@ export { EditMusicModal } from "./EditMusicModal";
 export { EditInstrumentModal } from "./EditInstrumentModal";
 export { AddFilesModal } from "./AddFilesModal";
 export { AddMusicModal } from "./AddMusicModal";
+export { ChangeComputerTypeModal } from "./ChangeComputerTypeModal";
 export { MemoizedSongRow } from "./SongRow";
 export { MemoizedScoreRow } from "./ScoreRow";
