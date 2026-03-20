@@ -81,6 +81,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         songs = await api.getFavoritedSongs();
       } else if (state.sidebarView === "drafts") {
         songs = await api.getSongsWithDrafts();
+      } else if (state.sidebarView === "not_found") {
+        songs = await api.getSongsWithNotFound();
       } else if (
         typeof state.sidebarView === "object" &&
         state.sidebarView.type === "category"

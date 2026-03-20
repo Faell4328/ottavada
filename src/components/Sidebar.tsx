@@ -6,6 +6,7 @@ import {
   FolderOpen,
   Plus,
   Trash2,
+  AlertCircle,
 } from "lucide-react";
 import { useAppState } from "../context/AppContext";
 import type { SidebarView } from "../types";
@@ -91,6 +92,12 @@ export default function Sidebar() {
             label="Rascunhos Ativos"
             active={isActive("drafts")}
             onClick={() => setSidebarView("drafts")}
+          />
+          <SidebarItem
+            icon={<AlertCircle className="h-3.5 w-3.5" />}
+            label="Partituras não encontradas"
+            active={isActive("not_found")}
+            onClick={() => setSidebarView("not_found")}
           />
         </nav>
       </div>

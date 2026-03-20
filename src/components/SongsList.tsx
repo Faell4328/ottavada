@@ -95,9 +95,11 @@ export default function SongsList() {
         ? "Favoritos"
         : state.sidebarView === "drafts"
           ? "Rascunhos Ativos"
-          : typeof state.sidebarView === "object"
-            ? state.sidebarView.name
-            : "";
+          : state.sidebarView === "not_found"
+            ? "Partituras não encontradas"
+            : typeof state.sidebarView === "object"
+              ? state.sidebarView.name
+              : "";
 
   const handleSuggestionClick = (song: SongListItem) => {
     setLocalQuery(song.name);

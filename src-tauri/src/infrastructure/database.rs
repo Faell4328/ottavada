@@ -603,6 +603,41 @@ impl Database {
         Ok(result)
     }
 
+    #[allow(dead_code)]
+    pub fn get_songs_with_not_found(&self) -> Result<Vec<SongListItem>, AppError> {
+        let conn = self.conn.lock().unwrap();
+
+        let mut stmt = conn.prepare(
+            "SELECT DISTINCT s.id, s.name, s.composer, s.arranger, s.updated_at, s.is_favorite
+             FROM songs s
+             INNER JOIN scores sc ON sc.song_id = s.id
+             WHERE sc.status = 'not_found'
+             ORDER BY s.updated_at DESC"
+        )?;
+
+        let songs: Vec<SongListItem> = stmt.query_map([], |row| {
+            Ok(SongListItem {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                composer: row.get(2)?,
+                arranger: row.get(3)?,
+                updated_at: parse_datetime(&row.get::<_, String>(4)?),
+                is_favorite: row.get::<_, i32>(5)? != 0,
+                category_ids: Vec::new(),
+                scores: Vec::new(),
+            })
+        })?.filter_map(|r| r.ok()).collect();
+
+        let mut result = Vec::with_capacity(songs.len());
+        for mut song in songs {
+            song.scores = Self::get_scores_for_song(&conn, &song.id)?;
+            song.category_ids = Self::get_category_ids(&conn, &song.id)?;
+            result.push(song);
+        }
+
+        Ok(result)
+    }
+
     // ── Scores ──
 
     pub fn insert_score(&self, score: &Score) -> Result<(), AppError> {

@@ -59,6 +59,7 @@ export type SidebarView =
   | "all"
   | "favorites"
   | "drafts"
+  | "not_found"
   | { type: "category"; id: string; name: string };
 
 export interface AppState {

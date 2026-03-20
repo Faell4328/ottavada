@@ -24,8 +24,10 @@ Um aplicativo desktop windows, para organizar, controlar status das partituras e
 
 - **Main:** versão sincronizável, autorizada para backup no Google Drive (definida pelo usuário)
 - **Pending**: quando o cliente faz uma atualização e está pendente o server autorizar.
+	- Pode fazer backup no Google Drive, mas a forma de tratar ele pelo servidor é totalmente diferente. Ainda não elaborei como vai ser.
 - **Draft:** rascunho automático quando arquivo é alterado (não é feito o backup no Google Drive)
 - **Not Found**: partitura não encontrada (pode ter sido deletada ou renomeada)
+
 - **Monitoramento:** detecta mudanças e converte automaticamente para draft (apenas no servidor)
 
 ## Google Drive
@@ -175,6 +177,7 @@ Será documentando em JSON, mas na aplicação real é utilizando `MessagePack`.
 computer: {
 	"id": "lfajkdçf",
 	"name": "Faell",
+	"type": "Client" | "Server",
 	"dataBaseUpdatedAt": 8021948012,
 	"apiKey": {
 		"Client ID / Secret": "Identifica a aplicação",
@@ -324,8 +327,8 @@ Ao clicar na música será expandido e mostrar uma lista de partituras/instrumen
 - [x] Verificar dependências do projeto (se tem alguma não utilizada e se tem todas instaladas)
 - [x] Adicionar sistema de log
 	- [x] Garantir que está salvando o `C:\Users\<seu-usuario>\AppData\Roaming\<nome-do-app>\`
-- [ ] Deletar música e partitura  (apenas no programa).
-	- [ ] O programa deve abrir um modal de confirmação (igual para alterar o status da partitura).
+- [x] Deletar música e partitura  (apenas no programa).
+	- [x] O programa deve abrir um modal de confirmação (igual para alterar o status da partitura).
 
 ## Funcionalidades para v0.2 - funcionamento local completo
 - [x] Mudar as informações do sistema do banco de dados para o `tauri-plugin-store`
@@ -341,8 +344,15 @@ Ao clicar na música será expandido e mostrar uma lista de partituras/instrumen
 	- [x] Refatorar e adicionar teste no front
 	- [x] Refatorar e adicionar teste no back
 - [x] Atualizar o banco de dados (back e front), adicionando a tabela de `directory`
-- [x] Adicionar o status e funcionamento do `not found`
+- [x] Adicionar o status e funcionalidade do `not found`
+- [x] Adicione "Partituras não encontradas" na Sidebar.
 - [ ] Adicionar suporte Cliente/Servidor
+	- [ ] Atualizar o `tauri-plugin-store` adicionando o `type`. 
+	- [ ] Atualizar página de primeiro acesso (é preciso adicionar a opção para o usuário escolher entre "Cliente" e "Servidor"). Coloque um textinho orientando o que cada um faz.
+	- [ ] Adicione nas configurações a opção para alterar (quando for marcada deve pedi confirmação, tipo para deletar uma partitura), não é para atualizar no back, deve emitir um toast avisando que a funcionalidade não está disponível no momento.
+	- [ ] Implementar restrições.
+		- [ ] Não permitir que o cliente adicione música diretamente (adicionar nova música, adicionar arquivo e indexar diretório).
+		- [ ] Tudo que o Cliente atualizar deve ficar com o status `pending`.
 
 ## Funcionalidades para v0.3 - sincronização offline-ready
 - [ ] Criar MessagePack
@@ -360,6 +370,7 @@ Ao clicar na música será expandido e mostrar uma lista de partituras/instrumen
 - [ ] Testar massivamente e corrigir qualquer problema relacionado a adição de música e partituras.
 - [ ] Testar massivamente e corrigir qualquer problema relacionado a detecção de arquivos modificados.
 - [ ] Testar massivamente e corrigir qualquer problema relacionado a backup (todas as etapas).
+- [ ] Testar massivamente os possíveis e altamente prováveis problemas entre Cliente e Servidor.
 
 ## Funcionalidades para v2 (apenas rascunho/ideias)
 

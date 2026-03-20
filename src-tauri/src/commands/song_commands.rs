@@ -35,6 +35,12 @@ pub fn get_songs_with_drafts(db: State<'_, Database>) -> Result<Vec<SongListItem
 }
 
 #[tauri::command]
+#[allow(dead_code)]
+pub fn get_songs_with_not_found(db: State<'_, Database>) -> Result<Vec<SongListItem>, AppError> {
+    db.get_songs_with_not_found()
+}
+
+#[tauri::command]
 pub fn search_songs(db: State<'_, Database>, query: String) -> Result<Vec<SongListItem>, AppError> {
     if query.trim().is_empty() {
         info!("Busca vazia, retornando todas as músicas");
