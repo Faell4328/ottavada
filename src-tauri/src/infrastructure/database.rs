@@ -884,6 +884,46 @@ impl Database {
         conn.execute("DELETE FROM categories WHERE id = ?1", params![category_id])?;
         Ok(())
     }
+
+    pub fn delete_song(&self, song_id: &str) -> Result<(), AppError> {
+        let conn = self.conn.lock().unwrap();
+        
+        // Obter todos os diretórios usados por essa música
+        let mut stmt = conn.prepare(
+            "SELECT DISTINCT directory_id FROM scores WHERE song_id = ?1"
+        )?;
+        let directory_ids: Vec<String> = stmt
+            .query_map(params![song_id], |row| row.get(0))?
+            .filter_map(|r| r.ok())
+            .collect();
+        
+        // Deletar as partituras da música
+        conn.execute("DELETE FROM scores WHERE song_id = ?1", params![song_id])?;
+        
+        // Deletar as associações de categorias
+        conn.execute("DELETE FROM categories_songs WHERE song_id = ?1", params![song_id])?;
+        
+        // Deletar a música
+        let affected = conn.execute("DELETE FROM songs WHERE id = ?1", params![song_id])?;
+        if affected == 0 {
+            return Err(AppError::Generic("Música não encontrada".into()));
+        }
+        
+        // Verificar cada diretório: se não há mais scores usando esse diretório, deletar
+        for dir_id in directory_ids {
+            let has_scores: bool = conn.query_row(
+                "SELECT COUNT(*) > 0 FROM scores WHERE directory_id = ?1",
+                params![&dir_id],
+                |row| row.get(0)
+            )?;
+            
+            if !has_scores {
+                conn.execute("DELETE FROM directories WHERE id = ?1", params![&dir_id])?;
+            }
+        }
+        
+        Ok(())
+    }
 }
 
 fn parse_datetime(s: &str) -> chrono::NaiveDateTime {

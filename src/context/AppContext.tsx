@@ -48,6 +48,8 @@ interface AppContextValue {
     scoreId: string,
     status: "Main" | "Draft" | "Pending"
   ) => Promise<void>;
+  deleteScore: (scoreId: string) => Promise<void>;
+  deleteSong: (songId: string) => Promise<void>;
   completeFirstRun: (
     computerId: string,
     computerName: string,
@@ -297,6 +299,53 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [state.songs]
   );
 
+  const handleDeleteScore = useCallback(
+    async (scoreId: string) => {
+      try {
+        await api.deleteScore(scoreId);
+        
+        // Limpar a seleção se o score deletado estava selecionado
+        if (state.selectedScore?.id === scoreId) {
+          dispatch({ type: "SET_SELECTED_SCORE", payload: null });
+        }
+        
+        // Recarregar a lista de músicas
+        await loadSongs();
+        toast.success("Partitura deletada com sucesso!");
+      } catch (err) {
+        console.error("Failed to delete score:", err);
+        const errorMsg = err instanceof Error ? err.message : "Erro ao deletar partitura";
+        toast.error(errorMsg);
+        throw err;
+      }
+    },
+    [state.selectedScore, loadSongs]
+  );
+
+  const handleDeleteSong = useCallback(
+    async (songId: string) => {
+      try {
+        await api.deleteSong(songId);
+        
+        // Limpar a seleção se a música deletada estava selecionada
+        if (state.selectedSong?.id === songId) {
+          dispatch({ type: "SET_SELECTED_SONG", payload: null });
+        }
+        dispatch({ type: "SET_SELECTED_SCORE", payload: null });
+        
+        // Recarregar a lista de músicas
+        await loadSongs();
+        toast.success("Música deletada com sucesso!");
+      } catch (err) {
+        console.error("Failed to delete song:", err);
+        const errorMsg = err instanceof Error ? err.message : "Erro ao deletar música";
+        toast.error(errorMsg);
+        throw err;
+      }
+    },
+    [state.selectedSong, loadSongs]
+  );
+
   const handleSaveSettings = useCallback(
     async (settings: AppSettings) => {
       try {
@@ -360,8 +409,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         // Verificar se há arquivos não encontrados (marcados como not_found)
         if (result.not_found_files && result.not_found_files.length > 0) {
           if (!isAutomatic) {
-            toast.warning(
-              `⚠ ${result.not_found_files.length} arquivo(s) não encontrado(s)`
+            toast(
+              `⚠ ${result.not_found_files.length} arquivo(s) não encontrado(s)`,
+              { icon: "⚠️" }
             );
           }
           await loadSongs(); // Recarregar para atualizar UI com status not_found
@@ -422,6 +472,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       updateSong: handleUpdateSong,
       updateScore: handleUpdateScore,
       updateScoreStatus: handleUpdateScoreStatus,
+      deleteScore: handleDeleteScore,
+      deleteSong: handleDeleteSong,
       saveSettings: handleSaveSettings,
       completeFirstRun: handleCompleteFirstRun,
       scanFilesForChanges: handleScanFilesForChanges,
@@ -440,6 +492,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       handleDeleteCategory,
       handleUpdateSong,
       handleUpdateScore,
+      handleUpdateScoreStatus,
+      handleDeleteScore,
+      handleDeleteSong,
       handleSaveSettings,
       handleCompleteFirstRun,
       handleScanFilesForChanges,

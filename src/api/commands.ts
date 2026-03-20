@@ -127,6 +127,10 @@ export async function deleteScore(scoreId: string): Promise<void> {
   return invoke("delete_score", { scoreId });
 }
 
+export async function deleteSong(songId: string): Promise<void> {
+  return invoke("delete_song", { songId });
+}
+
 export async function getSearchSuggestions(query: string, limit?: number): Promise<SongListItem[]> {
   return invoke("get_search_suggestions", { query, limit });
 }

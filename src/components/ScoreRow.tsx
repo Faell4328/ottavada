@@ -14,6 +14,7 @@ interface ScoreRowProps {
   onMenuClose: () => void;
   onEdit: () => void;
   onStatusChange: (scoreId: string, status: "Main" | "Draft" | "Pending") => Promise<void>;
+  onDelete: (scoreId: string) => Promise<void>;
 }
 
 interface ConfirmationModal {
@@ -33,6 +34,7 @@ function ScoreRow({
   onMenuClose,
   onEdit,
   onStatusChange,
+  onDelete,
 }: ScoreRowProps) {
   const [isOpening, setIsOpening] = useState(false);
   const [confirmModal, setConfirmModal] = useState<ConfirmationModal>({
@@ -105,6 +107,24 @@ function ScoreRow({
         } catch (err) {
           console.error("Failed to set score as draft:", err);
           toast.error("Erro ao definir como Rascunho");
+        }
+      },
+      isLoading: false,
+    });
+  };
+
+  const handleDelete = () => {
+    setConfirmModal({
+      isOpen: true,
+      title: "Deletar Partitura",
+      message: "Você realmente deseja deletar esta partitura? Esta ação não pode ser desfeita.",
+      action: async () => {
+        try {
+          await onDelete(score.id);
+          onMenuClose();
+        } catch (err) {
+          console.error("Failed to delete score:", err);
+          toast.error("Erro ao deletar partitura");
         }
       },
       isLoading: false,
@@ -216,6 +236,13 @@ function ScoreRow({
                     e.stopPropagation();
                     onEdit();
                     onMenuClose();
+                  }}
+                />
+                <ContextMenuItem
+                  label="Deletar"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete();
                   }}
                   isLast
                 />

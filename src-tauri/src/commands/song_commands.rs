@@ -382,3 +382,21 @@ pub fn get_search_suggestions(
     songs.truncate(max_results as usize);
     Ok(songs)
 }
+
+#[tauri::command]
+pub fn delete_song(
+    db: State<'_, Database>,
+    song_id: String,
+) -> Result<(), AppError> {
+    info!("Deletando música: {}", song_id);
+    match db.delete_song(&song_id) {
+        Ok(_) => {
+            info!("Música deletada com sucesso: {}", song_id);
+            Ok(())
+        }
+        Err(e) => {
+            error!("Erro ao deletar música: {:?}", e);
+            Err(e)
+        }
+    }
+}

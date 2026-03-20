@@ -130,6 +130,7 @@ pub fn run() {
             commands::song_commands::create_song_with_categories,
             commands::song_commands::create_song_with_metadata,
             commands::song_commands::update_song,
+            commands::song_commands::delete_song,
             // Scores
             commands::score_commands::update_score,
             commands::score_commands::add_score_to_song,

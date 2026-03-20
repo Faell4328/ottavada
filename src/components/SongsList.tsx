@@ -12,7 +12,7 @@ import toast from "react-hot-toast";
 import type { SongListItem, ScoreListItem } from "../types";
 
 export default function SongsList() {
-  const { state, setSearchQuery, selectSong, selectScore, toggleFavorite, loadSongs, updateSong, updateScore, updateScoreStatus } =
+  const { state, setSearchQuery, selectSong, selectScore, toggleFavorite, loadSongs, updateSong, updateScore, updateScoreStatus, deleteScore, deleteSong } =
     useAppState();
   const [localQuery, setLocalQuery] = useState("");
   const [suggestions, setSuggestions] = useState<SongListItem[]>([]);
@@ -240,6 +240,7 @@ export default function SongsList() {
                         setEditingSong(song);
                         setIsEditMusicModalOpen(true);
                       }}
+                      onDelete={deleteSong}
                       menuId={`song-${song.id}`}
                       isMenuOpen={openMenuId === `song-${song.id}`}
                       onMenuOpen={(id) => setOpenMenuId(id)}
@@ -263,6 +264,7 @@ export default function SongsList() {
                             setIsEditScoreModalOpen(true);
                           }}
                           onStatusChange={updateScoreStatus}
+                          onDelete={deleteScore}
                         />
                       ))}
                   </React.Fragment>

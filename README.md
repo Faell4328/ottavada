@@ -324,7 +324,7 @@ Ao clicar na música será expandido e mostrar uma lista de partituras/instrumen
 - [x] Verificar dependências do projeto (se tem alguma não utilizada e se tem todas instaladas)
 - [x] Adicionar sistema de log
 	- [x] Garantir que está salvando o `C:\Users\<seu-usuario>\AppData\Roaming\<nome-do-app>\`
-- [ ] Deletar partitura  (apenas no programa).
+- [ ] Deletar música e partitura  (apenas no programa).
 	- [ ] O programa deve abrir um modal de confirmação (igual para alterar o status da partitura).
 
 ## Funcionalidades para v0.2 - funcionamento local completo
