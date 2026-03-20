@@ -346,10 +346,10 @@ Ao clicar na música será expandido e mostrar uma lista de partituras/instrumen
 - [x] Atualizar o banco de dados (back e front), adicionando a tabela de `directory`
 - [x] Adicionar o status e funcionalidade do `not found`
 - [x] Adicione "Partituras não encontradas" na Sidebar.
-- [ ] Adicionar suporte Cliente/Servidor
-	- [ ] Atualizar o `tauri-plugin-store` adicionando o `type`. 
-	- [ ] Atualizar página de primeiro acesso (é preciso adicionar a opção para o usuário escolher entre "Cliente" e "Servidor"). Coloque um textinho orientando o que cada um faz.
-	- [ ] Adicione nas configurações a opção para alterar (quando for marcada deve pedi confirmação, tipo para deletar uma partitura), não é para atualizar no back, deve emitir um toast avisando que a funcionalidade não está disponível no momento.
+- [x] Adicionar suporte Cliente/Servidor
+	- [x] Atualizar o `tauri-plugin-store` adicionando o `type`. 
+	- [x] Atualizar página de primeiro acesso (é preciso adicionar a opção para o usuário escolher entre "Cliente" e "Servidor"). Coloque um textinho orientando o que cada um faz.
+	- [x] Adicione nas configurações a opção para alterar (quando for marcada deve pedi confirmação, tipo para deletar uma partitura), não é para atualizar no back, deve emitir um toast avisando que a funcionalidade não está disponível no momento.
 	- [ ] Implementar restrições.
 		- [ ] Não permitir que o cliente adicione música diretamente (adicionar nova música, adicionar arquivo e indexar diretório).
 		- [ ] Tudo que o Cliente atualizar deve ficar com o status `pending`.
