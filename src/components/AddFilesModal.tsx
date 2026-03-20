@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
-import { X, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { useAppState } from "../context/AppContext";
 import type { IndexedFile } from "../types";
 import * as api from "../api/commands";
+import { Modal, ModalFooterButtons, FormField, TextInput, ErrorMessage } from "./ui";
+import { CategoryCheckboxList } from "./ui/CategoryCheckboxList";
 
 interface AddFilesModalProps {
   isOpen: boolean;
@@ -27,7 +29,6 @@ export function AddFilesModal({
   const [instrumentNames, setInstrumentNames] = useState<Record<number, string>>({});
   const [removedFileIndices, setRemovedFileIndices] = useState<Set<number>>(new Set());
 
-  // Extrair nome base da música do primeiro arquivo
   useEffect(() => {
     if (isOpen && files.length > 0) {
       setTitle(files[0].name || "");
@@ -37,7 +38,6 @@ export function AddFilesModal({
       setError("");
       setRemovedFileIndices(new Set());
       
-      // Inicializar nomes dos instrumentos
       const names: Record<number, string> = {};
       files.forEach((file, idx) => {
         names[idx] = file.instrument || "";
@@ -55,10 +55,7 @@ export function AddFilesModal({
   };
 
   const updateInstrumentName = (idx: number, name: string) => {
-    setInstrumentNames((prev) => ({
-      ...prev,
-      [idx]: name,
-    }));
+    setInstrumentNames((prev) => ({ ...prev, [idx]: name }));
   };
 
   const removeFile = (idx: number) => {
@@ -86,9 +83,7 @@ export function AddFilesModal({
     setError("");
 
     try {
-      // Mapear arquivos ativos com nomes de instrumentos editados
       const filteredFiles = activeFiles.map((f) => {
-        // Encontrar o índice original do arquivo
         const originalIdx = files.indexOf(f);
         return {
           path: f.path,
@@ -115,163 +110,94 @@ export function AddFilesModal({
     }
   };
 
-  if (!isOpen || files.length === 0) return null;
+  if (files.length === 0) return null;
 
   const activeFiles = files.filter((_, idx) => !removedFileIndices.has(idx));
   const instrumentCount = activeFiles.length;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="w-full max-w-lg rounded-lg bg-[#f8fafd] shadow-xl border border-[#c5cfdb] max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-[#d8e0ea]">
-          <h2 className="text-lg font-bold text-[#2f4259]">Adicionar Partitura(s)</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1 rounded hover:bg-[#eef2f6] transition-colors"
-          >
-            <X className="h-5 w-5 text-[#8b9db2]" />
-          </button>
-        </div>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Adicionar Partitura(s)"
+      maxWidth="max-w-lg"
+      footer={
+        <ModalFooterButtons
+          onCancel={onClose}
+          onConfirm={handleSave}
+          isSaving={isSaving}
+        />
+      }
+    >
+      <FormField label="Nome da Música" required>
+        <TextInput
+          value={title}
+          onChange={setTitle}
+          placeholder="Nome da música"
+          autoFocus
+        />
+      </FormField>
 
-        {/* Body */}
-        <div className="p-4 space-y-4">
-          {/* Nome da Música */}
-          <div>
-            <label className="block text-sm font-medium text-[#344b61] mb-1.5">
-              Nome da Música *
-            </label>
-            <input
-              type="text"
-              placeholder="Nome da música"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full rounded border border-[#c5cfdb] bg-white px-3 py-2 text-sm text-[#344b61] placeholder-[#a3b5c7] outline-none focus:border-[#7ba0d4] focus:ring-1 focus:ring-[#7ba0d4]/30"
-              autoFocus
-            />
+      <FormField label="Compositor">
+        <TextInput
+          value={composer}
+          onChange={setComposer}
+          placeholder="Nome do compositor"
+        />
+      </FormField>
+
+      <FormField label="Arranjador">
+        <TextInput
+          value={arranger}
+          onChange={setArranger}
+          placeholder="Nome do arranjador"
+        />
+      </FormField>
+
+      {state.categories.length > 0 && (
+        <FormField label="Categorias">
+          <CategoryCheckboxList
+            categories={state.categories}
+            selectedIds={selectedCategories}
+            onToggle={toggleCategory}
+          />
+        </FormField>
+      )}
+
+      {instrumentCount > 0 && (
+        <FormField label={`Instrumentos a adicionar (${instrumentCount})`}>
+          <div className="rounded border border-[#c5cfdb] bg-white p-3 space-y-4 max-h-75 overflow-y-auto">
+            {files.map((file, idx) => {
+              if (removedFileIndices.has(idx)) return null;
+              
+              return (
+                <div key={idx} className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs text-[#8b9db2] font-medium truncate">
+                      {file.path.split('/').pop()}
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => removeFile(idx)}
+                      className="p-1 text-[#8b9db2] hover:text-red-500 transition-colors"
+                      title="Remover arquivo"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <TextInput
+                    value={instrumentNames[idx] || ""}
+                    onChange={(val) => updateInstrumentName(idx, val)}
+                    placeholder="Nome do instrumento"
+                  />
+                </div>
+              );
+            })}
           </div>
+        </FormField>
+      )}
 
-          {/* Compositor */}
-          <div>
-            <label className="block text-sm font-medium text-[#344b61] mb-1.5">
-              Compositor
-            </label>
-            <input
-              type="text"
-              placeholder="Nome do compositor"
-              value={composer}
-              onChange={(e) => setComposer(e.target.value)}
-              className="w-full rounded border border-[#c5cfdb] bg-white px-3 py-2 text-sm text-[#344b61] placeholder-[#a3b5c7] outline-none focus:border-[#7ba0d4] focus:ring-1 focus:ring-[#7ba0d4]/30"
-            />
-          </div>
-
-          {/* Arranjador */}
-          <div>
-            <label className="block text-sm font-medium text-[#344b61] mb-1.5">
-              Arranjador
-            </label>
-            <input
-              type="text"
-              placeholder="Nome do arranjador"
-              value={arranger}
-              onChange={(e) => setArranger(e.target.value)}
-              className="w-full rounded border border-[#c5cfdb] bg-white px-3 py-2 text-sm text-[#344b61] placeholder-[#a3b5c7] outline-none focus:border-[#7ba0d4] focus:ring-1 focus:ring-[#7ba0d4]/30"
-            />
-          </div>
-
-          {/* Categorias */}
-          {state.categories && state.categories.length > 0 && (
-            <div>
-              <label className="block text-sm font-medium text-[#344b61] mb-2">
-                Categorias
-              </label>
-              <div className="space-y-2 border border-[#c5cfdb] rounded p-3 max-h-40 overflow-y-auto">
-                {state.categories.map((category) => (
-                  <label
-                    key={category.id}
-                    className="flex items-center gap-2 cursor-pointer"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedCategories.includes(category.id)}
-                      onChange={() => toggleCategory(category.id)}
-                      className="rounded border-[#c5cfdb]"
-                    />
-                    <span className="text-sm text-[#344b61]">{category.name}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Instrumentos a adicionar */}
-          {instrumentCount > 0 && (
-            <div>
-              <label className="block text-sm font-medium text-[#344b61] mb-2">
-                Instrumentos a adicionar ({instrumentCount})
-              </label>
-              <div className="rounded border border-[#c5cfdb] bg-white p-3 space-y-4 max-h-75 overflow-y-auto">
-                {files.map((file, idx) => {
-                  if (removedFileIndices.has(idx)) return null;
-                  
-                  return (
-                    <div key={idx} className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <label className="text-xs text-[#8b9db2] font-medium truncate">
-                          {file.path.split('/').pop()}
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => removeFile(idx)}
-                          className="p-1 text-[#8b9db2] hover:text-red-500 transition-colors"
-                          title="Remover arquivo"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                      <input
-                        type="text"
-                        value={instrumentNames[idx] || ""}
-                        onChange={(e) => updateInstrumentName(idx, e.target.value)}
-                        placeholder="Nome do instrumento"
-                        className="w-full rounded border border-[#c5cfdb] bg-[#f8fafd] px-2 py-1.5 text-sm text-[#344b61] placeholder-[#a3b5c7] outline-none focus:border-[#7ba0d4] focus:ring-1 focus:ring-[#7ba0d4]/30"
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Erro */}
-          {error && (
-            <div className="rounded bg-red-50 border border-red-200 p-2.5">
-              <p className="text-xs text-red-600">{error}</p>
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="flex gap-2 p-4 border-t border-[#d8e0ea]">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isSaving}
-            className="flex-1 rounded border border-[#c5cfdb] px-3 py-2 text-sm font-medium text-[#344b61] hover:bg-[#eef2f6] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Cancelar
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={isSaving}
-            className="flex-1 rounded bg-[#4f84d7] px-3 py-2 text-sm font-medium text-white hover:bg-[#3d6fb8] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isSaving ? "Salvando..." : "Salvar"}
-          </button>
-        </div>
-      </div>
-    </div>
+      <ErrorMessage error={error} />
+    </Modal>
   );
 }

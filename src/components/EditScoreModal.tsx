@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { X } from "lucide-react";
 import { open } from "@tauri-apps/plugin-dialog";
 import type { SongListItem, ScoreListItem } from "../types";
+import { Modal, ModalFooterButtons, FormField, TextInput, ErrorMessage } from "./ui";
 
 interface EditScoreModalProps {
   isOpen: boolean;
@@ -86,117 +86,67 @@ export function EditScoreModal({
     }
   };
 
-  if (!isOpen || !score || !instrument) return null;
+  if (!score || !instrument) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-[#f8fafd] rounded-lg shadow-xl border border-[#c5cfdb] w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-[#e0e8f0]">
-          <h2 className="text-lg font-bold text-[#2f4259]">Editar Partitura</h2>
-          <button
-            onClick={onClose}
-            className="p-1 rounded hover:bg-[#f2f5fa] transition-colors"
-            title="Fechar"
-          >
-            <X className="h-5 w-5 text-[#8b9db2]" />
-          </button>
-        </div>
-
-        {/* Body */}
-        <div className="p-4 space-y-4">
-          {/* Music Info - Read Only */}
-          <div>
-            <label className="block text-sm font-medium text-[#344b61] mb-1.5">
-              Música
-            </label>
-            <div className="rounded border border-[#c5cfdb] bg-[#f5f7fa] p-3">
-              <p className="text-sm text-[#344b61] font-medium">{score.name}</p>
-              {score.composer && (
-                <p className="text-xs text-[#8b9db2] mt-1">
-                  Compositor: {score.composer}
-                </p>
-              )}
-              {score.arranger && (
-                <p className="text-xs text-[#8b9db2]">
-                  Arranjador: {score.arranger}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Instrument Name */}
-          <div>
-            <label className="block text-sm font-medium text-[#344b61] mb-1.5">
-              Nome do Instrumento
-            </label>
-            <input
-              type="text"
-              value={instrumentName}
-              onChange={(e) => setInstrumentName(e.target.value)}
-              className="w-full rounded border border-[#c5cfdb] px-3 py-2 text-sm text-[#344b61] placeholder-[#a3b5c7] outline-none focus:border-[#7ba0d4] focus:ring-1 focus:ring-[#7ba0d4]/30"
-              placeholder="Ex: Flauta, Violino, Piano"
-              disabled={isSaving}
-            />
-          </div>
-
-          {/* File Path */}
-          <div>
-            <label className="block text-sm font-medium text-[#344b61] mb-1.5">
-              Caminho do Arquivo *
-            </label>
-            <div className="space-y-2">
-              {filePath && (
-                <div className="rounded border border-[#c5cfdb] bg-[#f5f7fa] p-3 min-h-[2.5rem] overflow-auto max-h-24">
-                  <p className="text-xs text-[#344b61] whitespace-pre-wrap break-all">
-                    {filePath}
-                  </p>
-                </div>
-              )}
-              {!filePath && (
-                <div className="rounded border border-[#c5cfdb] bg-[#f5f7fa] p-3 min-h-[2.5rem] flex items-center">
-                  <p className="text-sm text-[#a3b5c7]">
-                    Nenhum arquivo selecionado
-                  </p>
-                </div>
-              )}
-              <button
-                type="button"
-                onClick={handleSelectFile}
-                disabled={isSaving}
-                className="w-full px-4 py-2 rounded bg-[#f2f5fa] border border-[#c5cfdb] text-sm font-medium text-[#344b61] hover:bg-[#eef2f6] transition-colors disabled:opacity-50"
-              >
-                Alterar Arquivo
-              </button>
-            </div>
-          </div>
-
-          {/* Error Message */}
-          {error && (
-            <div className="rounded bg-red-50 border border-red-200 p-2.5">
-              <p className="text-xs text-red-600">{error}</p>
-            </div>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Editar Partitura"
+      maxWidth="max-w-lg"
+      footer={
+        <ModalFooterButtons
+          onCancel={onClose}
+          onConfirm={handleSave}
+          isSaving={isSaving}
+        />
+      }
+    >
+      {/* Music Info - Read Only */}
+      <FormField label="Música">
+        <div className="rounded border border-[#c5cfdb] bg-[#f5f7fa] p-3">
+          <p className="text-sm text-[#344b61] font-medium">{score.name}</p>
+          {score.composer && (
+            <p className="text-xs text-[#8b9db2] mt-1">
+              Compositor: {score.composer}
+            </p>
+          )}
+          {score.arranger && (
+            <p className="text-xs text-[#8b9db2]">
+              Arranjador: {score.arranger}
+            </p>
           )}
         </div>
+      </FormField>
 
-        {/* Footer */}
-        <div className="flex gap-2 p-4 border-t border-[#e0e8f0]">
+      <FormField label="Nome do Instrumento">
+        <TextInput
+          value={instrumentName}
+          onChange={setInstrumentName}
+          placeholder="Ex: Flauta, Violino, Piano"
+          disabled={isSaving}
+        />
+      </FormField>
+
+      <FormField label="Caminho do Arquivo" required>
+        <div className="space-y-2">
+          <div className="rounded border border-[#c5cfdb] bg-[#f5f7fa] p-3 min-h-[2.5rem] overflow-auto max-h-24">
+            <p className="text-xs text-[#344b61] whitespace-pre-wrap break-all">
+              {filePath || <span className="text-sm text-[#a3b5c7]">Nenhum arquivo selecionado</span>}
+            </p>
+          </div>
           <button
-            onClick={onClose}
-            className="flex-1 rounded border border-[#c5cfdb] px-3 py-2 text-sm font-medium text-[#344b61] hover:bg-[#f2f5fa] transition-colors disabled:opacity-50"
+            type="button"
+            onClick={handleSelectFile}
             disabled={isSaving}
+            className="w-full px-4 py-2 rounded bg-[#f2f5fa] border border-[#c5cfdb] text-sm font-medium text-[#344b61] hover:bg-[#eef2f6] transition-colors disabled:opacity-50"
           >
-            Cancelar
-          </button>
-          <button
-            onClick={handleSave}
-            className="flex-1 rounded bg-[#4f84d7] px-3 py-2 text-sm font-medium text-white hover:bg-[#3d6fb8] transition-colors disabled:opacity-50"
-            disabled={isSaving}
-          >
-            {isSaving ? "Salvando..." : "Salvar"}
+            Alterar Arquivo
           </button>
         </div>
-      </div>
-    </div>
+      </FormField>
+
+      <ErrorMessage error={error} />
+    </Modal>
   );
 }

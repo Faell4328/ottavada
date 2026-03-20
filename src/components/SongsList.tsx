@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState } from "react";
 import { Search, FileMusic } from "lucide-react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useAppState } from "../context/AppContext";
@@ -7,6 +7,7 @@ import { EditScoreModal } from "./EditScoreModal";
 import { MemoizedSongRow } from "./SongRow";
 import { MemoizedScoreRow } from "./ScoreRow";
 import { getDirectoryPath } from "../utils/paths";
+import { useSearch } from "../hooks/useSearch";
 import * as api from "../api/commands";
 import toast from "react-hot-toast";
 import type { SongListItem, ScoreListItem } from "../types";
@@ -14,16 +15,12 @@ import type { SongListItem, ScoreListItem } from "../types";
 export default function SongsList() {
   const { state, setSearchQuery, selectSong, selectScore, toggleFavorite, loadSongs, updateSong, updateScore, updateScoreStatus, deleteScore, deleteSong } =
     useAppState();
-  const [localQuery, setLocalQuery] = useState("");
-  const [suggestions, setSuggestions] = useState<SongListItem[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
+  const search = useSearch(setSearchQuery);
   const [editingSong, setEditingSong] = useState<SongListItem | null>(null);
   const [isEditMusicModalOpen, setIsEditMusicModalOpen] = useState(false);
   const [editingScore, setEditingScore] = useState<ScoreListItem | null>(null);
   const [isEditScoreModalOpen, setIsEditScoreModalOpen] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const suggestionsRef = useRef<HTMLDivElement>(null);
 
   const closeAllMenus = () => setOpenMenuId(null);
 
@@ -46,48 +43,6 @@ export default function SongsList() {
     await updateScore(data.scoreFileId, data.instrumentName, data.filePath);
   };
 
-  // Debounced search for suggestions
-  useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-
-    if (localQuery.trim().length < 2) {
-      setSuggestions([]);
-      setShowSuggestions(false);
-      setSearchQuery("");
-      return;
-    }
-
-    debounceRef.current = setTimeout(async () => {
-      try {
-        const results = await api.getSearchSuggestions(localQuery, 8);
-        setSuggestions(results);
-        setShowSuggestions(true);
-        setSearchQuery(localQuery);
-      } catch (err) {
-        console.error("Failed to fetch suggestions:", err);
-        setSuggestions([]);
-      }
-    }, 200);
-
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, [localQuery, setSearchQuery]);
-
-  // Close suggestions on outside click
-  useEffect(() => {
-    if (!showSuggestions) return;
-
-    const handleClickOutside = (event: MouseEvent) => {
-      if (suggestionsRef.current && !suggestionsRef.current.contains(event.target as Node)) {
-        setShowSuggestions(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showSuggestions]);
-
   const viewLabel =
     state.sidebarView === "all"
       ? "Todas as Partituras"
@@ -100,12 +55,6 @@ export default function SongsList() {
             : typeof state.sidebarView === "object"
               ? state.sidebarView.name
               : "";
-
-  const handleSuggestionClick = (song: SongListItem) => {
-    setLocalQuery(song.name);
-    setShowSuggestions(false);
-    setSearchQuery(song.name);
-  };
 
   async function handleAddFileToSong(songId: string) {
     try {
@@ -124,8 +73,7 @@ export default function SongsList() {
 
       if (indexed.length > 0) {
         await api.addScoreToSong(songId, indexed[0]);
-        setLocalQuery("");
-        setSearchQuery("");
+        search.clearSearch();
         await loadSongs();
         toast.success("Arquivo adicionado com sucesso");
       }
@@ -147,8 +95,7 @@ export default function SongsList() {
       }
 
       await api.addScoresToSong(songId, files);
-      setLocalQuery("");
-      setSearchQuery("");
+      search.clearSearch();
       await loadSongs();
       toast.success(`${files.length} arquivo(s) adicionado(s) com sucesso`);
     } catch (err) {
@@ -171,25 +118,25 @@ export default function SongsList() {
       </div>
 
       {/* Search with Suggestions */}
-      <div className="relative flex gap-1.5 h-9" ref={suggestionsRef}>
+      <div className="relative flex gap-1.5 h-9" ref={search.suggestionsRef}>
         <div className="relative flex-1 min-w-0">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#8694a6]" />
           <input
-            value={localQuery}
-            onChange={(e) => setLocalQuery(e.target.value)}
-            onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+            value={search.localQuery}
+            onChange={(e) => search.setLocalQuery(e.target.value)}
+            onFocus={search.onFocus}
             className="h-9 w-full rounded border border-[#c5cfdb] bg-white pl-9 pr-3 text-sm text-[#4d6075] placeholder-[#8e9fb3] outline-none focus:border-[#7ba0d4] focus:ring-1 focus:ring-[#7ba0d4]/30"
             placeholder="Buscar partituras..."
             aria-label="Buscar partituras"
             autoComplete="off"
           />
 
-          {showSuggestions && suggestions.length > 0 && (
+          {search.showSuggestions && search.suggestions.length > 0 && (
             <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#c5cfdb] rounded shadow-lg z-10 max-h-48 overflow-y-auto">
-              {suggestions.map((song) => (
+              {search.suggestions.map((song) => (
                 <button
                   key={song.id}
-                  onClick={() => handleSuggestionClick(song)}
+                  onClick={() => search.handleSuggestionClick(song)}
                   className="w-full text-left px-3 py-2 hover:bg-[#f2f5fa] border-b border-[#e8ecf0] last:border-b-0 text-sm text-[#344b61] transition-colors"
                 >
                   <div className="font-medium">{song.name}</div>

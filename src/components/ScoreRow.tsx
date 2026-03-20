@@ -3,7 +3,9 @@ import { FileMusic } from "lucide-react";
 import toast from "react-hot-toast";
 import * as api from "../api/commands";
 import type { ScoreListItem } from "../types";
-import { ContextMenu, ContextMenuItem } from "./SongRow";
+import { ContextMenu, ContextMenuItem } from "./ui/ContextMenu";
+import { ConfirmationModal } from "./ui/ConfirmationModal";
+import { useConfirmation } from "../hooks/useConfirmation";
 
 interface ScoreRowProps {
   score: ScoreListItem;
@@ -18,13 +20,19 @@ interface ScoreRowProps {
   computerType?: string;
 }
 
-interface ConfirmationModal {
-  isOpen: boolean;
-  title: string;
-  message: string;
-  action: (() => Promise<void>) | null;
-  isLoading: boolean;
-}
+const STATUS_STYLES: Record<string, string> = {
+  Draft: "bg-orange-100 p-2 rounded-full",
+  Pending: "bg-yellow-100 p-2 rounded-full",
+  Main: "bg-green-100 p-2 rounded-full",
+  NotFound: "bg-red-100 p-2 rounded-full",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  Draft: "Rascunho",
+  Pending: "Pendente",
+  Main: "Principal",
+  NotFound: "Não Encontrado",
+};
 
 function ScoreRow({
   score,
@@ -39,28 +47,8 @@ function ScoreRow({
   computerType,
 }: ScoreRowProps) {
   const [isOpening, setIsOpening] = useState(false);
-  const [confirmModal, setConfirmModal] = useState<ConfirmationModal>({
-    isOpen: false,
-    title: "",
-    message: "",
-    action: null,
-    isLoading: false,
-  });
-
-  const getStatusLabel = () => {
-    switch (score.status) {
-      case "Draft":
-        return "Rascunho";
-      case "Pending":
-        return "Pendente";
-      case "Main":
-        return "Principal";
-      case "NotFound":
-        return "Não Encontrado";
-      default:
-        return score.status;
-    }
-  };
+  const confirmation = useConfirmation();
+  const isClient = computerType === "Client";
 
   const handleDoubleClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -80,11 +68,10 @@ function ScoreRow({
   };
 
   const handleSetAsMain = () => {
-    setConfirmModal({
-      isOpen: true,
-      title: "Definir como Principal",
-      message: "Você realmente deseja mudar o arquivo para \"Principal\"?",
-      action: async () => {
+    confirmation.requestConfirmation(
+      "Definir como Principal",
+      "Você realmente deseja mudar o arquivo para \"Principal\"?",
+      async () => {
         try {
           await onStatusChange(score.id, "Main");
           onMenuClose();
@@ -92,17 +79,15 @@ function ScoreRow({
           console.error("Failed to set score as main:", err);
           toast.error("Erro ao definir como Principal");
         }
-      },
-      isLoading: false,
-    });
+      }
+    );
   };
 
   const handleSetAsDraft = () => {
-    setConfirmModal({
-      isOpen: true,
-      title: "Definir como Rascunho",
-      message: "Você realmente deseja mudar o arquivo para \"Rascunho\"?",
-      action: async () => {
+    confirmation.requestConfirmation(
+      "Definir como Rascunho",
+      "Você realmente deseja mudar o arquivo para \"Rascunho\"?",
+      async () => {
         try {
           await onStatusChange(score.id, "Draft");
           onMenuClose();
@@ -110,17 +95,15 @@ function ScoreRow({
           console.error("Failed to set score as draft:", err);
           toast.error("Erro ao definir como Rascunho");
         }
-      },
-      isLoading: false,
-    });
+      }
+    );
   };
 
   const handleDelete = () => {
-    setConfirmModal({
-      isOpen: true,
-      title: "Deletar Partitura",
-      message: "Você realmente deseja deletar esta partitura? Esta ação não pode ser desfeita.",
-      action: async () => {
+    confirmation.requestConfirmation(
+      "Deletar Partitura",
+      "Você realmente deseja deletar esta partitura? Esta ação não pode ser desfeita.",
+      async () => {
         try {
           await onDelete(score.id);
           onMenuClose();
@@ -128,37 +111,8 @@ function ScoreRow({
           console.error("Failed to delete score:", err);
           toast.error("Erro ao deletar partitura");
         }
-      },
-      isLoading: false,
-    });
-  };
-
-  const handleConfirm = async () => {
-    if (!confirmModal.action) return;
-    setConfirmModal({ ...confirmModal, isLoading: true });
-    try {
-      await confirmModal.action();
-    } finally {
-      setConfirmModal({
-        isOpen: false,
-        title: "",
-        message: "",
-        action: null,
-        isLoading: false,
-      });
-    }
-  };
-
-  const handleCloseModal = () => {
-    if (!confirmModal.isLoading) {
-      setConfirmModal({
-        isOpen: false,
-        title: "",
-        message: "",
-        action: null,
-        isLoading: false,
-      });
-    }
+      }
+    );
   };
 
   return (
@@ -187,14 +141,8 @@ function ScoreRow({
         <td className="px-3.5 py-1.5 text-xs text-[#8b9db2]">.{score.file_extension}</td>
         <td className="px-2 py-1.5 text-xs font-medium">
           <div className="flex items-center justify-between">
-            <span 
-              className={`inline-block text-[#4a6278] 
-                ${score.status === "Draft" && "bg-orange-100 p-2 rounded-full"}
-                ${score.status === "Pending" && "bg-yellow-100 p-2 rounded-full"}
-                ${score.status === "Main" && "bg-green-100 p-2 rounded-full"}
-                ${score.status === "NotFound" && "bg-red-100 p-2 rounded-full"}
-              `}>
-              {getStatusLabel()}
+            <span className={`inline-block text-[#4a6278] ${STATUS_STYLES[score.status] ?? ""}`}>
+              {STATUS_LABELS[score.status] ?? score.status}
             </span>
 
             <div className="flex items-center justify-end px-3">
@@ -214,49 +162,32 @@ function ScoreRow({
                   }}
                   disabled={score.status === "NotFound"}
                 />
-                {score.status === "Draft" && computerType !== "Client" && (
+                {score.status === "Draft" && !isClient && (
                   <ContextMenuItem
                     label="Definir como Principal"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleSetAsMain();
-                    }}
+                    onClick={(e) => { e.stopPropagation(); handleSetAsMain(); }}
                   />
                 )}
-                {score.status === "Main" && computerType !== "Client" && (
+                {score.status === "Main" && !isClient && (
                   <ContextMenuItem
                     label="Definir como Rascunho"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleSetAsDraft();
-                    }}
+                    onClick={(e) => { e.stopPropagation(); handleSetAsDraft(); }}
                   />
                 )}
                 <ContextMenuItem
                   label="Editar"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEdit();
-                    onMenuClose();
-                  }}
+                  onClick={(e) => { e.stopPropagation(); onEdit(); onMenuClose(); }}
                 />
-                {computerType !== "Client" && (
-                  <ContextMenuItem
-                    label="Deletar"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete();
-                    }}
-                    isLast={computerType !== "Client"}
-                  />
-                )}
-                {computerType === "Client" && (
+                {isClient ? (
                   <ContextMenuItem
                     label="Deletar (não permitido para cliente)"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toast.error("Operação não permitida para cliente");
-                    }}
+                    onClick={(e) => { e.stopPropagation(); toast.error("Operação não permitida para cliente"); }}
+                    isLast
+                  />
+                ) : (
+                  <ContextMenuItem
+                    label="Deletar"
+                    onClick={(e) => { e.stopPropagation(); handleDelete(); }}
                     isLast
                   />
                 )}
@@ -266,34 +197,14 @@ function ScoreRow({
         </td>
       </tr>
 
-      {confirmModal.isOpen && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-[#f8fafd] rounded-lg shadow-xl border border-[#c5cfdb] p-6 max-w-sm w-full mx-4">
-            <h2 className="text-lg font-semibold text-[#2f4259] mb-3">
-              {confirmModal.title}
-            </h2>
-            <p className="text-sm text-[#4a6278] mb-6">
-              {confirmModal.message}
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={handleCloseModal}
-                disabled={confirmModal.isLoading}
-                className="px-4 py-2 text-sm font-medium text-[#344b61] border border-[#c5cfdb] rounded-lg hover:bg-[#eef2f6] disabled:opacity-50 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleConfirm}
-                disabled={confirmModal.isLoading}
-                className="px-4 py-2 text-sm font-medium bg-[#4f84d7] text-white rounded-lg hover:bg-[#3d6fb8] disabled:opacity-50 transition-colors"
-              >
-                {confirmModal.isLoading ? "Processando..." : "Confirmar"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmationModal
+        isOpen={confirmation.isOpen}
+        title={confirmation.title}
+        message={confirmation.message}
+        isLoading={confirmation.isLoading}
+        onConfirm={confirmation.confirm}
+        onCancel={confirmation.cancel}
+      />
     </>
   );
 }

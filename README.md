@@ -412,7 +412,6 @@ Ao clicar na música será expandido e mostrar uma lista de partituras/instrumen
 - Deve ser um modal e não um confirm genérico.
 - Para a pessoa mudar, ela precisa esperar 5 segundos (botão desativado com contagem de tempo).
 - O modal deve transmitir o impactado da mudança, tendo uma grande exclamação no topo.
-- [ ] Adicionar no "Sidebar" todas as músicas/partituras com status `pending`.
 - [ ] Refatoração
 	- [ ] Refatorar front
 	- [ ] Refatorar back
@@ -421,7 +420,10 @@ Ao clicar na música será expandido e mostrar uma lista de partituras/instrumen
 - [ ] Criar MessagePack com base nas informações do banco de dados.
 - [ ] Integração com Google Drive
 - [ ] Implementar função para leitura e comparação do que mudou do MessagePack que outro enviou.
-- [ ] Adicionar função para listar todas as pendências
+- [ ] Atualizar o "Siderbar":
+	- [ ] Adicionar o campo de "pendente revisão".
+	- [ ] Ao clicar deve listar de forma organizar e por música, todas as alterações feitas e por quem.
+	- [ ] A opções "rascunhos ativos", "partituras não encontras" e "pendente revisão" deve aparecer apenas para o computador com `type` de servidor e não cliente.
 - [ ] Tratamento de falhas
 - [ ] Testes
 
