@@ -12,11 +12,14 @@ use crate::services::indexer::get_file_metadata;
 #[tauri::command]
 pub fn update_score(
     db: State<'_, Database>,
+    store: State<'_, SystemStore>,
     score_id: String,
     instrument_name: Option<String>,
     file_path: String,
 ) -> Result<(), AppError> {
     info!("Atualizando partitura: {} com arquivo: {}", score_id, file_path);
+    
+    let settings = store.get_app_settings()?;
     let path = Path::new(&file_path);
     if !path.exists() || !path.is_file() {
         warn!("Arquivo não encontrado: {}", file_path);
@@ -45,8 +48,14 @@ pub fn update_score(
 
     let (directory_id, file_name) = db.resolve_directory_for_path(&file_path)?;
 
+    // Se cliente está editando, marcar como pending
     match db.update_score(&score_id, instrument_name.clone(), &directory_id, &file_name, file_size, file_modified_at, now) {
         Ok(_) => {
+            // Buscar e atualizar o score para marcar como pending se for cliente
+            if settings.computer_type == crate::domain::models::ComputerType::Client {
+                info!("Cliente editando partitura, marcando como pending");
+                let _ = db.set_score_status(&score_id, ScoreStatus::Pending, &settings.computer_id);
+            }
             info!("Partitura atualizada com sucesso: {}", score_id);
             Ok(())
         }
@@ -214,9 +223,16 @@ pub fn update_score_status(
     score_id: String,
     status: String,
 ) -> Result<SongListItem, AppError> {
+    let settings = store.get_app_settings()?;
+    
+    // Bloquear clientes de mudar status
+    if settings.computer_type == crate::domain::models::ComputerType::Client {
+        warn!("Cliente tentou mudar status da partitura: operação não permitida");
+        return Err(AppError::ClientOperationNotAllowed);
+    }
+
     info!("Atualizando status da partitura: {} para: {}", score_id, status);
 
-    let settings = store.get_app_settings()?;
     let updated_by = settings.computer_id.clone();
 
     let score_status = match status.to_lowercase().as_str() {
@@ -245,8 +261,17 @@ pub fn update_score_status(
 #[tauri::command]
 pub fn delete_score(
     db: State<'_, Database>,
+    store: State<'_, SystemStore>,
     score_id: String,
 ) -> Result<(), AppError> {
+    let settings = store.get_app_settings()?;
+    
+    // Bloquear clientes de deletar partitura
+    if settings.computer_type == crate::domain::models::ComputerType::Client {
+        warn!("Cliente tentou deletar partitura: operação não permitida");
+        return Err(AppError::ClientOperationNotAllowed);
+    }
+
     info!("Deletando partitura: {}", score_id);
     match db.delete_score(&score_id) {
         Ok(_) => {

@@ -24,6 +24,7 @@ interface SongRowProps {
   isMenuOpen: boolean;
   onMenuOpen: (id: string) => void;
   onMenuClose: () => void;
+  computerType?: string;
 }
 
 function SongRow({
@@ -39,6 +40,7 @@ function SongRow({
   isMenuOpen,
   onMenuOpen,
   onMenuClose,
+  computerType,
 }: SongRowProps) {
   const [confirmModal, setConfirmModal] = useState<ConfirmationModal>({
     isOpen: false,
@@ -129,23 +131,48 @@ function SongRow({
               label={song.is_favorite ? "Remover de favoritos" : "Adicionar aos favoritos"}
               onClick={(e) => { e.stopPropagation(); onToggleFavorite(); onMenuClose(); }}
             />
-            <ContextMenuItem
-              label="Adicionar arquivo"
-              onClick={(e) => { e.stopPropagation(); onAddFile(); onMenuClose(); }}
-            />
-            <ContextMenuItem
-              label="Adicionar diretório"
-              onClick={(e) => { e.stopPropagation(); onAddDirectory(); onMenuClose(); }}
-            />
+            {computerType !== "Client" && (
+              <>
+                <ContextMenuItem
+                  label="Adicionar arquivo"
+                  onClick={(e) => { e.stopPropagation(); onAddFile(); onMenuClose(); }}
+                />
+                <ContextMenuItem
+                  label="Adicionar diretório"
+                  onClick={(e) => { e.stopPropagation(); onAddDirectory(); onMenuClose(); }}
+                />
+              </>
+            )}
+            {computerType === "Client" && (
+              <>
+                <ContextMenuItem
+                  label="Adicionar arquivo (não permitido)"
+                  onClick={(e) => { e.stopPropagation(); toast.error("Operação não permitida para cliente"); }}
+                />
+                <ContextMenuItem
+                  label="Adicionar diretório (não permitido)"
+                  onClick={(e) => { e.stopPropagation(); toast.error("Operação não permitida para cliente"); }}
+                />
+              </>
+            )}
             <ContextMenuItem
               label="Editar"
               onClick={(e) => { e.stopPropagation(); onEdit(); onMenuClose(); }}
             />
-            <ContextMenuItem
-              label="Deletar"
-              onClick={(e) => { e.stopPropagation(); handleDelete(); }}
-              isLast
-            />
+            {computerType !== "Client" && (
+              <ContextMenuItem
+                label="Deletar"
+                onClick={(e) => { e.stopPropagation(); handleDelete(); }}
+                isLast={computerType !== "Client"}
+              />
+            )}
+            {computerType === "Client" && (
+              <ContextMenuItem
+                label="Deletar (não permitido para cliente)"
+                onClick={(e) => { e.stopPropagation(); toast.error("Operação não permitida para cliente"); }}
+                isLast
+              />
+            )}
           </ContextMenu>
         </div>
       </td>

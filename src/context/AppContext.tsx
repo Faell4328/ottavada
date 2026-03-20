@@ -381,6 +381,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const handleScanFilesForChanges = useCallback(
     async (isAutomatic: boolean = false) => {
       try {
+        // Bloquear cliente de verificar alterações
+        if (state.settings?.computer_type === "Client") {
+          if (!isAutomatic) {
+            toast("Funcionalidade não implementada para cliente", {
+              icon: "ℹ️",
+            });
+          }
+          return;
+        }
+
         dispatch({ type: "SET_SCANNING_FILES", payload: true });
         dispatch({
           type: "SET_SCAN_PROGRESS",

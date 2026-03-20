@@ -69,6 +69,7 @@ describe("TypeScript Types", () => {
       const settings: AppSettings = {
         computer_id: "550e8400-e29b-41d4-a716-446655440000",
         computer_name: null,
+        computer_type: "Server",
         google_drive_mode: "Local",
         first_run_completed: false,
         google_service_account: null,
@@ -80,6 +81,7 @@ describe("TypeScript Types", () => {
       const settings: AppSettings = {
         computer_id: "550e8400-e29b-41d4-a716-446655440000",
         computer_name: "Computador Teste",
+        computer_type: "Server",
         google_drive_mode: "Api",
         first_run_completed: true,
         google_service_account: null,

@@ -764,7 +764,67 @@ impl Database {
              JOIN directories d ON d.id = s.directory_id"
         )?;
 
+        // Retorna todos os scores sem filtrar por host_id
+        // Para filtrar por host específico, use get_all_scores_with_metadata_by_host()
         let scores = stmt.query_map([], |row| {
+            let dir_path: String = row.get(1)?;
+            let file_name: String = row.get(2)?;
+            let file_path = std::path::PathBuf::from(&dir_path)
+                .join(&file_name)
+                .to_string_lossy()
+                .to_string();
+            Ok((
+                row.get::<_, String>(0)?,
+                file_path,
+                row.get::<_, u64>(3)?,
+                row.get::<_, String>(4)?,
+            ))
+        })?.filter_map(|r| r.ok()).collect();
+
+        Ok(scores)
+    }
+
+    /// Obtém todos os scores de um host específico com seus metadados
+    /// Retorna: (score_id, file_path_completo, file_size, file_modified_at)
+    pub fn get_all_scores_with_metadata_by_host(&self, host_id: &str) -> Result<Vec<(String, String, u64, String)>, AppError> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT s.id, d.path_name, s.file_name, s.file_size, s.file_modified_at
+             FROM scores s
+             JOIN directories d ON d.id = s.directory_id
+             WHERE s.host_id = ?1"
+        )?;
+
+        let scores = stmt.query_map([host_id], |row| {
+            let dir_path: String = row.get(1)?;
+            let file_name: String = row.get(2)?;
+            let file_path = std::path::PathBuf::from(&dir_path)
+                .join(&file_name)
+                .to_string_lossy()
+                .to_string();
+            Ok((
+                row.get::<_, String>(0)?,
+                file_path,
+                row.get::<_, u64>(3)?,
+                row.get::<_, String>(4)?,
+            ))
+        })?.filter_map(|r| r.ok()).collect();
+
+        Ok(scores)
+    }
+
+    /// Obtém todos os scores com status "not_found" de um host específico
+    /// Retorna: (score_id, file_path_completo, file_size, file_modified_at)
+    pub fn get_not_found_scores_by_host(&self, host_id: &str) -> Result<Vec<(String, String, u64, String)>, AppError> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT s.id, d.path_name, s.file_name, s.file_size, s.file_modified_at
+             FROM scores s
+             JOIN directories d ON d.id = s.directory_id
+             WHERE s.status = ?1 AND s.host_id = ?2"
+        )?;
+
+        let scores = stmt.query_map([ScoreStatus::NotFound.as_str(), host_id], |row| {
             let dir_path: String = row.get(1)?;
             let file_name: String = row.get(2)?;
             let file_path = std::path::PathBuf::from(&dir_path)

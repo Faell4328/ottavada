@@ -143,7 +143,24 @@ Será documentando em JSON, mas na aplicação real é utilizando `MessagePack`.
 		      // Tamanho do arquivo (um inteiro que significa a quantidade de bytes)
 		      "fileSize": 123124
 	      }
-      ]
+      ],
+      "changeLists": [
+	    {
+	      "id": "fjadkslfj",
+	      "entityType": "song",
+	      "entityId": "abc123",
+	      "createdBy": "computerId",
+	      "createdAt": 1710685000,
+	      "status": "pending",
+	      "changes": [
+	        {
+	          "field": "name",
+	          "oldValue": "Nome antigo",
+	          "newValue": "Nome novo"
+	        }
+	      ]
+	    }
+	  ]
     }
   ]
 }
@@ -193,6 +210,7 @@ Será documentando em JSON, mas na aplicação real é utilizando `MessagePack`.
 - `id`
 - `entityType` - o que foi alterado, ex: `song`, `score` e etc.
 - `entityId` - id do elemento que foi alterado
+- `status` - "pendding" (falta revisar) ou "ok" (já foi revisado).
 - `createdBy` - quem alterou
 - `createdAt`  - quando alterou
   
@@ -377,35 +395,36 @@ Ao clicar na música será expandido e mostrar uma lista de partituras/instrumen
 - [x] Adicionar suporte Cliente/Servidor
 	- [x] Atualizar o `tauri-plugin-store` adicionando o `type`. 
 	- [x] Atualizar página de primeiro acesso (é preciso adicionar a opção para o usuário escolher entre "Cliente" e "Servidor"). Coloque um textinho orientando o que cada um faz.
-	- [x] Adicione nas configurações a opção para alterar (quando for marcada deve pedi confirmação, tipo para deletar uma partitura), não é para atualizar no back, deve emitir um toast avisando que a funcionalidade não está disponível no momento.
-	- [ ] Implementar restrições (toda restrição deve ser implementada no front e back).
-		- [ ] Não permitir que o cliente adicione música diretamente (adicionar nova música, adicionar arquivo e indexar diretório).
-		- [ ] Não permitir que o cliente delete uma partitura.
-		- [ ] Não permitir que o cliente muda o status da partitura.
-		- [ ] Alterar o status para `pending`.
-			- [ ] Caso o Cliente altere informações da música, a música deve ficar com status de `pending`.
-			- [ ] Caso o Cliente altere informação da partitura, a música deve ficar com status de `pending`.
-			- [ ] Caso o Cliente adicione uma categoria não é necessário atualizar, mas caso ele mude a categoria ou adicione uma nova categoria a uma música, a música deve ficar com status `pending`.
-		- [ ] Adicionar alterações nas tabelas de alterações.
+	- [x] Adicione nas configurações a opção para alterar (quando for marcada deve pedi confirmação, tipo para deletar uma partitura).
+	- [x] Implementar restrições (toda restrição deve ser implementada no front e back).
+		- [x] Não permitir que o cliente adicione música diretamente (adicionar nova música, adicionar arquivo e indexar diretório).
+		- [x] Não permitir que o cliente delete uma partitura.
+		- [x] Não permitir que o cliente muda o status da partitura.
+		- [x] Alterar o status para `pending`.
+			- [x] Caso o Cliente altere informações da música, a música deve ficar com status de `pending`.
+			- [x] Caso o Cliente altere informação da partitura, a música deve ficar com status de `pending`.
+			- [x] Caso o Cliente adicione uma categoria não é necessário atualizar, mas caso ele mude a categoria ou adicione uma nova categoria a uma música, a música deve ficar com status `pending`.
+		- [x] Adicionar alterações nas tabelas de alterações.
 		- Um detalhe importante, quando for arquivo, não vai ter `oldValue` e `newValue`, vai ter apenas `field` com o valor `file`.
-	- [ ] O botão de "verificar alterações" no Cliente, deve ter o comportamento diferente. No Servidor ele busca nos diretórios e depois vai buscar no Drive (não implementado), no Cliente é apenas no Drive (não implementando), então quando o usuário com tipo Cliente clicar no botão, deve aparecer um `toast` falando: "funcionalidade não implementada".
+	- [x] O botão de "verificar alterações" no Cliente, deve ter o comportamento diferente. No Servidor ele busca nos diretórios e depois vai buscar no Drive (não implementado), no Cliente é apenas no Drive (não implementando), então quando o usuário com tipo Cliente clicar no botão, deve aparecer um `toast` falando: "funcionalidade não implementada".
+- [ ] Adicionar modal para confirmar alteração de tipo do computador.
+- Em hipótese alguma deve alterar antes do usuário confirmar no modal.
+- Deve ser um modal e não um confirm genérico.
+- Para a pessoa mudar, ela precisa esperar 5 segundos (botão desativado com contagem de tempo).
+- O modal deve transmitir o impactado da mudança, tendo uma grande exclamação no topo.
 - [ ] Refatoração
 	- [ ] Refatorar front
 	- [ ] Refatorar back
 
-## Funcionalidades para v0.3 - sincronização offline-ready
-- [ ] Criar MessagePack
-- [ ] Ler e comparar MessagePack
-- [ ] Versionamento do schema
-- [ ] Testes
-
-## Funcionalidades para v0.4 - cloud
+## Funcionalidades para v0.3 - cloud
+- [ ] Criar MessagePack com base nas informações do banco de dados.
 - [ ] Integração com Google Drive
+- [ ] Implementar função para leitura e comparação do que mudou do MessagePack que outro enviou.
 - [ ] Adicionar função para listar todas as pendências
 - [ ] Tratamento de falhas
 - [ ] Testes
 
-## Funcionalidade para v0.5 - colete de balas
+## Funcionalidade para v0.4 - colete de balas
 - [ ] Testar massivamente e corrigir qualquer problema relacionado a adição de música e partituras.
 - [ ] Testar massivamente e corrigir qualquer problema relacionado a detecção de arquivos modificados.
 - [ ] Testar massivamente e corrigir qualquer problema relacionado a backup (todas as etapas).

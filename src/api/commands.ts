@@ -187,6 +187,10 @@ export async function completeFirstRun(
   });
 }
 
+export async function toggleComputerType(): Promise<string> {
+  return invoke("toggle_computer_type");
+}
+
 export async function isInitialScanCompleted(): Promise<boolean> {
   return invoke("is_initial_scan_completed");
 }

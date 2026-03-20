@@ -62,7 +62,7 @@ pub fn run() {
                 // Criar uma nova instância do store para a thread
                 let store = SystemStore::new(app_data_dir_clone);
                 // Obter computer_id do store
-                let updated_by = match store.get_app_settings() {
+                let host_id = match store.get_app_settings() {
                     Ok(settings) => settings.computer_id,
                     Err(e) => {
                         eprintln!("Erro ao obter settings para obter computer_id: {:?}", e);
@@ -70,7 +70,8 @@ pub fn run() {
                     }
                 };
                 
-                match db_clone.get_all_scores_with_metadata() {
+                // Obter scores apenas deste computador (host_id)
+                match db_clone.get_all_scores_with_metadata_by_host(&host_id) {
                     Ok(scores) => {
                         let mut changed_count = 0;
                         let mut not_found_count = 0;
@@ -82,7 +83,7 @@ pub fn run() {
 
                             // Verificar se arquivo não existe
                             if !path.exists() || !path.is_file() {
-                                if db_clone.set_score_status_to_not_found(&score_id, &updated_by).is_ok() {
+                                if db_clone.set_score_status_to_not_found(&score_id, &host_id).is_ok() {
                                     not_found_count += 1;
                                     info!("✓ Status atualizado para not_found: {}", file_path);
                                 }
@@ -105,7 +106,7 @@ pub fn run() {
                                 );
 
                                 if detector.has_changed() {
-                                    if db_clone.set_score_status_to_draft(&score_id, current_size, current_modified_at, &updated_by).is_ok() {
+                                    if db_clone.set_score_status_to_draft(&score_id, current_size, current_modified_at, &host_id).is_ok() {
                                         changed_count += 1;
                                         info!("✓ Status atualizado para draft: {}", file_path);
                                     }
@@ -163,6 +164,7 @@ pub fn run() {
             commands::settings_commands::complete_first_run,
             commands::settings_commands::generate_computer_id,
             commands::settings_commands::is_initial_scan_completed,
+            commands::settings_commands::toggle_computer_type,
             // Scan
             commands::scan_commands::scan_files_for_changes,
         ])

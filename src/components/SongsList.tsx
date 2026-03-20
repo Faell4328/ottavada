@@ -247,6 +247,7 @@ export default function SongsList() {
                       isMenuOpen={openMenuId === `song-${song.id}`}
                       onMenuOpen={(id) => setOpenMenuId(id)}
                       onMenuClose={closeAllMenus}
+                      computerType={state.settings?.computer_type}
                     />
                     {state.selectedSong?.id === song.id &&
                       song.scores.map((score) => (
@@ -266,8 +267,7 @@ export default function SongsList() {
                             setIsEditScoreModalOpen(true);
                           }}
                           onStatusChange={updateScoreStatus}
-                          onDelete={deleteScore}
-                        />
+                          onDelete={deleteScore}                          computerType={state.settings?.computer_type}                        />
                       ))}
                   </React.Fragment>
                 ))

@@ -3,10 +3,11 @@ import { useNavigate } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAppState } from "../context/AppContext";
+import * as api from "../api/commands";
 import type { AppSettings } from "../types";
 
 export default function SettingsPage() {
-  const { state, saveSettings } = useAppState();
+  const { state, saveSettings, loadSettings } = useAppState();
   const navigate = useNavigate();
   const [settings, setSettings] = useState<AppSettings>(
     state.settings ?? {
@@ -18,13 +19,35 @@ export default function SettingsPage() {
       google_service_account: null,
     }
   );
+  const [isTogglingType, setIsTogglingType] = useState(false);
 
   function update(partial: Partial<AppSettings>) {
     setSettings((prev) => ({ ...prev, ...partial }));
   }
 
-  function handleComputerTypeChange(newType: "Server" | "Client") {
-    toast.error("A funcionalidade de alterar o tipo de computador não está disponível no momento");
+  async function handleComputerTypeChange() {
+    const newType = settings.computer_type === "Server" ? "Cliente" : "Servidor";
+    const confirmed = window.confirm(
+      `Você realmente deseja alternar para ${newType}?\n\nNota: Isso mudará quais partituras serão verificadas nas próximas verificações.`
+    );
+    
+    if (!confirmed) return;
+
+    setIsTogglingType(true);
+    try {
+      const result = await api.toggleComputerType();
+      setSettings((prev) => ({
+        ...prev,
+        computer_type: result as "Server" | "Client",
+      }));
+      toast.success(`Tipo de computador alterado para ${result}`);
+      await loadSettings();
+    } catch (err) {
+      console.error("Failed to toggle computer type:", err);
+      toast.error("Erro ao alternar tipo de computador");
+    } finally {
+      setIsTogglingType(false);
+    }
   }
 
   async function handleSave() {
@@ -64,23 +87,22 @@ export default function SettingsPage() {
 
           <Field label="Tipo de computador">
             <div className="flex items-center gap-2">
-              <select
-                value={settings.computer_type}
-                onChange={(e) => handleComputerTypeChange(e.target.value as "Server" | "Client")}
-                disabled
-                className="flex-1 h-9 rounded border border-[#c5cfdb] bg-[#f0f3f8] px-3 text-sm text-[#4d6075] outline-none cursor-not-allowed"
-              >
-                <option value="Server">Servidor</option>
-                <option value="Client">Cliente</option>
-              </select>
-              <span className="text-xs text-[#8b9db2]">
+              <div className="flex-1 h-9 rounded border border-[#c5cfdb] bg-[#f0f3f8] px-3 text-sm text-[#4d6075] flex items-center">
                 {settings.computer_type === "Server" ? "Servidor" : "Cliente"}
-              </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleComputerTypeChange}
+                disabled={isTogglingType}
+                className="h-9 px-4 rounded border border-[#c5cfdb] bg-white hover:bg-[#f2f5fa] text-sm font-medium text-[#344b61] disabled:opacity-50 transition-colors cursor-pointer"
+              >
+                {isTogglingType ? "Alternando..." : "Alternar"}
+              </button>
             </div>
             <p className="text-xs text-[#8b9db2] mt-1">
               {settings.computer_type === "Server"
-                ? "Computador mestre - indexa e sincroniza partituras"
-                : "Computador secundário - consulta e propõe alterações"}
+                ? "Computador mestre - indexa e sincroniza partituras. Clique em 'Alternar' para mudar para Cliente."
+                : "Computador secundário - consulta e propõe alterações. Clique em 'Alternar' para mudar para Servidor."}
             </p>
           </Field>
         </Section>

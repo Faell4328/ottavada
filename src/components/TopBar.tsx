@@ -140,18 +140,21 @@ export default function TopBar({
         <div className="flex items-center gap-2">
           <ActionButton
             icon={<Music className="h-4 w-4" />}
-            title="Adicionar música"
+            title={state.settings?.computer_type === "Client" ? "Operação não permitida para cliente" : "Adicionar música"}
             onClick={handleAddMusic}
+            disabled={state.settings?.computer_type === "Client"}
           />
           <ActionButton
             icon={<Plus className="h-4 w-4" />}
-            title="Adicionar arquivo"
+            title={state.settings?.computer_type === "Client" ? "Operação não permitida para cliente" : "Adicionar arquivo"}
             onClick={handleAddFile}
+            disabled={state.settings?.computer_type === "Client"}
           />
           <ActionButton
             icon={<FolderSearch className="h-4 w-4" />}
-            title="Indexar diretório"
+            title={state.settings?.computer_type === "Client" ? "Operação não permitida para cliente" : "Indexar diretório"}
             onClick={handleScanDirectory}
+            disabled={state.settings?.computer_type === "Client"}
           />
           <ActionButton
             icon={<RefreshCw className={`h-4 w-4 ${state.isScanningFiles ? 'animate-spin' : ''}`} />}

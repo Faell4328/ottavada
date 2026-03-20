@@ -185,6 +185,13 @@ pub fn import_indexed_files(
     category_ids: Vec<String>,
 ) -> Result<Vec<SongListItem>, AppError> {
     let settings = store.get_app_settings()?;
+    
+    // Bloquear clientes de importar arquivos
+    if settings.computer_type == crate::domain::models::ComputerType::Client {
+        warn!("Cliente tentou importar arquivos: operação não permitida");
+        return Err(AppError::ClientOperationNotAllowed);
+    }
+
     import_files_core(&db, &settings.computer_id, &files, &category_ids, None, None)
 }
 
@@ -198,6 +205,12 @@ pub fn import_indexed_files_with_metadata(
     arranger: Option<String>,
 ) -> Result<Vec<SongListItem>, AppError> {
     let settings = store.get_app_settings()?;
+    
+    // Bloquear clientes de importar arquivos
+    if settings.computer_type == crate::domain::models::ComputerType::Client {
+        warn!("Cliente tentou importar arquivos: operação não permitida");
+        return Err(AppError::ClientOperationNotAllowed);
+    }
     import_files_core(
         &db,
         &settings.computer_id,
@@ -222,6 +235,14 @@ pub fn create_song(
     store: State<'_, SystemStore>,
     name: String,
 ) -> Result<SongListItem, AppError> {
+    let settings = store.get_app_settings()?;
+    
+    // Bloquear clientes de criar música
+    if settings.computer_type == crate::domain::models::ComputerType::Client {
+        warn!("Cliente tentou criar música: operação não permitida");
+        return Err(AppError::ClientOperationNotAllowed);
+    }
+
     if name.trim().is_empty() {
         warn!("Tentativa de criar música com nome vazio");
         return Err(AppError::Generic(
@@ -229,7 +250,6 @@ pub fn create_song(
         ));
     }
 
-    let settings = store.get_app_settings()?;
     let updated_by = settings.computer_id.clone();
 
     let all_songs = db.get_all_songs()?;
@@ -266,6 +286,14 @@ pub fn create_song_with_categories(
     name: String,
     category_ids: Vec<String>,
 ) -> Result<SongListItem, AppError> {
+    let settings = store.get_app_settings()?;
+    
+    // Bloquear clientes de criar música
+    if settings.computer_type == crate::domain::models::ComputerType::Client {
+        warn!("Cliente tentou criar música: operação não permitida");
+        return Err(AppError::ClientOperationNotAllowed);
+    }
+
     if name.trim().is_empty() {
         warn!("Tentativa de criar música com nome vazio");
         return Err(AppError::Generic(
@@ -273,7 +301,6 @@ pub fn create_song_with_categories(
         ));
     }
 
-    let settings = store.get_app_settings()?;
     let updated_by = settings.computer_id.clone();
 
     let all_songs = db.get_all_songs()?;
@@ -312,13 +339,20 @@ pub fn create_song_with_metadata(
     arranger: Option<String>,
     category_ids: Vec<String>,
 ) -> Result<SongListItem, AppError> {
+    let settings = store.get_app_settings()?;
+    
+    // Bloquear clientes de criar música
+    if settings.computer_type == crate::domain::models::ComputerType::Client {
+        warn!("Cliente tentou criar música: operação não permitida");
+        return Err(AppError::ClientOperationNotAllowed);
+    }
+
     if name.trim().is_empty() {
         return Err(AppError::Generic(
             "Nome da música não pode estar vazio".into(),
         ));
     }
 
-    let settings = store.get_app_settings()?;
     let updated_by = settings.computer_id.clone();
 
     let all_songs = db.get_all_songs()?;
@@ -381,6 +415,14 @@ pub fn update_song(
     let original_song = db.get_song_by_id(&song_id)?;
     let now = Local::now().naive_local();
 
+    // Se cliente está editando, marcar como pending
+    let new_status = if settings.computer_type == crate::domain::models::ComputerType::Client {
+        info!("Cliente editando música, marcando como pending");
+        ScoreStatus::Pending
+    } else {
+        original_song.status.clone()
+    };
+
     let updated_song = Song {
         id: original_song.id.clone(),
         name: name.trim().to_string(),
@@ -391,7 +433,7 @@ pub fn update_song(
             .map(|a| a.trim().to_string())
             .filter(|a| !a.is_empty()),
         is_favorite: original_song.is_favorite,
-        status: original_song.status,
+        status: new_status,
         updated_at: now,
         updated_by,
     };

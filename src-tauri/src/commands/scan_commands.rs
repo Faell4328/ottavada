@@ -20,8 +20,9 @@ pub fn scan_files_for_changes(
 
     let settings = store.get_app_settings()?;
     let updated_by = settings.computer_id.clone();
+    let host_id = &settings.computer_id; // O filtro é por quem criou o score
 
-    let scores = db.get_all_scores_with_metadata()?;
+    let scores = db.get_all_scores_with_metadata_by_host(host_id)?;
     let mut changed_files = Vec::new();
     let mut not_found_files = Vec::new();
     let mut recovered_files = Vec::new();
@@ -77,7 +78,7 @@ pub fn scan_files_for_changes(
     }
 
     // Verificar scores com status "not_found" (verificar se voltaram)
-    if let Ok(not_found_scores) = db.get_not_found_scores() {
+    if let Ok(not_found_scores) = db.get_not_found_scores_by_host(host_id) {
         info!("Verificando {} arquivo(s) marcado(s) como not_found", not_found_scores.len());
         
         for (score_id, file_path, _stored_size, _stored_modified_at_str) in not_found_scores {

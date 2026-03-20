@@ -15,6 +15,7 @@ interface ScoreRowProps {
   onEdit: () => void;
   onStatusChange: (scoreId: string, status: "Main" | "Draft" | "Pending") => Promise<void>;
   onDelete: (scoreId: string) => Promise<void>;
+  computerType?: string;
 }
 
 interface ConfirmationModal {
@@ -35,6 +36,7 @@ function ScoreRow({
   onEdit,
   onStatusChange,
   onDelete,
+  computerType,
 }: ScoreRowProps) {
   const [isOpening, setIsOpening] = useState(false);
   const [confirmModal, setConfirmModal] = useState<ConfirmationModal>({
@@ -212,7 +214,7 @@ function ScoreRow({
                   }}
                   disabled={score.status === "NotFound"}
                 />
-                {score.status === "Draft" && (
+                {score.status === "Draft" && computerType !== "Client" && (
                   <ContextMenuItem
                     label="Definir como Principal"
                     onClick={(e) => {
@@ -221,7 +223,7 @@ function ScoreRow({
                     }}
                   />
                 )}
-                {score.status === "Main" && (
+                {score.status === "Main" && computerType !== "Client" && (
                   <ContextMenuItem
                     label="Definir como Rascunho"
                     onClick={(e) => {
@@ -238,14 +240,26 @@ function ScoreRow({
                     onMenuClose();
                   }}
                 />
-                <ContextMenuItem
-                  label="Deletar"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDelete();
-                  }}
-                  isLast
-                />
+                {computerType !== "Client" && (
+                  <ContextMenuItem
+                    label="Deletar"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete();
+                    }}
+                    isLast={computerType !== "Client"}
+                  />
+                )}
+                {computerType === "Client" && (
+                  <ContextMenuItem
+                    label="Deletar (não permitido para cliente)"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toast.error("Operação não permitida para cliente");
+                    }}
+                    isLast
+                  />
+                )}
               </ContextMenu>
             </div>
           </div>

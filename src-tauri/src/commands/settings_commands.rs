@@ -86,3 +86,26 @@ pub fn is_initial_scan_completed(
 ) -> bool {
     scan_flag.load(Ordering::SeqCst)
 }
+
+#[tauri::command]
+pub fn toggle_computer_type(
+    store: State<'_, SystemStore>,
+) -> Result<String, AppError> {
+    info!("Alternando tipo de computador");
+    let mut settings = store.get_app_settings()?;
+    
+    let new_type = match settings.computer_type {
+        crate::domain::models::ComputerType::Server => crate::domain::models::ComputerType::Client,
+        crate::domain::models::ComputerType::Client => crate::domain::models::ComputerType::Server,
+    };
+    
+    info!("Alternar tipo de computador de {} para {}", 
+        settings.computer_type.as_str(), 
+        new_type.as_str());
+    
+    settings.computer_type = new_type.clone();
+    store.save_app_settings(&settings)?;
+    
+    info!("Tipo de computador alterado com sucesso");
+    Ok(new_type.as_str().to_string())
+}

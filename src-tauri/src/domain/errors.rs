@@ -21,6 +21,9 @@ pub enum AppError {
     #[error("Diretório inválido: {0}")]
     InvalidDirectory(String),
 
+    #[error("Operação não permitida para cliente")]
+    ClientOperationNotAllowed,
+
     #[error("{0}")]
     Generic(String),
 }
