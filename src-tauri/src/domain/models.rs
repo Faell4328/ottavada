@@ -78,6 +78,7 @@ pub struct Category {
 pub struct AppSettings {
     pub computer_id: String,
     pub computer_name: Option<String>,
+    pub computer_type: ComputerType,
     pub google_drive_mode: GoogleDriveMode,
     pub first_run_completed: bool,
     pub google_service_account: Option<GoogleServiceAccount>,
@@ -88,10 +89,40 @@ impl Default for AppSettings {
         Self {
             computer_id: String::new(),
             computer_name: None,
+            computer_type: ComputerType::Server,
             google_drive_mode: GoogleDriveMode::Local,
             first_run_completed: false,
             google_service_account: None,
         }
+    }
+}
+
+/// Tipo de computador
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum ComputerType {
+    Server,
+    Client,
+}
+
+impl ComputerType {
+    pub fn as_str(&self) -> &str {
+        match self {
+            ComputerType::Server => "Server",
+            ComputerType::Client => "Client",
+        }
+    }
+
+    pub fn from_str(s: &str) -> Self {
+        match s {
+            "Client" => ComputerType::Client,
+            _ => ComputerType::Server,
+        }
+    }
+}
+
+impl Default for ComputerType {
+    fn default() -> Self {
+        ComputerType::Server
     }
 }
 

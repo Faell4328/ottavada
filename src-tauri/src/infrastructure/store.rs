@@ -3,7 +3,7 @@ use std::fs;
 use tracing::info;
 
 use crate::domain::errors::AppError;
-use crate::domain::models::{AppSettings, GoogleDriveMode, GoogleServiceAccount};
+use crate::domain::models::{AppSettings, ComputerType, GoogleDriveMode, GoogleServiceAccount};
 
 const STORE_FILENAME: &str = "app-store.json";
 
@@ -51,6 +51,12 @@ impl SystemStore {
             computer_name: store
                 .get("computer_name")
                 .and_then(|v: &serde_json::Value| v.as_str().map(|s: &str| s.to_string())),
+            computer_type: match store
+                .get("computer_type")
+                .and_then(|v: &serde_json::Value| v.as_str()) {
+                Some("Client") => ComputerType::Client,
+                _ => ComputerType::Server,
+            },
             google_drive_mode: match store
                 .get("google_drive_mode")
                 .and_then(|v: &serde_json::Value| v.as_str()) {
@@ -80,6 +86,9 @@ impl SystemStore {
         } else {
             store.as_object_mut().map(|obj| obj.remove("computer_name"));
         }
+
+        let computer_type_str = settings.computer_type.as_str();
+        store["computer_type"] = serde_json::json!(computer_type_str);
 
         let mode_str = match settings.google_drive_mode {
             GoogleDriveMode::Local => "local",

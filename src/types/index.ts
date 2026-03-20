@@ -28,6 +28,7 @@ export interface Category {
 export interface AppSettings {
   computer_id: string;
   computer_name: string | null;
+  computer_type: "Server" | "Client";
   google_drive_mode: "Local" | "Api";
   first_run_completed: boolean;
   google_service_account: GoogleServiceAccount | null;

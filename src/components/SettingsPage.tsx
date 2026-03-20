@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { ArrowLeft } from "lucide-react";
+import toast from "react-hot-toast";
 import { useAppState } from "../context/AppContext";
 import type { AppSettings } from "../types";
 
@@ -11,6 +12,7 @@ export default function SettingsPage() {
     state.settings ?? {
       computer_id: "",
       computer_name: null,
+      computer_type: "Server",
       google_drive_mode: "Local",
       first_run_completed: true,
       google_service_account: null,
@@ -19,6 +21,10 @@ export default function SettingsPage() {
 
   function update(partial: Partial<AppSettings>) {
     setSettings((prev) => ({ ...prev, ...partial }));
+  }
+
+  function handleComputerTypeChange(newType: "Server" | "Client") {
+    toast.error("A funcionalidade de alterar o tipo de computador não está disponível no momento");
   }
 
   async function handleSave() {
@@ -54,6 +60,28 @@ export default function SettingsPage() {
               className="w-full h-9 rounded border border-[#c5cfdb] bg-white px-3 text-sm text-[#4d6075] outline-none focus:border-[#7ba0d4]"
               placeholder="Ex: Estúdio, Home, Sala Ensaio..."
             />
+          </Field>
+
+          <Field label="Tipo de computador">
+            <div className="flex items-center gap-2">
+              <select
+                value={settings.computer_type}
+                onChange={(e) => handleComputerTypeChange(e.target.value as "Server" | "Client")}
+                disabled
+                className="flex-1 h-9 rounded border border-[#c5cfdb] bg-[#f0f3f8] px-3 text-sm text-[#4d6075] outline-none cursor-not-allowed"
+              >
+                <option value="Server">Servidor</option>
+                <option value="Client">Cliente</option>
+              </select>
+              <span className="text-xs text-[#8b9db2]">
+                {settings.computer_type === "Server" ? "Servidor" : "Cliente"}
+              </span>
+            </div>
+            <p className="text-xs text-[#8b9db2] mt-1">
+              {settings.computer_type === "Server"
+                ? "Computador mestre - indexa e sincroniza partituras"
+                : "Computador secundário - consulta e propõe alterações"}
+            </p>
           </Field>
         </Section>
 

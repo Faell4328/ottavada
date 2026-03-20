@@ -48,14 +48,16 @@ pub fn complete_first_run(
     store: State<'_, SystemStore>,
     computer_id: String,
     computer_name: String,
+    computer_type: String,
     _google_drive_mode: String,
     google_service_account_json: Option<String>,
 ) -> Result<(), AppError> {
-    info!("Completando primeira execução para: {} ({})", computer_name, computer_id);
+    info!("Completando primeira execução para: {} ({}) - Tipo: {}", computer_name, computer_id, computer_type);
     let mut settings = store.get_app_settings()?;
     
     settings.computer_id = computer_id;
     settings.computer_name = Some(computer_name);
+    settings.computer_type = crate::domain::models::ComputerType::from_str(&computer_type);
     
     if let Some(json_str) = google_service_account_json {
         info!("Validando credenciais do Google Drive");

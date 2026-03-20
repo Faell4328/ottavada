@@ -5,12 +5,13 @@ import { useAppState } from "../context/AppContext";
 import * as api from "../api/commands";
 import type { GoogleServiceAccount } from "../types";
 
-type Step = "name" | "google-drive" | "confirm";
+type Step = "name" | "type" | "google-drive" | "confirm";
 
 export default function FirstRunPage() {
   const { completeFirstRun } = useAppState();
   const [computerId, setComputerId] = useState("");
   const [computerName, setComputerName] = useState("");
+  const [computerType, setComputerType] = useState<"Server" | "Client" | "">("Server");
   const [step, setStep] = useState<Step>("name");
   const [serviceAccount, setServiceAccount] = useState<GoogleServiceAccount | null>(null);
   const [jsonText, setJsonText] = useState("");
@@ -93,6 +94,18 @@ export default function FirstRunPage() {
   }
 
   async function handleNameSubmit() {
+    if (!computerName.trim()) {
+      toast.error("Digite o nome do computador");
+      return;
+    }
+    setStep("type");
+  }
+
+  async function handleTypeSubmit() {
+    if (!computerType) {
+      toast.error("Selecione o tipo de computador");
+      return;
+    }
     setStep("google-drive");
   }
 
@@ -116,7 +129,7 @@ export default function FirstRunPage() {
         ? null
         : JSON.stringify(serviceAccount);
 
-      await completeFirstRun(computerId, computerName.trim(), "api", serviceAccountJson);
+      await completeFirstRun(computerId, computerName.trim(), computerType, "api", serviceAccountJson);
     } catch (error) {
       toast.error(
         `Erro: ${error instanceof Error ? error.message : "Erro desconhecido"}`
@@ -186,7 +199,94 @@ export default function FirstRunPage() {
           </>
         )}
 
-        {/* Step 2: Google Drive Setup */}
+        {/* Step 2: Computer Type */}
+        {step === "type" && (
+          <>
+            <h2 className="text-lg font-semibold text-[#34485d] mb-4">
+              Qual é o tipo de computador?
+            </h2>
+
+            <p className="text-sm text-[#6b849e] mb-6">
+              Escolha o tipo que se aplica ao seu computador:
+            </p>
+
+            {/* Server Option */}
+            <div
+              onClick={() => setComputerType("Server")}
+              className={`mb-4 p-6 rounded-lg border-2 cursor-pointer transition-all ${
+                computerType === "Server"
+                  ? "border-[#4f84d7] bg-[#f0f3f8]"
+                  : "border-[#c5cfdb] bg-white hover:border-[#7ba0d4]"
+              }`}
+            >
+              <div className="flex items-start gap-4">
+                <div
+                  className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                    computerType === "Server"
+                      ? "border-[#4f84d7] bg-[#4f84d7]"
+                      : "border-[#c5cfdb]"
+                  }`}
+                >
+                  {computerType === "Server" && (
+                    <div className="w-2 h-2 bg-white rounded-full" />
+                  )}
+                </div>
+                <div>
+                  <h3 className="font-semibold text-[#34485d] mb-1">Servidor</h3>
+                  <p className="text-xs text-[#6b849e]">
+                    Computador mestre. Mantém todas as partituras indexadas localmente, detecta mudanças e é referência para sincronização com outros computadores.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Client Option */}
+            <div
+              onClick={() => setComputerType("Client")}
+              className={`mb-6 p-6 rounded-lg border-2 cursor-pointer transition-all ${
+                computerType === "Client"
+                  ? "border-[#4f84d7] bg-[#f0f3f8]"
+                  : "border-[#c5cfdb] bg-white hover:border-[#7ba0d4]"
+              }`}
+            >
+              <div className="flex items-start gap-4">
+                <div
+                  className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                    computerType === "Client"
+                      ? "border-[#4f84d7] bg-[#4f84d7]"
+                      : "border-[#c5cfdb]"
+                  }`}
+                >
+                  {computerType === "Client" && (
+                    <div className="w-2 h-2 bg-white rounded-full" />
+                  )}
+                </div>
+                <div>
+                  <h3 className="font-semibold text-[#34485d] mb-1">Cliente</h3>
+                  <p className="text-xs text-[#6b849e]">
+                    Computador secundário. Não indexa o diretório local, consulta partituras na versão principal e pode propor mudanças (que requerem aprovação do servidor).
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={handleTypeSubmit}
+              className="w-full h-11 rounded-lg bg-[#4f84d7] text-sm font-bold text-white hover:bg-[#3d6fb8] transition-colors cursor-pointer border-0"
+            >
+              Próximo
+            </button>
+
+            <button
+              onClick={() => setStep("name")}
+              className="w-full h-10 rounded-lg bg-white text-sm font-semibold text-[#4f84d7] border border-[#7ba0d4] hover:bg-[#f8fafd] transition-colors cursor-pointer mt-2"
+            >
+              Voltar
+            </button>
+          </>
+        )}
+
+        {/* Step 3: Google Drive Setup */}
         {step === "google-drive" && (
           <>
             <h2 className="text-lg font-semibold text-[#34485d] mb-4">
@@ -308,10 +408,17 @@ export default function FirstRunPage() {
                 Usar Offline
               </button>
             </div>
+
+            <button
+              onClick={() => setStep("type")}
+              className="w-full h-10 rounded-lg bg-white text-sm font-semibold text-[#4f84d7] border border-[#7ba0d4] hover:bg-[#f8fafd] transition-colors cursor-pointer mt-3"
+            >
+              Voltar
+            </button>
           </>
         )}
 
-        {/* Step 3: Confirmation */}
+        {/* Step 4: Confirmation */}
         {step === "confirm" && (
           <>
             <h2 className="text-lg font-semibold text-[#34485d] mb-6">
@@ -330,6 +437,13 @@ export default function FirstRunPage() {
                 <p className="text-xs text-[#8b9db2] mb-1">Nome do computador</p>
                 <p className="text-sm font-semibold text-[#34485d]">
                   {computerName || "(não preenchido)"}
+                </p>
+              </div>
+
+              <div className="p-4 bg-[#f8fafd] rounded-lg border border-[#c5cfdb]">
+                <p className="text-xs text-[#8b9db2] mb-1">Tipo de computador</p>
+                <p className="text-sm font-semibold text-[#34485d]">
+                  {computerType === "Server" ? "Servidor" : "Cliente"}
                 </p>
               </div>
 
