@@ -319,3 +319,60 @@ pub struct IndexedFile {
     pub instrument: Option<String>,
     pub extension: String,
 }
+
+// ── Estruturas para exportação MessagePack ──
+
+/// Representa uma alteração individual em um campo
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExportChange {
+    pub field: String,
+    pub old_value: Option<String>,
+    pub new_value: Option<String>,
+}
+
+/// Representa um grupo de alterações (ChangeList)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExportChangeList {
+    pub id: String,
+    pub entity_type: String,
+    pub entity_id: String,
+    pub created_by: String,
+    pub created_at: i64,
+    pub status: String,
+    pub changes: Vec<ExportChange>,
+}
+
+/// Representa uma partitura para exportação
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExportScore {
+    pub id: String,
+    pub name: Option<String>,
+    pub status: String,
+    pub updated_at: i64,
+    pub updated_by: String,
+    pub file_modified_at: i64,
+    pub file_size: u64,
+}
+
+/// Representa uma música para exportação com suas partituras
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExportSong {
+    pub id: String,
+    pub name: String,
+    pub composer: Option<String>,
+    pub arranger: Option<String>,
+    pub categories_id: Vec<String>,
+    pub status: String,
+    pub updated_at: i64,
+    pub updated_by: String,
+    pub scores: Vec<ExportScore>,
+    pub change_lists: Vec<ExportChangeList>,
+}
+
+/// Estrutura raiz do banco de dados exportado em MessagePack
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExportDatabase {
+    pub schema_version: u32,
+    pub updated_at: i64,
+    pub songs: Vec<ExportSong>,
+}

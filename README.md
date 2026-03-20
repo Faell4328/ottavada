@@ -417,7 +417,7 @@ Ao clicar na música será expandido e mostrar uma lista de partituras/instrumen
 	- [x] Refatorar back
 
 ## Funcionalidades para v0.3 - cloud
-- [ ] Criar MessagePack com base nas informações do banco de dados.
+- [x] Criar MessagePack com base nas informações do banco de dados.
 - [ ] Integração com Google Drive
 - [ ] Implementar função para leitura e comparação do que mudou do MessagePack que outro enviou.
 - [ ] Atualizar o "Siderbar":

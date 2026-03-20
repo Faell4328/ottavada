@@ -124,6 +124,33 @@ impl Database {
             ).ok(); // Ignore error if column already exists
         }
 
+        // Tabelas para rastreamento de alterações (change_lists e changes)
+        conn.execute_batch("
+            CREATE TABLE IF NOT EXISTS change_lists (
+                id TEXT PRIMARY KEY,
+                entity_type TEXT NOT NULL,
+                entity_id TEXT NOT NULL,
+                created_by TEXT NOT NULL,
+                created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                status TEXT NOT NULL DEFAULT 'pending'
+            );
+
+            CREATE TABLE IF NOT EXISTS changes (
+                id TEXT PRIMARY KEY,
+                change_list_id TEXT NOT NULL REFERENCES change_lists(id) ON DELETE CASCADE,
+                field TEXT NOT NULL,
+                old_value TEXT,
+                new_value TEXT
+            );
+        ")?;
+
+        // Índices para change_lists e changes
+        conn.execute_batch("
+            CREATE INDEX IF NOT EXISTS idx_change_lists_entity ON change_lists(entity_type, entity_id);
+            CREATE INDEX IF NOT EXISTS idx_change_lists_created_at ON change_lists(created_at);
+            CREATE INDEX IF NOT EXISTS idx_changes_change_list_id ON changes(change_list_id);
+        ")?;
+
         // FTS5 para busca textual em músicas
         conn.execute_batch("
             CREATE VIRTUAL TABLE IF NOT EXISTS songs_fts USING fts5(
@@ -877,6 +904,195 @@ impl Database {
         }
         
         Ok(())
+    }
+}
+
+// ── Métodos de exportação para MessagePack ──
+
+impl Database {
+    /// Exporta o banco de dados completo para estrutura serializable
+    pub fn export_to_message_pack(&self) -> Result<ExportDatabase, AppError> {
+        let conn = self.conn.lock().unwrap();
+        
+        let updated_at = chrono::Local::now().timestamp();
+        
+        // Buscar todas as músicas
+        let mut stmt = conn.prepare(
+            "SELECT id, name, composer, arranger, status, updated_at, updated_by 
+             FROM songs 
+             ORDER BY name"
+        )?;
+        
+        let songs: Result<Vec<ExportSong>, AppError> = stmt.query_map([], |row| {
+            let song_id: String = row.get(0)?;
+            let updated_at_str: String = row.get(5)?;
+            let updated_at_ts = parse_datetime_to_timestamp(&updated_at_str);
+            
+            Ok((
+                song_id,
+                row.get::<_, String>(1)?,
+                row.get::<_, Option<String>>(2)?,
+                row.get::<_, Option<String>>(3)?,
+                row.get::<_, String>(4)?,
+                updated_at_ts,
+                row.get::<_, String>(6)?,
+            ))
+        })?
+            .filter_map(|r| r.ok())
+            .map(|(song_id, name, composer, arranger, status, updated_at, updated_by)| {
+                // Para cada música, buscar suas partituras e alterações
+                let scores = Self::get_export_scores_for_song(&conn, &song_id)?;
+                let categories_id = Self::get_category_ids(&conn, &song_id)?;
+                let change_lists = Self::get_export_change_lists(&conn, "song", &song_id)?;
+                
+                Ok(ExportSong {
+                    id: song_id,
+                    name,
+                    composer,
+                    arranger,
+                    categories_id,
+                    status,
+                    updated_at,
+                    updated_by,
+                    scores,
+                    change_lists,
+                })
+            })
+            .collect();
+        
+        Ok(ExportDatabase {
+            schema_version: 1,
+            updated_at,
+            songs: songs?,
+        })
+    }
+    
+    /// Busca as partituras de uma música para exportação
+    fn get_export_scores_for_song(conn: &Connection, song_id: &str) -> Result<Vec<ExportScore>, AppError> {
+        let mut stmt = conn.prepare(
+            "SELECT id, name, status, updated_at, updated_by, file_modified_at, file_size 
+             FROM scores 
+             WHERE song_id = ?1 
+             ORDER BY name"
+        )?;
+        
+        let scores = stmt.query_map(params![song_id], |row| {
+            let updated_at_str: String = row.get(3)?;
+            let updated_at_ts = parse_datetime_to_timestamp(&updated_at_str);
+            let file_modified_at_str: String = row.get(5)?;
+            let file_modified_at_ts = parse_datetime_to_timestamp(&file_modified_at_str);
+            
+            Ok(ExportScore {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                status: row.get(2)?,
+                updated_at: updated_at_ts,
+                updated_by: row.get(4)?,
+                file_modified_at: file_modified_at_ts,
+                file_size: row.get(6)?,
+            })
+        })?
+            .filter_map(|r| r.ok())
+            .collect();
+        
+        Ok(scores)
+    }
+    
+    /// Busca as listas de alterações para uma entidade
+    fn get_export_change_lists(
+        conn: &Connection,
+        entity_type: &str,
+        entity_id: &str,
+    ) -> Result<Vec<ExportChangeList>, AppError> {
+        let mut stmt = conn.prepare(
+            "SELECT id, created_by, created_at, status 
+             FROM change_lists 
+             WHERE entity_type = ?1 AND entity_id = ?2 
+             ORDER BY created_at DESC"
+        )?;
+        
+        let change_lists: Vec<ExportChangeList> = stmt.query_map(params![entity_type, entity_id], |row| {
+            let created_at_str: String = row.get(2)?;
+            let created_at_ts = parse_datetime_to_timestamp(&created_at_str);
+            
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                created_at_ts,
+                row.get::<_, String>(3)?,
+            ))
+        })?
+            .filter_map(|r| r.ok())
+            .filter_map(|(change_list_id, created_by, created_at, status)| {
+                match Self::get_export_changes(conn, &change_list_id) {
+                    Ok(changes) => Some(ExportChangeList {
+                        id: change_list_id,
+                        entity_type: entity_type.to_string(),
+                        entity_id: entity_id.to_string(),
+                        created_by,
+                        created_at,
+                        status,
+                        changes,
+                    }),
+                    Err(_) => None,
+                }
+            })
+            .collect();
+        
+        Ok(change_lists)
+    }
+    
+    /// Busca as alterações individuais de uma lista de alterações
+    fn get_export_changes(conn: &Connection, change_list_id: &str) -> Result<Vec<ExportChange>, AppError> {
+        let mut stmt = conn.prepare(
+            "SELECT field, old_value, new_value 
+             FROM changes 
+             WHERE change_list_id = ?1 
+             ORDER BY rowid"
+        )?;
+        
+        let changes = stmt.query_map(params![change_list_id], |row| {
+            Ok(ExportChange {
+                field: row.get(0)?,
+                old_value: row.get(1)?,
+                new_value: row.get(2)?,
+            })
+        })?
+            .filter_map(|r| r.ok())
+            .collect();
+        
+        Ok(changes)
+    }
+    
+    /// Serializa a estrutura ExportDatabase para bytes MessagePack
+    pub fn serialize_to_msgpack(export_db: &ExportDatabase) -> Result<Vec<u8>, AppError> {
+        rmp_serde::to_vec(export_db)
+            .map_err(|e| AppError::Generic(format!("Erro ao serializar para MessagePack: {}", e)))
+    }
+    
+    /// Exporta e serializa o banco de dados para MessagePack
+    pub fn export_and_serialize_msgpack(&self) -> Result<Vec<u8>, AppError> {
+        let export_db = self.export_to_message_pack()?;
+        Self::serialize_to_msgpack(&export_db)
+    }
+    
+    /// Comprime dados com xz
+    pub fn compress_xz(data: &[u8]) -> Result<Vec<u8>, AppError> {
+        use std::io::Write;
+        let mut compressed = Vec::new();
+        let mut encoder = xz2::write::XzEncoder::new(&mut compressed, 6);
+        encoder.write_all(data)
+            .map_err(|e| AppError::Generic(format!("Erro ao comprimir com xz: {}", e)))?;
+        encoder.finish()
+            .map_err(|e| AppError::Generic(format!("Erro ao finalizar compressão xz: {}", e)))?;
+        Ok(compressed)
+    }
+}
+
+fn parse_datetime_to_timestamp(s: &str) -> i64 {
+    match chrono::NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S") {
+        Ok(dt) => dt.and_utc().timestamp(),
+        Err(_) => chrono::Local::now().timestamp(),
     }
 }
 

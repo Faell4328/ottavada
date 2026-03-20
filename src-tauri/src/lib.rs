@@ -113,6 +113,10 @@ pub fn run() {
             commands::settings_commands::toggle_computer_type,
             // Scan
             commands::scan_commands::scan_files_for_changes,
+            // Backup
+            commands::backup_commands::export_database_to_msgpack,
+            commands::backup_commands::export_database_to_msgpack_xz,
+            commands::backup_commands::export_database_to_path,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

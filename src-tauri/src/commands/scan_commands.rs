@@ -110,6 +110,22 @@ pub fn scan_files_for_changes(
     info!("Verificação concluída. {} alterados, {} não encontrados, {} recuperados, {} erros", 
         changed_files.len(), not_found_files.len(), recovered_files.len(), failed_files.len());
 
+    // Exportar banco de dados para MessagePack após o scan
+    let app_data_dir = store.get_app_data_dir();
+    let msgpack_output_path = app_data_dir.join("database.msgpack.xz");
+    
+    match crate::commands::backup_commands::export_database_to_path_internal(
+        &*db,
+        msgpack_output_path.to_string_lossy().to_string(),
+    ) {
+        Ok(_) => {
+            info!("Banco de dados exportado com sucesso para MessagePack após scan");
+        }
+        Err(e) => {
+            warn!("Erro ao exportar banco de dados após scan: {:?}", e);
+        }
+    }
+
     Ok(ScanResult {
         changed_files,
         not_found_files,

@@ -190,4 +190,12 @@ impl SystemStore {
         let store = self.load_store()?;
         Ok(store.get(key).cloned())
     }
+
+    /// Obtém o diretório de dados da aplicação (onde o store é armazenado)
+    pub fn get_app_data_dir(&self) -> PathBuf {
+        self.store_path
+            .parent()
+            .map(|p| p.to_path_buf())
+            .unwrap_or_else(|| PathBuf::from("."))
+    }
 }
