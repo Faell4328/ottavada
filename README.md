@@ -231,9 +231,9 @@ computer: {
 	"name": "Faell",
 	"type": "Client" | "Server",
 	"dataBaseLocal": 8021948012,
-	"apiKey": {
-		"Client ID / Secret": "Identifica a aplicação",
-		"Access Token": "Token usado para acessar recursos protegidos",
+	"rclone": {
+		"name": "",
+		"path": "Diretório no Google Drive",
 		
 	}
 }
@@ -439,10 +439,14 @@ Ao clicar na música será expandido e mostrar uma lista de partituras/instrumen
 	- [x] Remover a solicitação do arquivo json do Accout Service.
 	- [x] Adicionar no lugar a pagina de configuração do rclone.
 	- [x] Deve ter um botão de "fazer teste", onde será gerado um arquivo no diretório do `tauri-plugin-store`, dentro de (`/{tauri-plugin-store}/nuvem`): `nuvem/`. Esse arquivo é um .txt que vai ter o conteúdo "Upload feito com sucesso". Ao clicar no botão será executado a criação e o upload do arquivo.
-- [ ] Atualizar a página de configurações.
-	- [ ] Adicione um botão de "testar rclone", com objetivo de testar se o rclone está funcionando. O teste deve ser o mesmo que no primeiro acesso.
-- [ ] Atualizar para os arquivos `msgpack.xz` será gerado dentro do diretório `/nuvem`
-- [ ] Implementar o rclone para fazer upload ao Google Drive.
+- [x] Atualizar a página de configurações.
+	- [x] Adicione um botão de "testar rclone", com objetivo de testar se o rclone está funcionando. O teste deve ser o mesmo que no primeiro acesso.
+- [x] Atualizar para os arquivos `msgpack.xz` será gerado dentro do diretório `/nuvem`
+- [ ] Atualizar estrutura do `tauri-plugin-store`.
+- [ ] Salvar as informações digitadas na página de primeiro acesso. No path o default deve ser "ScoreMaestro", a pessoa pode alterar o valor do input se quiser, mas será preenchido com isso.
+- [ ] Atualizar as configurações para buscar as informações do `tauri-plugin-store`.
+- [x] Implementar o rclone para fazer upload ao Google Drive.
+- [ ] Atualizar o "verificar alterações", para que depois de fazer a verificação, gerar os arquivos e comprimir, faça o upload com rcone.
 - [ ] Implementar função para leitura e comparação do que mudou do MessagePack que outro enviou.
 - [ ] Atualizar o "Siderbar":
 	- [ ] Adicionar o campo de "pendente revisão".

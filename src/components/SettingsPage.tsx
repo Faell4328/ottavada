@@ -23,6 +23,9 @@ export default function SettingsPage() {
   );
   const [isTogglingType, setIsTogglingType] = useState(false);
   const [isChangeComputerTypeModalOpen, setIsChangeComputerTypeModalOpen] = useState(false);
+  const [isTestingRclone, setIsTestingRclone] = useState(false);
+  const [rcloneRemote, setRcloneRemote] = useState("");
+  const [rclonePath, setRclonePath] = useState("ScoreMaestro");
 
   function update(partial: Partial<AppSettings>) {
     setSettings((prev) => ({ ...prev, ...partial }));
@@ -47,6 +50,25 @@ export default function SettingsPage() {
       toast.error("Erro ao alternar tipo de computador");
     } finally {
       setIsTogglingType(false);
+    }
+  }
+
+  async function handleTestRclone() {
+    if (!rcloneRemote.trim()) {
+      toast.error("Especifique o nome do remote do rclone");
+      return;
+    }
+
+    setIsTestingRclone(true);
+    try {
+      await api.testRcloneUpload(rcloneRemote, rclonePath);
+      toast.success("Teste realizado com sucesso! Arquivo enviado para o rclone.");
+    } catch (error) {
+      toast.error(
+        `Erro ao testar rclone: ${error instanceof Error ? error.message : "Erro desconhecido"}`
+      );
+    } finally {
+      setIsTestingRclone(false);
     }
   }
 
@@ -105,6 +127,47 @@ export default function SettingsPage() {
                 : "Computador secundário - consulta e propõe alterações. Clique em 'Alternar' para mudar para Servidor."}
             </p>
           </Field>
+        </Section>
+
+        {/* Rclone */}
+        <Section title="Rclone">
+          <Field label="Remote do rclone">
+            <input
+              value={rcloneRemote}
+              onChange={(e) => setRcloneRemote(e.target.value)}
+              className="w-full h-9 rounded border border-[#c5cfdb] bg-white px-3 text-sm text-[#4d6075] outline-none focus:border-[#7ba0d4]"
+              placeholder="Ex: gdrive"
+            />
+            <p className="text-xs text-[#8b9db2] mt-1">
+              Nome do remote configurado no rclone (geralmente 'gdrive')
+            </p>
+          </Field>
+
+          <Field label="Caminho no remote">
+            <input
+              value={rclonePath}
+              onChange={(e) => setRclonePath(e.target.value)}
+              className="w-full h-9 rounded border border-[#c5cfdb] bg-white px-3 text-sm text-[#4d6075] outline-none focus:border-[#7ba0d4]"
+              placeholder="Ex: ScoreMaestro"
+            />
+            <p className="text-xs text-[#8b9db2] mt-1">
+              Caminho onde os backups serão salvos
+            </p>
+          </Field>
+
+          <div>
+            <button
+              type="button"
+              onClick={handleTestRclone}
+              disabled={isTestingRclone || !rcloneRemote.trim()}
+              className="h-9 px-4 rounded border border-[#c5cfdb] bg-white hover:bg-[#f2f5fa] text-sm font-medium text-[#344b61] disabled:opacity-50 transition-colors cursor-pointer"
+            >
+              {isTestingRclone ? "Testando..." : "Testar Rclone"}
+            </button>
+            <p className="text-xs text-[#8b9db2] mt-1">
+              Clique para testar a conexão com o rclone. Um arquivo de teste será enviado.
+            </p>
+          </div>
         </Section>
 
         {/* Save */}

@@ -112,7 +112,14 @@ pub fn scan_files_for_changes(
 
     // Exportar banco de dados para MessagePack após o scan
     let app_data_dir = store.get_app_data_dir();
-    let msgpack_output_path = app_data_dir.join("database.msgpack.xz");
+    let nuvem_dir = app_data_dir.join("nuvem");
+    
+    // Criar diretório nuvem se não existir
+    if let Err(e) = std::fs::create_dir_all(&nuvem_dir) {
+        warn!("Erro ao criar diretório nuvem: {:?}", e);
+    }
+    
+    let msgpack_output_path = nuvem_dir.join("database.msgpack.xz");
     
     match crate::commands::backup_commands::export_database_to_path_internal(
         &*db,
