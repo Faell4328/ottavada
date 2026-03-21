@@ -76,15 +76,12 @@ export default function FirstRunPage() {
       return;
     }
     
-    // Deletar arquivo de teste do remote antes de prosseguir
-    if (rcloneRemote.trim()) {
-      try {
-        await api.deleteRcloneTestFile(rcloneRemote, rclonePath);
-      } catch (error) {
-        // Não bloqueia o fluxo se falhar ao deletar
-        console.warn("Aviso ao deletar arquivo de teste:", error);
-        toast("Aviso: Arquivo de teste não pôde ser deletado do remote", { icon: "⚠️" });
-      }
+    // Deletar arquivo de teste local da pasta /nuvem
+    try {
+      await api.deleteRcloneTestFile();
+    } catch (error) {
+      // Não bloqueia o fluxo se falhar ao deletar
+      console.warn("Aviso ao deletar arquivo de teste local:", error);
     }
     
     setStep("confirm");

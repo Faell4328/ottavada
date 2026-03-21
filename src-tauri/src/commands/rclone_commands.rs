@@ -199,58 +199,34 @@ pub fn test_rclone_upload(
     Ok(())
 }
 
-/// Deleta o arquivo de teste do remote após o teste ser bem-sucedido
+/// Deleta o arquivo de teste local em /nuvem após o usuário prosseguir com rclone
 /// 
 /// # Parâmetros
 /// - `store`: SystemStore para obter o diretório de dados
-/// - `remote`: Nome do remote configurado no rclone
-/// - `path`: Caminho no remote
 /// 
 /// # Retorna
 /// - `Ok(())`: Arquivo deletado com sucesso ou não encontrado
-/// - `Err(AppError)`: Erro ao deletar
 #[tauri::command]
 pub fn delete_rclone_test_file(
     store: State<'_, SystemStore>,
-    remote: String,
-    path: String,
 ) -> Result<(), AppError> {
-    info!("Deletando arquivo de teste do remote: remote={}, path={}", remote, path);
+    info!("Deletando arquivo de teste local");
     
     let app_data_dir = store.app_data_dir();
     let nuvem_dir = app_data_dir.join("nuvem");
     let test_file_path = nuvem_dir.join("rclone_test.txt");
     
-    // Limpar o path (remover barras extras)
-    let clean_path = path.trim().trim_start_matches('/').trim_end_matches('/');
-    let remote_path = if clean_path.is_empty() {
-        format!("{}:", remote)
-    } else {
-        format!("{}:{}", remote, clean_path)
-    };
-    
-    // Deletar arquivo de teste do remote usando rclone
-    info!("Deletando arquivo remoto: {}/rclone_test.txt", remote_path);
-    let output = Command::new("rclone")
-        .args(&["delete", &format!("{}/rclone_test.txt", remote_path)])
-        .output()
-        .map_err(|e| {
-            error!("Erro ao executar rclone delete: {:?}", e);
-            AppError::Generic(format!("Erro ao deletar arquivo de teste: {}", e))
-        })?;
-    
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        // Não tratamos como erro crítico - apenas um aviso
-        info!("Aviso: Arquivo de teste não pôde ser deletado do remote: {}", stderr);
-    } else {
-        info!("✓ Arquivo de teste deletado do remote com sucesso");
-    }
-    
-    // Tentar remover arquivo local se ainda existir
+    // Deletar arquivo local se existir
     if test_file_path.exists() {
-        let _ = std::fs::remove_file(&test_file_path);
-        info!("✓ Arquivo de teste local também removido");
+        std::fs::remove_file(&test_file_path)
+            .map_err(|e| {
+                error!("Erro ao remover arquivo de teste local: {}", e);
+                AppError::Generic(format!("Erro ao remover arquivo de teste: {}", e))
+            })?;
+        
+        info!("✓ Arquivo de teste local removido com sucesso");
+    } else {
+        info!("Arquivo de teste local não encontrado, nada a remover");
     }
     
     Ok(())
