@@ -75,6 +75,18 @@ export default function FirstRunPage() {
       toast.error("Teste a conexão com rclone antes de continuar");
       return;
     }
+    
+    // Deletar arquivo de teste do remote antes de prosseguir
+    if (rcloneRemote.trim()) {
+      try {
+        await api.deleteRcloneTestFile(rcloneRemote, rclonePath);
+      } catch (error) {
+        // Não bloqueia o fluxo se falhar ao deletar
+        console.warn("Aviso ao deletar arquivo de teste:", error);
+        toast("Aviso: Arquivo de teste não pôde ser deletado do remote", { icon: "⚠️" });
+      }
+    }
+    
     setStep("confirm");
   }
 

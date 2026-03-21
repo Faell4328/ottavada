@@ -442,9 +442,9 @@ Ao clicar na música será expandido e mostrar uma lista de partituras/instrumen
 - [x] Atualizar a página de configurações.
 	- [x] Adicione um botão de "testar rclone", com objetivo de testar se o rclone está funcionando. O teste deve ser o mesmo que no primeiro acesso.
 - [x] Atualizar para os arquivos `msgpack.xz` será gerado dentro do diretório `/nuvem`
-- [ ] Atualizar estrutura do `tauri-plugin-store`.
-- [ ] Salvar as informações digitadas na página de primeiro acesso. No path o default deve ser "ScoreMaestro", a pessoa pode alterar o valor do input se quiser, mas será preenchido com isso.
-- [ ] Atualizar as configurações para buscar as informações do `tauri-plugin-store`.
+- [x] Atualizar estrutura do `tauri-plugin-store`.
+- [x] Salvar as informações digitadas na página de primeiro acesso. No path o default deve ser "ScoreMaestro", a pessoa pode alterar o valor do input se quiser, mas será preenchido com isso.
+- [x] Atualizar as configurações para buscar as informações do `tauri-plugin-store`.
 - [x] Implementar o rclone para fazer upload ao Google Drive.
 - [ ] Atualizar o "verificar alterações", para que depois de fazer a verificação, gerar os arquivos e comprimir, faça o upload com rcone.
 - [ ] Implementar função para leitura e comparação do que mudou do MessagePack que outro enviou.

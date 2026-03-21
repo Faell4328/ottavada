@@ -231,3 +231,7 @@ export async function uploadWithRclone(
 ): Promise<string> {
   return invoke("upload_with_rclone", { remote, path, filePath });
 }
+
+export async function deleteRcloneTestFile(remote: string, path: string): Promise<void> {
+  return invoke("delete_rclone_test_file", { remote, path });
+}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import toast from "react-hot-toast";
@@ -26,6 +26,14 @@ export default function SettingsPage() {
   const [isTestingRclone, setIsTestingRclone] = useState(false);
   const [rcloneRemote, setRcloneRemote] = useState("");
   const [rclonePath, setRclonePath] = useState("ScoreMaestro");
+
+  // Carregar dados do rclone da store quando o componente monta ou settings muda
+  useEffect(() => {
+    if (state.settings?.rclone_config) {
+      setRcloneRemote(state.settings.rclone_config.remote);
+      setRclonePath(state.settings.rclone_config.path);
+    }
+  }, [state.settings]);
 
   function update(partial: Partial<AppSettings>) {
     setSettings((prev) => ({ ...prev, ...partial }));
@@ -73,8 +81,25 @@ export default function SettingsPage() {
   }
 
   async function handleSave() {
-    await saveSettings(settings);
-    navigate("/");
+    // Atualizar os dados de rclone no objeto settings antes de salvar
+    const updatedSettings: AppSettings = {
+      ...settings,
+      rclone_config: (rcloneRemote.trim() || rclonePath.trim()) 
+        ? {
+            remote: rcloneRemote,
+            path: rclonePath,
+          }
+        : null,
+    };
+    
+    try {
+      await saveSettings(updatedSettings);
+      toast.success("Configurações salvas com sucesso!");
+      navigate("/");
+    } catch (error) {
+      console.error("Failed to save settings:", error);
+      toast.error("Erro ao salvar configurações");
+    }
   }
 
   return (
