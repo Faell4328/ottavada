@@ -117,6 +117,10 @@ pub fn run() {
             commands::backup_commands::export_database_to_msgpack,
             commands::backup_commands::export_database_to_msgpack_xz,
             commands::backup_commands::export_database_to_path,
+            // Rclone
+            commands::rclone_commands::test_rclone_connection,
+            commands::rclone_commands::upload_with_rclone,
+            commands::rclone_commands::test_rclone_upload,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

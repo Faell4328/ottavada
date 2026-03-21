@@ -9,13 +9,19 @@ const STORE_FILENAME: &str = "app-store.json";
 
 /// Gerencia o armazenamento de configurações do sistema usando um arquivo JSON
 pub struct SystemStore {
+    app_data_dir: PathBuf,
     store_path: PathBuf,
 }
 
 impl SystemStore {
     pub fn new(app_data_dir: PathBuf) -> Self {
         let store_path = app_data_dir.join(STORE_FILENAME);
-        Self { store_path }
+        Self { app_data_dir, store_path }
+    }
+
+    /// Retorna o diretório de dados da aplicação
+    pub fn app_data_dir(&self) -> &PathBuf {
+        &self.app_data_dir
     }
 
     /// Carrega as configurações do arquivo JSON
@@ -101,6 +107,9 @@ impl SystemStore {
             google_service_account: store
                 .get("google_service_account")
                 .and_then(|v| serde_json::from_value::<GoogleServiceAccount>(v.clone()).ok()),
+            rclone_config: store
+                .get("rclone_config")
+                .and_then(|v| serde_json::from_value::<crate::domain::models::RcloneConfig>(v.clone()).ok()),
             database_local: store
                 .get("database_local")
                 .and_then(|v: &serde_json::Value| v.as_u64()),
@@ -140,6 +149,14 @@ impl SystemStore {
             store["google_service_account"] = account_json;
         } else {
             store.as_object_mut().map(|obj| obj.remove("google_service_account"));
+        }
+
+        if let Some(ref rclone_cfg) = settings.rclone_config {
+            let rclone_json = serde_json::to_value(rclone_cfg)
+                .map_err(|e| AppError::Generic(format!("Erro ao serializar rclone config: {}", e)))?;
+            store["rclone_config"] = rclone_json;
+        } else {
+            store.as_object_mut().map(|obj| obj.remove("rclone_config"));
         }
 
         if let Some(database_local) = settings.database_local {

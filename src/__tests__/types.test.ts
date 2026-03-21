@@ -73,6 +73,7 @@ describe("TypeScript Types", () => {
         google_drive_mode: "Local",
         first_run_completed: false,
         google_service_account: null,
+        rclone_config: null,
       };
       expect(settings.google_drive_mode).toBe("Local");
     });
@@ -85,6 +86,7 @@ describe("TypeScript Types", () => {
         google_drive_mode: "Api",
         first_run_completed: true,
         google_service_account: null,
+        rclone_config: null,
       };
       expect(settings.google_drive_mode).toBe("Api");
     });

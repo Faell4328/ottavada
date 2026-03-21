@@ -176,7 +176,8 @@ export async function completeFirstRun(
   computerName: string,
   computerType: string,
   googleDriveMode: string,
-  googleServiceAccountJson?: string | null
+  googleServiceAccountJson?: string | null,
+  rcloneConfigJson?: string | null
 ): Promise<void> {
   return invoke("complete_first_run", {
     computerId,
@@ -184,6 +185,7 @@ export async function completeFirstRun(
     computerType,
     googleDriveMode,
     googleServiceAccountJson,
+    rcloneConfigJson,
   });
 }
 
@@ -210,4 +212,22 @@ export async function scanFilesForChanges(): Promise<ScanResult> {
 
 export async function generateComputerId(): Promise<string> {
   return invoke("generate_computer_id");
+}
+
+// ── Rclone ──
+
+export async function testRcloneConnection(remote: string, path: string): Promise<boolean> {
+  return invoke("test_rclone_connection", { remote, path });
+}
+
+export async function testRcloneUpload(remote: string, path: string): Promise<void> {
+  return invoke("test_rclone_upload", { remote, path });
+}
+
+export async function uploadWithRclone(
+  remote: string,
+  path: string,
+  filePath: string
+): Promise<string> {
+  return invoke("upload_with_rclone", { remote, path, filePath });
 }

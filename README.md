@@ -12,10 +12,10 @@ Um aplicativo desktop windows, para organizar, controlar status das partituras e
 - **Servidor** é o computador mestre: ele mantém todas as partituras indexadas localmente e serve como referência para detectar alterações nos arquivos. É o computador do maestro/compositor/arranjador.
 - **Cliente** não indexa o diretório local; consulta as partituras na versão `main` e pode propor alterações pontuais. Essas alterações só são aplicadas no diretório mestre após aprovação do servidor (ou seja, para efetivar a alteração). É o computador de utilidade nos ensaios, sendo mais utilizando para consulta.
 
-## Gerenciamento de Partituras
+## Gerenciamento de Músicas e Partituras
 
 - **Adicionar:** música manualmente, arquivo individual, ou diretório inteiro
-- **Editar:** nome, compositor, arranjador, categorias
+- **Editar:** nome, compositor, arranjador, categorias, arquivo e status.
 - **Favoritar:** marcar/desmarcar como favoritos
 - **Pesquisar:** com sugestões automáticas por escopo (todas, favoritas, categoria)
 - **Visualizar:** duplo clique abre arquivo no software padrão do sistema
@@ -38,13 +38,12 @@ Um aplicativo desktop windows, para organizar, controlar status das partituras e
 ## Gerenciamento de Categorias
 
 - Criar, editar, remover categorias (ex.: "Harpa Cristã", "Clássicas")
-- Uma música pode pertencer a múltiplas categorias
+- Uma música pode pertencer a múltiplas categorias e uma categoria pode pertencer a múltiplas músicas.
 
 ## Configurações
 
 - O usuário pode alterar o nome do computador
-- O usuário pode adicionar API key do Google Drive (Service Account). O usuário não pode ver/obter informações da API key no front-end, podendo apenas atualizar a existente.
-- Deve ter um sistema de log
+- O usuário pode alterar o tipo de computador dele (entre cliente e servidor).
 
 # Requisitos não funcionais
 
@@ -62,7 +61,9 @@ Um aplicativo desktop windows, para organizar, controlar status das partituras e
 - Tanto a varredura, quanto o update e download, deve ser feito em thread separada. Para não interferir no funcionamento dos outros componentes.
 - O computador deve fazer a verificação de alteração sempre quando ligar e quando o usuário clicar no botão.
 - O `logs` deve ser salvo no mesmo diretório onde o `tauri-plugin-store` salva por padrão (`C:\Users\<seu-usuario>\AppData\Roaming\<nome-do-app>\`).
+- O arquivo do MessagePack deve ficar no diretório: `C:\Users\<user>\AppData\Roaming\ScoreMaestro\database\database.msgpack`
 - O update no Google Drive deve ser dessa forma: comprimir com o nome: `database.msgpack.xz.tmp` e depois renomear para `database.msgpack.xz` (no Google Drive), o mesmo vale para as partituras. Objetivo é evitar arquivos corrompidos.
+- Por questão de segurança, usado o Service Account com acesso a uma pasta compartilhada no Google (sem delegação).
 
 ## Front-end
 
@@ -84,8 +85,8 @@ Um aplicativo desktop windows, para organizar, controlar status das partituras e
 - `serde` + `rmp-serde` - Leitura do arquivo `MessagePack`.
 - `fs2` - Espaço em disco
 - `thiserror` - Erros tipados
-- `yup-oauth2` - Para facilitar/automatizar a integração com Auth2
-- `reqwest` - Para facilitar requisições HTTP para Google Drive
+- `jsonwebtoken`
+- `ureq`
 - `tauri-plugin-dialog` - Diálogos nativos (seleção de arquivos/pastas)
 - `tauri-plugin-fs` - Acesso ao sistema de arquivos
 - `tauri-plugin-store` - Persistência de configurações
@@ -323,6 +324,17 @@ backupSongsStep: [
 4. Caso esteja tudo certo, é salvo no banco de dados.
 
 ! Caso a música já exista, deve salvar na música existente e não criar uma nova com o mesmo nome.
+
+### Upload do banco de dados e músicas/partituras para o Google Drive
+! É necessário ter o rclone instalado e configurado com nome do provedor sendo (`gdrive`), utilizar a autenticação normal, sem ser o Account Service.
+1. O sistema gera o arquivo, ex: `database.msgpack.xz`.
+	- Esses arquivos ficam na pasta `nuvem/`. No caso é no diretório onde o `tauri-plugin-store` salva os arquivos.
+	- Para músicas/partituras é o mesmo diretório, mas é: `nuvem/song/{songId}.xz`
+2. Marca o status como pronto para upload.
+3. Chama o rclone para upload. O upload deve ser feito na pasta `/ScoreMaestro`.
+4. Valida o resultado e trata qualquer erro.
+! O sistema deve mostrar visualmente para o usuário que está fazendo upload e informar qual está fazendo e quanto falta.
+ 
 ## Computador Cliente
 
 ### Abrindo o aplicativo:
@@ -354,6 +366,11 @@ Ao clicar na música será expandido e mostrar uma lista de partituras/instrumen
 É um dos meios de comunicar com o usuário o que está sendo feito. Ele deve ser sempre visível.
 - Status: data/hora do último backup
 - Se em progresso: barra de progresso e porcentagem
+
+
+### Configurações
+- O usuário deve poder alterar o nome.
+- Alterar o tipo de computador.
 
 # Funcionalidades para cada versão
 
@@ -418,7 +435,14 @@ Ao clicar na música será expandido e mostrar uma lista de partituras/instrumen
 
 ## Funcionalidades para v0.3 - cloud
 - [x] Criar MessagePack com base nas informações do banco de dados.
-- [ ] Integração com Google Drive
+- [x] Atualizar na página de primeiro acesso.
+	- [x] Remover a solicitação do arquivo json do Accout Service.
+	- [x] Adicionar no lugar a pagina de configuração do rclone.
+	- [x] Deve ter um botão de "fazer teste", onde será gerado um arquivo no diretório do `tauri-plugin-store`, dentro de (`/{tauri-plugin-store}/nuvem`): `nuvem/`. Esse arquivo é um .txt que vai ter o conteúdo "Upload feito com sucesso". Ao clicar no botão será executado a criação e o upload do arquivo.
+- [ ] Atualizar a página de configurações.
+	- [ ] Adicione um botão de "testar rclone", com objetivo de testar se o rclone está funcionando. O teste deve ser o mesmo que no primeiro acesso.
+- [ ] Atualizar para os arquivos `msgpack.xz` será gerado dentro do diretório `/nuvem`
+- [ ] Implementar o rclone para fazer upload ao Google Drive.
 - [ ] Implementar função para leitura e comparação do que mudou do MessagePack que outro enviou.
 - [ ] Atualizar o "Siderbar":
 	- [ ] Adicionar o campo de "pendente revisão".
@@ -460,3 +484,20 @@ Solução:
 - Alterações grandes no banco dados.
 - Alterações grande no shema (MessagePack).
 - Melhor resolução de conflitos (vários computadores atualizando ao mesmo tempo)
+
+21-03-2026 - Problema com Google Drive.
+- Quebrei a cabeça ontem e hoje tentando fazer um simples update.
+- Então cheguei a três possibilidades:
+	1. Utilizar python de fundo com SKD.
+	- Tem os seguintes problemas:
+		1. Teria que ter python instalado no computador.
+		2. Teria que dar manutenção (atualização e ajuste no código).
+	1. Utilizar outro provedor de nuvem, pCloud.
+	- Tem os seguinte problemas:
+		1. Não é tão robusto e confiável como o Google Drive (padrão do mercado).
+		2. Nunca utilize e não faço ideia como funciona. Aparenta ser mais simples.
+	1. Utilizar rclone para tomar conta.
+	- Tem o seguinte problema:
+		1. Precisa ter o rclone instalado e manter atualizado.
+! Minha escolha foi utilizar o rclone, devido a ter que fazer menos manutenção no código, é só simplesmente atualizar ele e pronto.
+! Mas, caso eu veja que vai dar muita dor de cabeça, posso utilizar o rclone com pCloud (ou via API direto no código). Agora, minha decisão é o Google Drive, mas estarei estudando e testando o pCloud em paralelo.

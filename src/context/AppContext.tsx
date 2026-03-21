@@ -55,7 +55,8 @@ interface AppContextValue {
     computerName: string,
     computerType: string,
     googleDriveMode: string,
-    googleServiceAccountJson?: string | null
+    googleServiceAccountJson?: string | null,
+    rcloneConfigJson?: string | null
   ) => Promise<void>;
   scanFilesForChanges: () => Promise<void>;
 }
@@ -364,9 +365,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 
   const handleCompleteFirstRun = useCallback(
-    async (computerId: string, computerName: string, computerType: string, googleDriveMode: string, googleServiceAccountJson?: string | null) => {
+    async (computerId: string, computerName: string, computerType: string, googleDriveMode: string, googleServiceAccountJson?: string | null, rcloneConfigJson?: string | null) => {
       try {
-        await api.completeFirstRun(computerId, computerName, computerType, googleDriveMode, googleServiceAccountJson);
+        await api.completeFirstRun(computerId, computerName, computerType, googleDriveMode, googleServiceAccountJson, rcloneConfigJson);
         dispatch({ type: "SET_FIRST_RUN", payload: false });
         await Promise.all([loadSongs(), loadCategories(), loadSettings()]);
         toast.success("Configuração inicial concluída!");

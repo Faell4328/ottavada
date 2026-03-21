@@ -18,6 +18,7 @@ export default function SettingsPage() {
       google_drive_mode: "Local",
       first_run_completed: true,
       google_service_account: null,
+      rclone_config: null,
     }
   );
   const [isTogglingType, setIsTogglingType] = useState(false);

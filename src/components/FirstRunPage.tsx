@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react";
-import { Music, Upload, AlertCircle, CheckCircle } from "lucide-react";
+import { Music, AlertCircle, CheckCircle, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAppState } from "../context/AppContext";
 import * as api from "../api/commands";
-import type { GoogleServiceAccount } from "../types";
 
-type Step = "name" | "type" | "google-drive" | "confirm";
+type Step = "name" | "type" | "rclone-setup" | "confirm";
 
 export default function FirstRunPage() {
   const { completeFirstRun } = useAppState();
@@ -13,8 +12,10 @@ export default function FirstRunPage() {
   const [computerName, setComputerName] = useState("");
   const [computerType, setComputerType] = useState<"Server" | "Client" | "">("Server");
   const [step, setStep] = useState<Step>("name");
-  const [serviceAccount, setServiceAccount] = useState<GoogleServiceAccount | null>(null);
-  const [jsonText, setJsonText] = useState("");
+  const [rcloneRemote, setRcloneRemote] = useState("");
+  const [rclonePath, setRclonePath] = useState("ScoreMaestro");
+  const [rcloneConfigured, setRcloneConfigured] = useState(false);
+  const [isTestingRclone, setIsTestingRclone] = useState(false);
   const [useOfflineMode, setUseOfflineMode] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -27,70 +28,25 @@ export default function FirstRunPage() {
       });
   }, []);
 
-  function handleFileSelect(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const content = e.target?.result as string;
-      setJsonText(content);
-      validateServiceAccount(content);
-    };
-    reader.onerror = () => {
-      toast.error("Erro ao ler o arquivo");
-    };
-    reader.readAsText(file);
-  }
-
-  function validateServiceAccount(jsonStr: string) {
-    try {
-      const parsed: GoogleServiceAccount = JSON.parse(jsonStr);
-
-      // Validate required fields
-      const requiredFields: (keyof GoogleServiceAccount)[] = [
-        "type",
-        "project_id",
-        "private_key_id",
-        "private_key",
-        "client_email",
-        "client_id",
-        "auth_uri",
-        "token_uri",
-      ];
-
-      const missingFields = requiredFields.filter((field) => !parsed[field]);
-
-      if (missingFields.length > 0) {
-        toast.error(
-          `Campos obrigatórios faltando: ${missingFields.join(", ")}`
-        );
-        setServiceAccount(null);
-        return;
-      }
-
-      if (parsed.type !== "service_account") {
-        toast.error('O arquivo deve conter type: "service_account"');
-        setServiceAccount(null);
-        return;
-      }
-
-      setServiceAccount(parsed);
-      toast.success("Service Account validado com sucesso!");
-    } catch (error) {
-      toast.error(
-        `JSON inválido: ${error instanceof Error ? error.message : "Erro desconhecido"}`
-      );
-      setServiceAccount(null);
-    }
-  }
-
-  function handleJsonPaste() {
-    if (!jsonText.trim()) {
-      toast.error("Cole um arquivo JSON válido");
+  async function handleTestRclone() {
+    if (!rcloneRemote.trim()) {
+      toast.error("Especifique o nome do remote do rclone");
       return;
     }
-    validateServiceAccount(jsonText);
+
+    setIsTestingRclone(true);
+    try {
+      await api.testRcloneUpload(rcloneRemote, rclonePath);
+      toast.success("Teste realizado com sucesso! Arquivo enviado para o rclone.");
+      setRcloneConfigured(true);
+    } catch (error) {
+      toast.error(
+        `Erro ao testar rclone: ${error instanceof Error ? error.message : "Erro desconhecido"}`
+      );
+      setRcloneConfigured(false);
+    } finally {
+      setIsTestingRclone(false);
+    }
   }
 
   async function handleNameSubmit() {
@@ -106,7 +62,7 @@ export default function FirstRunPage() {
       toast.error("Selecione o tipo de computador");
       return;
     }
-    setStep("google-drive");
+    setStep("rclone-setup");
   }
 
   async function handleOfflineMode() {
@@ -114,9 +70,9 @@ export default function FirstRunPage() {
     setStep("confirm");
   }
 
-  async function handleWithGoogle() {
-    if (!serviceAccount) {
-      toast.error("Carregue um Service Account válido");
+  async function handleWithRclone() {
+    if (!rcloneConfigured && rcloneRemote.trim()) {
+      toast.error("Teste a conexão com rclone antes de continuar");
       return;
     }
     setStep("confirm");
@@ -125,11 +81,11 @@ export default function FirstRunPage() {
   async function handleConfirm() {
     setIsLoading(true);
     try {
-      const serviceAccountJson = useOfflineMode
-        ? null
-        : JSON.stringify(serviceAccount);
+      const rcloneJson = !useOfflineMode && rcloneRemote
+        ? JSON.stringify({ remote: rcloneRemote, path: rclonePath })
+        : null;
 
-      await completeFirstRun(computerId, computerName.trim(), computerType, "api", serviceAccountJson);
+      await completeFirstRun(computerId, computerName.trim(), computerType, "rclone", null, rcloneJson);
     } catch (error) {
       toast.error(
         `Erro: ${error instanceof Error ? error.message : "Erro desconhecido"}`
@@ -286,111 +242,124 @@ export default function FirstRunPage() {
           </>
         )}
 
-        {/* Step 3: Google Drive Setup */}
-        {step === "google-drive" && (
+        {/* Step 3: Rclone Setup */}
+        {step === "rclone-setup" && (
           <>
             <h2 className="text-lg font-semibold text-[#34485d] mb-4">
-              Configure o Google Drive (opcional)
+              Configure o Rclone (opcional)
             </h2>
 
             <p className="text-sm text-[#6b849e] mb-6">
-              Você pode configurar o backup automático agora ou usar o aplicativo
-              offline. Pode atualizar isso nas configurações depois.
+              Rclone permite sincronizar seus backups com provedores em nuvem. 
+              Você pode configurar depois nas definições se preferir usar modo offline.
             </p>
 
-            {/* Option 1: With Google Drive */}
+            {/* Option 1: With Rclone */}
             <div className="mb-6 p-4 border border-[#c5cfdb] rounded-lg">
               <h3 className="font-semibold text-[#34485d] mb-3">
-                Com backup automático
+                Com sincronização em nuvem
               </h3>
 
               <p className="text-xs text-[#6b849e] mb-4">
-                Carregue o arquivo JSON de Service Account do Google Cloud
-                Console:
+                Configure o rclone em seu computador primeiro. Pode fazer download em{" "}
+                <a 
+                  href="https://rclone.org/downloads/" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-[#4f84d7] hover:underline font-semibold"
+                >
+                  rclone.org/downloads
+                </a>
               </p>
 
-              {/* File Upload */}
-              <div className="mb-4">
-                <label className="flex items-center justify-center w-full h-32 border-2 border-dashed border-[#7ba0d4] rounded-lg cursor-pointer hover:bg-[#f8fafd] transition-colors">
-                  <div className="flex flex-col items-center justify-center">
-                    <Upload className="h-6 w-6 text-[#7ba0d4] mb-2" />
-                    <span className="text-sm font-medium text-[#34485d]">
-                      Carregue o arquivo JSON
-                    </span>
-                    <span className="text-xs text-[#8b9db2]">
-                      ou clique para selecionar
-                    </span>
-                  </div>
-                  <input
-                    type="file"
-                    accept=".json"
-                    onChange={handleFileSelect}
-                    className="hidden"
-                  />
-                </label>
-              </div>
-
-              {/* Paste JSON */}
+              {/* Rclone Remote Name */}
               <div className="mb-4">
                 <label className="block text-xs font-semibold text-[#34485d] mb-2">
-                  Ou cole o conteúdo JSON:
+                  Nome do Remote (ex: gdrive, pcloud)
                 </label>
-                <textarea
-                  value={jsonText}
-                  onChange={(e) => setJsonText(e.target.value)}
-                  className="w-full h-24 rounded-lg border border-[#c5cfdb] bg-[#f8fafd] px-3 py-2 text-xs text-[#4d6075] outline-none focus:border-[#7ba0d4] focus:ring-2 focus:ring-[#7ba0d4]/20 font-mono"
-                  placeholder='Cole aqui o conteúdo do arquivo JSON...'
+                <input
+                  value={rcloneRemote}
+                  onChange={(e) => {
+                    setRcloneRemote(e.target.value);
+                    setRcloneConfigured(false);
+                  }}
+                  className="w-full h-10 rounded-lg border border-[#c5cfdb] bg-[#f8fafd] px-3 text-sm text-[#4d6075] outline-none focus:border-[#7ba0d4] focus:ring-2 focus:ring-[#7ba0d4]/20"
+                  placeholder="Nome do remote do rclone"
                 />
-                <button
-                  onClick={handleJsonPaste}
-                  className="mt-2 px-4 h-9 rounded-lg bg-[#7ba0d4] text-xs font-semibold text-white hover:bg-[#6a8ec0] transition-colors cursor-pointer border-0"
-                >
-                  Validar JSON
-                </button>
               </div>
 
+              {/* Rclone Path */}
+              <div className="mb-4">
+                <label className="block text-xs font-semibold text-[#34485d] mb-2">
+                  Caminho na nuvem (ex: /ScoreMaestro)
+                </label>
+                <input
+                  value={rclonePath}
+                  onChange={(e) => {
+                    setRclonePath(e.target.value);
+                    setRcloneConfigured(false);
+                  }}
+                  className="w-full h-10 rounded-lg border border-[#c5cfdb] bg-[#f8fafd] px-3 text-sm text-[#4d6075] outline-none focus:border-[#7ba0d4] focus:ring-2 focus:ring-[#7ba0d4]/20"
+                  placeholder="/ScoreMaestro"
+                />
+              </div>
+
+              {/* Test Button */}
+              <button
+                onClick={handleTestRclone}
+                disabled={isTestingRclone || !rcloneRemote.trim()}
+                className={`w-full h-10 rounded-lg text-sm font-bold transition-colors cursor-pointer border-0 mb-4 flex items-center justify-center gap-2 ${
+                  isTestingRclone || !rcloneRemote.trim()
+                    ? "bg-[#9db3d1] cursor-not-allowed text-white"
+                    : "bg-[#7ba0d4] hover:bg-[#6a8ec0] text-white"
+                }`}
+              >
+                {isTestingRclone && <Loader2 className="h-4 w-4 animate-spin" />}
+                {isTestingRclone ? "Testando..." : "Fazer Teste"}
+              </button>
+
               {/* Status */}
-              {serviceAccount && (
+              {rcloneConfigured && (
                 <div className="p-3 bg-green-50 border border-green-200 rounded-lg flex items-start gap-2 mb-4">
                   <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
                   <div>
                     <p className="text-xs font-semibold text-green-800">
-                      Service Account válido
+                      Rclone configurado com sucesso
                     </p>
                     <p className="text-xs text-green-700 mt-1">
-                      Projeto: <code className="bg-green-100 px-1">{serviceAccount.project_id}</code>
+                      Remote: <code className="bg-green-100 px-1">{rcloneRemote}</code>
                     </p>
                     <p className="text-xs text-green-700">
-                      Email: <code className="bg-green-100 px-1 text-xs">{serviceAccount.client_email}</code>
+                      Caminho: <code className="bg-green-100 px-1">{rclonePath}</code>
                     </p>
                   </div>
                 </div>
               )}
 
-              {jsonText && !serviceAccount && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2 mb-4">
-                  <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+              {rcloneRemote && !rcloneConfigured && !isTestingRclone && (
+                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start gap-2 mb-4">
+                  <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-xs font-semibold text-red-800">
-                      JSON inválido
+                    <p className="text-xs font-semibold text-yellow-800">
+                      Teste pendente
                     </p>
-                    <p className="text-xs text-red-700 mt-1">
-                      Verifique se todos os campos obrigatórios estão presentes
+                    <p className="text-xs text-yellow-700 mt-1">
+                      Clique em "Testar Conexão" para validar as configurações
                     </p>
                   </div>
                 </div>
               )}
 
               <button
-                onClick={handleWithGoogle}
-                disabled={!serviceAccount}
+                onClick={handleWithRclone}
+                disabled={!rcloneConfigured && !!rcloneRemote.trim()}
                 className={`w-full h-10 rounded-lg text-sm font-bold text-white transition-colors cursor-pointer border-0 ${
-                  serviceAccount
-                    ? "bg-[#4f84d7] hover:bg-[#3d6fb8]"
-                    : "bg-[#9db3d1] cursor-not-allowed"
+                  !rcloneConfigured && rcloneRemote.trim()
+                    ? "bg-[#9db3d1] cursor-not-allowed"
+                    : "bg-[#4f84d7] hover:bg-[#3d6fb8]"
                 }`}
               >
-                Continuar com Google Drive
+                Continuar com Rclone
               </button>
             </div>
 
@@ -398,7 +367,7 @@ export default function FirstRunPage() {
             <div className="p-4 border border-[#c5cfdb] rounded-lg">
               <h3 className="font-semibold text-[#34485d] mb-2">Modo Offline</h3>
               <p className="text-xs text-[#6b849e] mb-4">
-                Use o aplicativo sem backup automático. Você pode configurar
+                Use o aplicativo sem sincronização em nuvem. Você pode configurar 
                 depois nas definições.
               </p>
               <button
@@ -448,17 +417,17 @@ export default function FirstRunPage() {
               </div>
 
               <div className="p-4 bg-[#f8fafd] rounded-lg border border-[#c5cfdb]">
-                <p className="text-xs text-[#8b9db2] mb-1">Modo de backup</p>
+                <p className="text-xs text-[#8b9db2] mb-1">Modo de sincronização</p>
                 <p className="text-sm font-semibold text-[#34485d]">
                   {useOfflineMode ? (
                     <>
                       <span className="text-orange-600">Offline</span>
-                      <span className="text-xs text-[#6b849e]"> (sem backup automático)</span>
+                      <span className="text-xs text-[#6b849e]"> (sem sincronização em nuvem)</span>
                     </>
                   ) : (
                     <>
-                      <span className="text-green-600">Google Drive</span>
-                      <span className="text-xs text-[#6b849e]"> ({serviceAccount?.project_id})</span>
+                      <span className="text-green-600">Rclone</span>
+                      <span className="text-xs text-[#6b849e]"> ({rcloneRemote})</span>
                     </>
                   )}
                 </p>
@@ -478,7 +447,7 @@ export default function FirstRunPage() {
             </button>
 
             <button
-              onClick={() => setStep("google-drive")}
+              onClick={() => setStep("rclone-setup")}
               disabled={isLoading}
               className="w-full h-10 rounded-lg bg-white text-sm font-semibold text-[#4f84d7] border border-[#7ba0d4] hover:bg-[#f8fafd] transition-colors cursor-pointer mt-2"
             >

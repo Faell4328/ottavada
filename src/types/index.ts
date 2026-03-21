@@ -32,6 +32,7 @@ export interface AppSettings {
   google_drive_mode: "Local" | "Api";
   first_run_completed: boolean;
   google_service_account: GoogleServiceAccount | null;
+  rclone_config: RcloneConfig | null;
 }
 
 export interface GoogleServiceAccount {
@@ -45,6 +46,11 @@ export interface GoogleServiceAccount {
   token_uri: string;
   auth_provider_x509_cert_url: string;
   client_x509_cert_url: string;
+}
+
+export interface RcloneConfig {
+  remote: string;
+  path: string;
 }
 
 export interface IndexedFile {

@@ -51,6 +51,7 @@ pub fn complete_first_run(
     computer_type: String,
     _google_drive_mode: String,
     google_service_account_json: Option<String>,
+    rclone_config_json: Option<String>,
 ) -> Result<(), AppError> {
     info!("Completando primeira execução para: {} ({}) - Tipo: {}", computer_name, computer_id, computer_type);
     let mut settings = store.get_app_settings()?;
@@ -59,6 +60,7 @@ pub fn complete_first_run(
     settings.computer_name = Some(computer_name);
     settings.computer_type = ComputerType::from_str(&computer_type);
     
+    // Processar Google Drive (legacy)
     if let Some(json_str) = google_service_account_json {
         info!("Validando credenciais do Google Drive");
         let service_account: GoogleServiceAccount = 
@@ -71,6 +73,15 @@ pub fn complete_first_run(
         settings.google_service_account = Some(service_account);
         settings.google_drive_mode = GoogleDriveMode::Api;
         info!("Modo Google Drive: API");
+    } else if let Some(rclone_json) = rclone_config_json {
+        info!("Configurando Rclone");
+        let rclone_config: crate::domain::models::RcloneConfig = 
+            serde_json::from_str(&rclone_json)
+                .map_err(|e| AppError::Generic(format!("Configuração rclone inválida: {}", e)))?;
+        
+        settings.rclone_config = Some(rclone_config);
+        settings.google_drive_mode = GoogleDriveMode::Local;
+        info!("Rclone configurado");
     } else {
         settings.google_drive_mode = GoogleDriveMode::Local;
         info!("Modo Google Drive: Local");

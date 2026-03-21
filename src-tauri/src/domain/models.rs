@@ -111,6 +111,7 @@ pub struct AppSettings {
     pub google_drive_mode: GoogleDriveMode,
     pub first_run_completed: bool,
     pub google_service_account: Option<GoogleServiceAccount>,
+    pub rclone_config: Option<RcloneConfig>,
     pub database_local: Option<u64>,
     pub backup_database_step: Option<BackupDatabaseStep>,
     pub backup_songs_step: Option<Vec<SongBackupStatus>>,
@@ -125,6 +126,7 @@ impl Default for AppSettings {
             google_drive_mode: GoogleDriveMode::Local,
             first_run_completed: false,
             google_service_account: None,
+            rclone_config: None,
             database_local: None,
             backup_database_step: None,
             backup_songs_step: None,
@@ -240,6 +242,13 @@ impl GoogleServiceAccount {
         }
         Ok(())
     }
+}
+
+/// Configuração do Rclone para sincronização em nuvem
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RcloneConfig {
+    pub remote: String,
+    pub path: String,
 }
 
 /// Status de um backup
