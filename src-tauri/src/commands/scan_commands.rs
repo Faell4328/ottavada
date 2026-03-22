@@ -127,6 +127,20 @@ pub fn scan_files_for_changes(
     ) {
         Ok(_) => {
             info!("Banco de dados exportado com sucesso para MessagePack após scan");
+            
+            // Atualizar o backup_database_step.updated_at com o cascading update (efeito em cascata)
+            match store.get_app_settings() {
+                Ok(mut settings) => {
+                    if let Err(e) = store.save_app_settings_with_db(&mut settings, &*db) {
+                        warn!("Erro ao atualizar backup_database_step.updated_at: {:?}", e);
+                    } else {
+                        info!("✓ backup_database_step.updated_at atualizado com o timestamp mais recente das músicas");
+                    }
+                }
+                Err(e) => {
+                    warn!("Erro ao carregar app_settings após scan: {:?}", e);
+                }
+            }
         }
         Err(e) => {
             warn!("Erro ao exportar banco de dados após scan: {:?}", e);

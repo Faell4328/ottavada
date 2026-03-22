@@ -205,6 +205,29 @@ impl SystemStore {
         Ok(())
     }
 
+    /// Salva as configurações do sistema e atualiza o backup_database_step.updated_at
+    /// com o timestamp da última alteração em qualquer música (efeito em cascata)
+    pub fn save_app_settings_with_db(&self, settings: &mut AppSettings, db: &crate::infrastructure::database::Database) -> Result<(), AppError> {
+        // Obter o updated_at mais recente das songs
+        if let Some(latest_timestamp) = db.get_latest_songs_update_timestamp()? {
+            // Atualizar ou criar o backup_database_step com o timestamp mais recente
+            match settings.backup_database_step {
+                Some(ref mut backup_step) => {
+                    backup_step.updated_at = latest_timestamp;
+                }
+                None => {
+                    use crate::domain::models::{BackupDatabaseStep, BackupStatus};
+                    settings.backup_database_step = Some(BackupDatabaseStep {
+                        status: BackupStatus::Pending,
+                        updated_at: latest_timestamp,
+                    });
+                }
+            }
+        }
+
+        self.save_app_settings(settings)
+    }
+
     /// Salva um valor genérico no store
     #[allow(dead_code)]
     pub fn set(&self, key: &str, value: serde_json::Value) -> Result<(), AppError> {

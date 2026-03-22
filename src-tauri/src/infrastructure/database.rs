@@ -1323,6 +1323,28 @@ impl Database {
         conn.execute("DELETE FROM backup_songs WHERE status = 'error'", [])?;
         Ok(())
     }
+
+    // ===== Métodos para rastreamento de atualização do banco de dados =====
+
+    /// Obtém o timestamp (em segundos) da última alteração em qualquer música
+    /// Retorna None se não houver nenhuma música
+    /// Esta é a função principal para o "efeito em cascata" do backup_database_step.updated_at
+    pub fn get_latest_songs_update_timestamp(&self) -> Result<Option<i64>, AppError> {
+        let conn = self.conn.lock().unwrap();
+        
+        match conn.query_row(
+            "SELECT updated_at FROM songs ORDER BY updated_at DESC LIMIT 1",
+            [],
+            |row| {
+                let datetime_str: String = row.get(0)?;
+                Ok(parse_datetime_to_timestamp(&datetime_str))
+            }
+        ) {
+            Ok(timestamp) => Ok(Some(timestamp)),
+            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+            Err(e) => Err(AppError::Database(e)),
+        }
+    }
 }
 
 fn parse_datetime_to_timestamp(s: &str) -> i64 {
