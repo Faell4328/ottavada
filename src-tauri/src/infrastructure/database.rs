@@ -646,12 +646,13 @@ impl Database {
         file_size: u64,
         file_modified_at: chrono::NaiveDateTime,
         now: chrono::NaiveDateTime,
+        updated_by: &str,
     ) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
         let now_str = datetime_utils::format_datetime(now);
         
         conn.execute(
-            "UPDATE scores SET name = ?1, directory_id = ?2, file_name = ?3, file_size = ?4, file_modified_at = ?5, updated_at = ?6 WHERE id = ?7",
+            "UPDATE scores SET name = ?1, directory_id = ?2, file_name = ?3, file_size = ?4, file_modified_at = ?5, updated_at = ?6, updated_by = ?7 WHERE id = ?8",
             params![
                 name,
                 directory_id,
@@ -659,11 +660,12 @@ impl Database {
                 file_size,
                 datetime_utils::format_datetime(file_modified_at),
                 now_str,
+                updated_by,
                 score_id,
             ],
         )?;
         
-        // Propagar alteração para a música (sem updated_by, usa empty string)
+        // Propagar alteração para a música
         let song_id: String = conn.query_row(
             "SELECT song_id FROM scores WHERE id = ?1",
             params![score_id],
@@ -671,8 +673,8 @@ impl Database {
         )?;
         
         conn.execute(
-            "UPDATE songs SET updated_at = ?1 WHERE id = ?2",
-            params![now_str, song_id],
+            "UPDATE songs SET updated_at = ?1, updated_by = ?2 WHERE id = ?3",
+            params![now_str, updated_by, song_id],
         )?;
         
         Ok(())
@@ -981,8 +983,6 @@ impl Database {
     pub fn export_to_message_pack(&self) -> Result<ExportDatabase, AppError> {
         let conn = self.conn.lock().unwrap();
         
-        let updated_at = chrono::Local::now().timestamp();
-        
         // Buscar todas as categorias
         let mut cat_stmt = conn.prepare(
             "SELECT id, name, updated_at, updated_by FROM categories ORDER BY name"
@@ -1046,11 +1046,19 @@ impl Database {
             })
             .collect();
         
+        let songs = songs?;
+        
+        // Calcular o updated_at do banco como o máximo entre todas as músicas (mais recente)
+        let updated_at = songs.iter()
+            .map(|s| s.updated_at)
+            .max()
+            .unwrap_or_else(|| chrono::Local::now().timestamp());
+        
         Ok(ExportDatabase {
             schema_version: 1,
             updated_at,
             categories,
-            songs: songs?,
+            songs,
         })
     }
     

@@ -475,13 +475,13 @@ Ao clicar na música será expandido e mostrar uma lista de partituras/instrumen
 - [x] Salvar as informações digitadas na página de primeiro acesso. No path o default deve ser "ScoreMaestro", a pessoa pode alterar o valor do input se quiser, mas será preenchido com isso.
 - [x] Atualizar as configurações para buscar as informações do `tauri-plugin-store`.
 - [x] Implementar o rclone para fazer upload ao Google Drive.
-- [ ] Atualize a estrutura do `database.msgpack` gerado.
-- [ ] Verificar se os campos de data estão sendo devidamente atualizado.
+- [x] Atualize a estrutura do `database.msgpack` gerado.
+- [x] Verificar se os campos de data estão sendo devidamente atualizado.
 - [ ] Atualizar o "verificar alterações", para que depois de fazer a verificação, gerar os arquivos e comprimir, faça o upload com rcone.
 	- [ ] Depois de verificar os arquivos que foram alterados, atualizar o banco de dados, deve gerar o `database.msgpack.xz` no diretório `projeto/nuvem`.
 	- [ ] Deve gerar depois os arquivos com as músicas, `projeto/nuvem/Scores/{songId}.tar.xz`
 	- [ ] Depois deve ser feito o upload para o Google Drive utilizando o rclone.
-! Deve verificar se tem alteração
+! Deve verificar se tem alteração, não é para regerar arquivo que não foi alterado
 - [ ] Implementar função para leitura e comparação do que mudou do MessagePack que outro enviou.
 - [ ] Atualizar o "Siderbar":
 	- [ ] Adicionar o campo de "pendente revisão".

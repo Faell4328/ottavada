@@ -339,7 +339,7 @@ mod tests {
         db.insert_score(&make_score(&db, "sc1", "s1", Some("Violino"))).unwrap();
 
         let new_dir_id = db.insert_or_get_directory("/new/path").unwrap();
-        db.update_score("sc1", Some("Violino 1".to_string()), &new_dir_id, "score.musx", 2048, now(), now()).unwrap();
+        db.update_score("sc1", Some("Violino 1".to_string()), &new_dir_id, "score.musx", 2048, now(), now(), "test-computer").unwrap();
 
         let songs = db.get_all_songs().unwrap();
         assert_eq!(songs[0].scores[0].name, Some("Violino 1".to_string()));

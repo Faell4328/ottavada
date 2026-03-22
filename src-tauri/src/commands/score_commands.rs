@@ -50,7 +50,7 @@ pub fn update_score(
     let (directory_id, file_name) = db.resolve_directory_for_path(&file_path)?;
 
     // Se cliente está editando, marcar como pending
-    match db.update_score(&score_id, instrument_name.clone(), &directory_id, &file_name, file_size, file_modified_at, now) {
+    match db.update_score(&score_id, instrument_name.clone(), &directory_id, &file_name, file_size, file_modified_at, now, &settings.computer_id) {
         Ok(_) => {
             // Buscar e atualizar o score para marcar como pending se for cliente
             if settings.computer_type == ComputerType::Client {
