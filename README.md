@@ -116,6 +116,33 @@ Será documentando em JSON, mas na aplicação real é utilizando `MessagePack`.
   "schemaVersion": 1,
   // Quando foi gerado
   "updatedAt": 1710684000,
+  // Lista de categorias
+  "categories": [
+	  {
+		  "id": "dklasf",
+		  "name": "Cagetoria 1",
+		  // Quando foi atualizado por último
+	      "updatedAt": 1710684000,
+	      // Quem atualizou
+	      "updatedBy": "computerId",
+	  },
+	  {
+		  "id": "czxv",
+		  "name": "Cagetoria 2",
+		  // Quando foi atualizado por último
+	      "updatedAt": 1710684000,
+	      // Quem atualizou
+	      "updatedBy": "computerId",
+	  },
+	  {
+		  "id": "fadfd",
+		  "name": "Cagetoria 3",
+		  // Quando foi atualizado por último
+	      "updatedAt": 1710684000,
+	      // Quem atualizou
+	      "updatedBy": "computerId",
+	  }
+  ],
   // Lista as músicas
   "songs": [
     {
@@ -123,7 +150,7 @@ Será documentando em JSON, mas na aplicação real é utilizando `MessagePack`.
       "name": "Nome música",
       "composer": "Nome compositor",
       "arranger": "Nome arranjador",
-      "categoriesId": ["Categoria 1", "Categoria 2"],
+      "categoriesId": ["ID Categoria 1", "ID Categoria 3"],
       "status": "main",
       // Quando foi atualizado por último
       "updatedAt": 1710684000,
@@ -171,6 +198,8 @@ Será documentando em JSON, mas na aplicação real é utilizando `MessagePack`.
 ### Categories
 - `id`
 - `name`
+- `updatedAt`
+- `updatedBy`
 
 ### Categories_Songs
 - `id`
@@ -446,7 +475,13 @@ Ao clicar na música será expandido e mostrar uma lista de partituras/instrumen
 - [x] Salvar as informações digitadas na página de primeiro acesso. No path o default deve ser "ScoreMaestro", a pessoa pode alterar o valor do input se quiser, mas será preenchido com isso.
 - [x] Atualizar as configurações para buscar as informações do `tauri-plugin-store`.
 - [x] Implementar o rclone para fazer upload ao Google Drive.
+- [ ] Atualize a estrutura do `database.msgpack` gerado.
+- [ ] Verificar se os campos de data estão sendo devidamente atualizado.
 - [ ] Atualizar o "verificar alterações", para que depois de fazer a verificação, gerar os arquivos e comprimir, faça o upload com rcone.
+	- [ ] Depois de verificar os arquivos que foram alterados, atualizar o banco de dados, deve gerar o `database.msgpack.xz` no diretório `projeto/nuvem`.
+	- [ ] Deve gerar depois os arquivos com as músicas, `projeto/nuvem/Scores/{songId}.tar.xz`
+	- [ ] Depois deve ser feito o upload para o Google Drive utilizando o rclone.
+! Deve verificar se tem alteração
 - [ ] Implementar função para leitura e comparação do que mudou do MessagePack que outro enviou.
 - [ ] Atualizar o "Siderbar":
 	- [ ] Adicionar o campo de "pendente revisão".

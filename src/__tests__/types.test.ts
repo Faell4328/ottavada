@@ -59,8 +59,11 @@ describe("TypeScript Types", () => {
       const cat: Category = {
         id: "c1",
         name: "Harpa Cristã",
+        updated_at: "2024-01-01T12:00:00",
+        updated_by: "computer-id",
       };
       expect(cat.name).toBe("Harpa Cristã");
+      expect(cat.updated_at).toBe("2024-01-01T12:00:00");
     });
   });
 

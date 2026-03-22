@@ -1,9 +1,10 @@
 use tauri::State;
 use tracing::{info, error};
+use chrono::Local;
 
 use crate::domain::errors::AppError;
 use crate::domain::models::Category;
-use crate::infrastructure::database::Database;
+use crate::infrastructure::{database::Database, store::SystemStore};
 
 #[tauri::command]
 pub fn get_categories(db: State<'_, Database>) -> Result<Vec<Category>, AppError> {
@@ -21,11 +22,17 @@ pub fn get_categories(db: State<'_, Database>) -> Result<Vec<Category>, AppError
 }
 
 #[tauri::command]
-pub fn create_category(db: State<'_, Database>, name: String) -> Result<Category, AppError> {
+pub fn create_category(db: State<'_, Database>, store: State<'_, SystemStore>, name: String) -> Result<Category, AppError> {
     info!("Criando nova categoria: {}", name);
+    
+    let settings = store.get_app_settings()?;
+    let updated_by = settings.computer_id.clone();
+    
     let category = Category {
         id: uuid::Uuid::new_v4().to_string(),
         name,
+        updated_at: Local::now().naive_local(),
+        updated_by,
     };
     match db.insert_category(&category) {
         Ok(_) => {

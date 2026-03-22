@@ -101,6 +101,21 @@ impl Database {
             ")?;
         }
 
+        // Migration: Adicionar updated_at e updated_by nas categorias
+        let categories_columns = Self::get_table_columns(conn, "categories");
+        if !categories_columns.contains(&"updated_at".to_string()) {
+            conn.execute(
+                "ALTER TABLE categories ADD COLUMN updated_at TEXT NOT NULL DEFAULT (datetime('now'))",
+                [],
+            ).ok(); // Ignore error if column already exists
+        }
+        if !categories_columns.contains(&"updated_by".to_string()) {
+            conn.execute(
+                "ALTER TABLE categories ADD COLUMN updated_by TEXT NOT NULL DEFAULT ''",
+                [],
+            ).ok(); // Ignore error if column already exists
+        }
+
         // Migration: Adicionar status e updated_by em tabelas existentes
         let songs_columns = Self::get_table_columns(conn, "songs");
         if !songs_columns.contains(&"status".to_string()) {
@@ -428,6 +443,20 @@ impl Database {
         Ok(())
     }
 
+    /// Helper: Atualiza o timestamp de uma música
+    /// Útil quando um score, categoria ou outros dados relacionados mudam
+    pub fn update_song_timestamp(&self, song_id: &str, updated_by: &str) -> Result<(), AppError> {
+        let conn = self.conn.lock().unwrap();
+        let now_str = datetime_utils::format_now();
+        
+        conn.execute(
+            "UPDATE songs SET updated_at = ?1, updated_by = ?2 WHERE id = ?3",
+            params![now_str, updated_by, song_id],
+        )?;
+        
+        Ok(())
+    }
+
     pub fn get_song_by_id(&self, song_id: &str) -> Result<Song, AppError> {
         let conn = self.conn.lock().unwrap();
 
@@ -619,6 +648,8 @@ impl Database {
         now: chrono::NaiveDateTime,
     ) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
+        let now_str = datetime_utils::format_datetime(now);
+        
         conn.execute(
             "UPDATE scores SET name = ?1, directory_id = ?2, file_name = ?3, file_size = ?4, file_modified_at = ?5, updated_at = ?6 WHERE id = ?7",
             params![
@@ -627,10 +658,23 @@ impl Database {
                 file_name,
                 file_size,
                 datetime_utils::format_datetime(file_modified_at),
-                datetime_utils::format_datetime(now),
+                now_str,
                 score_id,
             ],
         )?;
+        
+        // Propagar alteração para a música (sem updated_by, usa empty string)
+        let song_id: String = conn.query_row(
+            "SELECT song_id FROM scores WHERE id = ?1",
+            params![score_id],
+            |row| row.get(0),
+        )?;
+        
+        conn.execute(
+            "UPDATE songs SET updated_at = ?1 WHERE id = ?2",
+            params![now_str, song_id],
+        )?;
+        
         Ok(())
     }
 
@@ -771,6 +815,19 @@ impl Database {
                 params![status.as_str(), now_str, updated_by, score_id],
             )?;
         }
+        
+        // Propagar alteração para a música
+        let song_id: String = conn.query_row(
+            "SELECT song_id FROM scores WHERE id = ?1",
+            params![score_id],
+            |row| row.get(0),
+        )?;
+        
+        conn.execute(
+            "UPDATE songs SET updated_at = ?1, updated_by = ?2 WHERE id = ?3",
+            params![now_str, updated_by, song_id],
+        )?;
+        
         Ok(())
     }
 
@@ -840,20 +897,30 @@ impl Database {
     pub fn insert_category(&self, category: &Category) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
         conn.execute(
-            "INSERT INTO categories (id, name) VALUES (?1, ?2)",
-            params![category.id, category.name],
+            "INSERT INTO categories (id, name, updated_at, updated_by) VALUES (?1, ?2, ?3, ?4)",
+            params![
+                category.id, 
+                category.name,
+                datetime_utils::format_datetime(category.updated_at),
+                category.updated_by,
+            ],
         )?;
         Ok(())
     }
 
     pub fn get_all_categories(&self) -> Result<Vec<Category>, AppError> {
         let conn = self.conn.lock().unwrap();
-        let mut stmt = conn.prepare("SELECT id, name FROM categories ORDER BY name")?;
+        let mut stmt = conn.prepare("SELECT id, name, updated_at, updated_by FROM categories ORDER BY name")?;
 
         let categories = stmt.query_map([], |row| {
+            let updated_at_str: String = row.get(2)?;
+            let updated_at = parse_datetime(&updated_at_str);
+            
             Ok(Category {
                 id: row.get(0)?,
                 name: row.get(1)?,
+                updated_at,
+                updated_by: row.get(3)?,
             })
         })?.filter_map(|r| r.ok()).collect();
 
@@ -916,6 +983,25 @@ impl Database {
         
         let updated_at = chrono::Local::now().timestamp();
         
+        // Buscar todas as categorias
+        let mut cat_stmt = conn.prepare(
+            "SELECT id, name, updated_at, updated_by FROM categories ORDER BY name"
+        )?;
+        
+        let categories: Vec<ExportCategory> = cat_stmt.query_map([], |row| {
+            let updated_at_str: String = row.get(2)?;
+            let updated_at_ts = parse_datetime_to_timestamp(&updated_at_str);
+            
+            Ok(ExportCategory {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                updated_at: updated_at_ts,
+                updated_by: row.get(3)?,
+            })
+        })?
+            .filter_map(|r| r.ok())
+            .collect();
+        
         // Buscar todas as músicas
         let mut stmt = conn.prepare(
             "SELECT id, name, composer, arranger, status, updated_at, updated_by 
@@ -963,6 +1049,7 @@ impl Database {
         Ok(ExportDatabase {
             schema_version: 1,
             updated_at,
+            categories,
             songs: songs?,
         })
     }

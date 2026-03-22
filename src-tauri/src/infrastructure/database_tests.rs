@@ -42,6 +42,15 @@ mod tests {
         }
     }
 
+    fn make_category(id: &str, name: &str) -> Category {
+        Category {
+            id: id.to_string(),
+            name: name.to_string(),
+            updated_at: now(),
+            updated_by: "test-computer".to_string(),
+        }
+    }
+
     // ── Directory CRUD ──
 
     #[test]
@@ -129,7 +138,7 @@ mod tests {
     #[test]
     fn test_get_song_list_item_by_id() {
         let db = make_db();
-        let cat = Category { id: "c1".to_string(), name: "Hinos".to_string() };
+        let cat = make_category("c1", "Hinos");
         db.insert_category(&cat).unwrap();
         db.insert_song(&make_song("s1", "Canon"), &["c1".to_string()]).unwrap();
         db.insert_score(&make_score(&db, "sc1", "s1", Some("Violino"))).unwrap();
@@ -188,8 +197,8 @@ mod tests {
     #[test]
     fn test_update_song_categories() {
         let db = make_db();
-        let cat1 = Category { id: "c1".to_string(), name: "Hinos".to_string() };
-        let cat2 = Category { id: "c2".to_string(), name: "Clássicas".to_string() };
+        let cat1 = make_category("c1", "Hinos");
+        let cat2 = make_category("c2", "Clássicas");
         db.insert_category(&cat1).unwrap();
         db.insert_category(&cat2).unwrap();
 
@@ -572,10 +581,7 @@ mod tests {
     #[test]
     fn test_category_crud() {
         let db = make_db();
-        let cat = Category {
-            id: "c1".to_string(),
-            name: "Harpa Cristã".to_string(),
-        };
+        let cat = make_category("c1", "Harpa Cristã");
         db.insert_category(&cat).unwrap();
 
         let categories = db.get_all_categories().unwrap();
@@ -591,10 +597,7 @@ mod tests {
     fn test_songs_by_category() {
         let db = make_db();
 
-        let cat = Category {
-            id: "c1".to_string(),
-            name: "Hinos".to_string(),
-        };
+        let cat = make_category("c1", "Hinos");
         db.insert_category(&cat).unwrap();
 
         db.insert_song(&make_song("s1", "Canon"), &["c1".to_string()]).unwrap();
@@ -609,8 +612,8 @@ mod tests {
     fn test_song_multiple_categories() {
         let db = make_db();
 
-        let cat1 = Category { id: "c1".to_string(), name: "Hinos".to_string() };
-        let cat2 = Category { id: "c2".to_string(), name: "Clássicas".to_string() };
+        let cat1 = make_category("c1", "Hinos");
+        let cat2 = make_category("c2", "Clássicas");
         db.insert_category(&cat1).unwrap();
         db.insert_category(&cat2).unwrap();
 
@@ -630,7 +633,7 @@ mod tests {
     fn test_category_delete_removes_relationship() {
         let db = make_db();
 
-        let cat = Category { id: "c1".to_string(), name: "Hinos".to_string() };
+        let cat = make_category("c1", "Hinos");
         db.insert_category(&cat).unwrap();
 
         db.insert_song(&make_song("s1", "Canon"), &["c1".to_string()]).unwrap();

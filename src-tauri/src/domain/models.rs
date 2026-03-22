@@ -100,6 +100,8 @@ impl Score {
 pub struct Category {
     pub id: String,
     pub name: String,
+    pub updated_at: NaiveDateTime,
+    pub updated_by: String,
 }
 
 /// Configurações da aplicação
@@ -351,6 +353,15 @@ pub struct ExportChangeList {
     pub changes: Vec<ExportChange>,
 }
 
+/// Representa uma categoria para exportação
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExportCategory {
+    pub id: String,
+    pub name: String,
+    pub updated_at: i64,
+    pub updated_by: String,
+}
+
 /// Representa uma partitura para exportação
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExportScore {
@@ -383,5 +394,6 @@ pub struct ExportSong {
 pub struct ExportDatabase {
     pub schema_version: u32,
     pub updated_at: i64,
+    pub categories: Vec<ExportCategory>,
     pub songs: Vec<ExportSong>,
 }

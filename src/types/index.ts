@@ -23,6 +23,8 @@ export interface ScoreListItem {
 export interface Category {
   id: string;
   name: string;
+  updated_at: string;
+  updated_by: string;
 }
 
 export interface AppSettings {
