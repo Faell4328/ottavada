@@ -4,6 +4,35 @@ use crate::domain::errors::AppError;
 use crate::infrastructure::store::SystemStore;
 use tauri::State;
 
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
+
+/// Retorna o comandо correto para executar rclone baseado no sistema operacional
+/// 
+/// - Windows: C:\rclone\rclone.exe
+/// - Linux/macOS: rclone (do PATH)
+fn get_rclone_command() -> String {
+    if cfg!(target_os = "windows") {
+        "C:\\rclone\\rclone.exe".to_string()
+    } else {
+        "rclone".to_string()
+    }
+}
+
+/// Configura um Command para executar sem mostrar a janela de console no Windows
+/// 
+/// No Windows, usa a flag CREATE_NO_WINDOW (0x08000000) para ocultar a janela
+/// Em outros SOs, não faz nada
+#[allow(dead_code)]
+fn configure_no_window_command(mut cmd: Command) -> Command {
+    #[cfg(target_os = "windows")]
+    {
+        // CREATE_NO_WINDOW = 0x08000000
+        cmd.creation_flags(0x08000000);
+    }
+    cmd
+}
+
 /// Testa a conexão com um remote do rclone
 /// 
 /// # Parâmetros
@@ -23,7 +52,8 @@ pub fn test_rclone_connection(remote: String, path: String) -> Result<bool, AppE
     
     // Primeiro, testar a conexão com o remote root
     info!("Testando acesso ao remote: {}", remote);
-    let output = Command::new("rclone")
+    let mut cmd = configure_no_window_command(Command::new(get_rclone_command()));
+    let output = cmd
         .args(&["lsd", &format!("{}:", remote), "--max-depth", "1"])
         .output()
         .map_err(|e| {
@@ -54,7 +84,8 @@ pub fn test_rclone_connection(remote: String, path: String) -> Result<bool, AppE
     // Se um caminho específico foi fornecido, tentar verificar se existe
     if !clean_path.is_empty() {
         info!("Verificando se o caminho existe: {}", clean_path);
-        let path_test = Command::new("rclone")
+        let mut path_cmd = configure_no_window_command(Command::new(get_rclone_command()));
+        let path_test = path_cmd
             .args(&["lsd", &format!("{}:{}", remote, clean_path), "--max-depth", "1"])
             .output()
             .map_err(|e| {
@@ -101,7 +132,8 @@ pub fn upload_with_rclone(
         .ok_or_else(|| AppError::Generic("Caminho inválido".to_string()))?;
     
     // Executar upload
-    let output = Command::new("rclone")
+    let mut cmd = configure_no_window_command(Command::new(get_rclone_command()));
+    let output = cmd
         .args(&["copy", &file_path, &format!("{}:{}", remote, path)])
         .output()
         .map_err(|e| {
@@ -168,7 +200,8 @@ pub fn test_rclone_upload(
     
     // Fazer upload do arquivo de teste
     info!("Iniciando upload para: {}", remote_path);
-    let output = Command::new("rclone")
+    let mut cmd = configure_no_window_command(Command::new(get_rclone_command()));
+    let output = cmd
         .args(&["copy", test_file_path.to_str().unwrap_or(""), &remote_path])
         .output()
         .map_err(|e| {
