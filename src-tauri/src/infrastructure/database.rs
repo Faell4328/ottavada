@@ -193,6 +193,17 @@ impl Database {
             END;
         ")?;
 
+        // Tabela para rastreamento de status de backup por música
+        conn.execute_batch("
+            CREATE TABLE IF NOT EXISTS backup_songs (
+                id TEXT PRIMARY KEY,
+                song_id TEXT NOT NULL UNIQUE REFERENCES songs(id) ON DELETE CASCADE,
+                status TEXT NOT NULL DEFAULT 'pending',
+                last_backup_at INTEGER,
+                error_message TEXT
+            );
+        ")?;
+
         // Índices
         conn.execute_batch("
             CREATE INDEX IF NOT EXISTS idx_scores_song_id ON scores(song_id);
@@ -200,6 +211,8 @@ impl Database {
             CREATE INDEX IF NOT EXISTS idx_categories_songs_song_id ON categories_songs(song_id);
             CREATE INDEX IF NOT EXISTS idx_categories_songs_category_id ON categories_songs(category_id);
             CREATE INDEX IF NOT EXISTS idx_songs_is_favorite ON songs(is_favorite);
+            CREATE INDEX IF NOT EXISTS idx_backup_songs_song_id ON backup_songs(song_id);
+            CREATE INDEX IF NOT EXISTS idx_backup_songs_status ON backup_songs(status);
         ")?;
 
         Ok(())
@@ -1181,6 +1194,134 @@ impl Database {
         encoder.finish()
             .map_err(|e| AppError::Generic(format!("Erro ao finalizar compressão xz: {}", e)))?;
         Ok(compressed)
+    }
+
+    // ===== Métodos para gerenciamento de backup_songs =====
+
+    /// Cria ou atualiza um registro de status de backup para uma música
+    pub fn upsert_backup_song_status(
+        &self,
+        song_id: &str,
+        status: &BackupStatus,
+    ) -> Result<(), AppError> {
+        let conn = self.conn.lock().unwrap();
+        let status_str = status.as_str();
+        let id = uuid::Uuid::new_v4().to_string();
+        let now = chrono::Local::now().timestamp();
+
+        conn.execute(
+            "INSERT INTO backup_songs (id, song_id, status, last_backup_at, error_message)
+             VALUES (?1, ?2, ?3, ?4, NULL)
+             ON CONFLICT(song_id) DO UPDATE SET
+             status = ?3,
+             last_backup_at = ?4",
+            params![id, song_id, status_str, now],
+        )?;
+        Ok(())
+    }
+
+    /// Atualiza o status de backup de uma música com mensagem de erro opcional
+    pub fn update_backup_song_status(
+        &self,
+        song_id: &str,
+        status: &BackupStatus,
+        error_message: Option<String>,
+    ) -> Result<(), AppError> {
+        let conn = self.conn.lock().unwrap();
+        let status_str = status.as_str();
+        let now = chrono::Local::now().timestamp();
+
+        conn.execute(
+            "UPDATE backup_songs
+             SET status = ?1, last_backup_at = ?2, error_message = ?3
+             WHERE song_id = ?4",
+            params![status_str, now, error_message, song_id],
+        )?;
+        Ok(())
+    }
+
+    /// Obtém o status de backup de uma música
+    pub fn get_backup_song_status(&self, song_id: &str) -> Result<Option<SongBackupStatus>, AppError> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT id, song_id, status, last_backup_at, error_message
+             FROM backup_songs WHERE song_id = ?1"
+        )?;
+
+        let result = stmt.query_row(params![song_id], |row| {
+            Ok(SongBackupStatus {
+                id: row.get(0)?,
+                song_id: row.get(1)?,
+                status: BackupStatus::from_str(&row.get::<_, String>(2)?),
+                last_backup_at: row.get(3)?,
+                error_message: row.get(4)?,
+            })
+        });
+
+        match result {
+            Ok(status) => Ok(Some(status)),
+            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+            Err(e) => Err(AppError::Database(e)),
+        }
+    }
+
+    /// Obtém todos os status de backup de músicas
+    pub fn get_all_backup_songs_status(&self) -> Result<Vec<SongBackupStatus>, AppError> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT id, song_id, status, last_backup_at, error_message
+             FROM backup_songs ORDER BY last_backup_at DESC"
+        )?;
+
+        let results = stmt.query_map([], |row| {
+            Ok(SongBackupStatus {
+                id: row.get(0)?,
+                song_id: row.get(1)?,
+                status: BackupStatus::from_str(&row.get::<_, String>(2)?),
+                last_backup_at: row.get(3)?,
+                error_message: row.get(4)?,
+            })
+        })?;
+
+        let backup_songs: Result<Vec<_>, _> = results.collect();
+        Ok(backup_songs?)
+    }
+
+    /// Obtém todos os status de backup com um status específico
+    pub fn get_backup_songs_by_status(&self, status: &BackupStatus) -> Result<Vec<SongBackupStatus>, AppError> {
+        let conn = self.conn.lock().unwrap();
+        let status_str = status.as_str();
+        let mut stmt = conn.prepare(
+            "SELECT id, song_id, status, last_backup_at, error_message
+             FROM backup_songs WHERE status = ?1 ORDER BY last_backup_at DESC"
+        )?;
+
+        let results = stmt.query_map(params![status_str], |row| {
+            Ok(SongBackupStatus {
+                id: row.get(0)?,
+                song_id: row.get(1)?,
+                status: BackupStatus::from_str(&row.get::<_, String>(2)?),
+                last_backup_at: row.get(3)?,
+                error_message: row.get(4)?,
+            })
+        })?;
+
+        let backup_songs: Result<Vec<_>, _> = results.collect();
+        Ok(backup_songs?)
+    }
+
+    /// Deleta um registro de status de backup
+    pub fn delete_backup_song_status(&self, song_id: &str) -> Result<(), AppError> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute("DELETE FROM backup_songs WHERE song_id = ?1", params![song_id])?;
+        Ok(())
+    }
+
+    /// Limpa todos os registros de backup_songs com status de erro
+    pub fn clear_backup_errors(&self) -> Result<(), AppError> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute("DELETE FROM backup_songs WHERE status = 'error'", [])?;
+        Ok(())
     }
 }
 

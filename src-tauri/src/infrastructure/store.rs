@@ -71,10 +71,14 @@ impl SystemStore {
                         let id = song.get("id")?.as_str()?.to_string();
                         let song_id = song.get("song_id")?.as_str()?.to_string();
                         let status_str = song.get("status")?.as_str()?;
+                        let last_backup_at = song.get("last_backup_at")?.as_i64();
+                        let error_message = song.get("error_message")?.as_str().map(|s| s.to_string());
                         Some(SongBackupStatus {
                             id,
                             song_id,
                             status: BackupStatus::from_str(status_str),
+                            last_backup_at,
+                            error_message,
                         })
                     })
                     .collect()
@@ -176,11 +180,20 @@ impl SystemStore {
 
         if let Some(ref backup_songs) = settings.backup_songs_step {
             store["backup_songs_step"] = serde_json::json!(
-                backup_songs.iter().map(|s| serde_json::json!({
-                    "id": s.id,
-                    "song_id": s.song_id,
-                    "status": s.status.as_str()
-                })).collect::<Vec<_>>()
+                backup_songs.iter().map(|s| {
+                    let mut obj = serde_json::json!({
+                        "id": s.id,
+                        "song_id": s.song_id,
+                        "status": s.status.as_str()
+                    });
+                    if let Some(last_backup) = s.last_backup_at {
+                        obj["last_backup_at"] = serde_json::json!(last_backup);
+                    }
+                    if let Some(ref error_msg) = s.error_message {
+                        obj["error_message"] = serde_json::json!(error_msg);
+                    }
+                    obj
+                }).collect::<Vec<_>>()
             );
         } else {
             store.as_object_mut().map(|obj| obj.remove("backup_songs_step"));

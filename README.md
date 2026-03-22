@@ -252,6 +252,13 @@ Será documentando em JSON, mas na aplicação real é utilizando `MessagePack`.
 - `newValue`
 ! Deve ter suporte a arquivo também.
 
+
+### backup_songs
+- `songId`
+- `lastBackupAt`
+- `status` - "pending" || "compressed" || "ok" || "error"
+- `errorMessage`
+
 ## `tauri-plugin-store`
 
 ```json
@@ -270,13 +277,6 @@ backupDataBaseStep: {
 	"status": "pending" || "compressed" || "ok" || "error",
 	"updatedAt": timestamp
 }
-backupSongsStep: [
-	{
-		"id": "jfkladsf",
-		"songsId": "lkaf123",
-		"status": "pending" || "compressed" || "ok" || "error"
-	}
-]
 ```
 
 - `none` - nada foi feito, pronto para ser comprimido
@@ -477,11 +477,13 @@ Ao clicar na música será expandido e mostrar uma lista de partituras/instrumen
 - [x] Implementar o rclone para fazer upload ao Google Drive.
 - [x] Atualize a estrutura do `database.msgpack` gerado.
 - [x] Verificar se os campos de data estão sendo devidamente atualizado.
+- [x] Atualizar o banco de dados para implementar uma tabela nova.
+! O objetivo aqui é simples preparar terreno para a próxima task. A próxima task terá um grande problema. Como saber se é preciso gerar os arquivos song ou não. Eles deve ser gerados se não tiver ou se forem alterados, não faz sentido 
 - [ ] Atualizar o "verificar alterações", para que depois de fazer a verificação, gerar os arquivos e comprimir, faça o upload com rcone.
 	- [ ] Depois de verificar os arquivos que foram alterados, atualizar o banco de dados, deve gerar o `database.msgpack.xz` no diretório `projeto/nuvem`.
 	- [ ] Deve gerar depois os arquivos com as músicas, `projeto/nuvem/Scores/{songId}.tar.xz`
 	- [ ] Depois deve ser feito o upload para o Google Drive utilizando o rclone.
-! Deve verificar se tem alteração, não é para regerar arquivo que não foi alterado
+! Deve verificar se tem alteração
 - [ ] Implementar função para leitura e comparação do que mudou do MessagePack que outro enviou.
 - [ ] Atualizar o "Siderbar":
 	- [ ] Adicionar o campo de "pendente revisão".

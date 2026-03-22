@@ -296,6 +296,8 @@ pub struct SongBackupStatus {
     pub id: String,
     pub song_id: String,
     pub status: BackupStatus,
+    pub last_backup_at: Option<i64>,
+    pub error_message: Option<String>,
 }
 
 /// Dados retornados para a listagem de músicas no frontend
