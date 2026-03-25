@@ -110,42 +110,8 @@ pub fn scan_files_for_changes(
     info!("Verificação concluída. {} alterados, {} não encontrados, {} recuperados, {} erros", 
         changed_files.len(), not_found_files.len(), recovered_files.len(), failed_files.len());
 
-    // Exportar banco de dados para MessagePack após o scan
-    let app_data_dir = store.get_app_data_dir();
-    let nuvem_dir = app_data_dir.join("nuvem");
-    
-    // Criar diretório nuvem se não existir
-    if let Err(e) = std::fs::create_dir_all(&nuvem_dir) {
-        warn!("Erro ao criar diretório nuvem: {:?}", e);
-    }
-    
-    let msgpack_output_path = nuvem_dir.join("database.msgpack.xz");
-    
-    match crate::commands::backup_commands::export_database_to_path_internal(
-        &*db,
-        msgpack_output_path.to_string_lossy().to_string(),
-    ) {
-        Ok(_) => {
-            info!("Banco de dados exportado com sucesso para MessagePack após scan");
-            
-            // Atualizar o backup_database_step.updated_at com o cascading update (efeito em cascata)
-            match store.get_app_settings() {
-                Ok(mut settings) => {
-                    if let Err(e) = store.save_app_settings_with_db(&mut settings, &*db) {
-                        warn!("Erro ao atualizar backup_database_step.updated_at: {:?}", e);
-                    } else {
-                        info!("✓ backup_database_step.updated_at atualizado com o timestamp mais recente das músicas");
-                    }
-                }
-                Err(e) => {
-                    warn!("Erro ao carregar app_settings após scan: {:?}", e);
-                }
-            }
-        }
-        Err(e) => {
-            warn!("Erro ao exportar banco de dados após scan: {:?}", e);
-        }
-    }
+    // TODO: Exportar apenas as mudanças (tabela "changed") como {computerId}.msgpack.zst
+    // Não exportar todo o banco de dados
 
     Ok(ScanResult {
         changed_files,

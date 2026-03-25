@@ -195,7 +195,7 @@ pub fn should_backup_song(db: &Database, song_id: &str) -> Result<bool, AppError
     Ok(should_backup)
 }
 
-/// Gera arquivo .tar.xz para uma música e retorna o resultado
+/// Gera arquivo .tar.zst para uma música e retorna o resultado
 pub fn backup_song(
     db: &Database,
     song_id: &str,
@@ -215,32 +215,32 @@ pub fn backup_song(
     // Criar arquivo tar temporário
     let tar_filename = format!("{}.tar", song_id);
     let tar_path = nuvem_dir.join(&tar_filename);
-    let tar_xz_filename = format!("{}.tar.xz", song_id);
-    let tar_xz_path = nuvem_dir.join(&tar_xz_filename);
-    let tar_xz_tmp_path = nuvem_dir.join(format!("{}.tmp", &tar_xz_filename));
+    let tar_zst_filename = format!("{}.tar.zst", song_id);
+    let tar_zst_path = nuvem_dir.join(&tar_zst_filename);
+    let tar_zst_tmp_path = nuvem_dir.join(format!("{}.tmp", &tar_zst_filename));
 
     // Criar arquivo tar
     match create_tar_for_song(db, song_id, &tar_path) {
         Ok(tar_size) => {
             info!("Tar criado com sucesso: {} ({} bytes)", tar_path.display(), tar_size);
 
-            // Comprimir tar com xz
+            // Comprimir tar com zstd
             match std::fs::read(&tar_path) {
                 Ok(tar_data) => {
-                    match Database::compress_xz(&tar_data) {
+                    match Database::compress_zstd(&tar_data) {
                         Ok(compressed_data) => {
                             // Salvar em arquivo temporário
-                            match std::fs::write(&tar_xz_tmp_path, &compressed_data) {
+                            match std::fs::write(&tar_zst_tmp_path, &compressed_data) {
                                 Ok(_) => {
                                     // Renomear para final
-                                    match std::fs::rename(&tar_xz_tmp_path, &tar_xz_path) {
+                                    match std::fs::rename(&tar_zst_tmp_path, &tar_zst_path) {
                                         Ok(_) => {
                                             let file_size = compressed_data.len() as u64;
                                             info!(
                                                 "✓ Backup de música concluído: {} ({} bytes comprimidos) -> {}",
-                                                tar_xz_path.display(),
+                                                tar_zst_path.display(),
                                                 file_size,
-                                                tar_xz_path.display()
+                                                tar_zst_path.display()
                                             );
 
                                             // Limpar arquivo tar original
@@ -256,13 +256,13 @@ pub fn backup_song(
                                             Ok(SongBackupResult::success(
                                                 song_id.to_string(),
                                                 song_name,
-                                                tar_xz_path.to_string_lossy().to_string(),
+                                                tar_zst_path.to_string_lossy().to_string(),
                                                 file_size,
                                             ))
                                         }
                                         Err(e) => {
                                             error!("Erro ao renomear arquivo: {}", e);
-                                            let _ = std::fs::remove_file(&tar_xz_tmp_path);
+                                            let _ = std::fs::remove_file(&tar_zst_tmp_path);
                                             let _ = std::fs::remove_file(&tar_path);
                                             Ok(SongBackupResult::error(
                                                 song_id.to_string(),

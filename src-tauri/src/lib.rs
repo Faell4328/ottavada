@@ -113,14 +113,11 @@ pub fn run() {
             commands::settings_commands::toggle_computer_type,
             // Scan
             commands::scan_commands::scan_files_for_changes,
-            // Backup
-            commands::backup_commands::export_database_to_msgpack,
-            commands::backup_commands::export_database_to_msgpack_xz,
-            commands::backup_commands::export_database_to_path,
             // Rclone
             commands::rclone_commands::test_rclone_connection,
             commands::rclone_commands::upload_with_rclone,
             commands::rclone_commands::test_rclone_upload,
+            commands::rclone_commands::delete_rclone_test_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
