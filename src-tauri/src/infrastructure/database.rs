@@ -195,7 +195,7 @@ impl Database {
 
         // Tabela para rastreamento de status de backup por música
         conn.execute_batch("
-            CREATE TABLE IF NOT EXISTS backup_songs (
+            CREATE TABLE IF NOT EXISTS backupSongs (
                 id TEXT PRIMARY KEY,
                 song_id TEXT NOT NULL UNIQUE REFERENCES songs(id) ON DELETE CASCADE,
                 status TEXT NOT NULL DEFAULT 'pending',
@@ -211,8 +211,8 @@ impl Database {
             CREATE INDEX IF NOT EXISTS idx_categories_songs_song_id ON categories_songs(song_id);
             CREATE INDEX IF NOT EXISTS idx_categories_songs_category_id ON categories_songs(category_id);
             CREATE INDEX IF NOT EXISTS idx_songs_is_favorite ON songs(is_favorite);
-            CREATE INDEX IF NOT EXISTS idx_backup_songs_song_id ON backup_songs(song_id);
-            CREATE INDEX IF NOT EXISTS idx_backup_songs_status ON backup_songs(status);
+            CREATE INDEX IF NOT EXISTS idx_backupSongs_song_id ON backupSongs(song_id);
+            CREATE INDEX IF NOT EXISTS idx_backupSongs_status ON backupSongs(status);
         ")?;
 
         Ok(())
@@ -1196,7 +1196,7 @@ impl Database {
         Ok(compressed)
     }
 
-    // ===== Métodos para gerenciamento de backup_songs =====
+    // ===== Métodos para gerenciamento de backupSongs =====
 
     /// Cria ou atualiza um registro de status de backup para uma música
     pub fn upsert_backup_song_status(
@@ -1210,7 +1210,7 @@ impl Database {
         let now = chrono::Local::now().timestamp();
 
         conn.execute(
-            "INSERT INTO backup_songs (id, song_id, status, last_backup_at, error_message)
+            "INSERT INTO backupSongs (id, song_id, status, last_backup_at, error_message)
              VALUES (?1, ?2, ?3, ?4, NULL)
              ON CONFLICT(song_id) DO UPDATE SET
              status = ?3,
@@ -1232,7 +1232,7 @@ impl Database {
         let now = chrono::Local::now().timestamp();
 
         conn.execute(
-            "UPDATE backup_songs
+            "UPDATE backupSongs
              SET status = ?1, last_backup_at = ?2, error_message = ?3
              WHERE song_id = ?4",
             params![status_str, now, error_message, song_id],
@@ -1245,7 +1245,7 @@ impl Database {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
             "SELECT id, song_id, status, last_backup_at, error_message
-             FROM backup_songs WHERE song_id = ?1"
+             FROM backupSongs WHERE song_id = ?1"
         )?;
 
         let result = stmt.query_row(params![song_id], |row| {
@@ -1270,7 +1270,7 @@ impl Database {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
             "SELECT id, song_id, status, last_backup_at, error_message
-             FROM backup_songs ORDER BY last_backup_at DESC"
+             FROM backupSongs ORDER BY last_backup_at DESC"
         )?;
 
         let results = stmt.query_map([], |row| {
@@ -1293,7 +1293,7 @@ impl Database {
         let status_str = status.as_str();
         let mut stmt = conn.prepare(
             "SELECT id, song_id, status, last_backup_at, error_message
-             FROM backup_songs WHERE status = ?1 ORDER BY last_backup_at DESC"
+             FROM backupSongs WHERE status = ?1 ORDER BY last_backup_at DESC"
         )?;
 
         let results = stmt.query_map(params![status_str], |row| {
@@ -1313,14 +1313,14 @@ impl Database {
     /// Deleta um registro de status de backup
     pub fn delete_backup_song_status(&self, song_id: &str) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
-        conn.execute("DELETE FROM backup_songs WHERE song_id = ?1", params![song_id])?;
+        conn.execute("DELETE FROM backupSongs WHERE song_id = ?1", params![song_id])?;
         Ok(())
     }
 
-    /// Limpa todos os registros de backup_songs com status de erro
+    /// Limpa todos os registros de backupSongs com status de erro
     pub fn clear_backup_errors(&self) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
-        conn.execute("DELETE FROM backup_songs WHERE status = 'error'", [])?;
+        conn.execute("DELETE FROM backupSongs WHERE status = 'error'", [])?;
         Ok(())
     }
 
