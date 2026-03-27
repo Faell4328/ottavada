@@ -1,8 +1,7 @@
 # Anotações
 
 - Ao invés de `.json`, será utilizado `.msgpack` por ser mais rápido e leve.
-- Antes da compressão os arquivos deve ser juntos em um `.tar`. Isso ocorre devido a possibilidade de uma partitura estar em um diretório e outra em outro.
-- Todos os arquivos (Partituras e MessagePack) devem ser comprimidos em `.zst` para ocupar menos espaço, upload e download mais rápido.
+- Antes da compressão os arquivos deve ser juntos em um `.tar`. Isso ocorre devido a possibilidade das partituras da música estarem em diretórios diferentes.
 
 ---
 # Diretórios do Projeto
@@ -18,26 +17,30 @@ Diretório temporário do projeto:
 - `/home/<user>/.local/share/com.rhafa.score-maestro/temp` (Linux).
 
 Diretório raiz da nuvem:
-- `C:\Users\<user>\AppData\Roaming\ScoreMaestro\nuvem` (Windows).
-- `/home/<user>/.local/share/com.rhafa.score-maestro/nuvem` (Linux).
+- `C:\Users\<user>\AppData\Roaming\ScoreMaestro\clound` (Windows).
+- `/home/<user>/.local/share/com.rhafa.score-maestro/clound` (Linux).
 
 Diretório com as partituras compactadas (baixado do drive):
-- `C:\Users\<user>\AppData\Roaming\ScoreMaestro\nuvem\song` (Windows).
-- `/home/<user>/.local/share/com.rhafa.score-maestro/nuvem/song` (Linux).
+- `C:\Users\<user>\AppData\Roaming\ScoreMaestro\nuvem\songs` (Windows).
+- `/home/<user>/.local/share/com.rhafa.score-maestro/nuvem/songs` (Linux).
 
 ! É o mesmo diretório do `tauri-plugin-store`.
 
 ## Nuvem
 
-- `Songs/` - diretório com todas as músicas.
-- `Songs/{songId}.tar.zst` - arquivo compactado com todas as partituras de uma música.
-- `Songs/database.msgpack.zst` - arquivo com todas as informações do banco de dados.
+- `{computerId}.msgpack.zst` - arquivo as as alterações recentes deitas por aquele computador.
+- `snapshot.msgpack.zst` - arquivo com a snapshot do banco de dados (gerado exclusivamente pelo servidor).
+- `pending/` - diretório com todas as músicas pendentes.
+	- Músicas que foram enviadas pelo Cliente e precisam ser aprovadas pelo servidor.
+- `songs/` - diretório com todas as músicas.
+- `songs/{songId}.tar.zst` - arquivo compactado com todas as partituras de uma música.
+! O diretório raiz é definido no `rclone`, por exemplo: `/Score Maestro/Songs`
 
 ---
 # Arquitetura Entre os Computadores
 
 - **Servidor** é o computador mestre: ele mantém todas as partituras indexadas localmente e serve como referência para detectar alterações nos arquivos. É o computador do maestro/compositor/arranjador.
-- **Cliente** não indexa o diretório local; consulta as partituras na versão `main` e pode propor alterações pontuais. Essas alterações só são aplicadas no diretório mestre após aprovação do servidor (ou seja, para efetivar a alteração). É o computador de utilidade nos ensaios, sendo mais utilizando para consulta.
+- **Cliente** não indexa o diretório local; consulta as partituras na versão `main` e pode propor alterações pontuais. Essas alterações só são aplicadas no diretório `main` após aprovação do servidor (ou seja, para efetivar a alteração). É o computador de utilidade nos ensaios, sendo mais utilizando para consulta.
 
 # Status das Partituras
 

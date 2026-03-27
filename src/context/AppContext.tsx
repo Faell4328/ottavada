@@ -46,7 +46,7 @@ interface AppContextValue {
   ) => Promise<void>;
   updateScoreStatus: (
     scoreId: string,
-    status: "Main" | "Draft" | "Pending"
+    status: "main" | "draft" | "pending"
   ) => Promise<void>;
   deleteScore: (scoreId: string) => Promise<void>;
   deleteSong: (songId: string) => Promise<void>;
@@ -277,7 +277,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const handleUpdateScoreStatus = useCallback(
     async (
       scoreId: string,
-      status: "Main" | "Draft" | "Pending"
+      status: "main" | "draft" | "pending"
     ) => {
       try {
         const updatedSong = await api.updateScoreStatus(scoreId, status);
@@ -291,7 +291,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         );
         dispatch({ type: "SET_SONGS", payload: updatedSongs });
         
-        const statusLabel = status === "Main" ? "Principal" : status === "Draft" ? "Rascunho" : "Pendente";
+        const statusLabel = status === "main" ? "Principal" : status === "draft" ? "Rascunho" : "Pendente";
         toast.success(`Partitura definida como ${statusLabel}!`);
       } catch (err) {
         console.error("Failed to update score status:", err);

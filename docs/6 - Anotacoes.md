@@ -2,6 +2,8 @@
 
 - Os arquivos com as partituras em `.tar.zst` possuem em média 1MB e compressão e descompressão é quase instantânea.
 
+! Eu preciso tomar cuidado em como vou fazer a atualização do software em produção. É preciso ter um plano para não quebrar o software já funcionando ou pelo menos uma forma de quebrar e recuperar ele rapidamente.
+
 ---
 
 **19-03-2026** - Estava cogitando utilizando o `notify`, mas, ele vai dar mais problema que benefício. Então estou buscando uma alternativa melhor e mais robusta.
@@ -42,14 +44,14 @@ Solução:
 ! Minha escolha foi utilizar o rclone, devido a ter que fazer menos manutenção no código, é só simplesmente atualizar ele e pronto.
 ! Mas, caso eu veja que vai dar muita dor de cabeça, posso utilizar o rclone com pCloud (ou via API direto no código). Agora, minha decisão é o Google Drive, mas estarei estudando e testando o pCloud em paralelo.
 
-23-03-2026 - Mudanças e melhorias
+**23-03-2026** - Mudanças e melhorias
 - 1° Alteração no banco de dados, removendo tabelas inúteis e padronizando o nome.
 	- Existiam muitas tabelas e campos que faziam sentidos no começo e em minha cabeça, mas agora não fazem mais.
 - 2° Alteração de `.xz` para `.zst` (zstd - Zstandard).
 	- Devido ao melhor equilibro, a melhor escolha é o `Zstandard`.
 - 3° Adição de fluxos detalhados.
 
-24-03-20226 
+**24-03-20226** 
 
 Mudando estrategia de upload para Nuvem
 - Estava pensando em só fazer upload para a Nuvem quanto todas as partituras da música fossem `main`. Mas isso pode frustar o usuário.
@@ -65,3 +67,11 @@ Mudando estratégia: de banco de dados completo para incrementação/alteração
 	- O que foi implementado.
 	- O que foi alterado.
 	- O que foi deletado.
+
+**26-03-2026**
+
+Problemas e problemas
+- Pensei em um possível problema: "E se o `{computerId}.msgpack` virar um monstrinho de 10MB ou mais".
+- Pensei em separar o `{computerId}.msgpack` em pedaços: `{computerId}_{sequence}.msgpack`, criando sempre um novo arquivo assim que ele chegar a 1MB. Mas isso com tempo iria poluir muito o diretório.
+- E em ambos os casos tem o mesmo problema: Se for adicionado um novo computador, ele teria que ler todos os arquivos, aplicar evento por evento até chegar no estado igual dos outros computadores. Seria um inferno de lento e complexidade.
+- Solução: `{computerId}.msgpack` e `snapshot` do banco de dados. Quando os arquivos  `{computerId}.msgpack` chegarem a um determinado tamanho, o servidor vai gerar uma `snapshot` do banco de dados atual.

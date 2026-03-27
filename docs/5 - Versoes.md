@@ -81,6 +81,7 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [x] Atualizar o banco de dados para implementar uma tabela nova.
 ! O objetivo aqui é simples preparar terreno para a próxima task. A próxima task terá um grande problema. Como saber se é preciso gerar os arquivos song ou não. Eles deve ser gerados se não tiver ou se forem alterados, não faz sentido 
 - [ ] Atualizar o banco de dados e verificar se está correto o tauri-plugin-store.
+- [ ] Implementar o fluxo de 
 - [ ] Atualizar o "verificar alterações".
 ! Deve mostrar no `statusBar` todo o progresso e etapas que está sendo feito.
 - [ ] Implementar função para leitura e comparação do que mudou do MessagePack que outro enviou.
@@ -104,3 +105,8 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - Adicionar uma camada de cibersegurança.
 	- No começo, ele será utilizado em uma orquestra local (onde sou o único com conhecimento em informática). Mas futuramente esse software pode abranger outras organizações.
 - Suporte a vários servidores (no momento o recomendado é ter apenas um)
+- Adicionar snapshot do banco de dados e remover os arquivos de events.
+	- Simplificando a sincronização de computadores novos
+	- Reduzir a quantidade de arquivos `{computerId}_{sequence}.msgpack`.
+- Possível adição de um novo `type` de computador `semi-server`.
+- Embutir o `rclone` no projeto: `/src-tauri/bin/rclone.exe`

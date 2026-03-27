@@ -15,23 +15,23 @@ interface ScoreRowProps {
   onMenuOpen: (id: string) => void;
   onMenuClose: () => void;
   onEdit: () => void;
-  onStatusChange: (scoreId: string, status: "Main" | "Draft" | "Pending") => Promise<void>;
+  onStatusChange: (scoreId: string, status: "main" | "draft" | "pending") => Promise<void>;
   onDelete: (scoreId: string) => Promise<void>;
   computerType?: string;
 }
 
 const STATUS_STYLES: Record<string, string> = {
-  Draft: "bg-orange-100 p-2 rounded-full",
-  Pending: "bg-yellow-100 p-2 rounded-full",
-  Main: "bg-green-100 p-2 rounded-full",
-  NotFound: "bg-red-100 p-2 rounded-full",
+  draft: "bg-orange-100 p-2 rounded-full",
+  pending: "bg-yellow-100 p-2 rounded-full",
+  main: "bg-green-100 p-2 rounded-full",
+  not_found: "bg-red-100 p-2 rounded-full",
 };
 
 const STATUS_LABELS: Record<string, string> = {
-  Draft: "Rascunho",
-  Pending: "Pendente",
-  Main: "Principal",
-  NotFound: "Não Encontrado",
+  draft: "Rascunho",
+  pending: "Pendente",
+  main: "Principal",
+  not_found: "Não Encontrado",
 };
 
 function ScoreRow({
@@ -49,10 +49,17 @@ function ScoreRow({
   const [isOpening, setIsOpening] = useState(false);
   const confirmation = useConfirmation();
   const isClient = computerType === "Client";
+  const rawStatus = String(score.status ?? "");
+  const statusKey = rawStatus
+    // Convert camelCase / PascalCase to snake_case (e.g. NotFound -> not_found)
+    .replace(/([a-z])([A-Z])/g, "$1_$2")
+    // Replace spaces or dashes with underscore
+    .replace(/[\s-]+/g, "_")
+    .toLowerCase();
 
   const handleDoubleClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (score.status === "NotFound") {
+    if (statusKey === "not_found") {
       toast.error("Arquivo não encontrado");
       return;
     }
@@ -73,7 +80,7 @@ function ScoreRow({
       "Você realmente deseja mudar o arquivo para \"Principal\"?",
       async () => {
         try {
-          await onStatusChange(score.id, "Main");
+          await onStatusChange(score.id, "main");
           onMenuClose();
         } catch (err) {
           console.error("Failed to set score as main:", err);
@@ -89,7 +96,7 @@ function ScoreRow({
       "Você realmente deseja mudar o arquivo para \"Rascunho\"?",
       async () => {
         try {
-          await onStatusChange(score.id, "Draft");
+          await onStatusChange(score.id, "draft");
           onMenuClose();
         } catch (err) {
           console.error("Failed to set score as draft:", err);
@@ -122,11 +129,11 @@ function ScoreRow({
           e.stopPropagation();
           onSelectScore();
         }}
-        onDoubleClick={score.status === "NotFound" ? undefined : handleDoubleClick}
+        onDoubleClick={statusKey === "not_found" ? undefined : handleDoubleClick}
         title={
           isOpening
             ? "Abrindo arquivo..."
-            : score.status === "NotFound"
+            : statusKey === "not_found"
             ? "Arquivo não encontrado"
             : "Duplo clique para abrir"
         }
@@ -141,8 +148,8 @@ function ScoreRow({
         <td className="px-3.5 py-1.5 text-xs text-[#8b9db2]">.{score.file_extension}</td>
         <td className="px-2 py-1.5 text-xs font-medium">
           <div className="flex items-center justify-between">
-            <span className={`inline-block text-[#4a6278] ${STATUS_STYLES[score.status] ?? ""}`}>
-              {STATUS_LABELS[score.status] ?? score.status}
+            <span className={`inline-block text-[#4a6278] ${STATUS_STYLES[statusKey] ?? ""}`}>
+              {STATUS_LABELS[statusKey] ?? score.status}
             </span>
 
             <div className="flex items-center justify-end px-3">
@@ -160,15 +167,15 @@ function ScoreRow({
                     handleDoubleClick(e);
                     onMenuClose();
                   }}
-                  disabled={score.status === "NotFound"}
+                  disabled={statusKey === "not_found"}
                 />
-                {score.status === "Draft" && !isClient && (
+                {statusKey === "draft" && !isClient && (
                   <ContextMenuItem
                     label="Definir como Principal"
                     onClick={(e) => { e.stopPropagation(); handleSetAsMain(); }}
                   />
                 )}
-                {score.status === "Main" && !isClient && (
+                {statusKey === "main" && !isClient && (
                   <ContextMenuItem
                     label="Definir como Rascunho"
                     onClick={(e) => { e.stopPropagation(); handleSetAsDraft(); }}
@@ -210,10 +217,16 @@ function ScoreRow({
 }
 
 export const MemoizedScoreRow = React.memo(ScoreRow, (prev, next) => {
+  const norm = (s: any) =>
+    String(s ?? "")
+      .replace(/([a-z])([A-Z])/g, "$1_$2")
+      .replace(/[\s-]+/g, "_")
+      .toLowerCase();
+
   return (
     prev.score.id === next.score.id &&
     prev.score.name === next.score.name &&
-    prev.score.status === next.score.status &&
+    norm(prev.score.status) === norm(next.score.status) &&
     prev.isMenuOpen === next.isMenuOpen
   );
 });

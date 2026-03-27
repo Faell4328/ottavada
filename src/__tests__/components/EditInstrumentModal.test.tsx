@@ -13,7 +13,7 @@ const sampleInstrument: ScoreListItem = {
   file_path: "/music/Canon - Flauta.musx",
   file_extension: "musx",
   updated_at: "2024-01-01 12:00:00",
-  status: "Main",
+  status: "main",
 };
 
 describe("EditInstrumentModal", () => {

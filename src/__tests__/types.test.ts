@@ -36,21 +36,21 @@ describe("TypeScript Types", () => {
         file_extension: "pdf",
         file_path: "/path/to/file.pdf",
         updated_at: "2024-01-01 12:00:00",
-        status: "Main",
+        status: "main",
       };
       expect(score.name).toBe("Violino 1");
-      expect(score.status).toBe("Main");
+      expect(score.status).toBe("main");
     });
 
     it("should support status values", () => {
       const scores: ScoreListItem[] = [
-        { id: "1", name: "V1", file_extension: "pdf", file_path: "/v1.pdf", updated_at: "2024-01-01 12:00:00", status: "Main" },
-        { id: "2", name: "V2", file_extension: "pdf", file_path: "/v2.pdf", updated_at: "2024-01-01 12:00:00", status: "Pending" },
-        { id: "3", name: "V3", file_extension: "pdf", file_path: "/v3.pdf", updated_at: "2024-01-01 12:00:00", status: "Draft" },
+        { id: "1", name: "V1", file_extension: "pdf", file_path: "/v1.pdf", updated_at: "2024-01-01 12:00:00", status: "main" },
+        { id: "2", name: "V2", file_extension: "pdf", file_path: "/v2.pdf", updated_at: "2024-01-01 12:00:00", status: "pending" },
+        { id: "3", name: "V3", file_extension: "pdf", file_path: "/v3.pdf", updated_at: "2024-01-01 12:00:00", status: "draft" },
       ];
-      expect(scores[0].status).toBe("Main");
-      expect(scores[1].status).toBe("Pending");
-      expect(scores[2].status).toBe("Draft");
+      expect(scores[0].status).toBe("main");
+      expect(scores[1].status).toBe("pending");
+      expect(scores[2].status).toBe("draft");
     });
   });
 

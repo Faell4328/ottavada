@@ -29,7 +29,7 @@ function makeScore(id: string, name: string): ScoreListItem {
     file_path: "/path/to/file.pdf",
     file_extension: "pdf",
     updated_at: "2024-01-01 12:00:00",
-    status: "Main",
+    status: "main",
   };
 }
 
@@ -65,7 +65,7 @@ describe("AppContext Reducer", () => {
   describe("SET_CATEGORIES", () => {
     it("should set categories", () => {
       const cats: Category[] = [
-        { id: "c1", name: "Hinos" },
+        { id: "c1", name: "Hinos", updated_at: "2024-01-01 12:00:00", updated_by: "comp-1" },
       ];
       const state = reducer(initialState, {
         type: "SET_CATEGORIES",

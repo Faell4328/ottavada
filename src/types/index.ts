@@ -17,7 +17,7 @@ export interface ScoreListItem {
   file_path: string;
   file_extension: string;
   updated_at: string;
-  status: "Main" | "Pending" | "Draft" | "NotFound";
+  status: "main" | "pending" | "draft" | "not_found";
 }
 
 export interface Category {
@@ -35,6 +35,9 @@ export interface AppSettings {
   first_run_completed: boolean;
   google_service_account: GoogleServiceAccount | null;
   rclone_config: RcloneConfig | null;
+  database_local?: number;
+  backup_database_step?: BackupDatabaseStep | null;
+  backup_songs_step?: SongBackupStatus[] | null;
 }
 
 export interface GoogleServiceAccount {
@@ -53,6 +56,26 @@ export interface GoogleServiceAccount {
 export interface RcloneConfig {
   remote: string;
   path: string;
+}
+
+export enum BackupStatus {
+  Pending = "pending",
+  Compressed = "compressed",
+  Ok = "ok",
+  Error = "error",
+}
+
+export interface SongBackupStatus {
+  song_id: string;
+  last_backup_at?: string;
+  status: BackupStatus;
+  error_message?: string;
+}
+
+export interface BackupDatabaseStep {
+  status: BackupStatus;
+  error_message?: string;
+  updated_at?: string;
 }
 
 export interface IndexedFile {

@@ -1,4 +1,4 @@
-Um gerenciador de partituras para Windows que organiza, acompanha o progresso e mantém backups seguros da sua biblioteca musical. Desenvolvido para dar liberdade ao músico: seus arquivos continuam sendo seus, sem dependência do aplicativo.
+Um gerenciador de partituras para Windows que organiza, acompanha o progresso e mantém backups seguros da sua biblioteca musical. Desenvolvido para dar liberdade ao músico: seus arquivos continuam sendo seus, sem dependência do aplicativo. Ele foi projetado para ter um computador Servidor e um ou vários computadores Clientes.
 
 # Estrutura da Documentação
 
