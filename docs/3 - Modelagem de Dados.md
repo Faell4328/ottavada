@@ -1,17 +1,26 @@
+! O software será simplificado até a versão `v1`, com isso, ele será desenvolvido com o seguinte cenário: 1 servidor, 1 ou vários clientes (`read-only`).
+
+**Responsabilidades Arquivos**:
+- `{computerId}.msgpack` - É usado para sincronizar as alterações feitas no computador entre os computadores.
+- `snapshot.msgpack` - É responsável por consolidar as alterações, o objetivo dele é limpar os eventos e agilizar a sincronização de novos computadores.
+- `backup.msgpack` - É usado para exportar todo o banco de dados, podendo ser uma copia de segurança ou importar em outro servidor.
+
+**Responsabilidades Tabelas**:
+- `changedField` - Possui a única função de gerar o `{computerId}.msgpack` com as alterações feitas.
+- `backupSongs` - Tem o objetivo de controlar os arquivos com as partitura que vai para o servidor. Gerando só o que for necessário, se os arquivos das partitura não foi alterado, não tem porque gerar novamente.
+
 # Compressão
 
 Dentro do `.tar.zst`, vai ter os instrumentos, ex: `flauta.musx`, `violino.musx`, `horn.musx` e etc. Também pode ter `.pdf`.
 
-### `snapshot.msgpack`
+# `snapshot.msgpack`
 
 Será documentando em JSON, mas na aplicação real é utilizando `MessagePack`.
 
 ```json
 {
-  // Versão do shema
-  "schemaVersion": 1,
   // Quando foi gerado
-  "generatorIn": 1710684000,
+  "generatedAt": 1710684000,
   // Lista as músicas
   "songs": [
     {
@@ -20,13 +29,14 @@ Será documentando em JSON, mas na aplicação real é utilizando `MessagePack`.
       "composer": "Nome compositor",
       "arranger": "Nome arranjador",
       "categoriesId": ["Categoria 1", "Categoria 2"],
-      "status": "main",
-      // Última alteração de algum arquivo de partitura
-      "lastScoreUpdateAt": 1710684000,
-      // Quando foi atualizado por último
-      "updatedAt": 1710684000,
-      // Quem atualizou
-      "updatedBy": "computerId",
+      // Implementando apenas na v1
+      //"status": "main",
+      // Última alteração de algum arquivo de partitura (implementando apenas na v1)
+      //"lastScoreUpdateAt": 1710684000,
+      // Quando foi atualizado por último (implementando apenas na v1)
+      //"updatedAt": 1710684000,
+      // Quem atualizou (implementando apenas na v1)
+      //"updatedBy": "computerId",
       // Lista as partituras
       "scores": [
 	      {
@@ -35,12 +45,12 @@ Será documentando em JSON, mas na aplicação real é utilizando `MessagePack`.
 		      "status": "main",
 		      // Quando foi atualizado por último
 		      "updatedAt": 1710684000,
-		      // Quem atualizou
-		      "updatedBy": "computerId",
-		      // Timestamp da última alteração do arquivo
-		      "fileModifiedAt": 1710684000,
-		      // Tamanho do arquivo (um inteiro que significa a quantidade de bytes)
-		      "fileSize": 123124
+		      // Quem atualizou (implementando apenas na v1)
+		      //"updatedBy": "computerId",
+		      // Timestamp da última alteração do arquivo (implementando apenas na v1)
+		      //"fileModifiedAt": 1710684000,
+		      // Tamanho do arquivo (um inteiro que significa a quantidade de bytes, implementando apenas na v1)
+		      //"fileSize": 123124
 	      }
       ],
     }
@@ -54,22 +64,21 @@ Será documentando em JSON, mas na aplicação real é utilizando `MessagePack`.
 
 ```json
 {
-	// Versão do shema
-	"schemaVersion": 1,
 	"computerId": "1iu2312",
+	// Implementando apenas na v1
+	//"origin": "server", // cliente | server
+	// Implementando apenas na v1
+	//"name": "Nome do computador no tauri-plugin-store",
 	"events": [
 		{
+			"id": "uuid",
 			"timestamp": 1710685000,
-			"origin": "server", // cliente | server
 
 			"type": "insert", // insert | update | delete
 			"entity": "songs", // songs | scores | categories
+			"entityId": "2141ko24",
 
-			"data": [
-				{
-					"field": "id",
-					"newValue": "3219o38901f"
-				},
+			"data":[
 				{
 					"field": "name",
 					"newValue": "HINO NACIONAL"
@@ -77,28 +86,34 @@ Será documentando em JSON, mas na aplicação real é utilizando `MessagePack`.
 				{
 					"field": "composer",
 					"newValue": "JOEL"
-				},
+				}
 			]
 		},
 		// Inserir nova música
 		{
+			"id": "uuid",
+			"timestamp": 1710685000,
+			
 			"type": "insert",
 			"entity": "songs",
+			"entityId": "2141ko24",
+			
 			"data": [
 				{
-					"field": "id",
-					"newValue": "3219o38901f"
-				},
-				{
 					"field": "name",
-					"newValue": "HINO NACIONAL"
+					"newValue": "Da dus Glória"
 				}
 			]
 		},
 		// Inserir nova partitura (música já existe)
 		{
+			"id": "uuid",
+			"timestamp": 1710685000,
+			
 			"type": "insert",
 			"entity": "scores",
+			"entityId": "3k123lj12l",
+			
 			"data": [
 				{
 					"field": "songId",
@@ -112,9 +127,13 @@ Será documentando em JSON, mas na aplicação real é utilizando `MessagePack`.
 		},
 		// Atualizar
 		{
+			"id": "uuid",
+			"timestamp": 1710685000,
+			
 			"type": "update",
 			"entity": "songs",
-			"entityId": "1",
+			"entityId": "2141ko24",
+			
 			"data": [
 				{
 					"field": "name",
@@ -125,20 +144,24 @@ Será documentando em JSON, mas na aplicação real é utilizando `MessagePack`.
 		},
 		// Deletar
 		{
+			"id": "uuid",
+			"timestamp": 1710685000,
+			
 			"type": "delete",
 			"entity": "songs",
-			"entityId": "1"
+			"entityId": "2141ko24"
 		},
 		
 		// Inserindo nova categoria
 		{
+			"id": "uuid",
+			"timestamp": 1710685000,
+			
 			"type": "insert",
 			"entity": "categories",
+			"entityId": "1234klj4",
+			
 			"data": [
-				{
-					"field": "id",
-					"newValue": "fkasdljrlç23"
-				},
 				{
 					"field": "name",
 					"newValue": "Clássica"
@@ -148,13 +171,14 @@ Será documentando em JSON, mas na aplicação real é utilizando `MessagePack`.
 		},
 		// Inserindo nova relação categoria
 		{
+			"id": "uuid",
+			"timestamp": 1710685000,
+			
 			"type": "insert",
 			"entity": "categoriesSongs",
+			"entityId": "3k12lj3l12çk",
+			
 			"data": [
-				{
-					"field": "id",
-					"newValue": "3912fadfkla"
-				},
 				{
 					"field": "categoryId",
 					"newValue": "çflkadsjl124"
@@ -167,13 +191,18 @@ Será documentando em JSON, mas na aplicação real é utilizando `MessagePack`.
 		},
 		// Deletando categoria
 		{
+			"id": "uuid",
+			"timestamp": 1710685000,
+			
 			"type": "delete",
 			"entity": "categoriesSongs",
-			"entityId": "3912fadfkla",
+			"entityId": "3k12lj3l12çk",
 		}
 	]
 }
 ```
+
+! Os eventos ficam em ordem crescente. Os novos eventos são adicionados ao final
 
 ---
 # Banco de dados
@@ -189,8 +218,11 @@ Será documentando em JSON, mas na aplicação real é utilizando `MessagePack`.
 ## categories
 - `id` - OB (SC)
 - `name` - OB (SC)
+```
+// NÃO SERÁ ADICIONADO ATÉ A VERSÃO V1 (apenas para documentação)
 - `updatedAt` - OB (SC)
 - `updatedBy` - OB (SC)
+```
 
 ## categoriesSongs
 - `id` - OB (SC)
@@ -205,12 +237,15 @@ Será documentando em JSON, mas na aplicação real é utilizando `MessagePack`.
 - `arranger` - OP (SC)
 - `isFavorite` - OP (SC)
 	- booleano
-- `lastScoreUpdateAt` - OB (SC)
-	- última alteração de algum arquivo de partitura (`main` ou `pendig`, não conta `draft` e `not found`)
+- `lastScoreFileModifiedAt` - OB (SC)
+	- timestamp da última alteração de algum arquivo de partitura.
+```
+// NÃO SERÁ ADICIONADO ATÉ A VERSÃO V1 (apenas para documentação)
 - `updatedAt` - OB (SC)
-	- última alteração da música
+	- última alteração da música (qualquer campo).
 - `updatedBy` - OB (SC)
-	- ID do computador que alterou por último.
+	- ID do computador que alterou por último (qualquer campo).
+```
 
 ## scores
 - `id` - OB (SC)
@@ -228,14 +263,18 @@ Será documentando em JSON, mas na aplicação real é utilizando `MessagePack`.
 	- tamanho do arquivo  (um inteiro que significa a quantidade de bytes)
 - `status` - OB (SC)
 	- `draft`, `pending`, `not found` e `main`.
+```
+// NÃO SERÁ ADICIONADO ATÉ A VERSÃO V1 (apenas para documentação)
 - `updatedAt` - OB (SC)
 - `updatedBy` - OB (SC)
 	- quem atualizou por último.
+```
 
 ! `fileModifiedAt` e `fileSize` NÃO são “verdade do sistema”, são apenas referência para detectar mudanças.
 
 ## changedField
 - `id`
+	- Um `uuid`
 - `origin`
 	- "client" ou "server"
 - `type`
@@ -251,50 +290,33 @@ Será documentando em JSON, mas na aplicação real é utilizando `MessagePack`.
 - `timestamp`
 
 ! O objetivo dessa tabela é facilitar a ageração do arquivo com alterações `{computerId}.msgpack`.
-! Após incrementado o arquivo  `{computerId}.msgpack` e fazer o upload com sucesso a Nuvem, os dados dessa tabela é delatado. Com referência do timestamp mais recente, não deletando as alterações mais recentes que não foram adicionada no `msgpack`.
-
-## changedRelations
-- `id`
-- `origin`
-	- "client" ou "server"
-- `type`
-	- "insert" ou "delete"
-- `categoryId`
-	- utilizado unicamente para relação N:N entre "category" e "song"
-- `songId`
-	- utilizado unicamente para relação N:N entre "category" e "song"
-- `timestamp`
+! Após incrementado o arquivo  `{computerId}.msgpack` e fazer o upload com sucesso a Nuvem, os dados dessa tabela é delatado. Com referência do timestamp mais recente, não deletando as alterações mais recentes que não foram adicionada no `msgpack`.`
 
 ## backupSongs
 - `songId`
 - `lastBackupAt`
-- `status` - "pending" || "processing" || "ok" || "error"
-- `errorMessage`
+- `status` - "processing" || "ok" || "error"
 
 ! Essa tabela é responsável por controlar a geração dos arquivos `.tar.zst`, evitando regerar um arquivo que ainda está válido e controlar o status dele.
 
 # `tauri-plugin-store`
 
 ```json
-computer: {
+{
 	"id": "lfajkdçf",
 	"name": "Faell",
-	"type": "Client" | "Server",
+	"type": "client",
 	"rclone": {
 		"name": "Nome salvo no rclone",
 		"path": "Diretório no Google Drive",
-		
 	},
 	"cloud": {
+		// Timestamp do último snapshot implementado
 		"lastSnapshotTimestamp": 14821049124,
+		// Timestamp do último evento de alteração implementado
 		"lastChangeTimestamp": 12903812039
 	}
 }
 ```
 
-- `none` - nada foi feito, pronto para ser comprimido
-- `compressed` - arquivo já comprimido, pronto para ser feito o update.
-- `ok` - tudo certo, compressão e update feito.
-- `error` - erro em alguma etapa (mensagem do erro).
-
-! Primeiro é feito as pendências de `backupSongs` depois é feito de `backupDatabase`. 
+! O `type` pode ser `client` ou `server`.

@@ -4,6 +4,7 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 
 ! Irei resolver esse caso especifico até a versão v1, depois, posso tentar expandir.
 
+# Documentação velha - Apenas anotação
 ## Funcionalidades para v0.1 - base sólida
 - [x] Corrigir inconsistências da interface
 	- [x] Remover o `VersionPanel`.
@@ -79,9 +80,8 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [x] Atualize a estrutura do `database.msgpack` gerado.
 - [x] Verificar se os campos de data estão sendo devidamente atualizado.
 - [x] Atualizar o banco de dados para implementar uma tabela nova.
-! O objetivo aqui é simples preparar terreno para a próxima task. A próxima task terá um grande problema. Como saber se é preciso gerar os arquivos song ou não. Eles deve ser gerados se não tiver ou se forem alterados, não faz sentido 
+- [ ] Remover o `main` para `draft` do overflow menu.
 - [ ] Atualizar o banco de dados e verificar se está correto o tauri-plugin-store.
-- [ ] Implementar o fluxo de 
 - [ ] Atualizar o "verificar alterações".
 ! Deve mostrar no `statusBar` todo o progresso e etapas que está sendo feito.
 - [ ] Implementar função para leitura e comparação do que mudou do MessagePack que outro enviou.
@@ -92,12 +92,27 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [ ] Tratamento de falhas
 - [ ] Testes
 
-## Funcionalidade para v0.4 - colete de balas
-- [ ] Testar massivamente e corrigir qualquer problema relacionado a adição de música e partituras.
-- [ ] Testar massivamente e corrigir qualquer problema relacionado a detecção de arquivos modificados.
-- [ ] Testar massivamente e corrigir qualquer problema relacionado a backup (todas as etapas).
-- [ ] Testar massivamente os possíveis e altamente prováveis problemas entre Cliente e Servidor.
-- [ ] Adicionar um diretório de backup para os arquivos `MessagePack`.
+# Documentação Nova - Apenas anotação
+
+! Para agilizar o desenvolvimento, essa funcionalidades abaixo só serão implementadas na v1:
+- O cliente pode fazer proposta de alteração.
+	- O cliente até a v1, será 100% consumidor, não podendo alterar NADA.
+	- O objetivo é agilizar o desenvolvimento até a v1. O fluxo de aprovação e implementação de alteração no servidor é complicado e chato.
+
+## Etapas
+- v0.4 - Casa limpa
+	- O objetivo dessa versão é "limpar a casa".
+	- Corrigir tudo que está errado ou obsoleto.
+- v0.5 - Geração do `{clientId}.msgpack`
+## v0.4
+- [ ] Atualizar bando de dados
+- [ ] Atualizar `tauri-plugin-store`
+- [ ] Corrigir os fluxos existentes
+- [ ] Adicionar a função de `changedField` e `changedRelations
+
+## v0.5
+- [ ] Remover tudo da GUI que o computador com type `client` não vai utilizar ou não deve utilizar.
+- [ ] Adicionar etapa de verificação antes de inciar fluxos que computador com type `client` não podem fazer.
 
 ## Funcionalidades para v2 (apenas rascunho/ideias)
 

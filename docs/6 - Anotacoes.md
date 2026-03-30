@@ -75,3 +75,18 @@ Problemas e problemas
 - Pensei em separar o `{computerId}.msgpack` em pedaços: `{computerId}_{sequence}.msgpack`, criando sempre um novo arquivo assim que ele chegar a 1MB. Mas isso com tempo iria poluir muito o diretório.
 - E em ambos os casos tem o mesmo problema: Se for adicionado um novo computador, ele teria que ler todos os arquivos, aplicar evento por evento até chegar no estado igual dos outros computadores. Seria um inferno de lento e complexidade.
 - Solução: `{computerId}.msgpack` e `snapshot` do banco de dados. Quando os arquivos  `{computerId}.msgpack` chegarem a um determinado tamanho, o servidor vai gerar uma `snapshot` do banco de dados atual.
+
+**27-03-2026**
+
+Eu me precipitei
+- Deveria ter elaborado melhor meus planos. Muita das coisas que eu pensei/implementei estavam errada ou seriam feitas erradas.
+- Então, irei abandonar a versão 0.3 devido a bagunça que ela se tornou.
+- Agora com a visão macro e micro do sistema, será mais fácil organizar as versões.
+- A ideia agora é implementar uma funcionalidade e ir testando ela massivamente.
+
+**30-03-2026**
+
+Simplificando o óbvio
+- O aplicativo até a versão estável `v1` será apenas `client read-only`.
+- Isso vai reduzir MUITO a complexidade e acelerar MUITO o desenvolvimento.
+- Como já tenho uma estrutura base, isso vai ajudar na visão ao longo prazo, se existir futuro nesse aplicativo (só Deus sabe e espero que sim).

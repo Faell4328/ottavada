@@ -1,7 +1,7 @@
 # Anotações
 
 - Ao invés de `.json`, será utilizado `.msgpack` por ser mais rápido e leve.
-- Antes da compressão os arquivos deve ser juntos em um `.tar`. Isso ocorre devido a possibilidade das partituras da música estarem em diretórios diferentes.
+- Antes da compressão os arquivos deve ser juntos em um `.tar` (arquivos de partituras). Isso ocorre devido a possibilidade das partituras da música estarem em diretórios diferentes.
 
 ---
 # Diretórios do Projeto
@@ -17,22 +17,28 @@ Diretório temporário do projeto:
 - `/home/<user>/.local/share/com.rhafa.score-maestro/temp` (Linux).
 
 Diretório raiz da nuvem:
-- `C:\Users\<user>\AppData\Roaming\ScoreMaestro\clound` (Windows).
-- `/home/<user>/.local/share/com.rhafa.score-maestro/clound` (Linux).
+- `C:\Users\<user>\AppData\Roaming\ScoreMaestro\cloud` (Windows).
+- `/home/<user>/.local/share/com.rhafa.score-maestro/cloud` (Linux).
+! Esse diretório é utilizado para sincronizar com a nuvem
 
-Diretório com as partituras compactadas (baixado do drive):
-- `C:\Users\<user>\AppData\Roaming\ScoreMaestro\nuvem\songs` (Windows).
-- `/home/<user>/.local/share/com.rhafa.score-maestro/nuvem/songs` (Linux).
+Diretório com as partituras compactadas:
+- `C:\Users\<user>\AppData\Roaming\ScoreMaestro\cloud\songs` (Windows).
+- `/home/<user>/.local/share/com.rhafa.score-maestro/cloud/songs` (Linux).
+
+Diretório com os eventos:
+- `C:\Users\<user>\AppData\Roaming\ScoreMaestro\cloud\events` (Windows).
+- `/home/<user>/.local/share/com.rhafa.score-maestro/cloud/events` (Linux).
+! Esse é o diretório onde é salvo os arquivos `{computerId}.msgpack.zst`.
 
 ! É o mesmo diretório do `tauri-plugin-store`.
 
 ## Nuvem
 
-- `{computerId}.msgpack.zst` - arquivo as as alterações recentes deitas por aquele computador.
+- `{computerId}.msgpack.zst` - arquivo com as alterações recentes feitas. Cada computador terá o seu (até a `v1` apenas o Servidor gera)
 - `snapshot.msgpack.zst` - arquivo com a snapshot do banco de dados (gerado exclusivamente pelo servidor).
 - `pending/` - diretório com todas as músicas pendentes.
 	- Músicas que foram enviadas pelo Cliente e precisam ser aprovadas pelo servidor.
-- `songs/` - diretório com todas as músicas.
+- `songs/` - diretório com todas as músicas e partituras.
 - `songs/{songId}.tar.zst` - arquivo compactado com todas as partituras de uma música.
 ! O diretório raiz é definido no `rclone`, por exemplo: `/Score Maestro/Songs`
 
@@ -40,16 +46,38 @@ Diretório com as partituras compactadas (baixado do drive):
 # Arquitetura Entre os Computadores
 
 - **Servidor** é o computador mestre: ele mantém todas as partituras indexadas localmente e serve como referência para detectar alterações nos arquivos. É o computador do maestro/compositor/arranjador.
-- **Cliente** não indexa o diretório local; consulta as partituras na versão `main` e pode propor alterações pontuais. Essas alterações só são aplicadas no diretório `main` após aprovação do servidor (ou seja, para efetivar a alteração). É o computador de utilidade nos ensaios, sendo mais utilizando para consulta.
+- **Cliente** não indexa o diretório local; consulta as partituras na versão `main` e pode propor alterações pontuais. Essas alterações ficam com status `pending` em um diretório separado (aguardando aprovação ou rejeição) e só são aplicadas no diretório `main` após aprovação do servidor. É o computador de utilidade nos ensaios, sendo mais utilizando para consulta.
 
-# Status das Partituras
+! Por questões de simplificação e entregar um protótipo simples que já resolve o problema (da orquestra que pertenço), o cliente será `read-only` até a versão `v1`, após isso, ele irá ser alterado para ter a função falada acima.
 
-**Main**: é a versão definitiva, ela só pode ser especificada pelo servidor. Partituras com esse status, estão autorizados a fazer backup na Nuvem.
-**Draft**: é a versão de rascunho, ela só pode ser especificada pelo servidor. Partituras com esse status, não estão autorizados a fazer backup na Nuvem.
-**Not Found**: é quando na "verificação de alteração" o arquivo da partitura não é encontrada (podendo ter sido renomeada, movida ou deletada), sendo necessário intervenção, ela só pode ser especifica pelo servidor. Partituras com esse status, não estão autorizadas a fazer backup na Nuvem.
-**Pending**: é quando o cliente faz uma alteração, podendo ser alguma informação da música, partitura ou o arquivo. O servidor precisa permitir essa atualização para que seja definitiva. Ela só pode ser especifica pelo Cliente.
+# Status das Partituras  
+  
+**Main**: é a versão definitiva. Só pode ser definida pelo servidor. Partituras com esse status estão autorizadas a realizar backup na nuvem.
+**Draft**: é a versão de rascunho. Só pode ser definida pelo servidor. Partituras com esse status não estão autorizadas a realizar backup na nuvem.
+**Not Found**: ocorre quando, durante a verificação de alterações, o arquivo da partitura não é encontrado (podendo ter sido renomeado, movido ou deletado). Requer intervenção do usuário (voltando o nome original ou reindexando o arquivo). Partituras com esse status não estão autorizadas a realizar backup na nuvem.
+**Pending**: ocorre quando o cliente propõe uma alteração (em metadados ou no arquivo da partitura). O servidor precisa aprovar essa alteração para que ela se torne definitiva. Esse status só pode ser definido pelo cliente.
 
-! Quando uma partitura `main` for alterada, ela deve virar `draft`.
+! Quando uma partitura `main` for alterada, ela deve passar para o status `draft`. 
+! Caso já exista uma partitura `main` no diretório `/cloud/songs` e a partitura passe para `draft`, o arquivo previamente armazenado como `main` deve ser mantido. O mesmo vale para o status `not found`.
+! O status `pending` não será utilizado até a versão `v1`, mas já estará previsto no sistema.
+
+# Diferença entre Event Log, Snapshot e Database Export  
+
+**Event Log (`{computerId}.msgpack`)**:
+- Contém as alterações incrementais do sistema (inserções, atualizações e deleções).
+- Utilizado para sincronização contínua entre servidor e cliente, aplicando apenas o que mudou desde a última atualização.
+- Fluxo: servidor → cliente (v1)
+- Em versões futuras, cada computador poderá gerar seu próprio Event Log, mas a sincronização continuará sendo centralizada via servidor (sem comunicação direta entre clientes).
+
+**Snapshot (`snapshot.msgpack`)**:
+- Contém um estado parcial do sistema.
+- Utilizado para sincronização entre servidor e cliente.
+- Fluxo: servidor → cliente.
+
+**Database Export (`backup.msgpack`)**:
+- Contém o estado completo do banco de dados.
+- Utilizado para backup, migração ou replicação entre servidores.
+- Fluxo: servidor → servidor.
 
 ---
 # Tecnologias Utilizadas
@@ -83,6 +111,8 @@ Diretório com as partituras compactadas (baixado do drive):
 
 ---
 # Interface
+### Primeiro acesso
+- O usuário pode importar um arquivo `backup.msgpack`.
 
 ### Header
 - Logo do Score Maestro | Botões: adicionar música, adicionar arquivo, adicionar diretório, configurações
@@ -110,3 +140,16 @@ Ao clicar na música será expandido e mostrar uma lista de partituras/instrumen
 ### Configurações
 - O usuário deve poder alterar o nome.
 - Alterar o tipo de computador.
+- Pode forçar a geração de snapshot.
+	- Caso o usuário queira por algum motivo, força a geração de um snapshot.
+- Importar um arquivo de snapshot.
+	- O usuário pode carregar um arquivo `snapshot.msgpack` ou `snapshot.msgpack.zst` para carregar um estado do banco de dados.
+
+### Configurações  
+  
+- O usuário deve poder alterar o nome do dispositivo.
+- O usuário deve poder alterar o tipo de computador (ex: servidor ou cliente).
+- O usuário deve poder forçar a geração de um snapshot.
+- O usuário deve poder exportar o bando de dados e o `tauri-plugin-store`.
+	- Permitir gerar um `backup.msgpack` com todas as informações do banco de dados.
+- O usuário deve poder importar `backup.msgpack`.
