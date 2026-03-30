@@ -8,6 +8,18 @@ use crate::domain::models::*;
 
 const CHANGE_ORIGIN_SERVER: &str = "server";
 
+#[derive(Debug, Clone)]
+pub struct ChangedFieldRecord {
+    pub id: String,
+    pub change_type: String,
+    pub entity: String,
+    pub entity_id: String,
+    pub field: Option<String>,
+    pub old_value: Option<String>,
+    pub new_value: Option<String>,
+    pub timestamp: i64,
+}
+
 #[derive(Clone)]
 pub struct Database {
     pub conn: Arc<Mutex<Connection>>,
@@ -1263,6 +1275,32 @@ impl Database {
             Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
             Err(e) => Err(AppError::Database(e)),
         }
+    }
+
+    /// Lista todas as alterações registradas em changedField em ordem cronológica.
+    pub fn get_changed_fields_ordered(&self) -> Result<Vec<ChangedFieldRecord>, AppError> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT id, type, entity, entityId, field, oldValue, newValue, timestamp
+             FROM changedField
+             ORDER BY timestamp ASC, id ASC",
+        )?;
+
+        let rows = stmt.query_map([], |row| {
+            Ok(ChangedFieldRecord {
+                id: row.get(0)?,
+                change_type: row.get(1)?,
+                entity: row.get(2)?,
+                entity_id: row.get(3)?,
+                field: row.get(4)?,
+                old_value: row.get(5)?,
+                new_value: row.get(6)?,
+                timestamp: row.get(7)?,
+            })
+        })?;
+
+        let records: Result<Vec<_>, _> = rows.collect();
+        Ok(records?)
     }
 }
 

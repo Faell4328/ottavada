@@ -403,12 +403,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
         const result = await api.scanFilesForChanges();
         const archiveSummary = await api.generateSongArchivesFiles();
+        const eventsSummary = await api.generateEventsFile();
         const changedCount = result.changed_files.length;
         const failedCount = result.failed_files.length;
         const recoveredCount = result.recovered_files?.length ?? 0;
         const notFoundCount = result.not_found_files?.length ?? 0;
         const generatedArchives = archiveSummary.generated ?? 0;
         const failedArchives = archiveSummary.failed ?? 0;
+        const generatedEventsCount = eventsSummary.events_count ?? 0;
 
         const totalFiles = changedCount + failedCount;
         dispatch({
@@ -463,6 +465,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
         if (!isAutomatic && failedArchives > 0) {
           toast.error(`${failedArchives} arquivo(s) .tar.zst falharam ao gerar`);
+        }
+
+        if (!isAutomatic) {
+          toast.success(`events.msgpack.zst atualizado com ${generatedEventsCount} evento(s)`);
         }
 
         if (changedCount > 0 || recoveredCount > 0 || notFoundCount > 0) {

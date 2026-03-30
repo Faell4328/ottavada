@@ -119,7 +119,7 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 ## v0.5
 - [x] Adicionar a geração dos arquivos `{songId}.tar.zst`.
 - [x] Adicionar a função de `changedField` em todos os fluxos necessário (ex: adicionar música, partitura, editar, deletar, mudar status e etc e etc)
-- [ ] Adicionar a geração de `events.msgpack`.
+- [x] Adicionar a geração de `events.msgpack`.
 - [ ] Adicionar a geração de `snapshot.msgpack`.
 - [ ] Adicionar o `backup.msgpack`.
 

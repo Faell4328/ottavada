@@ -5,6 +5,7 @@ use crate::domain::models::OperationGuard;
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
 use crate::services::backup_songs_service::{generate_song_archives, SongArchiveSummary};
+use crate::services::events_service::{generate_events_msgpack, EventsFileSummary};
 
 #[tauri::command]
 pub fn generate_song_archives_files(
@@ -19,4 +20,15 @@ pub fn generate_song_archives_files(
         .map_err(|e| AppError::Generic(format!("Erro ao preparar diretório nuvem: {}", e)))?;
 
     generate_song_archives(&db, &cloud_root)
+}
+
+#[tauri::command]
+pub fn generate_events_file(
+    db: State<'_, Database>,
+    store: State<'_, SystemStore>,
+) -> Result<EventsFileSummary, AppError> {
+    let settings = store.get_app_settings()?;
+    settings.require_server_only()?;
+
+    generate_events_msgpack(&db, &store)
 }

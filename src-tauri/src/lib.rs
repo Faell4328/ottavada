@@ -124,6 +124,7 @@ pub fn run() {
             commands::scan_commands::scan_files_for_changes,
             // Backup songs archives
             commands::backup_commands::generate_song_archives_files,
+            commands::backup_commands::generate_events_file,
             // Rclone
             commands::rclone_commands::test_rclone_connection,
             commands::rclone_commands::upload_with_rclone,

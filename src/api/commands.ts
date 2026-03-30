@@ -258,3 +258,13 @@ export interface SongArchiveSummary {
 export async function generateSongArchivesFiles(): Promise<SongArchiveSummary> {
   return invoke("generate_song_archives_files");
 }
+
+export interface EventsFileSummary {
+  output_path: string;
+  file_size: number;
+  events_count: number;
+}
+
+export async function generateEventsFile(): Promise<EventsFileSummary> {
+  return invoke("generate_events_file");
+}
