@@ -74,6 +74,10 @@ export function useAppState() {
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
 
+  const getErrorMessage = useCallback((err: unknown, fallback: string) => {
+    return err instanceof Error ? err.message : fallback;
+  }, []);
+
   const loadSongs = useCallback(async () => {
     try {
       let songs: SongListItem[];
@@ -248,12 +252,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         toast.success("Música atualizada com sucesso!");
       } catch (err) {
         console.error("Failed to update song:", err);
-        const errorMsg = err instanceof Error ? err.message : "Erro ao atualizar música";
-        toast.error(errorMsg);
+        toast.error(getErrorMessage(err, "Erro ao atualizar música"));
         throw err;
       }
     },
-    [loadSongs, loadCategories]
+    [loadSongs, loadCategories, getErrorMessage]
   );
 
   const handleUpdateScore = useCallback(
@@ -271,12 +274,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         toast.success("Partitura atualizada com sucesso!");
       } catch (err) {
         console.error("Failed to update score:", err);
-        const errorMsg = err instanceof Error ? err.message : "Erro ao atualizar partitura";
-        toast.error(errorMsg);
+        toast.error(getErrorMessage(err, "Erro ao atualizar partitura"));
         throw err;
       }
     },
-    [state.selectedScore, loadSongs]
+    [state.selectedScore, loadSongs, getErrorMessage]
   );
 
   const handleUpdateScoreStatus = useCallback(
@@ -299,12 +301,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         toast.success("Partitura definida como Principal!");
       } catch (err) {
         console.error("Failed to update score status:", err);
-        const errorMsg = err instanceof Error ? err.message : "Erro ao atualizar status da partitura";
-        toast.error(errorMsg);
+        toast.error(getErrorMessage(err, "Erro ao atualizar status da partitura"));
         throw err;
       }
     },
-    [state.songs]
+    [state.songs, getErrorMessage]
   );
 
   const handleDeleteScore = useCallback(
@@ -322,12 +323,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         toast.success("Partitura deletada com sucesso!");
       } catch (err) {
         console.error("Failed to delete score:", err);
-        const errorMsg = err instanceof Error ? err.message : "Erro ao deletar partitura";
-        toast.error(errorMsg);
+        toast.error(getErrorMessage(err, "Erro ao deletar partitura"));
         throw err;
       }
     },
-    [state.selectedScore, loadSongs]
+    [state.selectedScore, loadSongs, getErrorMessage]
   );
 
   const handleDeleteSong = useCallback(
@@ -346,12 +346,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         toast.success("Música deletada com sucesso!");
       } catch (err) {
         console.error("Failed to delete song:", err);
-        const errorMsg = err instanceof Error ? err.message : "Erro ao deletar música";
-        toast.error(errorMsg);
+        toast.error(getErrorMessage(err, "Erro ao deletar música"));
         throw err;
       }
     },
-    [state.selectedSong, loadSongs]
+    [state.selectedSong, loadSongs, getErrorMessage]
   );
 
   const handleSaveSettings = useCallback(
@@ -403,59 +402,64 @@ export function AppProvider({ children }: { children: ReactNode }) {
         });
 
         const result = await api.scanFilesForChanges();
+        const changedCount = result.changed_files.length;
+        const failedCount = result.failed_files.length;
+        const recoveredCount = result.recovered_files?.length ?? 0;
+        const notFoundCount = result.not_found_files?.length ?? 0;
 
-        const totalFiles = result.changed_files.length + result.failed_files.length;
+        const totalFiles = changedCount + failedCount;
         dispatch({
           type: "SET_SCAN_PROGRESS",
           payload: {
             total: totalFiles,
             completed: totalFiles,
-            changedFiles: result.changed_files.length,
+            changedFiles: changedCount,
           },
         });
 
         // Verificar se há arquivos recuperados (não mais not_found)
-        if (result.recovered_files && result.recovered_files.length > 0) {
+        if (recoveredCount > 0) {
           if (!isAutomatic) {
             toast.success(
-              `✓ ${result.recovered_files.length} arquivo(s) encontrado(s) novamente`
+              `✓ ${recoveredCount} arquivo(s) encontrado(s) novamente`
             );
           }
-          await loadSongs(); // Recarregar para atualizar UI
         }
 
         // Verificar se há arquivos não encontrados (marcados como not_found)
-        if (result.not_found_files && result.not_found_files.length > 0) {
+        if (notFoundCount > 0) {
           if (!isAutomatic) {
             toast(
-              `⚠ ${result.not_found_files.length} arquivo(s) não encontrado(s)`,
+              `⚠ ${notFoundCount} arquivo(s) não encontrado(s)`,
               { icon: "⚠️" }
             );
           }
-          await loadSongs(); // Recarregar para atualizar UI com status not_found
         }
 
-        if (result.changed_files.length > 0) {
+        if (changedCount > 0) {
           if (!isAutomatic) {
             toast.success(
-              `${result.changed_files.length} arquivo(s) alterado(s) detectado(s)`
+              `${changedCount} arquivo(s) alterado(s) detectado(s)`
             );
           }
-          await loadSongs();
-        } else if (!isAutomatic && !(result.recovered_files && result.recovered_files.length > 0) && !(result.not_found_files && result.not_found_files.length > 0)) {
+        } else if (!isAutomatic && recoveredCount === 0 && notFoundCount === 0) {
           toast.success("Nenhuma alteração detectada");
         }
 
-        if (result.failed_files.length > 0) {
+        if (failedCount > 0) {
           if (!isAutomatic) {
             toast.error(
-              `${result.failed_files.length} arquivo(s) falharam durante verificação`
+              `${failedCount} arquivo(s) falharam durante verificação`
             );
           }
         }
 
+        if (changedCount > 0 || recoveredCount > 0 || notFoundCount > 0) {
+          await loadSongs();
+        }
+
         // Limpar progresso após tempo apropriado
-        const delay = result.changed_files.length > 0 || (result.recovered_files && result.recovered_files.length > 0) ? 3000 : 1500;
+        const delay = changedCount > 0 || recoveredCount > 0 ? 3000 : 1500;
         setTimeout(() => {
           dispatch({ type: "SET_SCANNING_FILES", payload: false });
           dispatch({

@@ -9,16 +9,15 @@ use crate::infrastructure::{database::Database, store::SystemStore};
 #[tauri::command]
 pub fn get_categories(db: State<'_, Database>) -> Result<Vec<Category>, AppError> {
     info!("Buscando todas as categorias");
-    match db.get_all_categories() {
-        Ok(categories) => {
+    db.get_all_categories()
+        .map(|categories| {
             info!("Retornou {} categorias", categories.len());
-            Ok(categories)
-        }
-        Err(e) => {
+            categories
+        })
+        .map_err(|e| {
             error!("Erro ao buscar categorias: {:?}", e);
-            Err(e)
-        }
-    }
+            e
+        })
 }
 
 #[tauri::command]
@@ -40,16 +39,15 @@ pub fn create_category(db: State<'_, Database>, store: State<'_, SystemStore>, n
         updated_at: Local::now().naive_local(),
         updated_by,
     };
-    match db.insert_category(&category) {
-        Ok(_) => {
+    db.insert_category(&category)
+        .map(|_| {
             info!("Categoria criada com sucesso: {}", category.id);
-            Ok(category)
-        }
-        Err(e) => {
+            category
+        })
+        .map_err(|e| {
             error!("Erro ao criar categoria: {:?}", e);
-            Err(e)
-        }
-    }
+            e
+        })
 }
 
 #[tauri::command]
@@ -62,14 +60,12 @@ pub fn delete_category(
     settings.require_server_only()?;
 
     info!("Deletando categoria: {}", category_id);
-    match db.delete_category(&category_id) {
-        Ok(_) => {
+    db.delete_category(&category_id)
+        .map(|_| {
             info!("Categoria deletada com sucesso: {}", category_id);
-            Ok(())
-        }
-        Err(e) => {
+        })
+        .map_err(|e| {
             error!("Erro ao deletar categoria: {:?}", e);
-            Err(e)
-        }
-    }
+            e
+        })
 }

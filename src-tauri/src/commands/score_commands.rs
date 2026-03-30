@@ -10,6 +10,35 @@ use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
 use crate::services::indexer::{get_file_metadata, split_file_path};
 
+const VALID_SCORE_EXTENSIONS: [&str; 3] = ["pdf", "mus", "musx"];
+
+fn ensure_supported_score_file(path: &Path) -> Result<(), AppError> {
+    if !path.exists() || !path.is_file() {
+        warn!("Arquivo não encontrado: {}", path.display());
+        return Err(AppError::Generic("Arquivo não encontrado".into()));
+    }
+
+    let extension = path
+        .extension()
+        .and_then(|e| e.to_str())
+        .ok_or_else(|| AppError::Generic("Extensão de arquivo inválida".into()))?
+        .to_lowercase();
+
+    if !VALID_SCORE_EXTENSIONS.contains(&extension.as_str()) {
+        warn!("Extensão de arquivo não suportada: {}", extension);
+        return Err(AppError::Generic("Tipo de arquivo não suportado".into()));
+    }
+
+    Ok(())
+}
+
+fn read_score_file_metadata(path: &Path) -> Result<(u64, chrono::NaiveDateTime), AppError> {
+    get_file_metadata(path).map_err(|e| {
+        error!("Erro ao obter metadados do arquivo: {:?}", e);
+        AppError::Generic(format!("Erro ao ler arquivo: {}", e))
+    })
+}
+
 #[tauri::command]
 pub fn update_score(
     db: State<'_, Database>,
@@ -23,43 +52,22 @@ pub fn update_score(
     let settings = store.get_app_settings()?;
     settings.require_server_only()?;
     let path = Path::new(&file_path);
-    if !path.exists() || !path.is_file() {
-        warn!("Arquivo não encontrado: {}", file_path);
-        return Err(AppError::Generic("Arquivo não encontrado".into()));
-    }
-
-    let extension = path
-        .extension()
-        .and_then(|e| e.to_str())
-        .ok_or_else(|| AppError::Generic("Extensão de arquivo inválida".into()))?
-        .to_lowercase();
-
-    let valid_extensions = ["pdf", "mus", "musx"];
-    if !valid_extensions.contains(&extension.as_str()) {
-        warn!("Extensão de arquivo não suportada: {}", extension);
-        return Err(AppError::Generic("Tipo de arquivo não suportado".into()));
-    }
+    ensure_supported_score_file(path)?;
 
     let now = Local::now().naive_local();
 
-    let (file_size, file_modified_at) = get_file_metadata(path)
-        .map_err(|e| {
-            error!("Erro ao obter metadados do arquivo: {:?}", e);
-            AppError::Generic(format!("Erro ao ler arquivo: {}", e))
-        })?;
+    let (file_size, file_modified_at) = read_score_file_metadata(path)?;
 
     let (score_file_path, file_name) = split_file_path(&file_path);
 
-    match db.update_score(&score_id, instrument_name.clone(), &score_file_path, &file_name, file_size, file_modified_at, now, &settings.computer_id) {
-        Ok(_) => {
+    db.update_score(&score_id, instrument_name.clone(), &score_file_path, &file_name, file_size, file_modified_at, now, &settings.computer_id)
+        .map(|_| {
             info!("Partitura atualizada com sucesso: {}", score_id);
-            Ok(())
-        }
-        Err(e) => {
+        })
+        .map_err(|e| {
             error!("Erro ao atualizar partitura {}: {:?}", score_id, e);
-            Err(e)
-        }
-    }
+            e
+        })
 }
 
 #[tauri::command]
@@ -90,11 +98,7 @@ pub fn add_score_to_song(
         )));
     }
 
-    let (file_size, file_modified_at) = get_file_metadata(Path::new(&file.path))
-        .map_err(|e| {
-            error!("Erro ao obter metadados do arquivo: {:?}", e);
-            AppError::Generic(format!("Erro ao ler arquivo: {}", e))
-        })?;
+    let (file_size, file_modified_at) = read_score_file_metadata(Path::new(&file.path))?;
 
     let (score_file_path, file_name) = split_file_path(&file.path);
 
@@ -138,11 +142,7 @@ pub fn add_scores_to_song(
             continue;
         }
 
-        let (file_size, file_modified_at) = get_file_metadata(Path::new(&file.path))
-            .map_err(|e| {
-                error!("Erro ao obter metadados do arquivo: {:?}", e);
-                AppError::Generic(format!("Erro ao ler arquivo: {}", e))
-            })?;
+        let (file_size, file_modified_at) = read_score_file_metadata(Path::new(&file.path))?;
 
         let (score_file_path, file_name) = split_file_path(&file.path);
 
@@ -254,14 +254,12 @@ pub fn delete_score(
     settings.require_server_only()?;
     
     info!("Deletando partitura: {}", score_id);
-    match db.delete_score(&score_id) {
-        Ok(_) => {
+    db.delete_score(&score_id)
+        .map(|_| {
             info!("Partitura deletada com sucesso: {}", score_id);
-            Ok(())
-        }
-        Err(e) => {
+        })
+        .map_err(|e| {
             error!("Erro ao deletar partitura: {:?}", e);
-            Err(e)
-        }
-    }
+            e
+        })
 }

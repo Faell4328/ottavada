@@ -19,6 +19,8 @@ export default function TopBar({
 }: TopBarProps) {
   const { loadSongs, loadCategories, state, scanFilesForChanges } = useAppState();
   const navigate = useNavigate();
+  const isClient = state.settings?.computer_type === "Client";
+  const clientBlockedTitle = "Operação não permitida para cliente";
   const [showAddMusicModal, setShowAddMusicModal] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<IndexedFile[]>([]);
   const [showAddFilesModal, setShowAddFilesModal] = useState(false);
@@ -140,21 +142,21 @@ export default function TopBar({
         <div className="flex items-center gap-2">
           <ActionButton
             icon={<Music className="h-4 w-4" />}
-            title={state.settings?.computer_type === "Client" ? "Operação não permitida para cliente" : "Adicionar música"}
+            title={isClient ? clientBlockedTitle : "Adicionar música"}
             onClick={handleAddMusic}
-            disabled={state.settings?.computer_type === "Client"}
+            disabled={isClient}
           />
           <ActionButton
             icon={<Plus className="h-4 w-4" />}
-            title={state.settings?.computer_type === "Client" ? "Operação não permitida para cliente" : "Adicionar arquivo"}
+            title={isClient ? clientBlockedTitle : "Adicionar arquivo"}
             onClick={handleAddFile}
-            disabled={state.settings?.computer_type === "Client"}
+            disabled={isClient}
           />
           <ActionButton
             icon={<FolderSearch className="h-4 w-4" />}
-            title={state.settings?.computer_type === "Client" ? "Operação não permitida para cliente" : "Indexar diretório"}
+            title={isClient ? clientBlockedTitle : "Indexar diretório"}
             onClick={handleScanDirectory}
-            disabled={state.settings?.computer_type === "Client"}
+            disabled={isClient}
           />
           <ActionButton
             icon={<RefreshCw className={`h-4 w-4 ${state.isScanningFiles ? 'animate-spin' : ''}`} />}

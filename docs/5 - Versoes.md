@@ -109,7 +109,7 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [x] Atualizar `tauri-plugin-store`
 - [x] Corrigir o código que utiliza o banco de dados e `tauri-plugin-store`
 - [x] Corrigir os fluxos existentes
-- [ ] Refatorar o código e valide os teste
+- [x] Refatorar o código e valide os teste
 - [x] Atualiza o front, altere: "Todas as Partituras" para "Todas as Músicas", quantidade de partituras para quantidade de música e "Nenhuma partitura encontrada" para "Nenhuma música encontrada"
 
 ## v0.5

@@ -40,6 +40,18 @@ function SongRow({
   const confirmation = useConfirmation();
   const author = [song.composer, song.arranger].filter(Boolean).join(" / ");
   const isClient = computerType === "Client";
+  const blockedClientMessage = "Operação não permitida para cliente";
+
+  const handleClientBlockedAction = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    toast.error(blockedClientMessage);
+  };
+
+  const handleMenuAction = (e: React.MouseEvent, action: () => void) => {
+    e.stopPropagation();
+    action();
+    onMenuClose();
+  };
 
   const handleDelete = () => {
     confirmation.requestConfirmation(
@@ -89,52 +101,52 @@ function SongRow({
               {isClient ? (
                 <ContextMenuItem
                   label="Favoritar (não permitido para cliente)"
-                  onClick={(e) => { e.stopPropagation(); toast.error("Operação não permitida para cliente"); }}
+                  onClick={handleClientBlockedAction}
                 />
               ) : (
                 <ContextMenuItem
                   label={song.is_favorite ? "Remover de favoritos" : "Adicionar aos favoritos"}
-                  onClick={(e) => { e.stopPropagation(); onToggleFavorite(); onMenuClose(); }}
+                  onClick={(e) => handleMenuAction(e, onToggleFavorite)}
                 />
               )}
               {isClient ? (
                 <>
                   <ContextMenuItem
                     label="Adicionar arquivo (não permitido)"
-                    onClick={(e) => { e.stopPropagation(); toast.error("Operação não permitida para cliente"); }}
+                    onClick={handleClientBlockedAction}
                   />
                   <ContextMenuItem
                     label="Adicionar diretório (não permitido)"
-                    onClick={(e) => { e.stopPropagation(); toast.error("Operação não permitida para cliente"); }}
+                    onClick={handleClientBlockedAction}
                   />
                 </>
               ) : (
                 <>
                   <ContextMenuItem
                     label="Adicionar arquivo"
-                    onClick={(e) => { e.stopPropagation(); onAddFile(); onMenuClose(); }}
+                    onClick={(e) => handleMenuAction(e, onAddFile)}
                   />
                   <ContextMenuItem
                     label="Adicionar diretório"
-                    onClick={(e) => { e.stopPropagation(); onAddDirectory(); onMenuClose(); }}
+                    onClick={(e) => handleMenuAction(e, onAddDirectory)}
                   />
                 </>
               )}
               {isClient ? (
                 <ContextMenuItem
                   label="Editar (não permitido para cliente)"
-                  onClick={(e) => { e.stopPropagation(); toast.error("Operação não permitida para cliente"); }}
+                  onClick={handleClientBlockedAction}
                 />
               ) : (
                 <ContextMenuItem
                   label="Editar"
-                  onClick={(e) => { e.stopPropagation(); onEdit(); onMenuClose(); }}
+                  onClick={(e) => handleMenuAction(e, onEdit)}
                 />
               )}
               {isClient ? (
                 <ContextMenuItem
                   label="Deletar (não permitido para cliente)"
-                  onClick={(e) => { e.stopPropagation(); toast.error("Operação não permitida para cliente"); }}
+                  onClick={handleClientBlockedAction}
                   isLast
                 />
               ) : (
