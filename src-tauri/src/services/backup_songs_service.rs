@@ -142,31 +142,25 @@ fn create_tar_for_song(db: &Database, song_id: &str, output_path: &Path) -> Resu
 pub fn should_backup_song(db: &Database, song_id: &str) -> Result<bool, AppError> {
     let conn = db.conn.lock().unwrap();
 
-    // Obter o updated_at da música
+    // Obter o último timestamp de alteração de partitura da música
     let mut stmt = conn
-        .prepare("SELECT updated_at FROM songs WHERE id = ?1")
+        .prepare("SELECT last_score_file_modified_at FROM songs WHERE id = ?1")
         .map_err(|e| AppError::Generic(format!("Erro ao preparar query: {}", e)))?;
 
-    let song_updated_at_str: String = stmt
+    let last_score_file_modified_at: i64 = stmt
         .query_row([song_id], |row| row.get(0))
         .map_err(|_| AppError::Generic(format!("Música não encontrada: {}", song_id)))?;
 
-    // Converter para timestamp
-    let song_updated_at = chrono::NaiveDateTime::parse_from_str(&song_updated_at_str, "%Y-%m-%d %H:%M:%S")
-        .map_err(|e| AppError::Generic(format!("Erro ao fazer parse de data: {}", e)))?
-        .and_utc()
-        .timestamp();
-
-    // Obter o last_backup_at da tabela backup_songs
+    // Obter o last_backup_at da tabela backupSongs
     let mut stmt = conn
-        .prepare("SELECT last_backup_at FROM backup_songs WHERE song_id = ?1")
+        .prepare("SELECT last_backup_at FROM backupSongs WHERE song_id = ?1")
         .map_err(|e| AppError::Generic(format!("Erro ao preparar query: {}", e)))?;
 
     let last_backup_at_opt: Option<i64> = stmt
         .query_row([song_id], |row| row.get(0))
         .ok();
 
-    // Se não tem registro de backup ou o arquivo foi atualizado depois do último backup, fazer backup
+    // Se não tem registro de backup ou houve alteração local após o último backup, fazer backup
     let should_backup = match last_backup_at_opt {
         None => {
             info!(
@@ -176,10 +170,10 @@ pub fn should_backup_song(db: &Database, song_id: &str) -> Result<bool, AppError
             true
         }
         Some(last_backup) => {
-            if song_updated_at > last_backup {
+            if last_score_file_modified_at > last_backup {
                 info!(
                     "Música {} foi alterada após último backup ({} > {}), precisa fazer backup",
-                    song_id, song_updated_at, last_backup
+                    song_id, last_score_file_modified_at, last_backup
                 );
                 true
             } else {

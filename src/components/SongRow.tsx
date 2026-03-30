@@ -44,7 +44,7 @@ function SongRow({
   const handleDelete = () => {
     confirmation.requestConfirmation(
       "Deletar Música",
-      "Você realmente deseja deletar esta música? Esta ação não pode ser desfeita.",
+      "Você realmente deseja deletar esta música? Seu arquivo irá continuar localmente, será removido apenas do sistema.",
       async () => {
         try {
           await onDelete(song.id);

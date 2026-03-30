@@ -103,19 +103,17 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - v0.4 - Casa limpa
 	- O objetivo dessa versão é "limpar a casa".
 	- Corrigir tudo que está errado ou obsoleto.
-- v0.5 - Geração do `{clientId}.msgpack`
 ## v0.4
-- [ ] Atualizar bando de dados
-- [ ] Atualizar `tauri-plugin-store`
+- [x] Atualizar bando de dados
+- [x] Atualizar `tauri-plugin-store`
+- [x] Corrigir o código que utiliza o banco de dados e `tauri-plugin-store`
 - [ ] Corrigir os fluxos existentes
-- [ ] Adicionar a função de `changedField` e `changedRelations
-
-## v0.5
-- [ ] Remover tudo da GUI que o computador com type `client` não vai utilizar ou não deve utilizar.
-- [ ] Adicionar etapa de verificação antes de inciar fluxos que computador com type `client` não podem fazer.
+- [ ] Adicionar a função de `changedField`
+- [ ] Refatorar o código e adicionar testes
 
 ## Funcionalidades para v2 (apenas rascunho/ideias)
 
+- Tirar o cliente de `read-only`.
 - Backup utilizando pendrive ou outro meio local.
 - Adicionar uma camada de cibersegurança.
 	- No começo, ele será utilizado em uma orquestra local (onde sou o único com conhecimento em informática). Mas futuramente esse software pode abranger outras organizações.

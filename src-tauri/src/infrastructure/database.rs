@@ -56,6 +56,7 @@ impl Database {
                 composer TEXT,
                 arranger TEXT,
                 is_favorite INTEGER NOT NULL DEFAULT 0,
+                last_score_file_modified_at INTEGER NOT NULL DEFAULT 0,
                 status TEXT NOT NULL DEFAULT 'main',
                 updated_at TEXT NOT NULL DEFAULT (datetime('now')),
                 updated_by TEXT NOT NULL DEFAULT ''
@@ -124,6 +125,20 @@ impl Database {
                 [],
             ).ok(); // Ignore error if column already exists
         }
+        if !songs_columns.contains(&"last_score_file_modified_at".to_string()) {
+            conn.execute(
+                "ALTER TABLE songs ADD COLUMN last_score_file_modified_at INTEGER NOT NULL DEFAULT 0",
+                [],
+            ).ok(); // Ignore error if column already exists
+
+            // Preencher o novo campo com uma referência inicial para bases antigas.
+            conn.execute(
+                "UPDATE songs
+                 SET last_score_file_modified_at = CAST(strftime('%s', updated_at) AS INTEGER)
+                 WHERE last_score_file_modified_at = 0",
+                [],
+            ).ok();
+        }
         if !songs_columns.contains(&"updated_by".to_string()) {
             conn.execute(
                 "ALTER TABLE songs ADD COLUMN updated_by TEXT NOT NULL DEFAULT ''",
@@ -157,6 +172,24 @@ impl Database {
                 old_value TEXT,
                 new_value TEXT
             );
+        ")?;
+
+        // Estrutura de mudança canônica conforme documentação v0.4+
+        conn.execute_batch("
+            CREATE TABLE IF NOT EXISTS changedField (
+                id TEXT PRIMARY KEY,
+                origin TEXT NOT NULL,
+                type TEXT NOT NULL,
+                entity TEXT NOT NULL,
+                entityId TEXT NOT NULL,
+                field TEXT,
+                oldValue TEXT,
+                newValue TEXT,
+                timestamp INTEGER NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_changedField_entity ON changedField(entity, entityId);
+            CREATE INDEX IF NOT EXISTS idx_changedField_timestamp ON changedField(timestamp);
         ")?;
 
         // Índices para change_lists e changes
@@ -198,7 +231,7 @@ impl Database {
             CREATE TABLE IF NOT EXISTS backupSongs (
                 id TEXT PRIMARY KEY,
                 song_id TEXT NOT NULL UNIQUE REFERENCES songs(id) ON DELETE CASCADE,
-                status TEXT NOT NULL DEFAULT 'pending',
+                status TEXT NOT NULL DEFAULT 'processing',
                 last_backup_at INTEGER,
                 error_message TEXT
             );
@@ -630,6 +663,8 @@ impl Database {
 
     pub fn insert_score(&self, score: &Score) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
+        let file_modified_at_ts = score.file_modified_at.and_utc().timestamp();
+
         conn.execute(
             "INSERT INTO scores (id, song_id, name, host_id, directory_id, file_name, file_size, file_modified_at, updated_at, status, updated_by)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
@@ -647,6 +682,17 @@ impl Database {
                 score.updated_by,
             ],
         )?;
+
+        conn.execute(
+            "UPDATE songs
+             SET last_score_file_modified_at = CASE
+                   WHEN last_score_file_modified_at > ?1 THEN last_score_file_modified_at
+                   ELSE ?1
+                 END
+             WHERE id = ?2",
+            params![file_modified_at_ts, score.song_id],
+        )?;
+
         Ok(())
     }
 
@@ -663,6 +709,7 @@ impl Database {
     ) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
         let now_str = datetime_utils::format_datetime(now);
+        let file_modified_at_ts = file_modified_at.and_utc().timestamp();
         
         conn.execute(
             "UPDATE scores SET name = ?1, directory_id = ?2, file_name = ?3, file_size = ?4, file_modified_at = ?5, updated_at = ?6, updated_by = ?7 WHERE id = ?8",
@@ -688,6 +735,16 @@ impl Database {
         conn.execute(
             "UPDATE songs SET updated_at = ?1, updated_by = ?2 WHERE id = ?3",
             params![now_str, updated_by, song_id],
+        )?;
+
+        conn.execute(
+            "UPDATE songs
+             SET last_score_file_modified_at = CASE
+                   WHEN last_score_file_modified_at > ?1 THEN last_score_file_modified_at
+                   ELSE ?1
+                 END
+             WHERE id = ?2",
+            params![file_modified_at_ts, song_id],
         )?;
         
         Ok(())
@@ -811,6 +868,9 @@ impl Database {
     ) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
         let now_str = datetime_utils::format_now();
+        let file_modified_at_ts = file_metadata
+            .as_ref()
+            .map(|(_, modified)| modified.and_utc().timestamp());
 
         if let Some((file_size, file_modified_at)) = file_metadata {
             conn.execute(
@@ -842,6 +902,18 @@ impl Database {
             "UPDATE songs SET updated_at = ?1, updated_by = ?2 WHERE id = ?3",
             params![now_str, updated_by, song_id],
         )?;
+
+        if let Some(modified_ts) = file_modified_at_ts {
+            conn.execute(
+                "UPDATE songs
+                 SET last_score_file_modified_at = CASE
+                       WHEN last_score_file_modified_at > ?1 THEN last_score_file_modified_at
+                       ELSE ?1
+                     END
+                 WHERE id = ?2",
+                params![modified_ts, song_id],
+            )?;
+        }
         
         Ok(())
     }

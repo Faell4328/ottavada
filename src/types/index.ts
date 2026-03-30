@@ -38,6 +38,8 @@ export interface AppSettings {
   database_local?: number;
   backup_database_step?: BackupDatabaseStep | null;
   backup_songs_step?: SongBackupStatus[] | null;
+  last_snapshot_timestamp?: number | null;
+  last_change_timestamp?: number | null;
 }
 
 export interface GoogleServiceAccount {

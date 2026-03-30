@@ -49,6 +49,50 @@ impl SystemStore {
     pub fn get_app_settings(&self) -> Result<AppSettings, AppError> {
         let store = self.load_store()?;
 
+        let computer_id = store
+            .get("computer_id")
+            .or_else(|| store.get("id"))
+            .and_then(|v| v.as_str().map(|s| s.to_string()))
+            .unwrap_or_default();
+
+        let computer_name = store
+            .get("computer_name")
+            .or_else(|| store.get("name"))
+            .and_then(|v| v.as_str().map(|s| s.to_string()));
+
+        let computer_type_raw = store
+            .get("computer_type")
+            .and_then(|v| v.as_str())
+            .or_else(|| store.get("type").and_then(|v| v.as_str()))
+            .unwrap_or("server");
+
+        let computer_type = match computer_type_raw {
+            "Client" | "client" => ComputerType::Client,
+            _ => ComputerType::Server,
+        };
+
+        let rclone_config = store
+            .get("rclone_config")
+            .and_then(|v| serde_json::from_value::<crate::domain::models::RcloneConfig>(v.clone()).ok())
+            .or_else(|| {
+                let rclone = store.get("rclone")?;
+                let remote = rclone
+                    .get("name")
+                    .or_else(|| rclone.get("remote"))
+                    .and_then(|v| v.as_str())?
+                    .to_string();
+                let path = rclone.get("path")?.as_str()?.to_string();
+                Some(crate::domain::models::RcloneConfig { remote, path })
+            });
+
+        let cloud = store.get("cloud");
+        let last_snapshot_timestamp = cloud
+            .and_then(|v| v.get("lastSnapshotTimestamp"))
+            .and_then(|v| v.as_i64());
+        let last_change_timestamp = cloud
+            .and_then(|v| v.get("lastChangeTimestamp"))
+            .and_then(|v| v.as_i64());
+
         // Parse backup database step
         let backup_database_step = store
             .get("backup_database_step")
@@ -85,19 +129,9 @@ impl SystemStore {
             });
 
         let settings = AppSettings {
-            computer_id: store
-                .get("computer_id")
-                .and_then(|v: &serde_json::Value| v.as_str().map(|s: &str| s.to_string()))
-                .unwrap_or_default(),
-            computer_name: store
-                .get("computer_name")
-                .and_then(|v: &serde_json::Value| v.as_str().map(|s: &str| s.to_string())),
-            computer_type: match store
-                .get("computer_type")
-                .and_then(|v: &serde_json::Value| v.as_str()) {
-                Some("Client") => ComputerType::Client,
-                _ => ComputerType::Server,
-            },
+            computer_id,
+            computer_name,
+            computer_type,
             google_drive_mode: match store
                 .get("google_drive_mode")
                 .and_then(|v: &serde_json::Value| v.as_str()) {
@@ -111,14 +145,14 @@ impl SystemStore {
             google_service_account: store
                 .get("google_service_account")
                 .and_then(|v| serde_json::from_value::<GoogleServiceAccount>(v.clone()).ok()),
-            rclone_config: store
-                .get("rclone_config")
-                .and_then(|v| serde_json::from_value::<crate::domain::models::RcloneConfig>(v.clone()).ok()),
+            rclone_config,
             database_local: store
                 .get("database_local")
                 .and_then(|v: &serde_json::Value| v.as_u64()),
             backup_database_step,
             backup_songs_step,
+            last_snapshot_timestamp,
+            last_change_timestamp,
         };
 
         Ok(settings)
@@ -128,6 +162,29 @@ impl SystemStore {
     pub fn save_app_settings(&self, settings: &AppSettings) -> Result<(), AppError> {
         let mut store = self.load_store()?;
 
+        // Estrutura canônica (documentação): id, name, type, rclone, cloud
+        store["id"] = serde_json::json!(settings.computer_id);
+        store["name"] = serde_json::json!(settings.computer_name.clone().unwrap_or_default());
+        store["type"] = serde_json::json!(match settings.computer_type {
+            ComputerType::Server => "server",
+            ComputerType::Client => "client",
+        });
+
+        if let Some(ref rclone_cfg) = settings.rclone_config {
+            store["rclone"] = serde_json::json!({
+                "name": rclone_cfg.remote,
+                "path": rclone_cfg.path,
+            });
+        } else {
+            store.as_object_mut().map(|obj| obj.remove("rclone"));
+        }
+
+        store["cloud"] = serde_json::json!({
+            "lastSnapshotTimestamp": settings.last_snapshot_timestamp.unwrap_or(0),
+            "lastChangeTimestamp": settings.last_change_timestamp.unwrap_or(0),
+        });
+
+        // Chaves legadas mantidas por compatibilidade enquanto o frontend migra completamente.
         store["computer_id"] = serde_json::json!(settings.computer_id);
 
         if let Some(ref name) = settings.computer_name {
@@ -197,6 +254,14 @@ impl SystemStore {
             );
         } else {
             store.as_object_mut().map(|obj| obj.remove("backup_songs_step"));
+        }
+
+        if let Some(last_snapshot_timestamp) = settings.last_snapshot_timestamp {
+            store["cloud"]["lastSnapshotTimestamp"] = serde_json::json!(last_snapshot_timestamp);
+        }
+
+        if let Some(last_change_timestamp) = settings.last_change_timestamp {
+            store["cloud"]["lastChangeTimestamp"] = serde_json::json!(last_change_timestamp);
         }
 
         self.save_store(&store)?;
