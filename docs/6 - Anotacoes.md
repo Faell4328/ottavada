@@ -90,3 +90,7 @@ Simplificando o óbvio
 - O aplicativo até a versão estável `v1` será apenas `client read-only`.
 - Isso vai reduzir MUITO a complexidade e acelerar MUITO o desenvolvimento.
 - Como já tenho uma estrutura base, isso vai ajudar na visão ao longo prazo, se existir futuro nesse aplicativo (só Deus sabe e espero que sim).
+
+Mudando o nome (mais simplificação)
+- Irei alterar de `{computerId}.msgpack` para `events.msgpack` simplesmente, porque não faz sentido adicionar isso agora. É mais fácil e direito simplesmente colocar um nome padrão.
+- Mas isso não quer dizer que vou descartar a ideia, por isso estou documentando aqui. No futuro pretendo implementar ela.

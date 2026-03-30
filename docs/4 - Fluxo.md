@@ -290,7 +290,7 @@
 
 ! O arquivo do usuário deve se manter no diretório local dele.
 
-# Gerando o arquivo de alteração `{computerId}.msgpack`
+# Gerando o arquivo de alteração `events.msgpack`
 
 **Apenas Servidor**
 
@@ -300,7 +300,7 @@
 		- Aborta do fluxo
 		- Avisa o usuário que ocorreu um erro (toast)
 
-2. Verifica se o arquivo `{computerId}.msgpack.zst` tem 2MB
+2. Verifica se o arquivo `events.msgpack.zst` tem 2MB
 	- Se for igual ou maior:
 		- Executa o fluxo de "Gerar Snapshot"
 		- Encerra esse fluxo
@@ -308,7 +308,7 @@
 		- Descompacta o arquivo no diretório: "/temp/events/"
 		- Incrementa com as alterações no "changedField" (ordenada pelo timestamp - crescente)
 	- Se o arquivo não exister:
-		- Criar um novo arquivo `{computerId}.msgpack` no diretório: "/temp/events/"
+		- Criar um novo arquivo `events.msgpack` no diretório: "/temp/events/"
 		- Adiciona as alteração do "changedField" no arquivo (ordenada pelo timestamp - crescente)
 
 3. Compacta o arquivo
@@ -317,7 +317,7 @@
 		- Se ocorrer erro novamente, deve ser emitido um toast avisando o usuário que não é possível compactar o arquivo de alteração.
 		- O fluxo deve ser encerrado (caso esse fluxo esteja em outro, o fluxo pai deve ser encerrado também)
 	- Caso de sucesso:
-		- Deleta o arquivo `{computerId}.msgpack` e deixa apenas o `{computerId}.msgpack.zst`
+		- Deleta o arquivo `events.msgpack` e deixa apenas o `events.msgpack.zst`
 		- Vai para a próxima etapa
 		  
 4. Chama o rclone para sincronizar a pasta local com a "Nuvem"
@@ -352,7 +352,7 @@
 
 5. Deleta os dados dentro da tabela "changedField"
 
-6. Deleta o arquivo `{computerId}.msgpack.zst`
+6. Deleta o arquivo `events.msgpack.zst`
 
 7. Chama o rclone para sincronizar a pasta local com a "Nuvem"
 	- Caso de erro:
@@ -461,7 +461,7 @@
 8. Copia o arquivo em um diretório temporário e descompacta
 	- Diretório: "/temp/events/"
 
-9. Pega o arquivo e verifica se o tipo dele é "server", pelo campo "origin" no arquivo "{computerId}.msgpack"
+9. Pega o arquivo e verifica se o tipo dele é "server", pelo campo "origin" no arquivo "events.msgpack"
 	- Caso não seja:
 		- Deve ser emitido um toast avisando o usuário que existe algo errado e deve chamar o desenvolvedor responsável para investigar
 		- O fluxo deve ser encerrado (caso esse fluxo esteja em outro, o fluxo pai deve ser encerrado também)
@@ -494,7 +494,7 @@
 
 2. Executa o fluxo "Consultar Nuvem"
 
-3. Executa o fluxo "Gerando o arquivo de alteração {computerId}.msgpack"
+3. Executa o fluxo "Gerando o arquivo de alteração events.msgpack"
 	- Caso ocorra tudo certo vai para o próximo
 	- Caso ocorra algum erro, emite um toast avisando e interrompe o fluxo
 

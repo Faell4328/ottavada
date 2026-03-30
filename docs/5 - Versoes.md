@@ -103,6 +103,10 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - v0.4 - Casa limpa
 	- O objetivo dessa versão é "limpar a casa".
 	- Corrigir tudo que está errado ou obsoleto.
+- v0.5 - Implementando as funcionalidades
+	- Implementar o `changedField`
+	- Implementar o `events.msgpack`
+- v0.6 - Foco no `client`
 
 ## v0.4
 - [x] Atualizar bando de dados
@@ -113,7 +117,15 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [x] Atualiza o front, altere: "Todas as Partituras" para "Todas as Músicas", quantidade de partituras para quantidade de música e "Nenhuma partitura encontrada" para "Nenhuma música encontrada"
 
 ## v0.5
-- [ ] Adicionar a função de `changedField`
+- [ ] Adicionar a geração dos arquivos `{songId}.tar.zst`.
+- [ ] Adicionar a função de `changedField` em todos os fluxos necessário (ex: adicionar música, partitura, editar, deletar, mudar status e etc e etc)
+- [ ] Adicionar a geração dos 
+- [ ] Adicionar a geração de `events.msgpack`.
+- [ ] Adicionar a geração de  `snapshot.msgpack`.
+- [ ] Adicionar o `backup.msgpack`.
+
+## v0.6
+- [ ] Limitar as funcionalidades do front
 
 ## Funcionalidades para v2 (apenas rascunho/ideias)
 
@@ -121,9 +133,5 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - Backup utilizando pendrive ou outro meio local.
 - Adicionar uma camada de cibersegurança.
 	- No começo, ele será utilizado em uma orquestra local (onde sou o único com conhecimento em informática). Mas futuramente esse software pode abranger outras organizações.
-- Suporte a vários servidores (no momento o recomendado é ter apenas um)
-- Adicionar snapshot do banco de dados e remover os arquivos de events.
-	- Simplificando a sincronização de computadores novos
-	- Reduzir a quantidade de arquivos `{computerId}_{sequence}.msgpack`.
 - Possível adição de um novo `type` de computador `semi-server`.
 - Embutir o `rclone` no projeto: `/src-tauri/bin/rclone.exe`

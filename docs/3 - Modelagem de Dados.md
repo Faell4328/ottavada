@@ -1,12 +1,12 @@
 ! O software será simplificado até a versão `v1`, com isso, ele será desenvolvido com o seguinte cenário: 1 servidor, 1 ou vários clientes (`read-only`).
 
 **Responsabilidades Arquivos**:
-- `{computerId}.msgpack` - É usado para sincronizar as alterações feitas no computador entre os computadores.
+- `events.msgpack` - É usado para sincronizar as alterações feitas no computador entre os computadores.
 - `snapshot.msgpack` - É responsável por consolidar as alterações, o objetivo dele é limpar os eventos e agilizar a sincronização de novos computadores.
 - `backup.msgpack` - É usado para exportar todo o banco de dados, podendo ser uma copia de segurança ou importar em outro servidor.
 
 **Responsabilidades Tabelas**:
-- `changedField` - Possui a única função de gerar o `{computerId}.msgpack` com as alterações feitas.
+- `changedField` - Possui a única função de gerar o `events.msgpack` com as alterações feitas.
 - `backupSongs` - Tem o objetivo de controlar os arquivos com as partitura que vai para o servidor. Gerando só o que for necessário, se os arquivos das partitura não foi alterado, não tem porque gerar novamente.
 
 # Compressão
@@ -58,7 +58,7 @@ Será documentando em JSON, mas na aplicação real é utilizando `MessagePack`.
 }
 ```
 
-# Arquivo `{computerId}.msgpack`
+# Arquivo `events.msgpack`
 
 Será documentando em JSON, mas na aplicação real é utilizando `MessagePack`.
 
@@ -289,8 +289,8 @@ Será documentando em JSON, mas na aplicação real é utilizando `MessagePack`.
 - `newValue`
 - `timestamp`
 
-! O objetivo dessa tabela é facilitar a ageração do arquivo com alterações `{computerId}.msgpack`.
-! Após incrementado o arquivo  `{computerId}.msgpack` e fazer o upload com sucesso a Nuvem, os dados dessa tabela é delatado. Com referência do timestamp mais recente, não deletando as alterações mais recentes que não foram adicionada no `msgpack`.`
+! O objetivo dessa tabela é facilitar a ageração do arquivo com alterações `events.msgpack`.
+! Após incrementado o arquivo  `events.msgpack` e fazer o upload com sucesso a Nuvem, os dados dessa tabela é delatado. Com referência do timestamp mais recente, não deletando as alterações mais recentes que não foram adicionada no `msgpack`.`
 
 ## backupSongs
 - `songId`

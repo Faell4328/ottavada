@@ -28,13 +28,13 @@ Diretório com as partituras compactadas:
 Diretório com os eventos:
 - `C:\Users\<user>\AppData\Roaming\ScoreMaestro\cloud\events` (Windows).
 - `/home/<user>/.local/share/com.rhafa.score-maestro/cloud/events` (Linux).
-! Esse é o diretório onde é salvo os arquivos `{computerId}.msgpack.zst`.
+! Esse é o diretório onde é salvo os arquivos `events.msgpack.zst`.
 
 ! É o mesmo diretório do `tauri-plugin-store`.
 
 ## Nuvem
 
-- `{computerId}.msgpack.zst` - arquivo com as alterações recentes feitas. Cada computador terá o seu (até a `v1` apenas o Servidor gera)
+- `events.msgpack.zst` - arquivo com as alterações recentes feitas. Cada computador terá o seu (até a `v1` apenas o Servidor gera)
 - `snapshot.msgpack.zst` - arquivo com a snapshot do banco de dados (gerado exclusivamente pelo servidor).
 - `pending/` - diretório com todas as músicas pendentes.
 	- Músicas que foram enviadas pelo Cliente e precisam ser aprovadas pelo servidor.
@@ -63,7 +63,7 @@ Diretório com os eventos:
 
 # Diferença entre Event Log, Snapshot e Database Export  
 
-**Event Log (`{computerId}.msgpack`)**:
+**Event Log (`events.msgpack`)**:
 - Contém as alterações incrementais do sistema (inserções, atualizações e deleções).
 - Utilizado para sincronização contínua entre servidor e cliente, aplicando apenas o que mudou desde a última atualização.
 - Fluxo: servidor → cliente (v1)
