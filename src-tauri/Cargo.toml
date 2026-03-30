@@ -31,7 +31,7 @@ rmp-serde = "1"
 rusqlite = { version = "0.31", features = ["bundled"] }
 notify = "6"
 walkdir = "2"
-zstd = "0.13"
+zstd = { version = "0.13", features = ["zstdmt"] }
 fs2 = "0.4.3"
 uuid = { version = "1.22.0", features = ["v4"] }
 chrono = { version = "0.4.44", features = ["serde"] }

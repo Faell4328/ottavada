@@ -1,12 +1,22 @@
-// REMOVIDO: Funcionalidade de exportar banco de dados completo para MessagePack
-//
-// A exportação de banco de dados completo foi removida conforme mudança na documentação v0.3.
-// 
-// A estratégia correta é:
-// - Exportar apenas as mudanças (tabela "changed") como {computerId}.msgpack.zst
-// - Não exportar todo o banco de dados como database.msgpack.zst
-// 
-// TODO para próximas versões:
-// - Implementar export_changes_to_msgpack() que lê a tabela "changed" e gera {computerId}.msgpack
-// - Isso será feito quando o fluxo de sincronização for completamente definido
+use tauri::State;
 
+use crate::domain::errors::AppError;
+use crate::domain::models::OperationGuard;
+use crate::infrastructure::database::Database;
+use crate::infrastructure::store::SystemStore;
+use crate::services::backup_songs_service::{generate_song_archives, SongArchiveSummary};
+
+#[tauri::command]
+pub fn generate_song_archives_files(
+    db: State<'_, Database>,
+    store: State<'_, SystemStore>,
+) -> Result<SongArchiveSummary, AppError> {
+    let settings = store.get_app_settings()?;
+    settings.require_server_only()?;
+
+    let cloud_root = store.app_data_dir().join("nuvem");
+    std::fs::create_dir_all(&cloud_root)
+        .map_err(|e| AppError::Generic(format!("Erro ao preparar diretório nuvem: {}", e)))?;
+
+    generate_song_archives(&db, &cloud_root)
+}

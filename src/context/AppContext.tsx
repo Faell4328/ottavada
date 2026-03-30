@@ -402,10 +402,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         });
 
         const result = await api.scanFilesForChanges();
+        const archiveSummary = await api.generateSongArchivesFiles();
         const changedCount = result.changed_files.length;
         const failedCount = result.failed_files.length;
         const recoveredCount = result.recovered_files?.length ?? 0;
         const notFoundCount = result.not_found_files?.length ?? 0;
+        const generatedArchives = archiveSummary.generated ?? 0;
+        const failedArchives = archiveSummary.failed ?? 0;
 
         const totalFiles = changedCount + failedCount;
         dispatch({
@@ -452,6 +455,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
               `${failedCount} arquivo(s) falharam durante verificação`
             );
           }
+        }
+
+        if (!isAutomatic && generatedArchives > 0) {
+          toast.success(`${generatedArchives} arquivo(s) .tar.zst gerado(s)`);
+        }
+
+        if (!isAutomatic && failedArchives > 0) {
+          toast.error(`${failedArchives} arquivo(s) .tar.zst falharam ao gerar`);
         }
 
         if (changedCount > 0 || recoveredCount > 0 || notFoundCount > 0) {

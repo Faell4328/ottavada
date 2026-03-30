@@ -1,11 +1,11 @@
+use chrono::Local;
 use std::path::Path;
 use tauri::State;
-use chrono::Local;
-use tracing::{info, warn, error};
+use tracing::{error, info, warn};
 
 use crate::domain::errors::AppError;
-use crate::domain::models::*;
 use crate::domain::models::OperationGuard;
+use crate::domain::models::*;
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
 use crate::services::indexer::{get_file_metadata, split_file_path};
@@ -47,8 +47,11 @@ pub fn update_score(
     instrument_name: Option<String>,
     file_path: String,
 ) -> Result<(), AppError> {
-    info!("Atualizando partitura: {} com arquivo: {}", score_id, file_path);
-    
+    info!(
+        "Atualizando partitura: {} com arquivo: {}",
+        score_id, file_path
+    );
+
     let settings = store.get_app_settings()?;
     settings.require_server_only()?;
     let path = Path::new(&file_path);
@@ -60,14 +63,23 @@ pub fn update_score(
 
     let (score_file_path, file_name) = split_file_path(&file_path);
 
-    db.update_score(&score_id, instrument_name.clone(), &score_file_path, &file_name, file_size, file_modified_at, now, &settings.computer_id)
-        .map(|_| {
-            info!("Partitura atualizada com sucesso: {}", score_id);
-        })
-        .map_err(|e| {
-            error!("Erro ao atualizar partitura {}: {:?}", score_id, e);
-            e
-        })
+    db.update_score(
+        &score_id,
+        instrument_name.clone(),
+        &score_file_path,
+        &file_name,
+        file_size,
+        file_modified_at,
+        now,
+        &settings.computer_id,
+    )
+    .map(|_| {
+        info!("Partitura atualizada com sucesso: {}", score_id);
+    })
+    .map_err(|e| {
+        error!("Erro ao atualizar partitura {}: {:?}", score_id, e);
+        e
+    })
 }
 
 #[tauri::command]
@@ -83,13 +95,14 @@ pub fn add_score_to_song(
     let song = db.get_song_list_item_by_id(&song_id)?;
 
     // Verificar se o instrumento já existe (case-insensitive)
-    let score_exists = song.scores.iter().any(|sc| {
-        match (&sc.name, &file.instrument) {
+    let score_exists = song
+        .scores
+        .iter()
+        .any(|sc| match (&sc.name, &file.instrument) {
             (Some(existing), Some(indexed)) => existing.eq_ignore_ascii_case(indexed),
             (None, None) => true,
             _ => false,
-        }
-    });
+        });
 
     if score_exists {
         return Err(AppError::Generic(format!(
@@ -130,13 +143,13 @@ pub fn add_scores_to_song(
     let mut added_count = 0;
 
     for file in files {
-        let score_exists = existing_scores.iter().any(|sc| {
-            match (&sc.name, &file.instrument) {
+        let score_exists = existing_scores
+            .iter()
+            .any(|sc| match (&sc.name, &file.instrument) {
                 (Some(existing), Some(indexed)) => existing.eq_ignore_ascii_case(indexed),
                 (None, None) => sc.file_path == file.path,
                 _ => false,
-            }
-        });
+            });
 
         if score_exists {
             continue;
@@ -169,10 +182,7 @@ pub fn add_scores_to_song(
 }
 
 #[tauri::command]
-pub async fn open_file(
-    db: State<'_, Database>,
-    score_id: String,
-) -> Result<(), AppError> {
+pub async fn open_file(db: State<'_, Database>, score_id: String) -> Result<(), AppError> {
     let file_path = db.get_score_file_path(&score_id)?;
 
     #[cfg(target_os = "windows")]
@@ -211,8 +221,11 @@ pub fn update_score_status(
 ) -> Result<SongListItem, AppError> {
     let settings = store.get_app_settings()?;
     settings.require_server_only()?;
-    
-    info!("Atualizando status da partitura: {} para: {}", score_id, status);
+
+    info!(
+        "Atualizando status da partitura: {} para: {}",
+        score_id, status
+    );
     let song_id = db.get_song_id_for_score(&score_id)?;
     let song = db.get_song_list_item_by_id(&song_id)?;
     let current_score = song
@@ -240,7 +253,10 @@ pub fn update_score_status(
 
     db.update_score_status(&score_id, ScoreStatus::Main, &settings.computer_id, None)?;
 
-    info!("Status da partitura {} atualizado com sucesso para {}", score_id, status);
+    info!(
+        "Status da partitura {} atualizado com sucesso para {}",
+        score_id, status
+    );
     db.get_song_list_item_by_id(&song_id)
 }
 
@@ -252,7 +268,7 @@ pub fn delete_score(
 ) -> Result<(), AppError> {
     let settings = store.get_app_settings()?;
     settings.require_server_only()?;
-    
+
     info!("Deletando partitura: {}", score_id);
     db.delete_score(&score_id)
         .map(|_| {

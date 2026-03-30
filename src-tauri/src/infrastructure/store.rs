@@ -1,9 +1,12 @@
-use std::path::PathBuf;
 use std::fs;
+use std::path::PathBuf;
 use tracing::info;
 
 use crate::domain::errors::AppError;
-use crate::domain::models::{AppSettings, BackupDatabaseStep, BackupStatus, ComputerType, GoogleDriveMode, GoogleServiceAccount, SongBackupStatus};
+use crate::domain::models::{
+    AppSettings, BackupDatabaseStep, BackupStatus, ComputerType, GoogleDriveMode,
+    GoogleServiceAccount, SongBackupStatus,
+};
 
 const STORE_FILENAME: &str = "app-store.json";
 
@@ -16,7 +19,10 @@ pub struct SystemStore {
 impl SystemStore {
     pub fn new(app_data_dir: PathBuf) -> Self {
         let store_path = app_data_dir.join(STORE_FILENAME);
-        Self { app_data_dir, store_path }
+        Self {
+            app_data_dir,
+            store_path,
+        }
     }
 
     /// Retorna o diretório de dados da aplicação
@@ -73,7 +79,9 @@ impl SystemStore {
 
         let rclone_config = store
             .get("rclone_config")
-            .and_then(|v| serde_json::from_value::<crate::domain::models::RcloneConfig>(v.clone()).ok())
+            .and_then(|v| {
+                serde_json::from_value::<crate::domain::models::RcloneConfig>(v.clone()).ok()
+            })
             .or_else(|| {
                 let rclone = store.get("rclone")?;
                 let remote = rclone
@@ -94,29 +102,29 @@ impl SystemStore {
             .and_then(|v| v.as_i64());
 
         // Parse backup database step
-        let backup_database_step = store
-            .get("backup_database_step")
-            .and_then(|v| {
-                let status_str = v.get("status")?.as_str()?;
-                let updated_at = v.get("updated_at")?.as_i64()?;
-                Some(BackupDatabaseStep {
-                    status: BackupStatus::from_str(status_str),
-                    updated_at,
-                })
-            });
+        let backup_database_step = store.get("backup_database_step").and_then(|v| {
+            let status_str = v.get("status")?.as_str()?;
+            let updated_at = v.get("updated_at")?.as_i64()?;
+            Some(BackupDatabaseStep {
+                status: BackupStatus::from_str(status_str),
+                updated_at,
+            })
+        });
 
         // Parse backup songs step
         let backup_songs_step = store
             .get("backup_songs_step")
             .and_then(|v| v.as_array())
             .map(|songs| {
-                songs.iter()
+                songs
+                    .iter()
                     .filter_map(|song| {
                         let id = song.get("id")?.as_str()?.to_string();
                         let song_id = song.get("song_id")?.as_str()?.to_string();
                         let status_str = song.get("status")?.as_str()?;
                         let last_backup_at = song.get("last_backup_at")?.as_i64();
-                        let error_message = song.get("error_message")?.as_str().map(|s| s.to_string());
+                        let error_message =
+                            song.get("error_message")?.as_str().map(|s| s.to_string());
                         Some(SongBackupStatus {
                             id,
                             song_id,
@@ -134,7 +142,8 @@ impl SystemStore {
             computer_type,
             google_drive_mode: match store
                 .get("google_drive_mode")
-                .and_then(|v: &serde_json::Value| v.as_str()) {
+                .and_then(|v: &serde_json::Value| v.as_str())
+            {
                 Some("api") => GoogleDriveMode::Api,
                 _ => GoogleDriveMode::Local,
             },
@@ -205,16 +214,20 @@ impl SystemStore {
         store["first_run_completed"] = serde_json::json!(settings.first_run_completed);
 
         if let Some(ref account) = settings.google_service_account {
-            let account_json = serde_json::to_value(account)
-                .map_err(|e| AppError::Generic(format!("Erro ao serializar service account: {}", e)))?;
+            let account_json = serde_json::to_value(account).map_err(|e| {
+                AppError::Generic(format!("Erro ao serializar service account: {}", e))
+            })?;
             store["google_service_account"] = account_json;
         } else {
-            store.as_object_mut().map(|obj| obj.remove("google_service_account"));
+            store
+                .as_object_mut()
+                .map(|obj| obj.remove("google_service_account"));
         }
 
         if let Some(ref rclone_cfg) = settings.rclone_config {
-            let rclone_json = serde_json::to_value(rclone_cfg)
-                .map_err(|e| AppError::Generic(format!("Erro ao serializar rclone config: {}", e)))?;
+            let rclone_json = serde_json::to_value(rclone_cfg).map_err(|e| {
+                AppError::Generic(format!("Erro ao serializar rclone config: {}", e))
+            })?;
             store["rclone_config"] = rclone_json;
         } else {
             store.as_object_mut().map(|obj| obj.remove("rclone_config"));
@@ -223,7 +236,9 @@ impl SystemStore {
         if let Some(database_local) = settings.database_local {
             store["database_local"] = serde_json::json!(database_local);
         } else {
-            store.as_object_mut().map(|obj| obj.remove("database_local"));
+            store
+                .as_object_mut()
+                .map(|obj| obj.remove("database_local"));
         }
 
         if let Some(ref backup_db_step) = settings.backup_database_step {
@@ -232,12 +247,15 @@ impl SystemStore {
                 "updated_at": backup_db_step.updated_at
             });
         } else {
-            store.as_object_mut().map(|obj| obj.remove("backup_database_step"));
+            store
+                .as_object_mut()
+                .map(|obj| obj.remove("backup_database_step"));
         }
 
         if let Some(ref backup_songs) = settings.backup_songs_step {
-            store["backup_songs_step"] = serde_json::json!(
-                backup_songs.iter().map(|s| {
+            store["backup_songs_step"] = serde_json::json!(backup_songs
+                .iter()
+                .map(|s| {
                     let mut obj = serde_json::json!({
                         "id": s.id,
                         "song_id": s.song_id,
@@ -250,10 +268,12 @@ impl SystemStore {
                         obj["error_message"] = serde_json::json!(error_msg);
                     }
                     obj
-                }).collect::<Vec<_>>()
-            );
+                })
+                .collect::<Vec<_>>());
         } else {
-            store.as_object_mut().map(|obj| obj.remove("backup_songs_step"));
+            store
+                .as_object_mut()
+                .map(|obj| obj.remove("backup_songs_step"));
         }
 
         if let Some(last_snapshot_timestamp) = settings.last_snapshot_timestamp {
@@ -266,14 +286,21 @@ impl SystemStore {
 
         self.save_store(&store)?;
 
-        info!("Configurações salvas com sucesso no store em: {:?}", self.store_path);
+        info!(
+            "Configurações salvas com sucesso no store em: {:?}",
+            self.store_path
+        );
         Ok(())
     }
 
     /// Salva as configurações do sistema e atualiza o backup_database_step.updated_at
     /// com o timestamp da última alteração em qualquer música (efeito em cascata)
     #[allow(dead_code)]
-    pub fn save_app_settings_with_db(&self, settings: &mut AppSettings, db: &crate::infrastructure::database::Database) -> Result<(), AppError> {
+    pub fn save_app_settings_with_db(
+        &self,
+        settings: &mut AppSettings,
+        db: &crate::infrastructure::database::Database,
+    ) -> Result<(), AppError> {
         // Obter o updated_at mais recente das songs
         if let Some(latest_timestamp) = db.get_latest_songs_update_timestamp()? {
             // Atualizar ou criar o backup_database_step com o timestamp mais recente

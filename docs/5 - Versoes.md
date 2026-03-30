@@ -117,7 +117,7 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [x] Atualiza o front, altere: "Todas as Partituras" para "Todas as Músicas", quantidade de partituras para quantidade de música e "Nenhuma partitura encontrada" para "Nenhuma música encontrada"
 
 ## v0.5
-- [ ] Adicionar a geração dos arquivos `{songId}.tar.zst`.
+- [x] Adicionar a geração dos arquivos `{songId}.tar.zst`.
 - [ ] Adicionar a função de `changedField` em todos os fluxos necessário (ex: adicionar música, partitura, editar, deletar, mudar status e etc e etc)
 - [ ] Adicionar a geração dos 
 - [ ] Adicionar a geração de `events.msgpack`.

@@ -144,20 +144,18 @@ impl OperationGuard for AppSettings {
         }
         Ok(())
     }
-
 }
 
 /// Constantes e funções para formatação de data/hora
 pub mod datetime_utils {
     use chrono::NaiveDateTime;
-    
+
     pub const DATETIME_FORMAT: &str = "%Y-%m-%d %H:%M:%S";
-    
+
     /// Formata uma data/hora no padrão da aplicação
     pub fn format_datetime(dt: NaiveDateTime) -> String {
         dt.format(DATETIME_FORMAT).to_string()
     }
-    
 }
 
 /// Tipo de computador
@@ -317,7 +315,7 @@ pub struct IndexedFile {
 }
 
 // ── REMOVIDO: Estruturas para exportação MessagePack (database completo) ──
-// 
+//
 // Conforme atualização da documentação v0.3, a estratégia mudou de:
 // - ❌ Exportar todo o banco de dados como ExportDatabase
 // Para:
@@ -332,4 +330,3 @@ pub struct IndexedFile {
 // - ExportDatabase - Banco completo para export
 //
 // TODO: Implementar estruturas corretas para {computerId}.msgpack com "events"
-

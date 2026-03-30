@@ -1,7 +1,7 @@
-use tauri::State;
-use tracing::{info, error};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use tauri::State;
+use tracing::{error, info};
 
 use crate::domain::errors::AppError;
 use crate::domain::models::{AppSettings, ComputerType, GoogleDriveMode, GoogleServiceAccount};
@@ -15,7 +15,10 @@ pub fn get_settings(store: State<'_, SystemStore>) -> Result<AppSettings, AppErr
 
 #[tauri::command]
 pub fn save_settings(store: State<'_, SystemStore>, settings: AppSettings) -> Result<(), AppError> {
-    info!("Salvando configurações para computador: {}", settings.computer_id);
+    info!(
+        "Salvando configurações para computador: {}",
+        settings.computer_id
+    );
     match store.save_app_settings(&settings) {
         Ok(_) => {
             info!("Configurações salvas com sucesso");
@@ -53,32 +56,34 @@ pub fn complete_first_run(
     google_service_account_json: Option<String>,
     rclone_config_json: Option<String>,
 ) -> Result<(), AppError> {
-    info!("Completando primeira execução para: {} ({}) - Tipo: {}", computer_name, computer_id, computer_type);
+    info!(
+        "Completando primeira execução para: {} ({}) - Tipo: {}",
+        computer_name, computer_id, computer_type
+    );
     let mut settings = store.get_app_settings()?;
-    
+
     settings.computer_id = computer_id;
     settings.computer_name = Some(computer_name);
     settings.computer_type = ComputerType::from_str(&computer_type);
-    
+
     // Processar Google Drive (legacy)
     if let Some(json_str) = google_service_account_json {
         info!("Validando credenciais do Google Drive");
-        let service_account: GoogleServiceAccount = 
-            serde_json::from_str(&json_str)
-                .map_err(|e| AppError::Generic(format!("JSON inválido: {}", e)))?;
-        
-        service_account.validate()
+        let service_account: GoogleServiceAccount = serde_json::from_str(&json_str)
+            .map_err(|e| AppError::Generic(format!("JSON inválido: {}", e)))?;
+
+        service_account
+            .validate()
             .map_err(|e| AppError::Generic(e))?;
-        
+
         settings.google_service_account = Some(service_account);
         settings.google_drive_mode = GoogleDriveMode::Api;
         info!("Modo Google Drive: API");
     } else if let Some(rclone_json) = rclone_config_json {
         info!("Configurando Rclone");
-        let rclone_config: crate::domain::models::RcloneConfig = 
-            serde_json::from_str(&rclone_json)
-                .map_err(|e| AppError::Generic(format!("Configuração rclone inválida: {}", e)))?;
-        
+        let rclone_config: crate::domain::models::RcloneConfig = serde_json::from_str(&rclone_json)
+            .map_err(|e| AppError::Generic(format!("Configuração rclone inválida: {}", e)))?;
+
         settings.rclone_config = Some(rclone_config);
         settings.google_drive_mode = GoogleDriveMode::Local;
         info!("Rclone configurado");
@@ -86,37 +91,35 @@ pub fn complete_first_run(
         settings.google_drive_mode = GoogleDriveMode::Local;
         info!("Modo Google Drive: Local");
     }
-    
+
     settings.first_run_completed = true;
     store.save_app_settings(&settings)
 }
 
 #[tauri::command]
-pub fn is_initial_scan_completed(
-    scan_flag: State<'_, Arc<AtomicBool>>,
-) -> bool {
+pub fn is_initial_scan_completed(scan_flag: State<'_, Arc<AtomicBool>>) -> bool {
     scan_flag.load(Ordering::SeqCst)
 }
 
 #[tauri::command]
-pub fn toggle_computer_type(
-    store: State<'_, SystemStore>,
-) -> Result<String, AppError> {
+pub fn toggle_computer_type(store: State<'_, SystemStore>) -> Result<String, AppError> {
     info!("Alternando tipo de computador");
     let mut settings = store.get_app_settings()?;
-    
+
     let new_type = match settings.computer_type {
         ComputerType::Server => ComputerType::Client,
         ComputerType::Client => ComputerType::Server,
     };
-    
-    info!("Alternar tipo de computador de {} para {}", 
-        settings.computer_type.as_str(), 
-        new_type.as_str());
-    
+
+    info!(
+        "Alternar tipo de computador de {} para {}",
+        settings.computer_type.as_str(),
+        new_type.as_str()
+    );
+
     settings.computer_type = new_type.clone();
     store.save_app_settings(&settings)?;
-    
+
     info!("Tipo de computador alterado com sucesso");
     Ok(new_type.as_str().to_string())
 }

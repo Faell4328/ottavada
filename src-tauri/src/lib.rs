@@ -6,10 +6,10 @@ mod services;
 
 use infrastructure::database::Database;
 use infrastructure::store::SystemStore;
-use tauri::Manager;
-use tracing::info;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use tauri::Manager;
+use tracing::info;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -30,16 +30,15 @@ pub fn run() {
                 .expect("Não foi possível criar diretório de dados");
 
             // Inicializar logger
-            logger::init_logger(&app_data_dir)
-                .expect("Não foi possível inicializar o logger");
+            logger::init_logger(&app_data_dir).expect("Não foi possível inicializar o logger");
 
             info!("Aplicação iniciada");
             info!("Diretório de dados: {:?}", app_data_dir);
 
             // Inicializar banco de dados
             let db_path = app_data_dir.join("score_maestro.db");
-            let db = Database::new(&db_path)
-                .expect("Não foi possível inicializar o banco de dados");
+            let db =
+                Database::new(&db_path).expect("Não foi possível inicializar o banco de dados");
 
             // Estado para rastrear se o scan inicial terminou
             let initial_scan_completed = Arc::new(AtomicBool::new(false));
@@ -55,12 +54,15 @@ pub fn run() {
             let db_clone = db.clone();
             let app_data_dir_clone = app_data_dir.clone();
             let scan_completed_flag = initial_scan_completed.clone();
-            
+
             std::thread::spawn(move || {
                 let store = SystemStore::new(app_data_dir_clone);
                 let (host_id, should_scan) = match store.get_app_settings() {
                     Ok(settings) => {
-                        let is_server = matches!(settings.computer_type, crate::domain::models::ComputerType::Server);
+                        let is_server = matches!(
+                            settings.computer_type,
+                            crate::domain::models::ComputerType::Server
+                        );
                         (settings.computer_id, is_server)
                     }
                     Err(e) => {
@@ -120,6 +122,8 @@ pub fn run() {
             commands::settings_commands::toggle_computer_type,
             // Scan
             commands::scan_commands::scan_files_for_changes,
+            // Backup songs archives
+            commands::backup_commands::generate_song_archives_files,
             // Rclone
             commands::rclone_commands::test_rclone_connection,
             commands::rclone_commands::upload_with_rclone,
@@ -129,4 +133,3 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
-

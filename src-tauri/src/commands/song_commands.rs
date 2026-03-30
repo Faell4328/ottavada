@@ -1,11 +1,11 @@
+use chrono::Local;
 use std::path::Path;
 use tauri::State;
-use chrono::Local;
-use tracing::{info, warn, error};
+use tracing::{error, info, warn};
 
 use crate::domain::errors::AppError;
-use crate::domain::models::*;
 use crate::domain::models::OperationGuard;
+use crate::domain::models::*;
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
 use crate::services::indexer::{self, get_file_metadata};
@@ -29,7 +29,9 @@ where
 #[tauri::command]
 pub fn get_all_songs(db: State<'_, Database>) -> Result<Vec<SongListItem>, AppError> {
     info!("Buscando todas as músicas");
-    run_song_query_with_logging("Busca de todas as músicas concluída", || db.get_all_songs())
+    run_song_query_with_logging("Busca de todas as músicas concluída", || {
+        db.get_all_songs()
+    })
 }
 
 #[tauri::command]
@@ -140,27 +142,33 @@ fn import_files_core(
             .unwrap_or_default();
 
         for indexed_file in group_files {
-            let score_exists = existing_scores.iter().any(|sc| {
-                match (&sc.name, &indexed_file.instrument) {
-                    (Some(existing), Some(indexed)) => existing.eq_ignore_ascii_case(indexed),
-                    (None, None) => sc.file_path == indexed_file.path,
-                    _ => false,
-                }
-            });
+            let score_exists =
+                existing_scores
+                    .iter()
+                    .any(|sc| match (&sc.name, &indexed_file.instrument) {
+                        (Some(existing), Some(indexed)) => existing.eq_ignore_ascii_case(indexed),
+                        (None, None) => sc.file_path == indexed_file.path,
+                        _ => false,
+                    });
 
             if score_exists {
                 continue;
             }
 
-            let (file_size, file_modified_at) = match get_file_metadata(Path::new(&indexed_file.path)) {
-                Ok(metadata) => metadata,
-                Err(e) => {
-                    warn!("Erro ao obter metadados do arquivo {}: {:?}", indexed_file.path, e);
-                    (0, now)
-                }
-            };
+            let (file_size, file_modified_at) =
+                match get_file_metadata(Path::new(&indexed_file.path)) {
+                    Ok(metadata) => metadata,
+                    Err(e) => {
+                        warn!(
+                            "Erro ao obter metadados do arquivo {}: {:?}",
+                            indexed_file.path, e
+                        );
+                        (0, now)
+                    }
+                };
 
-            let (score_file_path, file_name) = crate::services::indexer::split_file_path(&indexed_file.path);
+            let (score_file_path, file_name) =
+                crate::services::indexer::split_file_path(&indexed_file.path);
 
             let score = Score::new_from_file(
                 song_id.clone(),
@@ -186,14 +194,21 @@ pub fn import_indexed_files(
     category_ids: Vec<String>,
 ) -> Result<Vec<SongListItem>, AppError> {
     let settings = store.get_app_settings()?;
-    
+
     // Bloquear clientes de importar arquivos
     if settings.computer_type == ComputerType::Client {
         warn!("Cliente tentou importar arquivos: operação não permitida");
         return Err(AppError::ClientOperationNotAllowed);
     }
 
-    import_files_core(&db, &settings.computer_id, &files, &category_ids, None, None)
+    import_files_core(
+        &db,
+        &settings.computer_id,
+        &files,
+        &category_ids,
+        None,
+        None,
+    )
 }
 
 #[tauri::command]
@@ -240,13 +255,17 @@ fn validate_server_create_song(
 
     if name.trim().is_empty() {
         warn!("Tentativa de criar música com nome vazio");
-        return Err(AppError::Generic("Nome da música não pode estar vazio".into()));
+        return Err(AppError::Generic(
+            "Nome da música não pode estar vazio".into(),
+        ));
     }
 
     let all_songs = db.get_all_songs()?;
     if all_songs.iter().any(|s| s.name.eq_ignore_ascii_case(name)) {
         warn!("Tentativa de criar música que já existe: {}", name);
-        return Err(AppError::Generic("Uma música com esse nome já existe".into()));
+        return Err(AppError::Generic(
+            "Uma música com esse nome já existe".into(),
+        ));
     }
 
     Ok(settings.computer_id)
@@ -326,7 +345,10 @@ pub fn update_song(
         .iter()
         .any(|s| s.id != song_id && s.name.eq_ignore_ascii_case(&name))
     {
-        warn!("Tentativa de alterar música {} para nome que já existe: {}", song_id, name);
+        warn!(
+            "Tentativa de alterar música {} para nome que já existe: {}",
+            song_id, name
+        );
         return Err(AppError::Generic(
             "Uma música com esse nome já existe".into(),
         ));

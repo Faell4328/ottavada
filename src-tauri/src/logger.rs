@@ -4,7 +4,7 @@ use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
 /// Inicializa o sistema de logging
-/// 
+///
 /// # Arguments
 /// * `log_dir` - Caminho do diretório onde os logs serão salvos
 pub fn init_logger(log_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
@@ -22,15 +22,10 @@ pub fn init_logger(log_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
         .with_level(true);
 
     #[cfg(debug_assertions)]
-    let console_layer = fmt::layer()
-        .pretty()
-        .with_target(true)
-        .with_level(true);
+    let console_layer = fmt::layer().pretty().with_target(true).with_level(true);
 
     #[cfg(not(debug_assertions))]
-    let console_layer = fmt::layer()
-        .with_target(true)
-        .with_level(true);
+    let console_layer = fmt::layer().with_target(true).with_level(true);
 
     let subscriber = tracing_subscriber::registry()
         .with(tracing_subscriber::filter::LevelFilter::INFO)

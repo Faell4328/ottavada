@@ -1,406 +1,429 @@
-use std::fs::File;
+use std::ffi::OsString;
+use std::fs::{self, File};
 use std::path::{Path, PathBuf};
+
+use rusqlite::params;
 use tar::Builder;
-use tracing::{info, warn, error};
+use tracing::{error, info, warn};
 
 use crate::domain::errors::AppError;
 use crate::infrastructure::database::Database;
 
-/// Resultado do backup de uma música
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct SongBackupResult {
+pub struct SongArchiveResult {
     pub song_id: String,
     pub song_name: String,
-    pub file_path: String,
-    pub file_size: u64,
-    pub success: bool,
+    pub archive_path: Option<String>,
+    pub archive_size: Option<u64>,
+    pub generated: bool,
     pub error: Option<String>,
 }
 
-impl SongBackupResult {
-    pub fn success(song_id: String, song_name: String, file_path: String, file_size: u64) -> Self {
-        Self {
-            song_id,
-            song_name,
-            file_path,
-            file_size,
-            success: true,
-            error: None,
-        }
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct SongArchiveSummary {
+    pub total: usize,
+    pub generated: usize,
+    pub skipped: usize,
+    pub failed: usize,
+    pub results: Vec<SongArchiveResult>,
+}
+
+#[derive(Debug)]
+struct SongBackupRow {
+    song_id: String,
+    song_name: String,
+    last_score_file_modified_at: i64,
+    last_backup_at: Option<i64>,
+}
+
+#[derive(Debug)]
+struct ScoreArchiveEntry {
+    score_id: String,
+    source_path: PathBuf,
+    tar_name: String,
+}
+
+const SONGS_DIR_NAME: &str = "songs";
+const TEMP_DIR_NAME: &str = "temp";
+const PROCESSING_STATUS: &str = "processing";
+
+fn upsert_processing_status(db: &Database, song_id: &str) -> Result<(), AppError> {
+    let conn = db.conn.lock().unwrap();
+    let id = uuid::Uuid::new_v4().to_string();
+
+    conn.execute(
+        "INSERT INTO backupSongs (id, song_id, status, last_backup_at, error_message)
+         VALUES (?1, ?2, ?3, NULL, NULL)
+         ON CONFLICT(song_id) DO UPDATE SET
+         status = excluded.status,
+         error_message = NULL",
+        params![id, song_id, PROCESSING_STATUS],
+    )?;
+
+    Ok(())
+}
+
+fn update_backup_status(
+    db: &Database,
+    song_id: &str,
+    status: &str,
+    last_backup_at: Option<i64>,
+    error_message: Option<&str>,
+) -> Result<(), AppError> {
+    let conn = db.conn.lock().unwrap();
+    conn.execute(
+        "UPDATE backupSongs
+         SET status = ?1, last_backup_at = ?2, error_message = ?3
+         WHERE song_id = ?4",
+        params![status, last_backup_at, error_message, song_id],
+    )?;
+    Ok(())
+}
+
+fn list_song_backup_rows(db: &Database) -> Result<Vec<SongBackupRow>, AppError> {
+    let conn = db.conn.lock().unwrap();
+    let mut stmt = conn.prepare(
+        "SELECT s.id, s.name, s.last_score_file_modified_at, b.last_backup_at
+         FROM songs s
+         LEFT JOIN backupSongs b ON s.id = b.song_id
+         ORDER BY s.name",
+    )?;
+
+    let rows = stmt.query_map([], |row| {
+        Ok(SongBackupRow {
+            song_id: row.get(0)?,
+            song_name: row.get(1)?,
+            last_score_file_modified_at: row.get(2)?,
+            last_backup_at: row.get(3)?,
+        })
+    })?;
+
+    let rows: Result<Vec<_>, _> = rows.collect();
+    Ok(rows?)
+}
+
+fn list_scores_for_archive(
+    db: &Database,
+    song_id: &str,
+) -> Result<Vec<ScoreArchiveEntry>, AppError> {
+    let conn = db.conn.lock().unwrap();
+    let mut stmt = conn.prepare(
+        "SELECT id, file_path, file_name
+         FROM scores
+         WHERE song_id = ?1 AND status IN ('main', 'pending')
+         ORDER BY name",
+    )?;
+
+    let rows = stmt.query_map([song_id], |row| {
+        let score_id: String = row.get(0)?;
+        let dir_path: String = row.get(1)?;
+        let file_name: String = row.get(2)?;
+
+        let source_path = PathBuf::from(&dir_path).join(&file_name);
+
+        let extension = Path::new(&file_name)
+            .extension()
+            .and_then(|ext| ext.to_str())
+            .map(|ext| ext.to_ascii_lowercase());
+
+        let tar_name = match extension {
+            Some(ext) if !ext.is_empty() => format!("{}.{}", score_id, ext),
+            _ => score_id.clone(),
+        };
+
+        Ok(ScoreArchiveEntry {
+            score_id,
+            source_path,
+            tar_name,
+        })
+    })?;
+
+    let rows: Result<Vec<_>, _> = rows.collect();
+    Ok(rows?)
+}
+
+fn create_song_temp_dir(temp_root: &Path, song_id: &str) -> Result<PathBuf, AppError> {
+    fs::create_dir_all(temp_root)?;
+    let temp_dir = temp_root.join(format!("song-{}-{}", song_id, uuid::Uuid::new_v4()));
+    fs::create_dir_all(&temp_dir)?;
+    Ok(temp_dir)
+}
+
+fn copy_and_rename_scores(entries: &[ScoreArchiveEntry], temp_dir: &Path) -> Result<(), AppError> {
+    if entries.is_empty() {
+        return Err(AppError::Generic(
+            "Nenhuma partitura com status main/pending para gerar backup".to_string(),
+        ));
     }
 
-    pub fn error(song_id: String, song_name: String, error: String) -> Self {
-        Self {
-            song_id,
-            song_name,
-            file_path: String::new(),
-            file_size: 0,
-            success: false,
-            error: Some(error),
+    for entry in entries {
+        if !entry.source_path.is_file() {
+            return Err(AppError::Generic(format!(
+                "Arquivo não encontrado para score {}: {}",
+                entry.score_id,
+                entry.source_path.display()
+            )));
         }
+
+        let destination = temp_dir.join(&entry.tar_name);
+        fs::copy(&entry.source_path, &destination).map_err(|e| {
+            AppError::Generic(format!(
+                "Erro ao copiar arquivo {} para {}: {}",
+                entry.source_path.display(),
+                destination.display(),
+                e
+            ))
+        })?;
+    }
+
+    Ok(())
+}
+
+fn create_tar_zst_from_temp_dir(temp_dir: &Path, output_file: &Path) -> Result<u64, AppError> {
+    let output = File::create(output_file).map_err(|e| {
+        AppError::Generic(format!(
+            "Erro ao criar arquivo temporário {}: {}",
+            output_file.display(),
+            e
+        ))
+    })?;
+
+    let level = 10;
+    let mut encoder = zstd::stream::Encoder::new(output, level)
+        .map_err(|e| AppError::Generic(format!("Erro ao inicializar encoder zstd: {}", e)))?;
+
+    let worker_count = std::thread::available_parallelism()
+        .map(usize::from)
+        .unwrap_or(1);
+    encoder
+        .multithread(worker_count as u32)
+        .map_err(|e| AppError::Generic(format!("Erro ao configurar multithread do zstd: {}", e)))?;
+
+    {
+        let mut tar_builder = Builder::new(&mut encoder);
+
+        let mut files: Vec<PathBuf> = fs::read_dir(temp_dir)?
+            .filter_map(|entry| entry.ok().map(|e| e.path()))
+            .filter(|path| path.is_file())
+            .collect();
+        files.sort();
+
+        for file in files {
+            let file_name: OsString = file
+                .file_name()
+                .ok_or_else(|| {
+                    AppError::Generic(
+                        "Nome de arquivo inválido no diretório temporário".to_string(),
+                    )
+                })?
+                .to_owned();
+
+            tar_builder
+                .append_path_with_name(&file, Path::new(&file_name))
+                .map_err(|e| {
+                    AppError::Generic(format!(
+                        "Erro ao adicionar {} no tar: {}",
+                        file.display(),
+                        e
+                    ))
+                })?;
+        }
+
+        tar_builder
+            .finish()
+            .map_err(|e| AppError::Generic(format!("Erro ao finalizar tar: {}", e)))?;
+    }
+
+    encoder
+        .finish()
+        .map_err(|e| AppError::Generic(format!("Erro ao finalizar zstd: {}", e)))?;
+
+    let size = fs::metadata(output_file)?.len();
+    Ok(size)
+}
+
+fn remove_if_exists(path: &Path) {
+    if path.exists() {
+        let _ = fs::remove_file(path);
     }
 }
 
-/// Gera um arquivo .tar contendo todos os scores de uma música
-fn create_tar_for_song(db: &Database, song_id: &str, output_path: &Path) -> Result<u64, AppError> {
-    info!("Criando arquivo tar para música: {}", song_id);
+fn remove_dir_if_exists(path: &Path) {
+    if path.exists() {
+        let _ = fs::remove_dir_all(path);
+    }
+}
 
-    let file = File::create(output_path)
-        .map_err(|e| AppError::Generic(format!(
-            "Erro ao criar arquivo tar em {}: {}",
-            output_path.display(),
-            e
-        )))?;
+fn generate_archive_with_retry(
+    db: &Database,
+    song_id: &str,
+    songs_dir: &Path,
+    temp_root: &Path,
+) -> Result<(String, u64), AppError> {
+    let entries = list_scores_for_archive(db, song_id)?;
+    let final_file = songs_dir.join(format!("{}.tar.zst", song_id));
+    let tmp_file = songs_dir.join(format!("{}.tar.zst.tmp", song_id));
 
-    let mut builder = Builder::new(file);
+    let mut last_error: Option<String> = None;
 
-    // Obter todos os scores da música
-    let conn = db.conn.lock().unwrap();
-    let mut stmt = conn
-        .prepare(
-            "SELECT s.id, s.file_path, s.file_name
-             FROM scores s
-             WHERE s.song_id = ?1
-             ORDER BY s.name"
-        )
-        .map_err(|e| AppError::Generic(format!("Erro ao preparar query: {}", e)))?;
+    for attempt in 1..=2 {
+        let song_temp_dir = create_song_temp_dir(temp_root, song_id)?;
 
-    let results = stmt
-        .query_map([song_id], |row| {
-            Ok((
-                row.get::<_, String>(0)?, // score_id
-                row.get::<_, String>(1)?, // dir_path
-                row.get::<_, String>(2)?, // file_name
-            ))
-        })
-        .map_err(|e| AppError::Generic(format!("Erro ao executar query: {}", e)))?;
+        let attempt_result = (|| -> Result<(String, u64), AppError> {
+            copy_and_rename_scores(&entries, &song_temp_dir)?;
 
-    let mut total_size = 0u64;
-    let mut files_added = 0;
+            remove_if_exists(&tmp_file);
+            let size = create_tar_zst_from_temp_dir(&song_temp_dir, &tmp_file)?;
 
-    for result in results {
-        let (_score_id, dir_path, file_name) = result
-            .map_err(|e| AppError::Generic(format!("Erro ao ler resultado: {}", e)))?;
+            if final_file.exists() {
+                fs::remove_file(&final_file)?;
+            }
 
-        let file_path = PathBuf::from(&dir_path).join(&file_name);
+            fs::rename(&tmp_file, &final_file)?;
+            Ok((final_file.to_string_lossy().to_string(), size))
+        })();
 
-        if !file_path.exists() {
-            warn!(
-                "Arquivo não encontrado para adicionar ao tar: {}",
-                file_path.display()
+        remove_dir_if_exists(&song_temp_dir);
+        remove_if_exists(&tmp_file);
+
+        match attempt_result {
+            Ok(result) => return Ok(result),
+            Err(err) => {
+                last_error = Some(err.to_string());
+                warn!(
+                    "Falha ao gerar arquivo da música {} na tentativa {}: {}",
+                    song_id, attempt, err
+                );
+            }
+        }
+    }
+
+    Err(AppError::Generic(last_error.unwrap_or_else(|| {
+        "Falha desconhecida ao gerar arquivo da música".to_string()
+    })))
+}
+
+pub fn generate_song_archives(
+    db: &Database,
+    cloud_root_dir: &Path,
+) -> Result<SongArchiveSummary, AppError> {
+    let songs_dir = cloud_root_dir.join(SONGS_DIR_NAME);
+    let temp_root = cloud_root_dir.join(TEMP_DIR_NAME).join(SONGS_DIR_NAME);
+
+    fs::create_dir_all(&songs_dir)?;
+    fs::create_dir_all(&temp_root)?;
+
+    let rows = list_song_backup_rows(db)?;
+    let mut results = Vec::with_capacity(rows.len());
+
+    for row in rows {
+        if let Err(err) = upsert_processing_status(db, &row.song_id) {
+            error!(
+                "Erro ao iniciar status de processamento para {}: {}",
+                row.song_id, err
             );
+            results.push(SongArchiveResult {
+                song_id: row.song_id,
+                song_name: row.song_name,
+                archive_path: None,
+                archive_size: None,
+                generated: false,
+                error: Some(err.to_string()),
+            });
             continue;
         }
 
-        // Adicionar arquivo ao tar
-        let mut file = File::open(&file_path)
-            .map_err(|e| AppError::Generic(format!(
-                "Erro ao abrir arquivo {}: {}",
-                file_path.display(),
-                e
-            )))?;
+        let should_generate = row
+            .last_backup_at
+            .map(|last_backup| row.last_score_file_modified_at > last_backup)
+            .unwrap_or(true);
 
-        let metadata = file_path.metadata()
-            .map_err(|e| AppError::Generic(format!(
-                "Erro ao obter metadata de {}: {}",
-                file_path.display(),
-                e
-            )))?;
-
-        let size = metadata.len();
-        total_size += size;
-
-        // Usar apenas o nome do arquivo no tar (sem caminho completo)
-        builder
-            .append_file(&file_name, &mut file)
-            .map_err(|e| AppError::Generic(format!(
-                "Erro ao adicionar {} ao tar: {}",
-                file_name,
-                e
-            )))?;
-
-        files_added += 1;
-        info!("Adicionado ao tar: {} ({})", file_name, size);
-    }
-
-    // Finalizar o tar
-    builder.finish()
-        .map_err(|e| AppError::Generic(format!("Erro ao finalizar tar: {}", e)))?;
-
-    info!(
-        "Arquivo tar criado com sucesso: {} ({} arquivos, {} bytes)",
-        output_path.display(),
-        files_added,
-        total_size
-    );
-
-    Ok(total_size)
-}
-
-/// Verifica se uma música precisa de backup comparando com a tabela backupSongs
-pub fn should_backup_song(db: &Database, song_id: &str) -> Result<bool, AppError> {
-    let conn = db.conn.lock().unwrap();
-
-    // Obter o último timestamp de alteração de partitura da música
-    let mut stmt = conn
-        .prepare("SELECT last_score_file_modified_at FROM songs WHERE id = ?1")
-        .map_err(|e| AppError::Generic(format!("Erro ao preparar query: {}", e)))?;
-
-    let last_score_file_modified_at: i64 = stmt
-        .query_row([song_id], |row| row.get(0))
-        .map_err(|_| AppError::Generic(format!("Música não encontrada: {}", song_id)))?;
-
-    // Obter o last_backup_at da tabela backupSongs
-    let mut stmt = conn
-        .prepare("SELECT last_backup_at FROM backupSongs WHERE song_id = ?1")
-        .map_err(|e| AppError::Generic(format!("Erro ao preparar query: {}", e)))?;
-
-    let last_backup_at_opt: Option<i64> = stmt
-        .query_row([song_id], |row| row.get(0))
-        .ok();
-
-    // Se não tem registro de backup ou houve alteração local após o último backup, fazer backup
-    let should_backup = match last_backup_at_opt {
-        None => {
-            info!(
-                "Nenhum backup anterior para música {}, precisa fazer backup",
-                song_id
-            );
-            true
-        }
-        Some(last_backup) => {
-            if last_score_file_modified_at > last_backup {
-                info!(
-                    "Música {} foi alterada após último backup ({} > {}), precisa fazer backup",
-                    song_id, last_score_file_modified_at, last_backup
+        if !should_generate {
+            if let Err(err) = update_backup_status(db, &row.song_id, "ok", row.last_backup_at, None)
+            {
+                error!(
+                    "Erro ao atualizar status de backup (skip) para {}: {}",
+                    row.song_id, err
                 );
-                true
-            } else {
+            }
+
+            results.push(SongArchiveResult {
+                song_id: row.song_id,
+                song_name: row.song_name,
+                archive_path: None,
+                archive_size: None,
+                generated: false,
+                error: None,
+            });
+            continue;
+        }
+
+        match generate_archive_with_retry(db, &row.song_id, &songs_dir, &temp_root) {
+            Ok((archive_path, archive_size)) => {
+                if let Err(err) = update_backup_status(
+                    db,
+                    &row.song_id,
+                    "ok",
+                    Some(row.last_score_file_modified_at),
+                    None,
+                ) {
+                    error!(
+                        "Erro ao atualizar status de backup (ok) para {}: {}",
+                        row.song_id, err
+                    );
+                }
+
                 info!(
-                    "Música {} não foi alterada desde último backup, ignorando",
-                    song_id
+                    "Arquivo {}.tar.zst gerado com sucesso em {}",
+                    row.song_id, archive_path
                 );
-                false
+
+                results.push(SongArchiveResult {
+                    song_id: row.song_id,
+                    song_name: row.song_name,
+                    archive_path: Some(archive_path),
+                    archive_size: Some(archive_size),
+                    generated: true,
+                    error: None,
+                });
             }
-        }
-    };
+            Err(err) => {
+                let error_text = err.to_string();
 
-    Ok(should_backup)
-}
-
-/// Gera arquivo .tar.zst para uma música e retorna o resultado
-pub fn backup_song(
-    db: &Database,
-    song_id: &str,
-    nuvem_dir: &Path,
-) -> Result<SongBackupResult, AppError> {
-    // Obter informações da música
-    let (_, song_name): (String, String) = {
-        let conn = db.conn.lock().unwrap();
-        let mut stmt = conn
-            .prepare("SELECT id, name, status FROM songs WHERE id = ?1")
-            .map_err(|e| AppError::Generic(format!("Erro ao preparar query: {}", e)))?;
-
-        stmt.query_row([song_id], |row| Ok((row.get(0)?, row.get(1)?)))
-            .map_err(|_| AppError::Generic(format!("Música não encontrada: {}", song_id)))?
-    };
-
-    // Criar arquivo tar temporário
-    let tar_filename = format!("{}.tar", song_id);
-    let tar_path = nuvem_dir.join(&tar_filename);
-    let tar_zst_filename = format!("{}.tar.zst", song_id);
-    let tar_zst_path = nuvem_dir.join(&tar_zst_filename);
-    let tar_zst_tmp_path = nuvem_dir.join(format!("{}.tmp", &tar_zst_filename));
-
-    // Criar arquivo tar
-    match create_tar_for_song(db, song_id, &tar_path) {
-        Ok(tar_size) => {
-            info!("Tar criado com sucesso: {} ({} bytes)", tar_path.display(), tar_size);
-
-            // Comprimir tar com zstd
-            match std::fs::read(&tar_path) {
-                Ok(tar_data) => {
-                    match Database::compress_zstd(&tar_data) {
-                        Ok(compressed_data) => {
-                            // Salvar em arquivo temporário
-                            match std::fs::write(&tar_zst_tmp_path, &compressed_data) {
-                                Ok(_) => {
-                                    // Renomear para final
-                                    match std::fs::rename(&tar_zst_tmp_path, &tar_zst_path) {
-                                        Ok(_) => {
-                                            let file_size = compressed_data.len() as u64;
-                                            info!(
-                                                "✓ Backup de música concluído: {} ({} bytes comprimidos) -> {}",
-                                                tar_zst_path.display(),
-                                                file_size,
-                                                tar_zst_path.display()
-                                            );
-
-                                            // Limpar arquivo tar original
-                                            let _ = std::fs::remove_file(&tar_path);
-
-                                            // Atualizar último backup na tabela backup_songs
-                                            let _ = db.update_backup_song_status(
-                                                song_id,
-                                                &crate::domain::models::BackupStatus::Ok,
-                                                None,
-                                            );
-
-                                            Ok(SongBackupResult::success(
-                                                song_id.to_string(),
-                                                song_name,
-                                                tar_zst_path.to_string_lossy().to_string(),
-                                                file_size,
-                                            ))
-                                        }
-                                        Err(e) => {
-                                            error!("Erro ao renomear arquivo: {}", e);
-                                            let _ = std::fs::remove_file(&tar_zst_tmp_path);
-                                            let _ = std::fs::remove_file(&tar_path);
-                                            Ok(SongBackupResult::error(
-                                                song_id.to_string(),
-                                                song_name,
-                                                format!("Erro ao finalizar compressão: {}", e),
-                                            ))
-                                        }
-                                    }
-                                }
-                                Err(e) => {
-                                    error!("Erro ao escrever arquivo comprimido: {}", e);
-                                    let _ = std::fs::remove_file(&tar_path);
-                                    Ok(SongBackupResult::error(
-                                        song_id.to_string(),
-                                        song_name,
-                                        format!("Erro ao escrever arquivo: {}", e),
-                                    ))
-                                }
-                            }
-                        }
-                        Err(e) => {
-                            error!("Erro ao comprimir tar: {:?}", e);
-                            let _ = std::fs::remove_file(&tar_path);
-                            Ok(SongBackupResult::error(
-                                song_id.to_string(),
-                                song_name,
-                                format!("Erro ao comprimir: {}", e.to_string()),
-                            ))
-                        }
-                    }
+                if let Err(status_err) = update_backup_status(
+                    db,
+                    &row.song_id,
+                    "error",
+                    row.last_backup_at,
+                    Some(&error_text),
+                ) {
+                    error!(
+                        "Erro ao atualizar status de backup (error) para {}: {}",
+                        row.song_id, status_err
+                    );
                 }
-                Err(e) => {
-                    error!("Erro ao ler arquivo tar: {}", e);
-                    let _ = std::fs::remove_file(&tar_path);
-                    Ok(SongBackupResult::error(
-                        song_id.to_string(),
-                        song_name,
-                        format!("Erro ao ler arquivo: {}", e),
-                    ))
-                }
-            }
-        }
-        Err(e) => {
-            error!("Erro ao criar tar: {:?}", e);
-            let _ = std::fs::remove_file(&tar_path);
-            Ok(SongBackupResult::error(
-                song_id.to_string(),
-                song_name,
-                e.to_string(),
-            ))
-        }
-    }
-}
 
-/// Faz backup de todas as músicas que precisam (status main ou pending)
-/// Retorna lista de resultados
-pub fn backup_all_songs(
-    db: &Database,
-    nuvem_dir: &Path,
-) -> Result<Vec<SongBackupResult>, AppError> {
-    info!("Iniciando backup de todas as músicas");
-
-    // Criar diretório Song dentro de nuvem
-    let songs_dir = nuvem_dir.join("Song");
-    std::fs::create_dir_all(&songs_dir)
-        .map_err(|e| AppError::Generic(format!(
-            "Erro ao criar diretório de músicas: {}",
-            e
-        )))?;
-    
-    info!("✓ Diretório de músicas criado/confirmado: {}", songs_dir.display());
-
-    // Obter todas as músicas com status main ou pending
-    let conn = db.conn.lock().unwrap();
-    let mut stmt = conn
-        .prepare(
-            "SELECT id, name, status FROM songs WHERE status IN ('main', 'pending') ORDER BY name"
-        )
-        .map_err(|e| AppError::Generic(format!("Erro ao preparar query: {}", e)))?;
-
-    let results = stmt
-        .query_map([], |row| {
-            Ok((
-                row.get::<_, String>(0)?,
-                row.get::<_, String>(1)?,
-                row.get::<_, String>(2)?,
-            ))
-        })
-        .map_err(|e| AppError::Generic(format!("Erro ao executar query: {}", e)))?;
-
-    let mut backup_results = Vec::new();
-    let mut total_count = 0;
-    let mut skipped_count = 0;
-    
-    // Converter para vec para debugar
-    let songs_list: Vec<_> = results.collect::<Result<Vec<_>, _>>()
-        .map_err(|e| AppError::Generic(format!("Erro ao coletar resultados: {}", e)))?;
-    
-    info!("🎵 Músicas encontradas para backup: {}", songs_list.len());
-    if songs_list.is_empty() {
-        info!("⚠️  Nenhuma música com status main ou pending encontrada!");
-        info!("💡 Verifique o status das músicas no banco de dados");
-    }
-
-    for (song_id, song_name, status) in songs_list {
-        info!("  - ID: {}, Nome: {}, Status: {}", song_id, song_name, status);
-        total_count += 1;
-
-        // Verificar se precisa fazer backup
-        match should_backup_song(db, &song_id) {
-            Ok(should_backup) => {
-                if !should_backup {
-                    skipped_count += 1;
-                    info!("  ⏭️  Música {} já foi sincronizada, ignorando", song_id);
-                    continue;
-                }
-            }
-            Err(e) => {
-                warn!("Erro ao verificar se deve fazer backup de {}: {}", song_id, e);
-                continue;
-            }
-        }
-
-        // Fazer backup da música
-        match backup_song(db, &song_id, &songs_dir) {
-            Ok(result) => {
-                info!("✓ Backup de música {} concluído com sucesso", song_id);
-                backup_results.push(result);
-            }
-            Err(e) => {
-                warn!("Erro ao fazer backup de {}: {}", song_id, e);
+                results.push(SongArchiveResult {
+                    song_id: row.song_id,
+                    song_name: row.song_name,
+                    archive_path: None,
+                    archive_size: None,
+                    generated: false,
+                    error: Some(error_text),
+                });
             }
         }
     }
 
-    drop(stmt);
-    drop(conn);
+    let generated = results.iter().filter(|r| r.generated).count();
+    let failed = results.iter().filter(|r| r.error.is_some()).count();
+    let skipped = results.len().saturating_sub(generated + failed);
 
-    info!(
-        "Backup de músicas concluído: {} processadas, {} ignoradas, {} sucesso, {} erro",
-        total_count,
-        skipped_count,
-        backup_results.iter().filter(|r| r.success).count(),
-        backup_results.iter().filter(|r| !r.success).count()
-    );
-
-    Ok(backup_results)
+    Ok(SongArchiveSummary {
+        total: results.len(),
+        generated,
+        skipped,
+        failed,
+        results,
+    })
 }

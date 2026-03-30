@@ -26,7 +26,10 @@ pub fn run_initial_scan(db: &Database, host_id: &str) {
         let path = Path::new(&file_path);
 
         if !path.exists() || !path.is_file() {
-            if db.update_score_status(&score_id, ScoreStatus::NotFound, host_id, None).is_ok() {
+            if db
+                .update_score_status(&score_id, ScoreStatus::NotFound, host_id, None)
+                .is_ok()
+            {
                 not_found_count += 1;
                 info!("✓ Status atualizado para not_found: {}", file_path);
             }
@@ -34,10 +37,9 @@ pub fn run_initial_scan(db: &Database, host_id: &str) {
         }
 
         if let Ok((current_size, current_modified_at)) = get_file_metadata(path) {
-            let stored_modified_at = chrono::NaiveDateTime::parse_from_str(
-                &stored_modified_at_str,
-                "%Y-%m-%d %H:%M:%S",
-            ).unwrap_or_else(|_| chrono::Local::now().naive_local());
+            let stored_modified_at =
+                chrono::NaiveDateTime::parse_from_str(&stored_modified_at_str, "%Y-%m-%d %H:%M:%S")
+                    .unwrap_or_else(|_| chrono::Local::now().naive_local());
 
             let detector = FileChangeDetector::new(
                 current_size,
@@ -47,7 +49,15 @@ pub fn run_initial_scan(db: &Database, host_id: &str) {
             );
 
             if detector.has_changed() {
-                if db.update_score_status(&score_id, ScoreStatus::Draft, host_id, Some((current_size, current_modified_at))).is_ok() {
+                if db
+                    .update_score_status(
+                        &score_id,
+                        ScoreStatus::Draft,
+                        host_id,
+                        Some((current_size, current_modified_at)),
+                    )
+                    .is_ok()
+                {
                     changed_count += 1;
                     info!("✓ Status atualizado para draft: {}", file_path);
                 }
@@ -55,5 +65,8 @@ pub fn run_initial_scan(db: &Database, host_id: &str) {
         }
     }
 
-    info!("Verificação inicial concluída: {} alterações, {} não encontrados", changed_count, not_found_count);
+    info!(
+        "Verificação inicial concluída: {} alterações, {} não encontrados",
+        changed_count, not_found_count
+    );
 }

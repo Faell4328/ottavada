@@ -1,6 +1,6 @@
+use chrono::NaiveDateTime;
 use std::path::Path;
 use walkdir::WalkDir;
-use chrono::NaiveDateTime;
 
 use crate::domain::models::IndexedFile;
 
@@ -98,7 +98,7 @@ pub fn get_file_metadata(file_path: &Path) -> Result<(u64, NaiveDateTime), std::
                 .unwrap_or_else(|| chrono::Local::now().naive_local())
         })
         .unwrap_or_else(|_| chrono::Local::now().naive_local());
-    
+
     Ok((file_size, modified_at))
 }
 

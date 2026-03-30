@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod tests {
-    use chrono::Local;
     use crate::domain::models::*;
     use crate::infrastructure::database::Database;
+    use chrono::Local;
 
     fn make_db() -> Database {
         Database::new_in_memory().expect("failed to create in-memory db")
@@ -55,7 +55,8 @@ mod tests {
 
     #[test]
     fn test_split_file_path() {
-        let (file_path, file_name) = crate::services::indexer::split_file_path("/home/user/music/Canon.musx");
+        let (file_path, file_name) =
+            crate::services::indexer::split_file_path("/home/user/music/Canon.musx");
         assert_eq!(file_path, "/home/user/music");
         assert_eq!(file_name, "Canon.musx");
     }
@@ -66,7 +67,8 @@ mod tests {
     fn test_insert_and_get_all_songs() {
         let db = make_db();
         db.insert_song(&make_song("s1", "Canon in D"), &[]).unwrap();
-        db.insert_song(&make_song("s2", "Moonlight Sonata"), &[]).unwrap();
+        db.insert_song(&make_song("s2", "Moonlight Sonata"), &[])
+            .unwrap();
 
         let songs = db.get_all_songs().unwrap();
         assert_eq!(songs.len(), 2);
@@ -101,8 +103,10 @@ mod tests {
         let db = make_db();
         let cat = make_category("c1", "Hinos");
         db.insert_category(&cat).unwrap();
-        db.insert_song(&make_song("s1", "Canon"), &["c1".to_string()]).unwrap();
-        db.insert_score(&make_score(&db, "sc1", "s1", Some("Violino"))).unwrap();
+        db.insert_song(&make_song("s1", "Canon"), &["c1".to_string()])
+            .unwrap();
+        db.insert_score(&make_score(&db, "sc1", "s1", Some("Violino")))
+            .unwrap();
 
         let item = db.get_song_list_item_by_id("s1").unwrap();
         assert_eq!(item.name, "Canon");
@@ -163,13 +167,15 @@ mod tests {
         db.insert_category(&cat1).unwrap();
         db.insert_category(&cat2).unwrap();
 
-        db.insert_song(&make_song("s1", "Canon"), &["c1".to_string()]).unwrap();
+        db.insert_song(&make_song("s1", "Canon"), &["c1".to_string()])
+            .unwrap();
 
         let songs = db.get_all_songs().unwrap();
         assert_eq!(songs[0].category_ids.len(), 1);
 
         let song = make_song("s1", "Canon");
-        db.update_song(&song, &["c1".to_string(), "c2".to_string()]).unwrap();
+        db.update_song(&song, &["c1".to_string(), "c2".to_string()])
+            .unwrap();
 
         let songs = db.get_all_songs().unwrap();
         assert_eq!(songs[0].category_ids.len(), 2);
@@ -181,7 +187,8 @@ mod tests {
     fn test_search_songs() {
         let db = make_db();
         db.insert_song(&make_song("s1", "Canon in D"), &[]).unwrap();
-        db.insert_song(&make_song("s2", "Moonlight Sonata"), &[]).unwrap();
+        db.insert_song(&make_song("s2", "Moonlight Sonata"), &[])
+            .unwrap();
 
         let results = db.search_songs("Canon").unwrap();
         assert_eq!(results.len(), 1);
@@ -221,8 +228,10 @@ mod tests {
     fn test_insert_score_and_list() {
         let db = make_db();
         db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
-        db.insert_score(&make_score(&db, "sc1", "s1", Some("Violino 1"))).unwrap();
-        db.insert_score(&make_score(&db, "sc2", "s1", Some("Piano"))).unwrap();
+        db.insert_score(&make_score(&db, "sc1", "s1", Some("Violino 1")))
+            .unwrap();
+        db.insert_score(&make_score(&db, "sc2", "s1", Some("Piano")))
+            .unwrap();
 
         let songs = db.get_all_songs().unwrap();
         assert_eq!(songs.len(), 1);
@@ -289,7 +298,9 @@ mod tests {
         db.insert_score(&score).unwrap();
 
         let songs = db.get_all_songs().unwrap();
-        assert!(songs[0].scores[0].file_path.contains("Canon - Violino.musx"));
+        assert!(songs[0].scores[0]
+            .file_path
+            .contains("Canon - Violino.musx"));
         assert!(songs[0].scores[0].file_path.contains("music"));
     }
 
@@ -297,10 +308,21 @@ mod tests {
     fn test_update_score() {
         let db = make_db();
         db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
-        db.insert_score(&make_score(&db, "sc1", "s1", Some("Violino"))).unwrap();
+        db.insert_score(&make_score(&db, "sc1", "s1", Some("Violino")))
+            .unwrap();
 
         let new_dir_id = "/new/path".to_string();
-        db.update_score("sc1", Some("Violino 1".to_string()), &new_dir_id, "score.musx", 2048, now(), now(), "test-computer").unwrap();
+        db.update_score(
+            "sc1",
+            Some("Violino 1".to_string()),
+            &new_dir_id,
+            "score.musx",
+            2048,
+            now(),
+            now(),
+            "test-computer",
+        )
+        .unwrap();
 
         let songs = db.get_all_songs().unwrap();
         assert_eq!(songs[0].scores[0].name, Some("Violino 1".to_string()));
@@ -311,7 +333,8 @@ mod tests {
     fn test_delete_score() {
         let db = make_db();
         db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
-        db.insert_score(&make_score(&db, "sc1", "s1", Some("Violino"))).unwrap();
+        db.insert_score(&make_score(&db, "sc1", "s1", Some("Violino")))
+            .unwrap();
 
         db.delete_score("sc1").unwrap();
 
@@ -365,9 +388,11 @@ mod tests {
     fn test_update_score_status() {
         let db = make_db();
         db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
-        db.insert_score(&make_score(&db, "sc1", "s1", Some("Violino"))).unwrap();
+        db.insert_score(&make_score(&db, "sc1", "s1", Some("Violino")))
+            .unwrap();
 
-        db.update_score_status("sc1", ScoreStatus::Draft, "test-computer", None).unwrap();
+        db.update_score_status("sc1", ScoreStatus::Draft, "test-computer", None)
+            .unwrap();
 
         let songs = db.get_all_songs().unwrap();
         assert_eq!(songs[0].scores[0].status, ScoreStatus::Draft);
@@ -377,10 +402,17 @@ mod tests {
     fn test_update_score_status_with_metadata() {
         let db = make_db();
         db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
-        db.insert_score(&make_score(&db, "sc1", "s1", Some("Violino"))).unwrap();
+        db.insert_score(&make_score(&db, "sc1", "s1", Some("Violino")))
+            .unwrap();
 
         let new_modified_at = now();
-        db.update_score_status("sc1", ScoreStatus::Draft, "test-computer", Some((4096, new_modified_at))).unwrap();
+        db.update_score_status(
+            "sc1",
+            ScoreStatus::Draft,
+            "test-computer",
+            Some((4096, new_modified_at)),
+        )
+        .unwrap();
 
         let songs = db.get_all_songs().unwrap();
         assert_eq!(songs[0].scores[0].status, ScoreStatus::Draft);
@@ -392,8 +424,10 @@ mod tests {
     fn test_get_all_scores_with_metadata() {
         let db = make_db();
         db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
-        db.insert_score(&make_score(&db, "sc1", "s1", Some("Violino"))).unwrap();
-        db.insert_score(&make_score(&db, "sc2", "s1", Some("Piano"))).unwrap();
+        db.insert_score(&make_score(&db, "sc1", "s1", Some("Violino")))
+            .unwrap();
+        db.insert_score(&make_score(&db, "sc2", "s1", Some("Piano")))
+            .unwrap();
 
         let metadata = db.get_all_scores_with_metadata().unwrap();
         assert_eq!(metadata.len(), 2);
@@ -450,7 +484,11 @@ mod tests {
         let songs = db.get_all_songs().unwrap();
         assert_eq!(songs[0].scores.len(), 2);
 
-        let paths: Vec<&str> = songs[0].scores.iter().map(|s| s.file_path.as_str()).collect();
+        let paths: Vec<&str> = songs[0]
+            .scores
+            .iter()
+            .map(|s| s.file_path.as_str())
+            .collect();
         assert!(paths.iter().any(|p| p.contains("classical")));
         assert!(paths.iter().any(|p| p.contains("hymns")));
     }
@@ -561,7 +599,8 @@ mod tests {
         let cat = make_category("c1", "Hinos");
         db.insert_category(&cat).unwrap();
 
-        db.insert_song(&make_song("s1", "Canon"), &["c1".to_string()]).unwrap();
+        db.insert_song(&make_song("s1", "Canon"), &["c1".to_string()])
+            .unwrap();
         db.insert_song(&make_song("s2", "Moonlight"), &[]).unwrap();
 
         let songs = db.get_songs_by_category("c1").unwrap();
@@ -578,7 +617,11 @@ mod tests {
         db.insert_category(&cat1).unwrap();
         db.insert_category(&cat2).unwrap();
 
-        db.insert_song(&make_song("s1", "Canon"), &["c1".to_string(), "c2".to_string()]).unwrap();
+        db.insert_song(
+            &make_song("s1", "Canon"),
+            &["c1".to_string(), "c2".to_string()],
+        )
+        .unwrap();
 
         let songs = db.get_all_songs().unwrap();
         assert_eq!(songs[0].category_ids.len(), 2);
@@ -597,7 +640,8 @@ mod tests {
         let cat = make_category("c1", "Hinos");
         db.insert_category(&cat).unwrap();
 
-        db.insert_song(&make_song("s1", "Canon"), &["c1".to_string()]).unwrap();
+        db.insert_song(&make_song("s1", "Canon"), &["c1".to_string()])
+            .unwrap();
         db.delete_category("c1").unwrap();
 
         let songs = db.get_all_songs().unwrap();
@@ -617,7 +661,8 @@ mod tests {
         draft_score.status = ScoreStatus::Draft;
         db.insert_score(&draft_score).unwrap();
 
-        db.insert_score(&make_score(&db, "sc2", "s2", Some("Piano"))).unwrap();
+        db.insert_score(&make_score(&db, "sc2", "s2", Some("Piano")))
+            .unwrap();
 
         let drafts = db.get_songs_with_drafts().unwrap();
         assert_eq!(drafts.len(), 1);
@@ -630,16 +675,17 @@ mod tests {
     fn test_song_delete_cascades_to_scores() {
         let db = make_db();
         db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
-        db.insert_score(&make_score(&db, "sc1", "s1", Some("Violino"))).unwrap();
+        db.insert_score(&make_score(&db, "sc1", "s1", Some("Violino")))
+            .unwrap();
 
         // Deletar a música diretamente via SQL
         {
             let conn = db.conn.lock().unwrap();
-            conn.execute("DELETE FROM songs WHERE id = 's1'", []).unwrap();
+            conn.execute("DELETE FROM songs WHERE id = 's1'", [])
+                .unwrap();
         }
 
         let metadata = db.get_all_scores_with_metadata().unwrap();
         assert!(metadata.is_empty());
     }
-
 }

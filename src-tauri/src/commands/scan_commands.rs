@@ -36,11 +36,16 @@ pub fn scan_files_for_changes(
 
         if !path.exists() || !path.is_file() {
             warn!("Arquivo não encontrado: {}", file_path);
-            
+
             // Marcar score como not_found (se não estiver já)
-            if let Err(e) = db.update_score_status(&score_id, ScoreStatus::NotFound, &updated_by, None) {
+            if let Err(e) =
+                db.update_score_status(&score_id, ScoreStatus::NotFound, &updated_by, None)
+            {
                 warn!("Erro ao atualizar status para not_found: {:?}", e);
-                failed_files.push((file_path.clone(), format!("Erro ao marcar como não encontrado: {:?}", e)));
+                failed_files.push((
+                    file_path.clone(),
+                    format!("Erro ao marcar como não encontrado: {:?}", e),
+                ));
             } else {
                 not_found_files.push(file_path);
             }
@@ -49,9 +54,11 @@ pub fn scan_files_for_changes(
 
         match get_file_metadata(path) {
             Ok((current_size, current_modified_at)) => {
-                let stored_modified_at =
-                    chrono::NaiveDateTime::parse_from_str(&stored_modified_at_str, "%Y-%m-%d %H:%M:%S")
-                        .unwrap_or_else(|_| chrono::Local::now().naive_local());
+                let stored_modified_at = chrono::NaiveDateTime::parse_from_str(
+                    &stored_modified_at_str,
+                    "%Y-%m-%d %H:%M:%S",
+                )
+                .unwrap_or_else(|_| chrono::Local::now().naive_local());
 
                 let detector = FileChangeDetector::new(
                     current_size,
@@ -62,11 +69,17 @@ pub fn scan_files_for_changes(
 
                 if detector.has_changed() {
                     info!("Alteração detectada em: {}", file_path);
-                    
+
                     // Atualizar status para draft com os novos metadados
-                    if let Err(e) = db.update_score_status(&score_id, ScoreStatus::Draft, &updated_by, Some((current_size, current_modified_at))) {
+                    if let Err(e) = db.update_score_status(
+                        &score_id,
+                        ScoreStatus::Draft,
+                        &updated_by,
+                        Some((current_size, current_modified_at)),
+                    ) {
                         warn!("Erro ao atualizar status para draft: {:?}", e);
-                        failed_files.push((file_path.clone(), format!("Erro ao atualizar: {:?}", e)));
+                        failed_files
+                            .push((file_path.clone(), format!("Erro ao atualizar: {:?}", e)));
                     } else {
                         changed_files.push(file_path);
                     }
@@ -81,26 +94,38 @@ pub fn scan_files_for_changes(
 
     // Verificar scores com status "not_found" (verificar se voltaram)
     if let Ok(not_found_scores) = db.get_not_found_scores_by_host(host_id) {
-        info!("Verificando {} arquivo(s) marcado(s) como not_found", not_found_scores.len());
-        
+        info!(
+            "Verificando {} arquivo(s) marcado(s) como not_found",
+            not_found_scores.len()
+        );
+
         for (score_id, file_path, _stored_size, _stored_modified_at_str) in not_found_scores {
             let path = Path::new(&file_path);
 
             // Se o arquivo agora existe, recuperar para main
             if path.exists() && path.is_file() {
                 info!("✓ Arquivo encontrado novamente: {}", file_path);
-                
+
                 match get_file_metadata(path) {
                     Ok((current_size, current_modified_at)) => {
-                        if let Err(e) = db.update_score_status(&score_id, ScoreStatus::Main, &updated_by, Some((current_size, current_modified_at))) {
+                        if let Err(e) = db.update_score_status(
+                            &score_id,
+                            ScoreStatus::Main,
+                            &updated_by,
+                            Some((current_size, current_modified_at)),
+                        ) {
                             warn!("Erro ao recuperar arquivo para main: {:?}", e);
-                            failed_files.push((file_path.clone(), format!("Erro ao recuperar: {:?}", e)));
+                            failed_files
+                                .push((file_path.clone(), format!("Erro ao recuperar: {:?}", e)));
                         } else {
                             recovered_files.push(file_path);
                         }
                     }
                     Err(e) => {
-                        warn!("Erro ao obter metadados do arquivo recuperado {}: {:?}", file_path, e);
+                        warn!(
+                            "Erro ao obter metadados do arquivo recuperado {}: {:?}",
+                            file_path, e
+                        );
                         failed_files.push((file_path, format!("Erro ao ler metadados: {}", e)));
                     }
                 }
@@ -108,8 +133,13 @@ pub fn scan_files_for_changes(
         }
     }
 
-    info!("Verificação concluída. {} alterados, {} não encontrados, {} recuperados, {} erros", 
-        changed_files.len(), not_found_files.len(), recovered_files.len(), failed_files.len());
+    info!(
+        "Verificação concluída. {} alterados, {} não encontrados, {} recuperados, {} erros",
+        changed_files.len(),
+        not_found_files.len(),
+        recovered_files.len(),
+        failed_files.len()
+    );
 
     // TODO: Exportar apenas as mudanças (tabela "changed") como {computerId}.msgpack.zst
     // Não exportar todo o banco de dados

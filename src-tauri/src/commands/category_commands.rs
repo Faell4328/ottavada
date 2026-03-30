@@ -1,6 +1,6 @@
-use tauri::State;
-use tracing::{info, error};
 use chrono::Local;
+use tauri::State;
+use tracing::{error, info};
 
 use crate::domain::errors::AppError;
 use crate::domain::models::{Category, OperationGuard};
@@ -21,18 +21,24 @@ pub fn get_categories(db: State<'_, Database>) -> Result<Vec<Category>, AppError
 }
 
 #[tauri::command]
-pub fn create_category(db: State<'_, Database>, store: State<'_, SystemStore>, name: String) -> Result<Category, AppError> {
+pub fn create_category(
+    db: State<'_, Database>,
+    store: State<'_, SystemStore>,
+    name: String,
+) -> Result<Category, AppError> {
     info!("Criando nova categoria: {}", name);
-    
+
     let settings = store.get_app_settings()?;
     settings.require_server_only()?;
 
     if name.trim().is_empty() {
-        return Err(AppError::Generic("Nome da categoria não pode estar vazio".into()));
+        return Err(AppError::Generic(
+            "Nome da categoria não pode estar vazio".into(),
+        ));
     }
 
     let updated_by = settings.computer_id.clone();
-    
+
     let category = Category {
         id: uuid::Uuid::new_v4().to_string(),
         name: name.trim().to_string(),

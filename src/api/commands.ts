@@ -235,3 +235,26 @@ export async function uploadWithRclone(
 export async function deleteRcloneTestFile(): Promise<void> {
   return invoke("delete_rclone_test_file");
 }
+
+// ── Backup Songs Archives ──
+
+export interface SongArchiveResult {
+  song_id: string;
+  song_name: string;
+  archive_path: string | null;
+  archive_size: number | null;
+  generated: boolean;
+  error: string | null;
+}
+
+export interface SongArchiveSummary {
+  total: number;
+  generated: number;
+  skipped: number;
+  failed: number;
+  results: SongArchiveResult[];
+}
+
+export async function generateSongArchivesFiles(): Promise<SongArchiveSummary> {
+  return invoke("generate_song_archives_files");
+}
