@@ -1,3 +1,5 @@
+! Em caso de problema, deve ser feito o rallback das alterações. Ou é feito tudo ou nada.
+
 # Verificar alteração dos arquivos
 
 **Apenas Servidor**
@@ -34,7 +36,7 @@
 	- Avisa o usuário que ocorreu um erro (toast)
 ```
 
-# Alterar partitura de `draft` para `main` (pelo botão na interface)
+# Alterar partitura de `draft` para `main` (pelo botão na interface) - Precisa arrumar no código
 
 **Apenas Servidor**
 
@@ -86,38 +88,22 @@
 		- O fluxo deve ser encerrado (caso esse fluxo esteja em outro, o fluxo pai deve ser encerrado também)
 		- Avisa o usuário que ocorreu um erro (toast)
 ```
+# Usuário adicionou uma música
 
-# Salvar alteração no `changedField`
-
-## Usuário adicionou uma música (sem partituras)
-
-**Apenas Servidor**
+## Apenas a música
 
 ```markdown
+1. O usuário clica para adicionar música
+! Existe a etapa onde o usuário adiciona o nome da música, no caso, já foi feito essa etapa
+   
 ⚠️ As operações abaixo devem ser executada dentro de uma transação
 
-1. O usuário adicionou a música "Hino a Bandeira"
-
-2. É inserido na tabela "changedField" a música
-
-3. Confirmar (commit) a transação
+2. O sistema adiciona a música em "songs"
 	- Em caso de problema:
 		- O fluxo deve ser encerrado (caso esse fluxo esteja em outro, o fluxo pai deve ser encerrado também)
 		- Avisa o usuário que ocorreu um erro (toast)
-```
 
-## Usuário adicionou uma música com partitura(s)
-
-**Apenas Servidor**
-
-```markdown
-⚠️ As operações abaixo devem ser executada dentro de uma transação
-
-1. O usuário adicionou a música "Hino a Bandeira"
-
-2. É inserido na tabela "changedField" a música
-
-3. É inserido na tabela "changedField" a(s) partitura(s)
+3. Adiciona o evento na tabela "changedField"
 
 4. Confirmar (commit) a transação
 	- Em caso de problema:
@@ -125,45 +111,184 @@
 		- Avisa o usuário que ocorreu um erro (toast)
 ```
 
-## Usuário alterando nome da música
-
-**Cliente e Servidor**
+## Partitura em uma música existente
 
 ```markdown
+1. O usuário clica para adicionar partitura em uma música existente
+! Existe a etapa onde o usuário seleciona a partitura no filesystem, no caso, já foi feito essa etapa
+   
 ⚠️ As operações abaixo devem ser executada dentro de uma transação
+		  
+1. O sistema adiciona a partitura em "scores"
+	- Em caso de problema:
+		- O fluxo deve ser encerrado (caso esse fluxo esteja em outro, o fluxo pai deve ser encerrado também)
+		- Avisa o usuário que ocorreu um erro (toast)
+		  
+2. O sistema verifica se existe a  música em "backupSongs"
+	- Se existe, atualiza os campos:
+		- "lastBackupAt" = 0
+		- "status" = "processing"
+	- Se não existe, adiciona com os campos:
+		- "lastBackupAt" = 0
+		- "status" = "processing"
+! Na próxima vez que for gerado os arquivos para backup, será gerado desse
 
-1. O usuário altera o nome da música, de "HINO NACIONAL" para "Hino Nacional"
+3. Adiciona o evento na tabela "changedField"
 
-2. O sistema procura se já existe com mesmos: "entity", "entityId" e "field"
-	- Caso exista, atualiza o campo na tabela "changedField":
-		- value;
-		- timestamp;
-	- Caso não exista, insere a alteração na tabela "changedField"
-
-3. Confirmar (commit) a transação
+4. Confirmar (commit) a transação
 	- Em caso de problema:
 		- O fluxo deve ser encerrado (caso esse fluxo esteja em outro, o fluxo pai deve ser encerrado também)
 		- Avisa o usuário que ocorreu um erro (toast)
 ```
 
-## Usuário deletando uma música
+## Com partitura(s)
 
 **Apenas Servidor**
 
 ```markdown
+1. O usuário clica para adicionar música com partituras e seleciona o diretório (com os arquivos)
+! Existe a etapa onde o usuário pode verifica os dados da música/partitura antes de confirmar, no caso, já foi feito essa etapa
+   
 ⚠️ As operações abaixo devem ser executada dentro de uma transação
 
-1. O usuário deletar a música "Hino Nacional"
+1. O sistema adiciona a música em "songs"
+	- Em caso de problema:
+		- O fluxo deve ser encerrado (caso esse fluxo esteja em outro, o fluxo pai deve ser encerrado também)
+		- Avisa o usuário que ocorreu um erro (toast)
+		  
+2. O sistema adiciona as partituras em "scores"
+	- Em caso de problema:
+		- O fluxo deve ser encerrado (caso esse fluxo esteja em outro, o fluxo pai deve ser encerrado também)
+		- Avisa o usuário que ocorreu um erro (toast)
+		  
+3. O sistema adiciona a música em "backupSongs"
+	- Os campos:
+		- "lastBackupAt" = 0
+		- "status" = "processing"
+! Na próxima vez que for gerado os arquivos para backup, será gerado desse
 
-2. O sistema procura se já existe com mesmo: "entity", "entityId" e "field"
-	- Caso exista, deleta eles da tabela (como se não existisse) e adiciona na tabela de "changedField"
-	- Caso não exista, adiciona na tabela de "changedField"
+4. Adiciona o evento na tabela "changedField"
+! Deve registrar de tudo, adicionando a música e as partituras (individual)
 
+5. Confirmar (commit) a transação
+	- Em caso de problema:
+		- O fluxo deve ser encerrado (caso esse fluxo esteja em outro, o fluxo pai deve ser encerrado também)
+		- Avisa o usuário que ocorreu um erro (toast)
+```
+
+# Usuário alterando nome
+
+### Música
+
+**Apenas Servidor**
+
+```markdown
+
+1. O usuário clica para alterar o nome da música, de "HINO NACIONAL" para "Hino Nacional"
+   
+⚠️ As operações abaixo devem ser executada dentro de uma transação
+
+1. O sistema verifica se existe a música no "songs"
+	- Se existe:
+		- Atualiza em "songs"
+		- Adiciona o evento na tabela "changedField"
+	- Em caso de problema ou se não existir:
+		- O fluxo deve ser encerrado (caso esse fluxo esteja em outro, o fluxo pai deve ser encerrado também)
+		- Avisa o usuário que ocorreu um erro (toast)
+		  
+2. Confirmar (commit) a transação
+	- Em caso de problema:
+		- O fluxo deve ser encerrado (caso esse fluxo esteja em outro, o fluxo pai deve ser encerrado também)
+		- Avisa o usuário que ocorreu um erro (toast)
+```
+
+### Partitura
+
+**Apenas Servidor**
+
+```markdown
+1. O usuário clica para alterar o nome do instrumento "FLAUTA" para "flauta" da música "Hino Nacional"
+   
+⚠️ As operações abaixo devem ser executada dentro de uma transação
+
+1. O sistema verifica se existe a partitura no "scores"
+	- Se existe:
+		- Atualiza em "scores"
+		- Adiciona o evento na tabela "changedField"
+	- Em caso de problema ou se não existir:
+		- O fluxo deve ser encerrado (caso esse fluxo esteja em outro, o fluxo pai deve ser encerrado também)
+		- Avisa o usuário que ocorreu um erro (toast)
+		  
+2. Confirmar (commit) a transação
+	- Em caso de problema:
+		- O fluxo deve ser encerrado (caso esse fluxo esteja em outro, o fluxo pai deve ser encerrado também)
+		- Avisa o usuário que ocorreu um erro (toast)
+```
+
+# Usuário deletando
+
+### Música
+
+**Apenas Servidor**
+
+```markdown
+1. O usuário clica para deletar a música "Hino Nacional"
+   
+⚠️ As operações abaixo devem ser executada dentro de uma transação
+
+2. O sistema verifica se existe a música no "songs"
+	- Se existe:
+		- Deleta o "songs"
+		- Deleta as "scores" dessa música
+		- Deleta em "categoriesSongs" as relações N:N com essa música
+		- Adiciona o evento na tabela "changedField"
+	- Em caso de problema:
+		- O fluxo deve ser encerrado (caso esse fluxo esteja em outro, o fluxo pai deve ser encerrado também)
+		- Avisa o usuário que ocorreu um erro (toast)
+		  
+3. Confirmar (commit) a transação
+	- Em caso de problema:
+		- O fluxo deve ser encerrado (caso esse fluxo esteja em outro, o fluxo pai deve ser encerrado também)
+		- Avisa o usuário que ocorreu um erro (toast)
+		  
+4. Verifica se existe o arquivo {songId}.tar.zst
+	- Se existir:
+		- Deleta o arquivo
+	- Se não existir:
+		- Não faz nada
+```
+
+! O arquivo do usuário deve se manter no diretório local dele.
+
+### Partituras
+
+**Apenas Servidor**
+
+```markdown
+1. O usuário clica para deletar a partitura "Flauta" da música "Hino Nacional"
+   
+⚠️ As operações abaixo devem ser executada dentro de uma transação
+
+2. O sistema verifica se existe a partitura em "scores"
+	- Se existe:
+		- Deleta a partitura em "scores"
+		- Adiciona o evento na tabela "changedField"
+		- Atualiza o "lastScoreFileModifiedAt" da tabela "songs"
+		- Atualiza o "lastBackupAt" para 0 e "status" = "processing" no "backupSongs", para regerar o arquivo (se ele existir)
+	- Se não existir:
+		- O fluxo deve ser encerrado (caso esse fluxo esteja em outro, o fluxo pai deve ser encerrado também)
+		- Avisa o usuário que ocorreu um erro (toast)
+	- Em caso de problema:
+		- O fluxo deve ser encerrado (caso esse fluxo esteja em outro, o fluxo pai deve ser encerrado também)
+		- Avisa o usuário que ocorreu um erro (toast)
+		  
 3. Confirmar (commit) a transação
 	- Em caso de problema:
 		- O fluxo deve ser encerrado (caso esse fluxo esteja em outro, o fluxo pai deve ser encerrado também)
 		- Avisa o usuário que ocorreu um erro (toast)
 ```
+
+! O arquivo do usuário deve se manter no diretório local dele.
 
 # Gerando o arquivo de alteração `{computerId}.msgpack`
 
