@@ -65,7 +65,7 @@ export default function TopBar({
         .filter((file) => selectedSet.has(file.path));
 
       if (indexed.length === 0) {
-        toast.error("Nenhuma partitura encontrada");
+        toast.error("Nenhuma música encontrada");
         return;
       }
 
@@ -83,7 +83,7 @@ export default function TopBar({
       if (selected) {
         const files = await api.scanDirectory(selected as string);
         if (files.length === 0) {
-          toast.error("Nenhuma partitura encontrada no diretório selecionado");
+          toast.error("Nenhuma música encontrada no diretório selecionado");
           return;
         }
         setPendingFiles(files);

@@ -10,19 +10,26 @@ use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
 use crate::services::indexer::{self, get_file_metadata};
 
-#[tauri::command]
-pub fn get_all_songs(db: State<'_, Database>) -> Result<Vec<SongListItem>, AppError> {
-    info!("Buscando todas as músicas");
-    match db.get_all_songs() {
+fn run_song_query_with_logging<F>(operation: &str, query: F) -> Result<Vec<SongListItem>, AppError>
+where
+    F: FnOnce() -> Result<Vec<SongListItem>, AppError>,
+{
+    match query() {
         Ok(songs) => {
-            info!("Retornou {} músicas", songs.len());
+            info!("{}: {} músicas", operation, songs.len());
             Ok(songs)
         }
         Err(e) => {
-            error!("Erro ao buscar todas as músicas: {:?}", e);
+            error!("{}: {:?}", operation, e);
             Err(e)
         }
     }
+}
+
+#[tauri::command]
+pub fn get_all_songs(db: State<'_, Database>) -> Result<Vec<SongListItem>, AppError> {
+    info!("Buscando todas as músicas");
+    run_song_query_with_logging("Busca de todas as músicas concluída", || db.get_all_songs())
 }
 
 #[tauri::command]
@@ -45,19 +52,10 @@ pub fn get_songs_with_not_found(db: State<'_, Database>) -> Result<Vec<SongListI
 pub fn search_songs(db: State<'_, Database>, query: String) -> Result<Vec<SongListItem>, AppError> {
     if query.trim().is_empty() {
         info!("Busca vazia, retornando todas as músicas");
-        return db.get_all_songs();
+        return run_song_query_with_logging("Busca vazia", || db.get_all_songs());
     }
     info!("Buscando músicas com query: '{}'", query);
-    match db.search_songs(&query) {
-        Ok(songs) => {
-            info!("Busca retornou {} resultados", songs.len());
-            Ok(songs)
-        }
-        Err(e) => {
-            error!("Erro ao buscar músicas: {:?}", e);
-            Err(e)
-        }
-    }
+    run_song_query_with_logging("Busca por músicas concluída", || db.search_songs(&query))
 }
 
 #[tauri::command]
@@ -383,14 +381,7 @@ pub fn delete_song(
     settings.require_server_only()?;
 
     info!("Deletando música: {}", song_id);
-    match db.delete_song(&song_id) {
-        Ok(_) => {
-            info!("Música deletada com sucesso: {}", song_id);
-            Ok(())
-        }
-        Err(e) => {
-            error!("Erro ao deletar música: {:?}", e);
-            Err(e)
-        }
-    }
+    db.delete_song(&song_id)?;
+    info!("Música deletada com sucesso: {}", song_id);
+    Ok(())
 }

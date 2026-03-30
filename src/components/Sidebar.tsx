@@ -78,7 +78,7 @@ export default function Sidebar() {
         <nav className="flex flex-col">
           <SidebarItem
             icon={<FolderOpen className="h-3.5 w-3.5" />}
-            label="Todas as Partituras"
+            label="Todas as Músicas"
             active={isActive("all")}
             onClick={() => setSidebarView("all")}
           />

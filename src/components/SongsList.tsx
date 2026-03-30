@@ -12,6 +12,15 @@ import * as api from "../api/commands";
 import toast from "react-hot-toast";
 import type { SongListItem, ScoreListItem } from "../types";
 
+function getViewLabel(sidebarView: ReturnType<typeof useAppState>["state"]["sidebarView"]): string {
+  if (sidebarView === "all") return "Todas as Músicas";
+  if (sidebarView === "favorites") return "Favoritos";
+  if (sidebarView === "drafts") return "Rascunhos Ativos";
+  if (sidebarView === "not_found") return "Partituras não encontradas";
+  if (typeof sidebarView === "object") return sidebarView.name;
+  return "";
+}
+
 export default function SongsList() {
   const { state, setSearchQuery, selectSong, selectScore, toggleFavorite, loadSongs, updateSong, updateScore, updateScoreStatus, deleteScore, deleteSong } =
     useAppState();
@@ -43,18 +52,7 @@ export default function SongsList() {
     await updateScore(data.scoreFileId, data.instrumentName, data.filePath);
   };
 
-  const viewLabel =
-    state.sidebarView === "all"
-      ? "Todas as Partituras"
-      : state.sidebarView === "favorites"
-        ? "Favoritos"
-        : state.sidebarView === "drafts"
-          ? "Rascunhos Ativos"
-          : state.sidebarView === "not_found"
-            ? "Partituras não encontradas"
-            : typeof state.sidebarView === "object"
-              ? state.sidebarView.name
-              : "";
+  const viewLabel = getViewLabel(state.sidebarView);
 
   async function handleAddFileToSong(songId: string) {
     try {
@@ -90,7 +88,7 @@ export default function SongsList() {
 
       const files = await api.scanDirectory(selected as string);
       if (files.length === 0) {
-        toast.error("Nenhuma partitura encontrada neste diretório");
+        toast.error("Nenhuma música encontrada neste diretório");
         return;
       }
 
@@ -113,7 +111,7 @@ export default function SongsList() {
       <div className="flex items-center justify-between mb-1">
         <h2 className="text-sm font-bold text-[#2f4259]">{viewLabel}</h2>
         <span className="text-xs text-[#6b849e]">
-          {state.songs.length} partitura{state.songs.length !== 1 ? "s" : ""}
+          {state.songs.length} música{state.songs.length !== 1 ? "s" : ""}
         </span>
       </div>
 
@@ -126,8 +124,8 @@ export default function SongsList() {
             onChange={(e) => search.setLocalQuery(e.target.value)}
             onFocus={search.onFocus}
             className="h-9 w-full rounded border border-[#c5cfdb] bg-white pl-9 pr-3 text-sm text-[#4d6075] placeholder-[#8e9fb3] outline-none focus:border-[#7ba0d4] focus:ring-1 focus:ring-[#7ba0d4]/30"
-            placeholder="Buscar partituras..."
-            aria-label="Buscar partituras"
+            placeholder="Buscar músicas..."
+            aria-label="Buscar músicas"
             autoComplete="off"
           />
 
@@ -167,7 +165,7 @@ export default function SongsList() {
                   <td colSpan={3} className="text-center py-12">
                     <div className="flex flex-col items-center justify-center text-[#8b9db2]">
                       <FileMusic className="h-12 w-12 mb-3 opacity-40" />
-                      <p className="text-sm">Nenhuma partitura encontrada</p>
+                      <p className="text-sm">Nenhuma música encontrada</p>
                       <p className="text-xs mt-1">Indexe um diretório para começar</p>
                     </div>
                   </td>
@@ -214,7 +212,9 @@ export default function SongsList() {
                             setIsEditScoreModalOpen(true);
                           }}
                           onStatusChange={updateScoreStatus}
-                          onDelete={deleteScore}                          computerType={state.settings?.computer_type}                        />
+                          onDelete={deleteScore}
+                          computerType={state.settings?.computer_type}
+                        />
                       ))}
                   </React.Fragment>
                 ))
