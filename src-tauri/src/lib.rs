@@ -58,8 +58,11 @@ pub fn run() {
             
             std::thread::spawn(move || {
                 let store = SystemStore::new(app_data_dir_clone);
-                let host_id = match store.get_app_settings() {
-                    Ok(settings) => settings.computer_id,
+                let (host_id, should_scan) = match store.get_app_settings() {
+                    Ok(settings) => {
+                        let is_server = matches!(settings.computer_type, crate::domain::models::ComputerType::Server);
+                        (settings.computer_id, is_server)
+                    }
                     Err(e) => {
                         tracing::error!("Erro ao obter settings para scan inicial: {:?}", e);
                         scan_completed_flag.store(true, Ordering::SeqCst);
@@ -67,7 +70,11 @@ pub fn run() {
                     }
                 };
 
-                services::background_scanner::run_initial_scan(&db_clone, &host_id);
+                if should_scan {
+                    services::background_scanner::run_initial_scan(&db_clone, &host_id);
+                } else {
+                    info!("Scan inicial ignorado: computador cliente");
+                }
                 scan_completed_flag.store(true, Ordering::SeqCst);
                 info!("✓ Flag 'initial_scan_completed' setada para true");
             });

@@ -272,6 +272,7 @@ impl SystemStore {
 
     /// Salva as configurações do sistema e atualiza o backup_database_step.updated_at
     /// com o timestamp da última alteração em qualquer música (efeito em cascata)
+    #[allow(dead_code)]
     pub fn save_app_settings_with_db(&self, settings: &mut AppSettings, db: &crate::infrastructure::database::Database) -> Result<(), AppError> {
         // Obter o updated_at mais recente das songs
         if let Some(latest_timestamp) = db.get_latest_songs_update_timestamp()? {
@@ -310,6 +311,7 @@ impl SystemStore {
     }
 
     /// Obtém o diretório de dados da aplicação (onde o store é armazenado)
+    #[allow(dead_code)]
     pub fn get_app_data_dir(&self) -> PathBuf {
         self.store_path
             .parent()

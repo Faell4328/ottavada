@@ -19,6 +19,7 @@ export default function Sidebar() {
   const [isCreatingCategory, setIsCreatingCategory] = useState(false);
 
   const currentView = state.sidebarView;
+  const isClient = state.settings?.computer_type === "Client";
 
   function isActive(view: SidebarView): boolean {
     if (typeof view === "string" && typeof currentView === "string") {
@@ -87,18 +88,22 @@ export default function Sidebar() {
             active={isActive("favorites")}
             onClick={() => setSidebarView("favorites")}
           />
-          <SidebarItem
-            icon={<FileEdit className="h-3.5 w-3.5" />}
-            label="Rascunhos Ativos"
-            active={isActive("drafts")}
-            onClick={() => setSidebarView("drafts")}
-          />
-          <SidebarItem
-            icon={<AlertCircle className="h-3.5 w-3.5" />}
-            label="Partituras não encontradas"
-            active={isActive("not_found")}
-            onClick={() => setSidebarView("not_found")}
-          />
+          {!isClient && (
+            <SidebarItem
+              icon={<FileEdit className="h-3.5 w-3.5" />}
+              label="Rascunhos Ativos"
+              active={isActive("drafts")}
+              onClick={() => setSidebarView("drafts")}
+            />
+          )}
+          {!isClient && (
+            <SidebarItem
+              icon={<AlertCircle className="h-3.5 w-3.5" />}
+              label="Partituras não encontradas"
+              active={isActive("not_found")}
+              onClick={() => setSidebarView("not_found")}
+            />
+          )}
         </nav>
       </div>
 
@@ -106,16 +111,18 @@ export default function Sidebar() {
       <div>
         <div className="flex items-center justify-between text-sm font-bold mb-1.5">
           <span>Categorias</span>
-          <button
-            type="button"
-            onClick={() => setShowNewCategory(!showNewCategory)}
-            className="flex h-5 w-5 items-center justify-center rounded bg-white/10 hover:bg-white/20 transition-colors cursor-pointer border-0 text-white/80"
-          >
-            <Plus className="h-3 w-3" />
-          </button>
+          {!isClient && (
+            <button
+              type="button"
+              onClick={() => setShowNewCategory(!showNewCategory)}
+              className="flex h-5 w-5 items-center justify-center rounded bg-white/10 hover:bg-white/20 transition-colors cursor-pointer border-0 text-white/80"
+            >
+              <Plus className="h-3 w-3" />
+            </button>
+          )}
         </div>
 
-        {showNewCategory && (
+        {showNewCategory && !isClient && (
           <form className="flex gap-1 mb-2" onSubmit={handleSubmitCategory}>
             <input
               value={newCategoryName}
@@ -144,13 +151,15 @@ export default function Sidebar() {
                 }
                 className="flex-1"
               />
-              <button
-                type="button"
-                onClick={() => deleteCategory(cat.id)}
-                className="opacity-0 group-hover:opacity-100 flex h-5 w-5 items-center justify-center rounded bg-transparent hover:bg-red-500/20 transition-all cursor-pointer border-0 text-red-300/70"
-              >
-                <Trash2 className="h-3 w-3" />
-              </button>
+              {!isClient && (
+                <button
+                  type="button"
+                  onClick={() => deleteCategory(cat.id)}
+                  className="opacity-0 group-hover:opacity-100 flex h-5 w-5 items-center justify-center rounded bg-transparent hover:bg-red-500/20 transition-all cursor-pointer border-0 text-red-300/70"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              )}
             </div>
           ))}
           {state.categories.length === 0 && (

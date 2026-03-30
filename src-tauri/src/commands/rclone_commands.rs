@@ -24,13 +24,19 @@ fn get_rclone_command() -> String {
 /// No Windows, usa a flag CREATE_NO_WINDOW (0x08000000) para ocultar a janela
 /// Em outros SOs, não faz nada
 #[allow(dead_code)]
-fn configure_no_window_command(mut cmd: Command) -> Command {
+fn configure_no_window_command(cmd: Command) -> Command {
     #[cfg(target_os = "windows")]
     {
+        let mut cmd = cmd;
         // CREATE_NO_WINDOW = 0x08000000
         cmd.creation_flags(0x08000000);
+        return cmd;
     }
-    cmd
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        cmd
+    }
 }
 
 /// Testa a conexão com um remote do rclone

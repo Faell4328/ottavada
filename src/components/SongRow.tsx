@@ -86,10 +86,17 @@ function SongRow({
                 isMenuOpen ? onMenuClose() : onMenuOpen(menuId);
               }}
             >
-              <ContextMenuItem
-                label={song.is_favorite ? "Remover de favoritos" : "Adicionar aos favoritos"}
-                onClick={(e) => { e.stopPropagation(); onToggleFavorite(); onMenuClose(); }}
-              />
+              {isClient ? (
+                <ContextMenuItem
+                  label="Favoritar (não permitido para cliente)"
+                  onClick={(e) => { e.stopPropagation(); toast.error("Operação não permitida para cliente"); }}
+                />
+              ) : (
+                <ContextMenuItem
+                  label={song.is_favorite ? "Remover de favoritos" : "Adicionar aos favoritos"}
+                  onClick={(e) => { e.stopPropagation(); onToggleFavorite(); onMenuClose(); }}
+                />
+              )}
               {isClient ? (
                 <>
                   <ContextMenuItem
@@ -113,10 +120,17 @@ function SongRow({
                   />
                 </>
               )}
-              <ContextMenuItem
-                label="Editar"
-                onClick={(e) => { e.stopPropagation(); onEdit(); onMenuClose(); }}
-              />
+              {isClient ? (
+                <ContextMenuItem
+                  label="Editar (não permitido para cliente)"
+                  onClick={(e) => { e.stopPropagation(); toast.error("Operação não permitida para cliente"); }}
+                />
+              ) : (
+                <ContextMenuItem
+                  label="Editar"
+                  onClick={(e) => { e.stopPropagation(); onEdit(); onMenuClose(); }}
+                />
+              )}
               {isClient ? (
                 <ContextMenuItem
                   label="Deletar (não permitido para cliente)"

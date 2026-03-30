@@ -46,7 +46,7 @@ interface AppContextValue {
   ) => Promise<void>;
   updateScoreStatus: (
     scoreId: string,
-    status: "main" | "draft" | "pending"
+    status: "main"
   ) => Promise<void>;
   deleteScore: (scoreId: string) => Promise<void>;
   deleteSong: (songId: string) => Promise<void>;
@@ -180,6 +180,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const handleToggleFavorite = useCallback(async (songId: string) => {
+    if (state.settings?.computer_type === "Client") {
+      toast.error("Operação não permitida para cliente");
+      return;
+    }
+
     try {
       const isFavorite = await api.toggleFavorite(songId);
       dispatch({
@@ -189,7 +194,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       console.error("Failed to toggle favorite:", err);
     }
-  }, []);
+  }, [state.settings?.computer_type]);
 
   const handleCreateCategory = useCallback(
     async (name: string) => {
@@ -277,7 +282,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const handleUpdateScoreStatus = useCallback(
     async (
       scoreId: string,
-      status: "main" | "draft" | "pending"
+      status: "main"
     ) => {
       try {
         const updatedSong = await api.updateScoreStatus(scoreId, status);
@@ -291,8 +296,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         );
         dispatch({ type: "SET_SONGS", payload: updatedSongs });
         
-        const statusLabel = status === "main" ? "Principal" : status === "draft" ? "Rascunho" : "Pendente";
-        toast.success(`Partitura definida como ${statusLabel}!`);
+        toast.success("Partitura definida como Principal!");
       } catch (err) {
         console.error("Failed to update score status:", err);
         const errorMsg = err instanceof Error ? err.message : "Erro ao atualizar status da partitura";

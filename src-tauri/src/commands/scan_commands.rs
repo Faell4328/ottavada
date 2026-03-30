@@ -3,7 +3,7 @@ use tauri::State;
 use tracing::{info, warn};
 
 use crate::domain::errors::AppError;
-use crate::domain::models::ScoreStatus;
+use crate::domain::models::{OperationGuard, ScoreStatus};
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
 use crate::services::indexer::{get_file_metadata, FileChangeDetector};
@@ -20,6 +20,7 @@ pub fn scan_files_for_changes(
     info!("Iniciando verificação de alterações nos arquivos de partituras");
 
     let settings = store.get_app_settings()?;
+    settings.require_server_only()?;
     let updated_by = settings.computer_id.clone();
     let host_id = &settings.computer_id; // O filtro é por quem criou o score
 

@@ -45,14 +45,6 @@ impl ScoreStatus {
     }
 }
 
-/// Representa um diretório onde partituras são armazenadas
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[allow(dead_code)]
-pub struct Directory {
-    pub id: String,
-    pub path_name: String,
-}
-
 /// Representa uma partitura (instrumento específico de uma música).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Score {
@@ -60,7 +52,7 @@ pub struct Score {
     pub song_id: String,
     pub name: Option<String>,
     pub host_id: String,
-    pub directory_id: String,
+    pub file_path: String,
     pub file_name: String,
     pub file_size: u64,
     pub file_modified_at: NaiveDateTime,
@@ -75,7 +67,7 @@ impl Score {
         song_id: String,
         host_id: String,
         indexed_file: &IndexedFile,
-        directory_id: String,
+        file_path: String,
         file_name: String,
         file_metadata: (u64, NaiveDateTime),
     ) -> Self {
@@ -84,7 +76,7 @@ impl Score {
             song_id,
             name: indexed_file.instrument.clone(),
             host_id: host_id.clone(),
-            directory_id,
+            file_path,
             file_name,
             file_size: file_metadata.0,
             file_modified_at: file_metadata.1,
@@ -143,7 +135,6 @@ impl Default for AppSettings {
 /// Trait para validar permissões de operação baseado na configuração do computador
 pub trait OperationGuard {
     fn require_server_only(&self) -> Result<(), crate::domain::errors::AppError>;
-    fn require_host_match(&self, host_id: &str) -> Result<(), crate::domain::errors::AppError>;
 }
 
 impl OperationGuard for AppSettings {
@@ -154,14 +145,6 @@ impl OperationGuard for AppSettings {
         Ok(())
     }
 
-    fn require_host_match(&self, host_id: &str) -> Result<(), crate::domain::errors::AppError> {
-        if self.computer_id != host_id {
-            return Err(crate::domain::errors::AppError::Generic(
-                format!("Operação não permitida para este computador"),
-            ));
-        }
-        Ok(())
-    }
 }
 
 /// Constantes e funções para formatação de data/hora
@@ -175,10 +158,6 @@ pub mod datetime_utils {
         dt.format(DATETIME_FORMAT).to_string()
     }
     
-    /// Formata a data/hora atual no padrão da aplicação
-    pub fn format_now() -> String {
-        format_datetime(chrono::Local::now().naive_local())
-    }
 }
 
 /// Tipo de computador

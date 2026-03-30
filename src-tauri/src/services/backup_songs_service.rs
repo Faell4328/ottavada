@@ -58,9 +58,8 @@ fn create_tar_for_song(db: &Database, song_id: &str, output_path: &Path) -> Resu
     let conn = db.conn.lock().unwrap();
     let mut stmt = conn
         .prepare(
-            "SELECT s.id, d.path_name, s.file_name
+            "SELECT s.id, s.file_path, s.file_name
              FROM scores s
-             JOIN directories d ON d.id = s.directory_id
              WHERE s.song_id = ?1
              ORDER BY s.name"
         )

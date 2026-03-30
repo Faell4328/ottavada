@@ -15,7 +15,7 @@ interface ScoreRowProps {
   onMenuOpen: (id: string) => void;
   onMenuClose: () => void;
   onEdit: () => void;
-  onStatusChange: (scoreId: string, status: "main" | "draft" | "pending") => Promise<void>;
+  onStatusChange: (scoreId: string, status: "main") => Promise<void>;
   onDelete: (scoreId: string) => Promise<void>;
   computerType?: string;
 }
@@ -90,22 +90,6 @@ function ScoreRow({
     );
   };
 
-  const handleSetAsDraft = () => {
-    confirmation.requestConfirmation(
-      "Definir como Rascunho",
-      "Você realmente deseja mudar o arquivo para \"Rascunho\"?",
-      async () => {
-        try {
-          await onStatusChange(score.id, "draft");
-          onMenuClose();
-        } catch (err) {
-          console.error("Failed to set score as draft:", err);
-          toast.error("Erro ao definir como Rascunho");
-        }
-      }
-    );
-  };
-
   const handleDelete = () => {
     confirmation.requestConfirmation(
       "Deletar Partitura",
@@ -175,16 +159,17 @@ function ScoreRow({
                     onClick={(e) => { e.stopPropagation(); handleSetAsMain(); }}
                   />
                 )}
-                {statusKey === "main" && !isClient && (
+                {isClient ? (
                   <ContextMenuItem
-                    label="Definir como Rascunho"
-                    onClick={(e) => { e.stopPropagation(); handleSetAsDraft(); }}
+                    label="Editar (não permitido para cliente)"
+                    onClick={(e) => { e.stopPropagation(); toast.error("Operação não permitida para cliente"); }}
+                  />
+                ) : (
+                  <ContextMenuItem
+                    label="Editar"
+                    onClick={(e) => { e.stopPropagation(); onEdit(); onMenuClose(); }}
                   />
                 )}
-                <ContextMenuItem
-                  label="Editar"
-                  onClick={(e) => { e.stopPropagation(); onEdit(); onMenuClose(); }}
-                />
                 {isClient ? (
                   <ContextMenuItem
                     label="Deletar (não permitido para cliente)"

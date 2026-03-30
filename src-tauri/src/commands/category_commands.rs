@@ -3,7 +3,7 @@ use tracing::{info, error};
 use chrono::Local;
 
 use crate::domain::errors::AppError;
-use crate::domain::models::Category;
+use crate::domain::models::{Category, OperationGuard};
 use crate::infrastructure::{database::Database, store::SystemStore};
 
 #[tauri::command]
@@ -26,11 +26,17 @@ pub fn create_category(db: State<'_, Database>, store: State<'_, SystemStore>, n
     info!("Criando nova categoria: {}", name);
     
     let settings = store.get_app_settings()?;
+    settings.require_server_only()?;
+
+    if name.trim().is_empty() {
+        return Err(AppError::Generic("Nome da categoria não pode estar vazio".into()));
+    }
+
     let updated_by = settings.computer_id.clone();
     
     let category = Category {
         id: uuid::Uuid::new_v4().to_string(),
-        name,
+        name: name.trim().to_string(),
         updated_at: Local::now().naive_local(),
         updated_by,
     };
@@ -47,7 +53,14 @@ pub fn create_category(db: State<'_, Database>, store: State<'_, SystemStore>, n
 }
 
 #[tauri::command]
-pub fn delete_category(db: State<'_, Database>, category_id: String) -> Result<(), AppError> {
+pub fn delete_category(
+    db: State<'_, Database>,
+    store: State<'_, SystemStore>,
+    category_id: String,
+) -> Result<(), AppError> {
+    let settings = store.get_app_settings()?;
+    settings.require_server_only()?;
+
     info!("Deletando categoria: {}", category_id);
     match db.delete_category(&category_id) {
         Ok(_) => {

@@ -61,7 +61,14 @@ pub fn search_songs(db: State<'_, Database>, query: String) -> Result<Vec<SongLi
 }
 
 #[tauri::command]
-pub fn toggle_favorite(db: State<'_, Database>, song_id: String) -> Result<bool, AppError> {
+pub fn toggle_favorite(
+    db: State<'_, Database>,
+    store: State<'_, SystemStore>,
+    song_id: String,
+) -> Result<bool, AppError> {
+    let settings = store.get_app_settings()?;
+    settings.require_server_only()?;
+
     info!("Alternando favorito para música: {}", song_id);
     match db.toggle_favorite(&song_id) {
         Ok(is_now_favorite) => {
@@ -155,13 +162,13 @@ fn import_files_core(
                 }
             };
 
-            let (directory_id, file_name) = db.resolve_directory_for_path(&indexed_file.path)?;
+            let (score_file_path, file_name) = crate::services::indexer::split_file_path(&indexed_file.path);
 
             let score = Score::new_from_file(
                 song_id.clone(),
                 host_id.to_string(),
                 &indexed_file,
-                directory_id,
+                score_file_path,
                 file_name,
                 (file_size, file_modified_at),
             );
@@ -313,6 +320,7 @@ pub fn update_song(
     }
 
     let settings = store.get_app_settings()?;
+    settings.require_server_only()?;
     let updated_by = settings.computer_id.clone();
 
     let all_songs = db.get_all_songs()?;
@@ -330,14 +338,6 @@ pub fn update_song(
     let original_song = db.get_song_by_id(&song_id)?;
     let now = Local::now().naive_local();
 
-    // Se cliente está editando, marcar como pending
-    let new_status = if settings.computer_type == ComputerType::Client {
-        info!("Cliente editando música, marcando como pending");
-        ScoreStatus::Pending
-    } else {
-        original_song.status.clone()
-    };
-
     let updated_song = Song {
         id: original_song.id.clone(),
         name: name.trim().to_string(),
@@ -348,7 +348,7 @@ pub fn update_song(
             .map(|a| a.trim().to_string())
             .filter(|a| !a.is_empty()),
         is_favorite: original_song.is_favorite,
-        status: new_status,
+        status: original_song.status,
         updated_at: now,
         updated_by,
     };
@@ -376,8 +376,12 @@ pub fn get_search_suggestions(
 #[tauri::command]
 pub fn delete_song(
     db: State<'_, Database>,
+    store: State<'_, SystemStore>,
     song_id: String,
 ) -> Result<(), AppError> {
+    let settings = store.get_app_settings()?;
+    settings.require_server_only()?;
+
     info!("Deletando música: {}", song_id);
     match db.delete_song(&song_id) {
         Ok(_) => {

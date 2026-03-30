@@ -25,14 +25,14 @@ mod tests {
         }
     }
 
-    fn make_score(db: &Database, id: &str, song_id: &str, name: Option<&str>) -> Score {
-        let dir_id = db.insert_or_get_directory("/tmp/music").unwrap();
+    fn make_score(_db: &Database, id: &str, song_id: &str, name: Option<&str>) -> Score {
+        let base_path = "/tmp/music".to_string();
         Score {
             id: id.to_string(),
             song_id: song_id.to_string(),
             name: name.map(|s| s.to_string()),
             host_id: "test-computer".to_string(),
-            directory_id: dir_id,
+            file_path: base_path,
             file_name: format!("{}.pdf", name.unwrap_or("test")),
             file_size: 1024,
             file_modified_at: now(),
@@ -51,52 +51,13 @@ mod tests {
         }
     }
 
-    // ── Directory CRUD ──
+    // ── Paths ──
 
     #[test]
-    fn test_insert_or_get_directory_creates_new() {
-        let db = make_db();
-        let id = db.insert_or_get_directory("/home/user/music").unwrap();
-        assert!(!id.is_empty());
-    }
-
-    #[test]
-    fn test_insert_or_get_directory_returns_existing() {
-        let db = make_db();
-        let id1 = db.insert_or_get_directory("/home/user/music").unwrap();
-        let id2 = db.insert_or_get_directory("/home/user/music").unwrap();
-        assert_eq!(id1, id2);
-    }
-
-    #[test]
-    fn test_insert_or_get_directory_different_paths() {
-        let db = make_db();
-        let id1 = db.insert_or_get_directory("/home/user/music").unwrap();
-        let id2 = db.insert_or_get_directory("/home/user/other").unwrap();
-        assert_ne!(id1, id2);
-    }
-
-    #[test]
-    fn test_get_all_directories() {
-        let db = make_db();
-        db.insert_or_get_directory("/path/a").unwrap();
-        db.insert_or_get_directory("/path/b").unwrap();
-
-        let dirs = db.get_all_directories().unwrap();
-        assert_eq!(dirs.len(), 2);
-    }
-
-    #[test]
-    fn test_resolve_directory_for_path() {
-        let db = make_db();
-        let (dir_id, file_name) = db.resolve_directory_for_path("/home/user/music/Canon.musx").unwrap();
-        assert!(!dir_id.is_empty());
+    fn test_split_file_path() {
+        let (file_path, file_name) = crate::services::indexer::split_file_path("/home/user/music/Canon.musx");
+        assert_eq!(file_path, "/home/user/music");
         assert_eq!(file_name, "Canon.musx");
-
-        // Mesmo diretório deve retornar mesmo ID
-        let (dir_id2, file_name2) = db.resolve_directory_for_path("/home/user/music/Sonata.pdf").unwrap();
-        assert_eq!(dir_id, dir_id2);
-        assert_eq!(file_name2, "Sonata.pdf");
     }
 
     // ── Song CRUD ──
@@ -214,10 +175,10 @@ mod tests {
         assert_eq!(songs[0].category_ids.len(), 2);
     }
 
-    // ── FTS5 Search ──
+    // ── Search ──
 
     #[test]
-    fn test_search_songs_fts5() {
+    fn test_search_songs() {
         let db = make_db();
         db.insert_song(&make_song("s1", "Canon in D"), &[]).unwrap();
         db.insert_song(&make_song("s2", "Moonlight Sonata"), &[]).unwrap();
@@ -286,13 +247,13 @@ mod tests {
         let db = make_db();
         db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
 
-        let dir_id = db.insert_or_get_directory("/tmp/music").unwrap();
+        let dir_id = "/tmp/music".to_string();
         let score = Score {
             id: "sc1".to_string(),
             song_id: "s1".to_string(),
             name: Some("Violino".to_string()),
             host_id: "test-computer".to_string(),
-            directory_id: dir_id,
+            file_path: dir_id,
             file_name: "Canon - Violino.musx".to_string(),
             file_size: 1024,
             file_modified_at: now(),
@@ -311,13 +272,13 @@ mod tests {
         let db = make_db();
         db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
 
-        let dir_id = db.insert_or_get_directory("/home/user/music").unwrap();
+        let dir_id = "/home/user/music".to_string();
         let score = Score {
             id: "sc1".to_string(),
             song_id: "s1".to_string(),
             name: Some("Violino".to_string()),
             host_id: "test-computer".to_string(),
-            directory_id: dir_id,
+            file_path: dir_id,
             file_name: "Canon - Violino.musx".to_string(),
             file_size: 1024,
             file_modified_at: now(),
@@ -338,7 +299,7 @@ mod tests {
         db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
         db.insert_score(&make_score(&db, "sc1", "s1", Some("Violino"))).unwrap();
 
-        let new_dir_id = db.insert_or_get_directory("/new/path").unwrap();
+        let new_dir_id = "/new/path".to_string();
         db.update_score("sc1", Some("Violino 1".to_string()), &new_dir_id, "score.musx", 2048, now(), now(), "test-computer").unwrap();
 
         let songs = db.get_all_songs().unwrap();
@@ -370,13 +331,13 @@ mod tests {
         let db = make_db();
         db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
 
-        let dir_id = db.insert_or_get_directory("/music/scores").unwrap();
+        let dir_id = "/music/scores".to_string();
         let score = Score {
             id: "sc1".to_string(),
             song_id: "s1".to_string(),
             name: Some("Violino".to_string()),
             host_id: "test-computer".to_string(),
-            directory_id: dir_id,
+            file_path: dir_id,
             file_name: "Canon - Violino.musx".to_string(),
             file_size: 1024,
             file_modified_at: now(),
@@ -452,15 +413,15 @@ mod tests {
         let db = make_db();
         db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
 
-        let dir1 = db.insert_or_get_directory("/music/classical").unwrap();
-        let dir2 = db.insert_or_get_directory("/music/hymns").unwrap();
+        let dir1 = "/music/classical".to_string();
+        let dir2 = "/music/hymns".to_string();
 
         let score1 = Score {
             id: "sc1".to_string(),
             song_id: "s1".to_string(),
             name: Some("Violino".to_string()),
             host_id: "test-computer".to_string(),
-            directory_id: dir1,
+            file_path: dir1,
             file_name: "Canon - Violino.pdf".to_string(),
             file_size: 1024,
             file_modified_at: now(),
@@ -474,7 +435,7 @@ mod tests {
             song_id: "s1".to_string(),
             name: Some("Piano".to_string()),
             host_id: "test-computer".to_string(),
-            directory_id: dir2,
+            file_path: dir2,
             file_name: "Canon - Piano.pdf".to_string(),
             file_size: 2048,
             file_modified_at: now(),
@@ -499,13 +460,13 @@ mod tests {
         let db = make_db();
         db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
 
-        let dir_id = db.insert_or_get_directory("/music").unwrap();
+        let dir_id = "/music".to_string();
         let score1 = Score {
             id: "sc1".to_string(),
             song_id: "s1".to_string(),
             name: Some("Violino".to_string()),
             host_id: "test-computer".to_string(),
-            directory_id: dir_id.clone(),
+            file_path: dir_id.clone(),
             file_name: "Canon.pdf".to_string(),
             file_size: 1024,
             file_modified_at: now(),
@@ -519,7 +480,7 @@ mod tests {
             song_id: "s1".to_string(),
             name: Some("Piano".to_string()),
             host_id: "test-computer".to_string(),
-            directory_id: dir_id,
+            file_path: dir_id,
             file_name: "Canon.pdf".to_string(), // Mesmo arquivo no mesmo diretório
             file_size: 1024,
             file_modified_at: now(),
@@ -538,15 +499,15 @@ mod tests {
         let db = make_db();
         db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
 
-        let dir1 = db.insert_or_get_directory("/music/v1").unwrap();
-        let dir2 = db.insert_or_get_directory("/music/v2").unwrap();
+        let dir1 = "/music/v1".to_string();
+        let dir2 = "/music/v2".to_string();
 
         let score1 = Score {
             id: "sc1".to_string(),
             song_id: "s1".to_string(),
             name: Some("Violino".to_string()),
             host_id: "test-computer".to_string(),
-            directory_id: dir1,
+            file_path: dir1,
             file_name: "Canon.pdf".to_string(),
             file_size: 1024,
             file_modified_at: now(),
@@ -560,7 +521,7 @@ mod tests {
             song_id: "s1".to_string(),
             name: Some("Violino v2".to_string()),
             host_id: "test-computer".to_string(),
-            directory_id: dir2,
+            file_path: dir2,
             file_name: "Canon.pdf".to_string(), // Mesmo nome, diretório diferente - OK
             file_size: 2048,
             file_modified_at: now(),
@@ -680,4 +641,5 @@ mod tests {
         let metadata = db.get_all_scores_with_metadata().unwrap();
         assert!(metadata.is_empty());
     }
+
 }

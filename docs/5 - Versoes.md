@@ -103,13 +103,16 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - v0.4 - Casa limpa
 	- O objetivo dessa versão é "limpar a casa".
 	- Corrigir tudo que está errado ou obsoleto.
+
 ## v0.4
 - [x] Atualizar bando de dados
 - [x] Atualizar `tauri-plugin-store`
 - [x] Corrigir o código que utiliza o banco de dados e `tauri-plugin-store`
-- [ ] Corrigir os fluxos existentes
-- [ ] Adicionar a função de `changedField`
+- [x] Corrigir os fluxos existentes
 - [ ] Refatorar o código e adicionar testes
+
+## v0.5
+- [ ] Adicionar a função de `changedField`
 
 ## Funcionalidades para v2 (apenas rascunho/ideias)
 

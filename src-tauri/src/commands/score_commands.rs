@@ -8,7 +8,7 @@ use crate::domain::models::*;
 use crate::domain::models::OperationGuard;
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
-use crate::services::indexer::get_file_metadata;
+use crate::services::indexer::{get_file_metadata, split_file_path};
 
 #[tauri::command]
 pub fn update_score(
@@ -21,6 +21,7 @@ pub fn update_score(
     info!("Atualizando partitura: {} com arquivo: {}", score_id, file_path);
     
     let settings = store.get_app_settings()?;
+    settings.require_server_only()?;
     let path = Path::new(&file_path);
     if !path.exists() || !path.is_file() {
         warn!("Arquivo não encontrado: {}", file_path);
@@ -47,16 +48,10 @@ pub fn update_score(
             AppError::Generic(format!("Erro ao ler arquivo: {}", e))
         })?;
 
-    let (directory_id, file_name) = db.resolve_directory_for_path(&file_path)?;
+    let (score_file_path, file_name) = split_file_path(&file_path);
 
-    // Se cliente está editando, marcar como pending
-    match db.update_score(&score_id, instrument_name.clone(), &directory_id, &file_name, file_size, file_modified_at, now, &settings.computer_id) {
+    match db.update_score(&score_id, instrument_name.clone(), &score_file_path, &file_name, file_size, file_modified_at, now, &settings.computer_id) {
         Ok(_) => {
-            // Buscar e atualizar o score para marcar como pending se for cliente
-            if settings.computer_type == ComputerType::Client {
-                info!("Cliente editando partitura, marcando como pending");
-                let _ = db.update_score_status(&score_id, ScoreStatus::Pending, &settings.computer_id, None);
-            }
             info!("Partitura atualizada com sucesso: {}", score_id);
             Ok(())
         }
@@ -74,6 +69,9 @@ pub fn add_score_to_song(
     song_id: String,
     file: IndexedFile,
 ) -> Result<SongListItem, AppError> {
+    let settings = store.get_app_settings()?;
+    settings.require_server_only()?;
+
     let song = db.get_song_list_item_by_id(&song_id)?;
 
     // Verificar se o instrumento já existe (case-insensitive)
@@ -92,21 +90,19 @@ pub fn add_score_to_song(
         )));
     }
 
-    let settings = store.get_app_settings()?;
-
     let (file_size, file_modified_at) = get_file_metadata(Path::new(&file.path))
         .map_err(|e| {
             error!("Erro ao obter metadados do arquivo: {:?}", e);
             AppError::Generic(format!("Erro ao ler arquivo: {}", e))
         })?;
 
-    let (directory_id, file_name) = db.resolve_directory_for_path(&file.path)?;
+    let (score_file_path, file_name) = split_file_path(&file.path);
 
     let score = Score::new_from_file(
         song_id.clone(),
         settings.computer_id.clone(),
         &file,
-        directory_id,
+        score_file_path,
         file_name,
         (file_size, file_modified_at),
     );
@@ -122,9 +118,10 @@ pub fn add_scores_to_song(
     song_id: String,
     files: Vec<IndexedFile>,
 ) -> Result<SongListItem, AppError> {
-    let song = db.get_song_list_item_by_id(&song_id)?;
-
     let settings = store.get_app_settings()?;
+    settings.require_server_only()?;
+
+    let song = db.get_song_list_item_by_id(&song_id)?;
     let existing_scores = song.scores.clone();
     let mut added_count = 0;
 
@@ -147,13 +144,13 @@ pub fn add_scores_to_song(
                 AppError::Generic(format!("Erro ao ler arquivo: {}", e))
             })?;
 
-        let (directory_id, file_name) = db.resolve_directory_for_path(&file.path)?;
+        let (score_file_path, file_name) = split_file_path(&file.path);
 
         let score = Score::new_from_file(
             song_id.clone(),
             settings.computer_id.clone(),
             &file,
-            directory_id,
+            score_file_path,
             file_name,
             (file_size, file_modified_at),
         );
@@ -216,20 +213,33 @@ pub fn update_score_status(
     settings.require_server_only()?;
     
     info!("Atualizando status da partitura: {} para: {}", score_id, status);
-
-    let score_status = match status.to_lowercase().as_str() {
-        "main" => ScoreStatus::Main,
-        "draft" => ScoreStatus::Draft,
-        "pending" => ScoreStatus::Pending,
-        _ => {
-            warn!("Status inválido: {}", status);
-            return Err(AppError::Generic(format!("Status inválido: {}", status)));
-        }
-    };
-
-    db.update_score_status(&score_id, score_status, &settings.computer_id, None)?;
-
     let song_id = db.get_song_id_for_score(&score_id)?;
+    let song = db.get_song_list_item_by_id(&song_id)?;
+    let current_score = song
+        .scores
+        .iter()
+        .find(|sc| sc.id == score_id)
+        .ok_or_else(|| AppError::ScoreNotFound(score_id.clone()))?;
+
+    if status.to_lowercase() != "main" {
+        warn!("Fluxo inválido de status manual solicitado: {}", status);
+        return Err(AppError::Generic(
+            "Apenas a mudança para 'main' é permitida manualmente".into(),
+        ));
+    }
+
+    if current_score.status != ScoreStatus::Draft {
+        warn!(
+            "Tentativa de definir score {} como main fora do fluxo draft -> main",
+            score_id
+        );
+        return Err(AppError::Generic(
+            "A partitura precisa estar como 'draft' para ser definida como 'main'".into(),
+        ));
+    }
+
+    db.update_score_status(&score_id, ScoreStatus::Main, &settings.computer_id, None)?;
+
     info!("Status da partitura {} atualizado com sucesso para {}", score_id, status);
     db.get_song_list_item_by_id(&song_id)
 }
