@@ -6,6 +6,8 @@ use crate::domain::errors::AppError;
 use crate::domain::models::datetime_utils;
 use crate::domain::models::*;
 
+const CHANGE_ORIGIN_SERVER: &str = "server";
+
 #[derive(Clone)]
 pub struct Database {
     pub conn: Arc<Mutex<Connection>>,
@@ -135,6 +137,34 @@ impl Database {
         Ok(())
     }
 
+    fn insert_changed_field(
+        conn: &Connection,
+        change_type: &str,
+        entity: &str,
+        entity_id: &str,
+        field: Option<&str>,
+        old_value: Option<String>,
+        new_value: Option<String>,
+    ) -> Result<(), AppError> {
+        conn.execute(
+            "INSERT INTO changedField (id, origin, type, entity, entityId, field, oldValue, newValue, timestamp)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+            params![
+                uuid::Uuid::new_v4().to_string(),
+                CHANGE_ORIGIN_SERVER,
+                change_type,
+                entity,
+                entity_id,
+                field,
+                old_value,
+                new_value,
+                chrono::Local::now().timestamp(),
+            ],
+        )?;
+
+        Ok(())
+    }
+
     // ── Songs ──
 
     pub fn insert_song(&self, song: &Song, category_ids: &[String]) -> Result<(), AppError> {
@@ -160,13 +190,78 @@ impl Database {
                 "INSERT OR IGNORE INTO categoriesSongs (id, category_id, song_id) VALUES (?1, ?2, ?3)",
                 params![rel_id, category_id, song.id],
             )?;
+
+            Self::insert_changed_field(
+                &conn,
+                "insert",
+                "categoriesSongs",
+                &rel_id,
+                Some("categoryId"),
+                None,
+                Some(category_id.clone()),
+            )?;
+
+            Self::insert_changed_field(
+                &conn,
+                "insert",
+                "categoriesSongs",
+                &rel_id,
+                Some("songId"),
+                None,
+                Some(song.id.clone()),
+            )?;
         }
 
+        Self::insert_changed_field(
+            &conn,
+            "insert",
+            "songs",
+            &song.id,
+            Some("name"),
+            None,
+            Some(song.name.clone()),
+        )?;
+        Self::insert_changed_field(
+            &conn,
+            "insert",
+            "songs",
+            &song.id,
+            Some("composer"),
+            None,
+            song.composer.clone(),
+        )?;
+        Self::insert_changed_field(
+            &conn,
+            "insert",
+            "songs",
+            &song.id,
+            Some("arranger"),
+            None,
+            song.arranger.clone(),
+        )?;
         Ok(())
     }
 
     pub fn update_song(&self, song: &Song, category_ids: &[String]) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
+
+        let original_song = conn.query_row(
+            "SELECT name, composer, arranger FROM songs WHERE id = ?1",
+            params![song.id],
+            |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, Option<String>>(1)?,
+                    row.get::<_, Option<String>>(2)?,
+                ))
+            },
+        )
+        .map_err(|e| match e {
+            rusqlite::Error::QueryReturnedNoRows => AppError::SongNotFound(song.id.clone()),
+            other => AppError::Database(other),
+        })?;
+
+        let old_category_ids = Self::get_category_ids(&conn, &song.id)?;
 
         conn.execute(
             "UPDATE songs SET name = ?1, composer = ?2, arranger = ?3, is_favorite = ?4
@@ -191,6 +286,78 @@ impl Database {
                 "INSERT OR IGNORE INTO categoriesSongs (id, category_id, song_id) VALUES (?1, ?2, ?3)",
                 params![rel_id, category_id, song.id],
             )?;
+
+            if !old_category_ids.iter().any(|id| id == category_id) {
+                Self::insert_changed_field(
+                    &conn,
+                    "insert",
+                    "categoriesSongs",
+                    &rel_id,
+                    Some("categoryId"),
+                    None,
+                    Some(category_id.clone()),
+                )?;
+
+                Self::insert_changed_field(
+                    &conn,
+                    "insert",
+                    "categoriesSongs",
+                    &rel_id,
+                    Some("songId"),
+                    None,
+                    Some(song.id.clone()),
+                )?;
+            }
+        }
+
+        if original_song.0 != song.name {
+            Self::insert_changed_field(
+                &conn,
+                "update",
+                "songs",
+                &song.id,
+                Some("name"),
+                Some(original_song.0),
+                Some(song.name.clone()),
+            )?;
+        }
+
+        if original_song.1 != song.composer {
+            Self::insert_changed_field(
+                &conn,
+                "update",
+                "songs",
+                &song.id,
+                Some("composer"),
+                original_song.1,
+                song.composer.clone(),
+            )?;
+        }
+
+        if original_song.2 != song.arranger {
+            Self::insert_changed_field(
+                &conn,
+                "update",
+                "songs",
+                &song.id,
+                Some("arranger"),
+                original_song.2,
+                song.arranger.clone(),
+            )?;
+        }
+
+        for old_category_id in old_category_ids {
+            if !category_ids.iter().any(|id| id == &old_category_id) {
+                Self::insert_changed_field(
+                    &conn,
+                    "delete",
+                    "categoriesSongs",
+                    &uuid::Uuid::new_v4().to_string(),
+                    Some("categoryId"),
+                    Some(old_category_id),
+                    None,
+                )?;
+            }
         }
 
         Ok(())
@@ -290,6 +457,7 @@ impl Database {
 
     pub fn toggle_favorite(&self, song_id: &str) -> Result<bool, AppError> {
         let conn = self.conn.lock().unwrap();
+
         conn.execute(
             "UPDATE songs SET is_favorite = CASE WHEN is_favorite = 1 THEN 0 ELSE 1 END WHERE id = ?1",
             params![song_id],
@@ -391,6 +559,34 @@ impl Database {
             params![file_modified_at_ts, score.song_id],
         )?;
 
+        Self::insert_changed_field(
+            &conn,
+            "insert",
+            "scores",
+            &score.id,
+            Some("songId"),
+            None,
+            Some(score.song_id.clone()),
+        )?;
+        Self::insert_changed_field(
+            &conn,
+            "insert",
+            "scores",
+            &score.id,
+            Some("name"),
+            None,
+            score.name.clone(),
+        )?;
+        Self::insert_changed_field(
+            &conn,
+            "insert",
+            "scores",
+            &score.id,
+            Some("status"),
+            None,
+            Some(score.status.as_str().to_string()),
+        )?;
+
         Ok(())
     }
 
@@ -407,6 +603,23 @@ impl Database {
     ) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
         let file_modified_at_ts = file_modified_at.and_utc().timestamp();
+
+        let old_values = conn
+            .query_row(
+                "SELECT name, file_path, file_name FROM scores WHERE id = ?1",
+                params![score_id],
+                |row| {
+                    Ok((
+                        row.get::<_, Option<String>>(0)?,
+                        row.get::<_, String>(1)?,
+                        row.get::<_, String>(2)?,
+                    ))
+                },
+            )
+            .map_err(|e| match e {
+                rusqlite::Error::QueryReturnedNoRows => AppError::ScoreNotFound(score_id.to_string()),
+                other => AppError::Database(other),
+            })?;
 
         conn.execute(
             "UPDATE scores SET name = ?1, file_path = ?2, file_name = ?3, file_size = ?4, file_modified_at = ?5 WHERE id = ?6",
@@ -437,15 +650,53 @@ impl Database {
             params![file_modified_at_ts, song_id],
         )?;
 
+        if old_values.0 != name {
+            Self::insert_changed_field(
+                &conn,
+                "update",
+                "scores",
+                score_id,
+                Some("name"),
+                old_values.0,
+                name,
+            )?;
+        }
+
+        if old_values.1 != file_path || old_values.2 != file_name {
+            Self::insert_changed_field(
+                &conn,
+                "update",
+                "scores",
+                score_id,
+                Some("file"),
+                None,
+                None,
+            )?;
+        }
+
         Ok(())
     }
 
     pub fn delete_score(&self, score_id: &str) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
+
+        conn.query_row(
+            "SELECT id FROM scores WHERE id = ?1",
+            params![score_id],
+            |row| row.get::<_, String>(0),
+        )
+        .map_err(|e| match e {
+            rusqlite::Error::QueryReturnedNoRows => AppError::ScoreNotFound(score_id.to_string()),
+            other => AppError::Database(other),
+        })?;
+
         let affected = conn.execute("DELETE FROM scores WHERE id = ?1", params![score_id])?;
         if affected == 0 {
             return Err(AppError::ScoreNotFound(score_id.to_string()));
         }
+
+        Self::insert_changed_field(&conn, "delete", "scores", score_id, None, None, None)?;
+
         Ok(())
     }
 
@@ -569,6 +820,18 @@ impl Database {
         file_metadata: Option<(u64, chrono::NaiveDateTime)>,
     ) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
+
+        let old_status = conn
+            .query_row(
+                "SELECT status FROM scores WHERE id = ?1",
+                params![score_id],
+                |row| row.get::<_, String>(0),
+            )
+            .map_err(|e| match e {
+                rusqlite::Error::QueryReturnedNoRows => AppError::ScoreNotFound(score_id.to_string()),
+                other => AppError::Database(other),
+            })?;
+
         let file_modified_at_ts = file_metadata
             .as_ref()
             .map(|(_, modified)| modified.and_utc().timestamp());
@@ -606,6 +869,18 @@ impl Database {
                      END
                  WHERE id = ?2",
                 params![modified_ts, song_id],
+            )?;
+        }
+
+        if old_status != status.as_str() {
+            Self::insert_changed_field(
+                &conn,
+                "update",
+                "scores",
+                score_id,
+                Some("status"),
+                Some(old_status),
+                Some(status.as_str().to_string()),
             )?;
         }
 
@@ -683,6 +958,17 @@ impl Database {
             "INSERT INTO categories (id, name) VALUES (?1, ?2)",
             params![category.id, category.name,],
         )?;
+
+        Self::insert_changed_field(
+            &conn,
+            "insert",
+            "categories",
+            &category.id,
+            Some("name"),
+            None,
+            Some(category.name.clone()),
+        )?;
+
         Ok(())
     }
 
@@ -707,12 +993,62 @@ impl Database {
 
     pub fn delete_category(&self, category_id: &str) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
+
+        let relation_ids: Vec<String> = {
+            let mut stmt = conn.prepare("SELECT id FROM categoriesSongs WHERE category_id = ?1")?;
+            let rows = stmt.query_map(params![category_id], |row| row.get::<_, String>(0))?;
+            rows.filter_map(|r| r.ok()).collect()
+        };
+
         conn.execute("DELETE FROM categories WHERE id = ?1", params![category_id])?;
+
+        for relation_id in relation_ids {
+            Self::insert_changed_field(
+                &conn,
+                "delete",
+                "categoriesSongs",
+                &relation_id,
+                None,
+                None,
+                None,
+            )?;
+        }
+
+        Self::insert_changed_field(
+            &conn,
+            "delete",
+            "categories",
+            category_id,
+            None,
+            None,
+            None,
+        )?;
+
         Ok(())
     }
 
     pub fn delete_song(&self, song_id: &str) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
+
+        conn.query_row("SELECT id FROM songs WHERE id = ?1", params![song_id], |row| {
+            row.get::<_, String>(0)
+        })
+        .map_err(|e| match e {
+            rusqlite::Error::QueryReturnedNoRows => AppError::SongNotFound(song_id.to_string()),
+            other => AppError::Database(other),
+        })?;
+
+        let score_ids: Vec<String> = {
+            let mut stmt = conn.prepare("SELECT id FROM scores WHERE song_id = ?1")?;
+            let rows = stmt.query_map(params![song_id], |row| row.get::<_, String>(0))?;
+            rows.filter_map(|r| r.ok()).collect()
+        };
+
+        let relation_ids: Vec<String> = {
+            let mut stmt = conn.prepare("SELECT id FROM categoriesSongs WHERE song_id = ?1")?;
+            let rows = stmt.query_map(params![song_id], |row| row.get::<_, String>(0))?;
+            rows.filter_map(|r| r.ok()).collect()
+        };
 
         // Deletar as partituras da música
         conn.execute("DELETE FROM scores WHERE song_id = ?1", params![song_id])?;
@@ -728,6 +1064,24 @@ impl Database {
         if affected == 0 {
             return Err(AppError::Generic("Música não encontrada".into()));
         }
+
+        for score_id in score_ids {
+            Self::insert_changed_field(&conn, "delete", "scores", &score_id, None, None, None)?;
+        }
+
+        for relation_id in relation_ids {
+            Self::insert_changed_field(
+                &conn,
+                "delete",
+                "categoriesSongs",
+                &relation_id,
+                None,
+                None,
+                None,
+            )?;
+        }
+
+        Self::insert_changed_field(&conn, "delete", "songs", song_id, None, None, None)?;
 
         Ok(())
     }

@@ -51,6 +51,16 @@ mod tests {
         }
     }
 
+    fn count_changed_field_for_entity(db: &Database, entity: &str) -> i64 {
+        let conn = db.conn.lock().unwrap();
+        conn.query_row(
+            "SELECT COUNT(*) FROM changedField WHERE entity = ?1",
+            [entity],
+            |row| row.get(0),
+        )
+        .unwrap()
+    }
+
     // ── Paths ──
 
     #[test]
@@ -179,6 +189,11 @@ mod tests {
 
         let songs = db.get_all_songs().unwrap();
         assert_eq!(songs[0].category_ids.len(), 2);
+
+        let song_events = count_changed_field_for_entity(&db, "songs");
+        let relation_events = count_changed_field_for_entity(&db, "categoriesSongs");
+        assert!(song_events > 0);
+        assert!(relation_events > 0);
     }
 
     // ── Search ──
@@ -340,6 +355,9 @@ mod tests {
 
         let songs = db.get_all_songs().unwrap();
         assert_eq!(songs[0].scores.len(), 0);
+
+        let score_events = count_changed_field_for_entity(&db, "scores");
+        assert!(score_events > 0);
     }
 
     #[test]
@@ -416,6 +434,16 @@ mod tests {
 
         let songs = db.get_all_songs().unwrap();
         assert_eq!(songs[0].scores[0].status, ScoreStatus::Draft);
+
+        let conn = db.conn.lock().unwrap();
+        let status_events: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM changedField WHERE entity = 'scores' AND field = 'status'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert!(status_events > 0);
     }
 
     // ── Score Metadata for Scanning ──
