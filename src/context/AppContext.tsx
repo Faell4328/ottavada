@@ -383,8 +383,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 
   const handleScanFilesForChanges = useCallback(
-    async (isAutomatic: boolean = false) => {
+    async (isAutomaticOrEvent: unknown = false) => {
+      const isAutomatic =
+        typeof isAutomaticOrEvent === "boolean" ? isAutomaticOrEvent : false;
+
       try {
+        const hasInternet = await api.hasInternetConnection();
+        if (!hasInternet) {
+          if (!isAutomatic) {
+            toast.error("Sem conexão com a internet");
+          }
+          return;
+        }
+
         dispatch({ type: "SET_SCANNING_FILES", payload: true });
         dispatch({
           type: "SET_SCAN_PROGRESS",

@@ -147,6 +147,7 @@ pub fn run() {
             commands::settings_commands::toggle_computer_type,
             // Scan
             commands::scan_commands::scan_files_for_changes,
+            commands::scan_commands::has_internet_connection,
             // Backup songs archives
             commands::backup_commands::generate_song_archives_files,
             commands::backup_commands::generate_events_file,

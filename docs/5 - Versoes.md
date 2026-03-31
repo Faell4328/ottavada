@@ -141,8 +141,8 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [ ] Corrigir problema de não gerar o `{songId}.tar.zst` ao deletar uma partitura da música.
 - [ ] Arrumar o diretório temporário não é `/cloud/tmp` é `/tmp`, igual na documentação.
 ! Se não for dessa forma vai arquivo temporário para o cliente.
-- [ ] Arrumar a geração de snaphot (não está gerado)
-	- [ ] Verificar se está forçando o cliente a implementar o snaphot, igual a documentação
+- [ ] Arrumar a geração de snapshot (não está gerado)
+	- [ ] Verificar se está forçando o cliente a implementar o snapshot, igual a documentação
 - [ ] Refatorar o front e back
 
 ## Funcionalidades para v2 (apenas rascunho/ideias)

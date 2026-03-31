@@ -210,6 +210,10 @@ export async function scanFilesForChanges(): Promise<ScanResult> {
   return invoke("scan_files_for_changes");
 }
 
+export async function hasInternetConnection(): Promise<boolean> {
+  return invoke("has_internet_connection");
+}
+
 export async function generateComputerId(): Promise<string> {
   return invoke("generate_computer_id");
 }

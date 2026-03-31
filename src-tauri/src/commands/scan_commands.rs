@@ -1,4 +1,5 @@
 use std::path::Path;
+use std::time::Duration;
 use tauri::State;
 use tracing::{info, warn};
 
@@ -170,4 +171,25 @@ pub struct ScanResult {
     pub not_found_files: Vec<String>,
     pub recovered_files: Vec<String>,
     pub failed_files: Vec<(String, String)>,
+}
+
+/// Faz uma verificação simples de conectividade com a internet usando socket TCP.
+/// Não depende de rclone: tenta conectar em servidores DNS públicos bem conhecidos.
+#[tauri::command]
+pub async fn has_internet_connection() -> Result<bool, AppError> {
+    tauri::async_runtime::spawn_blocking(has_internet_connection_impl)
+        .await
+        .map_err(|e| AppError::Generic(format!("Falha interna ao verificar internet: {}", e)))
+}
+
+fn has_internet_connection_impl() -> bool {
+    let timeout = Duration::from_secs(2);
+    let probes = ["1.1.1.1:53", "8.8.8.8:53", "9.9.9.9:53"];
+
+    probes.iter().any(|addr| {
+        addr.parse::<std::net::SocketAddr>()
+            .ok()
+            .and_then(|socket| std::net::TcpStream::connect_timeout(&socket, timeout).ok())
+            .is_some()
+    })
 }
