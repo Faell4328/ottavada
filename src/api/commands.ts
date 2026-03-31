@@ -236,6 +236,19 @@ export async function deleteRcloneTestFile(): Promise<void> {
   return invoke("delete_rclone_test_file");
 }
 
+export interface RcloneSyncSummary {
+  direction: "upload" | "download";
+  source: string;
+  destination: string;
+  duration_ms: number;
+}
+
+export async function syncCloudWithRclone(
+  direction: "upload" | "download"
+): Promise<RcloneSyncSummary> {
+  return invoke("sync_cloud_with_rclone", { direction });
+}
+
 // ── Backup Songs Archives ──
 
 export interface SongArchiveResult {

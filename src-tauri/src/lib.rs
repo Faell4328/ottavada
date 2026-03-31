@@ -133,6 +133,7 @@ pub fn run() {
             commands::rclone_commands::upload_with_rclone,
             commands::rclone_commands::test_rclone_upload,
             commands::rclone_commands::delete_rclone_test_file,
+            commands::rclone_commands::sync_cloud_with_rclone,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -385,25 +385,77 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const handleScanFilesForChanges = useCallback(
     async (isAutomatic: boolean = false) => {
       try {
-        // Bloquear cliente de verificar alterações
-        if (state.settings?.computer_type === "Client") {
-          if (!isAutomatic) {
-            toast("Funcionalidade não implementada para cliente", {
-              icon: "ℹ️",
-            });
-          }
-          return;
-        }
-
         dispatch({ type: "SET_SCANNING_FILES", payload: true });
         dispatch({
           type: "SET_SCAN_PROGRESS",
           payload: { total: 0, completed: 0, changedFiles: 0 },
         });
 
+        const isClient = state.settings?.computer_type === "Client";
+
+        if (isClient) {
+          dispatch({
+            type: "SET_SCAN_PROGRESS",
+            payload: { total: 1, completed: 0, changedFiles: 0 },
+          });
+
+          if (!isAutomatic) {
+            toast("Sincronizando atualizações da nuvem...", { icon: "☁️" });
+          }
+
+          await api.syncCloudWithRclone("download");
+
+          dispatch({
+            type: "SET_SCAN_PROGRESS",
+            payload: { total: 1, completed: 1, changedFiles: 0 },
+          });
+
+          if (!isAutomatic) {
+            toast.success("Sincronização da nuvem concluída");
+          }
+
+          setTimeout(() => {
+            dispatch({ type: "SET_SCANNING_FILES", payload: false });
+            dispatch({
+              type: "SET_SCAN_PROGRESS",
+              payload: { total: 0, completed: 0, changedFiles: 0 },
+            });
+          }, 1500);
+
+          return;
+        }
+
+        const totalSteps = 5;
+        let completedSteps = 0;
+        const updateStepProgress = (changedFiles: number) => {
+          dispatch({
+            type: "SET_SCAN_PROGRESS",
+            payload: {
+              total: totalSteps,
+              completed: completedSteps,
+              changedFiles,
+            },
+          });
+        };
+
+        updateStepProgress(0);
+
+        if (!isAutomatic) {
+          toast("Consultando alterações na nuvem...", { icon: "☁️" });
+        }
+        await api.syncCloudWithRclone("download");
+        completedSteps += 1;
+        updateStepProgress(0);
+
         const result = await api.scanFilesForChanges();
+        completedSteps += 1;
+
         const archiveSummary = await api.generateSongArchivesFiles();
+        completedSteps += 1;
+
         const eventsSummary = await api.generateEventsFile();
+        completedSteps += 1;
+
         const changedCount = result.changed_files.length;
         const failedCount = result.failed_files.length;
         const recoveredCount = result.recovered_files?.length ?? 0;
@@ -412,15 +464,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const failedArchives = archiveSummary.failed ?? 0;
         const generatedEventsCount = eventsSummary.events_count ?? 0;
 
-        const totalFiles = changedCount + failedCount;
-        dispatch({
-          type: "SET_SCAN_PROGRESS",
-          payload: {
-            total: totalFiles,
-            completed: totalFiles,
-            changedFiles: changedCount,
-          },
-        });
+        updateStepProgress(changedCount);
+
+        if (eventsSummary.file_size >= 2 * 1024 * 1024) {
+          await api.generateSnapshotFile();
+          if (!isAutomatic) {
+            toast("Snapshot forçado: events.msgpack.zst atingiu 2MB", {
+              icon: "📦",
+            });
+          }
+        }
+
+        if (!isAutomatic) {
+          toast("Sincronizando alterações para a nuvem...", { icon: "☁️" });
+        }
+        await api.syncCloudWithRclone("upload");
+        completedSteps += 1;
+        updateStepProgress(changedCount);
 
         // Verificar se há arquivos recuperados (não mais not_found)
         if (recoveredCount > 0) {
@@ -487,12 +547,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
       } catch (err) {
         console.error("Failed to scan files for changes:", err);
         if (!isAutomatic) {
-          toast.error("Erro ao verificar alterações nos arquivos");
+          toast.error(getErrorMessage(err, "Erro ao verificar alterações nos arquivos"));
         }
         dispatch({ type: "SET_SCANNING_FILES", payload: false });
+        dispatch({
+          type: "SET_SCAN_PROGRESS",
+          payload: { total: 0, completed: 0, changedFiles: 0 },
+        });
       }
     },
-    [loadSongs]
+    [loadSongs, state.settings?.computer_type, getErrorMessage]
   );
 
   const value: AppContextValue = useMemo(

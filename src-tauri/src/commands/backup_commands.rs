@@ -12,40 +12,64 @@ use crate::services::events_service::{generate_events_msgpack, EventsFileSummary
 use crate::services::snapshot_service::{generate_snapshot_msgpack, SnapshotFileSummary};
 
 #[tauri::command]
-pub fn generate_song_archives_files(
+pub async fn generate_song_archives_files(
     db: State<'_, Database>,
     store: State<'_, SystemStore>,
 ) -> Result<SongArchiveSummary, AppError> {
-    let settings = store.get_app_settings()?;
-    settings.require_server_only()?;
+    let db = db.inner().clone();
+    let app_data_dir = store.app_data_dir().clone();
 
-    let cloud_root = store.app_data_dir().join("nuvem");
-    std::fs::create_dir_all(&cloud_root)
-        .map_err(|e| AppError::Generic(format!("Erro ao preparar diretório nuvem: {}", e)))?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let store = SystemStore::new(app_data_dir.clone());
+        let settings = store.get_app_settings()?;
+        settings.require_server_only()?;
 
-    generate_song_archives(&db, &cloud_root)
+        let cloud_root = app_data_dir.join("nuvem");
+        std::fs::create_dir_all(&cloud_root)
+            .map_err(|e| AppError::Generic(format!("Erro ao preparar diretório nuvem: {}", e)))?;
+
+        generate_song_archives(&db, &cloud_root)
+    })
+    .await
+    .map_err(|e| AppError::Generic(format!("Falha interna ao gerar arquivos das músicas: {}", e)))?
 }
 
 #[tauri::command]
-pub fn generate_events_file(
+pub async fn generate_events_file(
     db: State<'_, Database>,
     store: State<'_, SystemStore>,
 ) -> Result<EventsFileSummary, AppError> {
-    let settings = store.get_app_settings()?;
-    settings.require_server_only()?;
+    let db = db.inner().clone();
+    let app_data_dir = store.app_data_dir().clone();
 
-    generate_events_msgpack(&db, &store)
+    tauri::async_runtime::spawn_blocking(move || {
+        let store = SystemStore::new(app_data_dir);
+        let settings = store.get_app_settings()?;
+        settings.require_server_only()?;
+
+        generate_events_msgpack(&db, &store)
+    })
+    .await
+    .map_err(|e| AppError::Generic(format!("Falha interna ao gerar events.msgpack: {}", e)))?
 }
 
 #[tauri::command]
-pub fn generate_snapshot_file(
+pub async fn generate_snapshot_file(
     db: State<'_, Database>,
     store: State<'_, SystemStore>,
 ) -> Result<SnapshotFileSummary, AppError> {
-    let settings = store.get_app_settings()?;
-    settings.require_server_only()?;
+    let db = db.inner().clone();
+    let app_data_dir = store.app_data_dir().clone();
 
-    generate_snapshot_msgpack(&db, &store)
+    tauri::async_runtime::spawn_blocking(move || {
+        let store = SystemStore::new(app_data_dir);
+        let settings = store.get_app_settings()?;
+        settings.require_server_only()?;
+
+        generate_snapshot_msgpack(&db, &store)
+    })
+    .await
+    .map_err(|e| AppError::Generic(format!("Falha interna ao gerar snapshot.msgpack: {}", e)))?
 }
 
 #[tauri::command]

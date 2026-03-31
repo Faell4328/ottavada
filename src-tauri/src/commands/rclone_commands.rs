@@ -1,6 +1,7 @@
 use crate::domain::errors::AppError;
 use crate::infrastructure::store::SystemStore;
 use std::process::Command;
+use std::time::Instant;
 use tauri::State;
 use tracing::{error, info};
 
@@ -37,6 +38,34 @@ fn configure_no_window_command(cmd: Command) -> Command {
     {
         cmd
     }
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RcloneSyncDirection {
+    Upload,
+    Download,
+}
+
+impl RcloneSyncDirection {
+    fn from_str(value: &str) -> Result<Self, AppError> {
+        match value {
+            "upload" => Ok(Self::Upload),
+            "download" => Ok(Self::Download),
+            _ => Err(AppError::Generic(format!(
+                "Direção de sync inválida: {}. Use 'upload' ou 'download'",
+                value
+            ))),
+        }
+    }
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct RcloneSyncSummary {
+    pub direction: String,
+    pub source: String,
+    pub destination: String,
+    pub duration_ms: u128,
 }
 
 /// Testa a conexão com um remote do rclone
@@ -170,6 +199,126 @@ pub fn upload_with_rclone(
         error!("Falha no upload rclone: {}", stderr);
         Err(AppError::Generic(format!("Falha no upload: {}", stderr)))
     }
+}
+
+/// Sincroniza a pasta local `/nuvem` com o remote configurado no rclone usando `rclone sync`.
+///
+/// Sempre utiliza os parâmetros exigidos pelo projeto:
+/// - `--rc`
+/// - `--rc-addr=127.0.0.1:5572`
+/// - `--transfers=10`
+#[tauri::command]
+pub async fn sync_cloud_with_rclone(
+    store: State<'_, SystemStore>,
+    direction: String,
+) -> Result<RcloneSyncSummary, AppError> {
+    let app_data_dir = store.app_data_dir().clone();
+
+    tauri::async_runtime::spawn_blocking(move || {
+        let store = SystemStore::new(app_data_dir);
+        sync_cloud_with_rclone_impl(&store, &direction)
+    })
+    .await
+    .map_err(|e| AppError::Generic(format!("Falha interna ao sincronizar com rclone: {}", e)))?
+}
+
+fn sync_cloud_with_rclone_impl(
+    store: &SystemStore,
+    direction: &str,
+) -> Result<RcloneSyncSummary, AppError> {
+    let sync_direction = RcloneSyncDirection::from_str(direction.trim())?;
+
+    let settings = store.get_app_settings()?;
+    let rclone_config = settings
+        .rclone_config
+        .ok_or_else(|| AppError::Generic("Configuração do rclone não encontrada".to_string()))?;
+
+    let clean_remote_path = rclone_config
+        .path
+        .trim()
+        .trim_start_matches('/')
+        .trim_end_matches('/');
+
+    let remote_target = if clean_remote_path.is_empty() {
+        format!("{}:", rclone_config.remote)
+    } else {
+        format!("{}:{}", rclone_config.remote, clean_remote_path)
+    };
+
+    let cloud_local_dir = store.app_data_dir().join("nuvem");
+    std::fs::create_dir_all(&cloud_local_dir)
+        .map_err(|e| AppError::Generic(format!("Erro ao preparar pasta local da nuvem: {}", e)))?;
+
+    let local_target = cloud_local_dir.to_string_lossy().to_string();
+
+    let (source, destination, direction_label) = match sync_direction {
+        RcloneSyncDirection::Upload => {
+            (local_target.clone(), remote_target.clone(), "upload".to_string())
+        }
+        RcloneSyncDirection::Download => {
+            (remote_target.clone(), local_target.clone(), "download".to_string())
+        }
+    };
+
+    info!(
+        "Iniciando rclone sync [{}]: {} -> {}",
+        direction_label, source, destination
+    );
+
+    let started_at = Instant::now();
+
+    let execute_sync = || -> Result<std::process::Output, AppError> {
+        let mut cmd = configure_no_window_command(Command::new(get_rclone_command()));
+        cmd.args(&[
+            "sync",
+            &source,
+            &destination,
+            "--rc",
+            "--rc-addr=127.0.0.1:5572",
+            "--transfers=10",
+        ])
+        .output()
+        .map_err(|e| {
+            error!("Erro ao executar rclone sync: {:?}", e);
+            AppError::Generic(format!("Erro ao executar rclone sync: {}", e))
+        })
+    };
+
+    let mut output = execute_sync()?;
+    if !output.status.success() {
+        let first_stderr = String::from_utf8_lossy(&output.stderr);
+        error!(
+            "Falha na 1a tentativa do rclone sync [{}]: {}",
+            direction_label, first_stderr
+        );
+        info!(
+            "Tentando novamente rclone sync [{}] por falha transitória",
+            direction_label
+        );
+        output = execute_sync()?;
+    }
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        error!("Falha no rclone sync [{}]: {}", direction_label, stderr);
+        return Err(AppError::Generic(format!(
+            "Falha no rclone sync ({}): {}",
+            direction_label, stderr
+        )));
+    }
+
+    let duration_ms = started_at.elapsed().as_millis();
+    info!(
+        "✓ rclone sync [{}] concluído em {}ms",
+        direction_label, duration_ms
+    );
+
+    Ok(RcloneSyncSummary {
+        direction: direction_label,
+        source,
+        destination,
+        duration_ms,
+    })
 }
 
 /// Faz um teste completo de upload com rclone

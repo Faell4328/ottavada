@@ -13,10 +13,22 @@ use crate::services::indexer::{get_file_metadata, FileChangeDetector};
 /// Se um arquivo não foi encontrado, o status é mudado para not_found
 /// Se um arquivo not_found é encontrado novamente, o status volta para main
 #[tauri::command]
-pub fn scan_files_for_changes(
+pub async fn scan_files_for_changes(
     db: State<'_, Database>,
     store: State<'_, SystemStore>,
 ) -> Result<ScanResult, AppError> {
+    let db = db.inner().clone();
+    let app_data_dir = store.app_data_dir().clone();
+
+    tauri::async_runtime::spawn_blocking(move || {
+        let store = SystemStore::new(app_data_dir);
+        scan_files_for_changes_impl(&db, &store)
+    })
+    .await
+    .map_err(|e| AppError::Generic(format!("Falha interna ao verificar alterações: {}", e)))?
+}
+
+fn scan_files_for_changes_impl(db: &Database, store: &SystemStore) -> Result<ScanResult, AppError> {
     info!("Iniciando verificação de alterações nos arquivos de partituras");
 
     let settings = store.get_app_settings()?;
