@@ -268,3 +268,17 @@ export interface EventsFileSummary {
 export async function generateEventsFile(): Promise<EventsFileSummary> {
   return invoke("generate_events_file");
 }
+
+export interface SnapshotFileSummary {
+  output_path: string;
+  file_size: number;
+  generated_at: number;
+  songs_count: number;
+  scores_count: number;
+  categories_count: number;
+  cleared_changed_fields: number;
+}
+
+export async function generateSnapshotFile(): Promise<SnapshotFileSummary> {
+  return invoke("generate_snapshot_file");
+}

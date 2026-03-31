@@ -6,6 +6,7 @@ use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
 use crate::services::backup_songs_service::{generate_song_archives, SongArchiveSummary};
 use crate::services::events_service::{generate_events_msgpack, EventsFileSummary};
+use crate::services::snapshot_service::{generate_snapshot_msgpack, SnapshotFileSummary};
 
 #[tauri::command]
 pub fn generate_song_archives_files(
@@ -31,4 +32,15 @@ pub fn generate_events_file(
     settings.require_server_only()?;
 
     generate_events_msgpack(&db, &store)
+}
+
+#[tauri::command]
+pub fn generate_snapshot_file(
+    db: State<'_, Database>,
+    store: State<'_, SystemStore>,
+) -> Result<SnapshotFileSummary, AppError> {
+    let settings = store.get_app_settings()?;
+    settings.require_server_only()?;
+
+    generate_snapshot_msgpack(&db, &store)
 }

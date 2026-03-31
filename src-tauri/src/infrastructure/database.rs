@@ -1302,6 +1302,13 @@ impl Database {
         let records: Result<Vec<_>, _> = rows.collect();
         Ok(records?)
     }
+
+    /// Remove todos os registros de changedField e retorna quantos foram removidos.
+    pub fn clear_changed_fields(&self) -> Result<usize, AppError> {
+        let conn = self.conn.lock().unwrap();
+        let deleted = conn.execute("DELETE FROM changedField", [])?;
+        Ok(deleted)
+    }
 }
 
 fn parse_datetime(s: &str) -> chrono::NaiveDateTime {

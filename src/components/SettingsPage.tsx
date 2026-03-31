@@ -24,6 +24,7 @@ export default function SettingsPage() {
   const [isTogglingType, setIsTogglingType] = useState(false);
   const [isChangeComputerTypeModalOpen, setIsChangeComputerTypeModalOpen] = useState(false);
   const [isTestingRclone, setIsTestingRclone] = useState(false);
+  const [isGeneratingSnapshot, setIsGeneratingSnapshot] = useState(false);
   const [rcloneRemote, setRcloneRemote] = useState("");
   const [rclonePath, setRclonePath] = useState("ScoreMaestro");
 
@@ -101,6 +102,32 @@ export default function SettingsPage() {
       toast.error("Erro ao salvar configurações");
     }
   }
+
+  async function handleForceSnapshot() {
+    if (settings.computer_type !== "Server") {
+      toast.error("A geração de snapshot é permitida apenas no servidor");
+      return;
+    }
+
+    setIsGeneratingSnapshot(true);
+    try {
+      const summary = await api.generateSnapshotFile();
+      await loadSettings();
+      toast.success(
+        `Snapshot gerado com sucesso (${summary.songs_count} música(s), ${summary.scores_count} partitura(s))`
+      );
+    } catch (error) {
+      toast.error(
+        `Erro ao gerar snapshot: ${error instanceof Error ? error.message : "Erro desconhecido"}`
+      );
+    } finally {
+      setIsGeneratingSnapshot(false);
+    }
+  }
+
+  const lastSnapshotLabel = settings.last_snapshot_timestamp
+    ? new Date(settings.last_snapshot_timestamp * 1000).toLocaleString("pt-BR")
+    : "Nunca gerado";
 
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-b from-[#edf1f6] via-[#f2f5fa] to-[#f8fafd] select-none">
@@ -191,6 +218,26 @@ export default function SettingsPage() {
             </button>
             <p className="text-xs text-[#8b9db2] mt-1">
               Clique para testar a conexão com o rclone. Um arquivo de teste será enviado.
+            </p>
+          </div>
+        </Section>
+
+        {/* Snapshot */}
+        <Section title="Snapshot">
+          <div>
+            <button
+              type="button"
+              onClick={handleForceSnapshot}
+              disabled={isGeneratingSnapshot || settings.computer_type !== "Server"}
+              className="h-9 px-4 rounded border border-[#c5cfdb] bg-white hover:bg-[#f2f5fa] text-sm font-medium text-[#344b61] disabled:opacity-50 transition-colors cursor-pointer"
+            >
+              {isGeneratingSnapshot ? "Gerando..." : "Forçar geração de snapshot"}
+            </button>
+            <p className="text-xs text-[#8b9db2] mt-1">
+              Gera manualmente o arquivo <code>snapshot.msgpack.zst</code>, ignorando a regra de 2MB.
+            </p>
+            <p className="text-xs text-[#8b9db2] mt-1">
+              Último snapshot: {lastSnapshotLabel}
             </p>
           </div>
         </Section>

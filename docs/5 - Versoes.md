@@ -120,8 +120,12 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [x] Adicionar a geração dos arquivos `{songId}.tar.zst`.
 - [x] Adicionar a função de `changedField` em todos os fluxos necessário (ex: adicionar música, partitura, editar, deletar, mudar status e etc e etc)
 - [x] Adicionar a geração de `events.msgpack`.
-- [ ] Adicionar a geração de `snapshot.msgpack`.
+- [x] Adicionar a geração de  `snapshot.msgpack`.
+	- [x] Adicionar botão para forçar a geração do `snapshot.msgpack` (configurações).
+! Ao força a geração do `snapshot.msgpack` ele deve só ignorar a regra do 2MB (forçando a geração).
 - [ ] Adicionar o `backup.msgpack`.
+	- [ ] Adicionar botão para exportar o `backup.msgpack` (configurações)
+	- [ ] Adicionar botão para importar o `backup.msgpack` (configurações)
 
 ## v0.6
 - [ ] Limitar as funcionalidades do front
