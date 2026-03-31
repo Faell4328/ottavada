@@ -45,7 +45,7 @@ struct ScoreArchiveEntry {
 }
 
 const SONGS_DIR_NAME: &str = "songs";
-const TEMP_DIR_NAME: &str = "temp";
+const TMP_DIR_NAME: &str = "tmp";
 const PROCESSING_STATUS: &str = "processing";
 
 fn should_generate_archive(row: &SongBackupRow, songs_dir: &Path) -> bool {
@@ -372,10 +372,11 @@ fn generate_archive_with_retry(
 
 pub fn generate_song_archives(
     db: &Database,
+    app_data_dir: &Path,
     cloud_root_dir: &Path,
 ) -> Result<SongArchiveSummary, AppError> {
     let songs_dir = cloud_root_dir.join(SONGS_DIR_NAME);
-    let temp_root = cloud_root_dir.join(TEMP_DIR_NAME).join(SONGS_DIR_NAME);
+    let temp_root = app_data_dir.join(TMP_DIR_NAME).join(SONGS_DIR_NAME);
 
     fs::create_dir_all(&songs_dir)?;
     fs::create_dir_all(&temp_root)?;

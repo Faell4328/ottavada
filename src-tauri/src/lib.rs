@@ -13,7 +13,7 @@ use tauri::Manager;
 use tracing::{info, warn};
 
 fn reset_temp_directory(app_data_dir: &Path) -> Result<(), std::io::Error> {
-    let temp_dir = app_data_dir.join("temp");
+    let temp_dir = app_data_dir.join("tmp");
 
     if temp_dir.exists() {
         std::fs::remove_dir_all(&temp_dir)?;
@@ -47,13 +47,13 @@ pub fn run() {
             if let Err(e) = reset_temp_directory(&app_data_dir) {
                 warn!(
                     "Falha ao limpar diretório temporário na inicialização ({}): {}",
-                    app_data_dir.join("temp").display(),
+                    app_data_dir.join("tmp").display(),
                     e
                 );
             } else {
                 info!(
                     "Diretório temporário limpo na inicialização: {}",
-                    app_data_dir.join("temp").display()
+                    app_data_dir.join("tmp").display()
                 );
             }
 

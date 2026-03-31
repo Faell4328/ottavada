@@ -29,7 +29,7 @@ pub async fn generate_song_archives_files(
         std::fs::create_dir_all(&cloud_root)
             .map_err(|e| AppError::Generic(format!("Erro ao preparar diretório cloud: {}", e)))?;
 
-        generate_song_archives(&db, &cloud_root)
+        generate_song_archives(&db, &app_data_dir, &cloud_root)
     })
     .await
     .map_err(|e| AppError::Generic(format!("Falha interna ao gerar arquivos das músicas: {}", e)))?

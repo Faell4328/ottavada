@@ -342,7 +342,7 @@ pub async fn open_file(
             .join("cloud")
             .join("songs")
             .join(format!("{}.tar.zst", song_id));
-        let temp_dir = app_data_dir.join("temp").join("scores");
+        let temp_dir = app_data_dir.join("tmp").join("scores");
 
         let extracted_path = extract_score_file_from_archive(&archive_path, &score_id, &temp_dir)?;
         let extracted_path_str = extracted_path.to_string_lossy().to_string();

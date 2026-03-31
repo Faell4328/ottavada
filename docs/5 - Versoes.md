@@ -148,7 +148,7 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [x] Atualizar o banco de dados, eventos e extensão do cliente.
 	- [x] Adicionar extensão no cliente, está como default `.score` (o que está horrível). Mostrar a extensão real.
 - [ ] Tirar a opção offline na página de primeiro acesso e no back.
-- [ ] Arrumar o diretório temporário não é `/cloud/tmp` é `/tmp`, igual na documentação.
+- [x] Arrumar o diretório temporário não é `/cloud/tmp` é `/tmp`, igual na documentação.
 ! Se não for dessa forma vai arquivo temporário para o cliente.
 - [ ] Arrumar a geração de snapshot (não está gerado)
 	- [ ] Verificar se está forçando o cliente a implementar o snapshot, igual a documentação
