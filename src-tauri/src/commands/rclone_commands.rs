@@ -358,20 +358,29 @@ fn sync_cloud_with_rclone_impl(
 /// - `Ok(())`: Teste completado com sucesso
 /// - `Err(AppError)`: Erro durante o teste
 #[tauri::command]
-pub fn test_rclone_upload(
+pub async fn test_rclone_upload(
     store: State<'_, SystemStore>,
     remote: String,
     path: String,
 ) -> Result<(), AppError> {
+    let app_data_dir = store.app_data_dir().clone();
+
+    tauri::async_runtime::spawn_blocking(move || {
+        let store = SystemStore::new(app_data_dir);
+        test_rclone_upload_impl(&store, &remote, &path)
+    })
+    .await
+    .map_err(|e| AppError::Generic(format!("Falha interna ao testar upload do rclone: {}", e)))?
+}
+
+fn test_rclone_upload_impl(store: &SystemStore, remote: &str, path: &str) -> Result<(), AppError> {
     info!(
         "Iniciando teste de upload com rclone: remote={}, path={}",
         remote, path
     );
 
-    let app_data_dir = store.app_data_dir();
-
     // Criar diretório de testes se não existir
-    let cloud_dir = ensure_cloud_dir(app_data_dir)?;
+    let cloud_dir = ensure_cloud_dir(store.app_data_dir())?;
 
     info!("Diretório de teste: {:?}", cloud_dir);
 

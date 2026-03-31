@@ -45,6 +45,7 @@ Será documentando em JSON, mas na aplicação real é utilizando `MessagePack`.
 		      "status": "main",
 		      // Quando foi atualizado por último
 		      "updatedAt": 1710684000,
+		      "extension": "extensão do arquivo"
 		      // Quem atualizou (implementando apenas na v1)
 		      //"updatedBy": "computerId",
 		      // Timestamp da última alteração do arquivo (implementando apenas na v1)
@@ -239,6 +240,8 @@ Será documentando em JSON, mas na aplicação real é utilizando `MessagePack`.
 	- booleano
 - `lastScoreFileModifiedAt` - OB (SC)
 	- timestamp da última alteração de algum arquivo de partitura.
+- `extension` - OB (SC)
+	- extensão do arquivo
 ```
 // NÃO SERÁ ADICIONADO ATÉ A VERSÃO V1 (apenas para documentação)
 - `updatedAt` - OB (SC)

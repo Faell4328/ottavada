@@ -103,7 +103,7 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - v0.4 - Casa limpa
 - v0.5 - Implementando as funcionalidades
 - v0.6 - Foco no `client`
-- v0.7 - Arrumando os bugs
+- v0.7 - Lapidando
 ## v0.4
 - [x] Atualizar bando de dados
 - [x] Atualizar `tauri-plugin-store`
@@ -143,11 +143,15 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 	- [x] Remover a opção "adicionar diretório" no overflow menu de uma música.
 	- [x] Regerar o `{songId}.tar.zst` quando uma nova partitura for adicionada a música.
 	- [x] Atualizar a lista da música quando uma nova partitura for adicionada a música.
-- [ ] Arrumar o testar rclone na página de primeiro acesso e configurações, para que seja assíncrono.
+- [x] Reduza a quantidade de toast do "verificar alterações". Principalmente no servidor que fala quantos eventos foram adicionados. Deixe apenas os toast importantes
+- [x] Arrumar o testar rclone na página de primeiro acesso e configurações, para que seja assíncrono.
+- [ ] Atualizar o banco de dados e os eventos.
+	- [ ] Adicionar extensão no cliente, está como default `.score` (o que está horrível). Mostrar a extensão real.
 - [ ] Arrumar o diretório temporário não é `/cloud/tmp` é `/tmp`, igual na documentação.
 ! Se não for dessa forma vai arquivo temporário para o cliente.
 - [ ] Arrumar a geração de snapshot (não está gerado)
 	- [ ] Verificar se está forçando o cliente a implementar o snapshot, igual a documentação
+- [ ] Adicionar a extensão no cliente.
 - [ ] Refatorar o front e back
 
 ## Funcionalidades para v2 (apenas rascunho/ideias)
@@ -157,4 +161,4 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - Adicionar uma camada de cibersegurança.
 	- No começo, ele será utilizado em uma orquestra local (onde sou o único com conhecimento em informática). Mas futuramente esse software pode abranger outras organizações.
 - Possível adição de um novo `type` de computador `semi-server`.
-- Embutir o `rclone` no projeto: `/src-tauri/bin/rclone.exe`
+- Embutir o `rclone` no projeto: `/src-tauri/bin/rclone.exe`.

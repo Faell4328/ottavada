@@ -410,20 +410,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
             payload: { total: 2, completed: 0, changedFiles: 0 },
           });
 
-          if (!isAutomatic) {
-            toast("Sincronizando atualizações da nuvem...", { icon: "☁️" });
-          }
-
           await api.syncCloudWithRclone("download");
 
           dispatch({
             type: "SET_SCAN_PROGRESS",
             payload: { total: 2, completed: 1, changedFiles: 0 },
           });
-
-          if (!isAutomatic) {
-            toast("Aplicando alterações do servidor...", { icon: "🧩" });
-          }
 
           const syncSummary = await api.applyServerChangesOnClient();
 
@@ -470,10 +462,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         };
 
         updateStepProgress(0);
-
-        if (!isAutomatic) {
-          toast("Consultando alterações na nuvem...", { icon: "☁️" });
-        }
         await api.syncCloudWithRclone("download");
         completedSteps += 1;
         updateStepProgress(0);
@@ -493,8 +481,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const notFoundCount = result.not_found_files?.length ?? 0;
         const generatedArchives = archiveSummary.generated ?? 0;
         const failedArchives = archiveSummary.failed ?? 0;
-        const generatedEventsCount = eventsSummary.events_count ?? 0;
-
         updateStepProgress(changedCount);
 
         if (eventsSummary.file_size >= 2 * 1024 * 1024) {
@@ -505,22 +491,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
             });
           }
         }
-
-        if (!isAutomatic) {
-          toast("Sincronizando alterações para a nuvem...", { icon: "☁️" });
-        }
         await api.syncCloudWithRclone("upload");
         completedSteps += 1;
         updateStepProgress(changedCount);
-
-        // Verificar se há arquivos recuperados (não mais not_found)
-        if (recoveredCount > 0) {
-          if (!isAutomatic) {
-            toast.success(
-              `✓ ${recoveredCount} arquivo(s) encontrado(s) novamente`
-            );
-          }
-        }
 
         // Verificar se há arquivos não encontrados (marcados como not_found)
         if (notFoundCount > 0) {
@@ -532,16 +505,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
           }
         }
 
-        if (changedCount > 0) {
-          if (!isAutomatic) {
-            toast.success(
-              `${changedCount} arquivo(s) alterado(s) detectado(s)`
-            );
-          }
-        } else if (!isAutomatic && recoveredCount === 0 && notFoundCount === 0) {
-          toast.success("Nenhuma alteração detectada");
-        }
-
         if (failedCount > 0) {
           if (!isAutomatic) {
             toast.error(
@@ -550,16 +513,35 @@ export function AppProvider({ children }: { children: ReactNode }) {
           }
         }
 
-        if (!isAutomatic && generatedArchives > 0) {
-          toast.success(`${generatedArchives} arquivo(s) .tar.zst gerado(s)`);
-        }
-
         if (!isAutomatic && failedArchives > 0) {
           toast.error(`${failedArchives} arquivo(s) .tar.zst falharam ao gerar`);
         }
 
         if (!isAutomatic) {
-          toast.success(`events.msgpack.zst atualizado com ${generatedEventsCount} evento(s)`);
+          const summaryParts: string[] = [];
+          if (changedCount > 0) {
+            summaryParts.push(`${changedCount} alterado(s)`);
+          }
+          if (recoveredCount > 0) {
+            summaryParts.push(`${recoveredCount} recuperado(s)`);
+          }
+          if (notFoundCount > 0) {
+            summaryParts.push(`${notFoundCount} não encontrado(s)`);
+          }
+          if (generatedArchives > 0) {
+            summaryParts.push(`${generatedArchives} arquivo(s) compactado(s)`);
+          }
+          const hasFailures = failedCount > 0 || failedArchives > 0;
+          const summaryText =
+            summaryParts.length > 0
+              ? `Verificação concluída: ${summaryParts.join(", ")}`
+              : "Verificação concluída sem alterações";
+
+          if (hasFailures) {
+            toast.error(`${summaryText}. Houve falhas durante o processo.`);
+          } else {
+            toast.success(summaryText);
+          }
         }
 
         if (changedCount > 0 || recoveredCount > 0 || notFoundCount > 0) {
