@@ -47,6 +47,20 @@ const SONGS_DIR_NAME: &str = "songs";
 const TEMP_DIR_NAME: &str = "temp";
 const PROCESSING_STATUS: &str = "processing";
 
+fn should_generate_archive(row: &SongBackupRow, songs_dir: &Path) -> bool {
+    let archive_exists = songs_dir.join(format!("{}.tar.zst", row.song_id)).is_file();
+
+    // Após importar backup.msgpack, o registro em backupSongs pode indicar "ok"
+    // mesmo quando o arquivo local ainda não existe. Nesse caso, deve gerar novamente.
+    if !archive_exists {
+        return true;
+    }
+
+    row.last_backup_at
+        .map(|last_backup| row.last_score_file_modified_at > last_backup)
+        .unwrap_or(true)
+}
+
 fn upsert_processing_status(db: &Database, song_id: &str) -> Result<(), AppError> {
     let conn = db.conn.lock().unwrap();
     let id = uuid::Uuid::new_v4().to_string();
@@ -333,10 +347,7 @@ pub fn generate_song_archives(
             continue;
         }
 
-        let should_generate = row
-            .last_backup_at
-            .map(|last_backup| row.last_score_file_modified_at > last_backup)
-            .unwrap_or(true);
+        let should_generate = should_generate_archive(&row, &songs_dir);
 
         if !should_generate {
             if let Err(err) = update_backup_status(db, &row.song_id, "ok", row.last_backup_at, None)
@@ -426,4 +437,65 @@ pub fn generate_song_archives(
         failed,
         results,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use tempfile::tempdir;
+
+    use super::{should_generate_archive, SongBackupRow};
+
+    #[test]
+    fn generates_when_archive_is_missing_even_if_last_backup_is_up_to_date() {
+        let temp = tempdir().expect("temp dir");
+        let songs_dir = temp.path().join("songs");
+        std::fs::create_dir_all(&songs_dir).expect("create songs dir");
+
+        let row = SongBackupRow {
+            song_id: "song-1".to_string(),
+            song_name: "Musica".to_string(),
+            last_score_file_modified_at: 100,
+            last_backup_at: Some(100),
+        };
+
+        assert!(should_generate_archive(&row, &songs_dir));
+    }
+
+    #[test]
+    fn skips_when_archive_exists_and_last_backup_is_up_to_date() {
+        let temp = tempdir().expect("temp dir");
+        let songs_dir = temp.path().join("songs");
+        std::fs::create_dir_all(&songs_dir).expect("create songs dir");
+
+        let row = SongBackupRow {
+            song_id: "song-2".to_string(),
+            song_name: "Musica".to_string(),
+            last_score_file_modified_at: 100,
+            last_backup_at: Some(100),
+        };
+
+        let archive_path = songs_dir.join("song-2.tar.zst");
+        std::fs::write(&archive_path, b"already generated").expect("create archive placeholder");
+
+        assert!(!should_generate_archive(&row, &songs_dir));
+    }
+
+    #[test]
+    fn generates_when_last_score_is_newer_than_last_backup() {
+        let temp = tempdir().expect("temp dir");
+        let songs_dir = temp.path().join("songs");
+        std::fs::create_dir_all(&songs_dir).expect("create songs dir");
+
+        let row = SongBackupRow {
+            song_id: "song-3".to_string(),
+            song_name: "Musica".to_string(),
+            last_score_file_modified_at: 200,
+            last_backup_at: Some(100),
+        };
+
+        let archive_path = songs_dir.join("song-3.tar.zst");
+        std::fs::write(&archive_path, b"old archive").expect("create archive placeholder");
+
+        assert!(should_generate_archive(&row, &songs_dir));
+    }
 }
