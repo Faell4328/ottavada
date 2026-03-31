@@ -1,10 +1,11 @@
 use chrono::Local;
+use std::fs::{self, File};
 use std::path::Path;
 use tauri::State;
 use tracing::{error, info, warn};
 
 use crate::domain::errors::AppError;
-use crate::domain::models::OperationGuard;
+use crate::domain::models::{ComputerType, OperationGuard};
 use crate::domain::models::*;
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
@@ -71,6 +72,152 @@ fn read_score_file_metadata(path: &Path) -> Result<(u64, chrono::NaiveDateTime),
         error!("Erro ao obter metadados do arquivo: {:?}", e);
         AppError::Generic(format!("Erro ao ler arquivo: {}", e))
     })
+}
+
+fn open_path_on_system(file_path: &str) -> Result<(), AppError> {
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("cmd")
+            .args(&["/C", "start", "", file_path])
+            .spawn()
+            .map_err(|e| AppError::Generic(format!("Erro ao abrir arquivo: {}", e)))?;
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(file_path)
+            .spawn()
+            .map_err(|e| AppError::Generic(format!("Erro ao abrir arquivo: {}", e)))?;
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(file_path)
+            .spawn()
+            .map_err(|e| AppError::Generic(format!("Erro ao abrir arquivo: {}", e)))?;
+    }
+
+    Ok(())
+}
+
+fn extract_score_file_from_archive(
+    archive_path: &Path,
+    score_id: &str,
+    destination_dir: &Path,
+) -> Result<std::path::PathBuf, AppError> {
+    if !archive_path.is_file() {
+        return Err(AppError::Generic(format!(
+            "Arquivo compactado da música não encontrado: {}",
+            archive_path.display()
+        )));
+    }
+
+    fs::create_dir_all(destination_dir).map_err(|e| {
+        AppError::Generic(format!(
+            "Erro ao criar diretório temporário para abrir partitura: {}",
+            e
+        ))
+    })?;
+
+    let archive_file = File::open(archive_path).map_err(|e| {
+        AppError::Generic(format!(
+            "Erro ao abrir arquivo compactado {}: {}",
+            archive_path.display(),
+            e
+        ))
+    })?;
+
+    let decoder = zstd::stream::read::Decoder::new(archive_file).map_err(|e| {
+        AppError::Generic(format!(
+            "Erro ao descompactar arquivo {}: {}",
+            archive_path.display(),
+            e
+        ))
+    })?;
+
+    let mut archive = tar::Archive::new(decoder);
+    let mut entries = archive.entries().map_err(|e| {
+        AppError::Generic(format!(
+            "Erro ao listar arquivos do pacote {}: {}",
+            archive_path.display(),
+            e
+        ))
+    })?;
+
+    while let Some(entry_result) = entries.next() {
+        let mut entry = entry_result.map_err(|e| {
+            AppError::Generic(format!(
+                "Erro ao ler entrada do pacote {}: {}",
+                archive_path.display(),
+                e
+            ))
+        })?;
+
+        if !entry.header().entry_type().is_file() {
+            continue;
+        }
+
+        let entry_path = entry.path().map_err(|e| {
+            AppError::Generic(format!(
+                "Erro ao ler caminho dentro do pacote {}: {}",
+                archive_path.display(),
+                e
+            ))
+        })?;
+
+        let file_name = match entry_path.file_name().and_then(|name| name.to_str()) {
+            Some(name) => name,
+            None => continue,
+        };
+
+        let path_for_name = Path::new(file_name);
+        let file_stem = path_for_name.file_stem().and_then(|stem| stem.to_str());
+        let is_target = file_stem == Some(score_id) || file_name == score_id;
+
+        if !is_target {
+            continue;
+        }
+
+        let extension = path_for_name
+            .extension()
+            .and_then(|ext| ext.to_str())
+            .unwrap_or("");
+
+        let output_name = if extension.is_empty() {
+            score_id.to_string()
+        } else {
+            format!("{}.{}", score_id, extension)
+        };
+
+        let output_path = destination_dir.join(output_name);
+        if output_path.exists() {
+            fs::remove_file(&output_path).map_err(|e| {
+                AppError::Generic(format!(
+                    "Erro ao limpar arquivo temporário {}: {}",
+                    output_path.display(),
+                    e
+                ))
+            })?;
+        }
+
+        entry.unpack(&output_path).map_err(|e| {
+            AppError::Generic(format!(
+                "Erro ao extrair partitura para {}: {}",
+                output_path.display(),
+                e
+            ))
+        })?;
+
+        return Ok(output_path);
+    }
+
+    Err(AppError::Generic(format!(
+        "Partitura '{}' não encontrada dentro do pacote {}",
+        score_id,
+        archive_path.display()
+    )))
 }
 
 #[tauri::command]
@@ -181,34 +328,29 @@ pub fn add_scores_to_song(
 }
 
 #[tauri::command]
-pub async fn open_file(db: State<'_, Database>, score_id: String) -> Result<(), AppError> {
+pub async fn open_file(
+    db: State<'_, Database>,
+    store: State<'_, SystemStore>,
+    score_id: String,
+) -> Result<(), AppError> {
+    let settings = store.get_app_settings()?;
+
+    if settings.computer_type == ComputerType::Client {
+        let song_id = db.get_song_id_for_score(&score_id)?;
+        let app_data_dir = store.app_data_dir().clone();
+        let archive_path = app_data_dir
+            .join("cloud")
+            .join("songs")
+            .join(format!("{}.tar.zst", song_id));
+        let temp_dir = app_data_dir.join("temp").join("scores");
+
+        let extracted_path = extract_score_file_from_archive(&archive_path, &score_id, &temp_dir)?;
+        let extracted_path_str = extracted_path.to_string_lossy().to_string();
+        return open_path_on_system(&extracted_path_str);
+    }
+
     let file_path = db.get_score_file_path(&score_id)?;
-
-    #[cfg(target_os = "windows")]
-    {
-        std::process::Command::new("cmd")
-            .args(&["/C", "start", "", &file_path])
-            .spawn()
-            .map_err(|e| AppError::Generic(format!("Erro ao abrir arquivo: {}", e)))?;
-    }
-
-    #[cfg(target_os = "macos")]
-    {
-        std::process::Command::new("open")
-            .arg(&file_path)
-            .spawn()
-            .map_err(|e| AppError::Generic(format!("Erro ao abrir arquivo: {}", e)))?;
-    }
-
-    #[cfg(target_os = "linux")]
-    {
-        std::process::Command::new("xdg-open")
-            .arg(&file_path)
-            .spawn()
-            .map_err(|e| AppError::Generic(format!("Erro ao abrir arquivo: {}", e)))?;
-    }
-
-    Ok(())
+    open_path_on_system(&file_path)
 }
 
 #[tauri::command]
@@ -277,4 +419,68 @@ pub fn delete_score(
             error!("Erro ao deletar partitura: {:?}", e);
             e
         })
+}
+
+#[cfg(test)]
+mod tests {
+    use std::fs;
+    use std::path::Path;
+
+    use tempfile::tempdir;
+
+    use super::extract_score_file_from_archive;
+
+    fn write_test_tar_zst(archive_path: &Path, files: &[(&str, &[u8])]) {
+        let archive_file = fs::File::create(archive_path).expect("create archive file");
+        let mut encoder =
+            zstd::stream::Encoder::new(archive_file, 3).expect("create zstd encoder");
+
+        {
+            let mut builder = tar::Builder::new(&mut encoder);
+            for (name, bytes) in files {
+                let mut header = tar::Header::new_gnu();
+                header.set_size(bytes.len() as u64);
+                header.set_mode(0o644);
+                header.set_cksum();
+                builder
+                    .append_data(&mut header, *name, &bytes[..])
+                    .expect("append tar entry");
+            }
+            builder.finish().expect("finish tar");
+        }
+
+        encoder.finish().expect("finish zstd");
+    }
+
+    #[test]
+    fn extracts_target_score_from_song_archive() {
+        let dir = tempdir().expect("temp dir");
+        let archive_path = dir.path().join("song-1.tar.zst");
+        write_test_tar_zst(
+            &archive_path,
+            &[("score-a.musx", b"A"), ("score-b.pdf", b"B")],
+        );
+
+        let output_dir = dir.path().join("out");
+        let extracted =
+            extract_score_file_from_archive(&archive_path, "score-b", &output_dir).expect("extract");
+
+        assert_eq!(
+            extracted.file_name().and_then(|name| name.to_str()),
+            Some("score-b.pdf")
+        );
+        assert_eq!(fs::read_to_string(extracted).expect("read file"), "B");
+    }
+
+    #[test]
+    fn returns_error_when_score_is_missing_in_archive() {
+        let dir = tempdir().expect("temp dir");
+        let archive_path = dir.path().join("song-2.tar.zst");
+        write_test_tar_zst(&archive_path, &[("score-a.musx", b"A")]);
+
+        let output_dir = dir.path().join("out");
+        let result = extract_score_file_from_archive(&archive_path, "score-z", &output_dir);
+
+        assert!(result.is_err());
+    }
 }

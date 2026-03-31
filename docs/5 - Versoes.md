@@ -131,9 +131,10 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 ## v0.6
 - [x] Sincronização do rclone na Nuvem
 - [x] Consultar e implementar as alterações do servidor no cliente
-- [ ] Corrigir cliente
-	- [ ] Não é para aparecer os opções no overflow menu e tirar essa merda de texto: "não permitido para cliente"
-	- [ ] Adicionar fluxo para abrir a partitura localmente, como especificado
+- [x] Corrigir cliente
+	- [x] Não é para aparecer os opções no overflow menu e tirar essa merda de texto: "não permitido para cliente"
+	- [x] Adicionar fluxo para abrir a partitura localmente, como especificado
+- [x] Limpar o diretório `/tmp` ao iniciar o aplicativo
 - [ ] Implementar função para abrir a partitura no cliente
 - [ ] Refatorar o front e back
 

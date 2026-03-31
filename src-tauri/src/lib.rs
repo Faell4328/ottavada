@@ -6,10 +6,22 @@ mod services;
 
 use infrastructure::database::Database;
 use infrastructure::store::SystemStore;
+use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tauri::Manager;
-use tracing::info;
+use tracing::{info, warn};
+
+fn reset_temp_directory(app_data_dir: &Path) -> Result<(), std::io::Error> {
+    let temp_dir = app_data_dir.join("temp");
+
+    if temp_dir.exists() {
+        std::fs::remove_dir_all(&temp_dir)?;
+    }
+
+    std::fs::create_dir_all(&temp_dir)?;
+    Ok(())
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -31,6 +43,19 @@ pub fn run() {
 
             // Inicializar logger
             logger::init_logger(&app_data_dir).expect("Não foi possível inicializar o logger");
+
+            if let Err(e) = reset_temp_directory(&app_data_dir) {
+                warn!(
+                    "Falha ao limpar diretório temporário na inicialização ({}): {}",
+                    app_data_dir.join("temp").display(),
+                    e
+                );
+            } else {
+                info!(
+                    "Diretório temporário limpo na inicialização: {}",
+                    app_data_dir.join("temp").display()
+                );
+            }
 
             info!("Aplicação iniciada");
             info!("Diretório de dados: {:?}", app_data_dir);

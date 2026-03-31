@@ -40,12 +40,6 @@ function SongRow({
   const confirmation = useConfirmation();
   const author = [song.composer, song.arranger].filter(Boolean).join(" / ");
   const isClient = computerType === "Client";
-  const blockedClientMessage = "Operação não permitida para cliente";
-
-  const handleClientBlockedAction = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    toast.error(blockedClientMessage);
-  };
 
   const handleMenuAction = (e: React.MouseEvent, action: () => void) => {
     e.stopPropagation();
@@ -91,36 +85,18 @@ function SongRow({
         <td className="px-3.5 py-2">
           <div className="flex items-center justify-between">
             <span className="text-[#5c7089]">—</span>
-            <ContextMenu
-              isOpen={isMenuOpen}
-              onToggle={(e) => {
-                e.stopPropagation();
-                isMenuOpen ? onMenuClose() : onMenuOpen(menuId);
-              }}
-            >
-              {isClient ? (
-                <ContextMenuItem
-                  label="Favoritar (não permitido para cliente)"
-                  onClick={handleClientBlockedAction}
-                />
-              ) : (
+            {!isClient && (
+              <ContextMenu
+                isOpen={isMenuOpen}
+                onToggle={(e) => {
+                  e.stopPropagation();
+                  isMenuOpen ? onMenuClose() : onMenuOpen(menuId);
+                }}
+              >
                 <ContextMenuItem
                   label={song.is_favorite ? "Remover de favoritos" : "Adicionar aos favoritos"}
                   onClick={(e) => handleMenuAction(e, onToggleFavorite)}
                 />
-              )}
-              {isClient ? (
-                <>
-                  <ContextMenuItem
-                    label="Adicionar arquivo (não permitido)"
-                    onClick={handleClientBlockedAction}
-                  />
-                  <ContextMenuItem
-                    label="Adicionar diretório (não permitido)"
-                    onClick={handleClientBlockedAction}
-                  />
-                </>
-              ) : (
                 <>
                   <ContextMenuItem
                     label="Adicionar arquivo"
@@ -131,32 +107,17 @@ function SongRow({
                     onClick={(e) => handleMenuAction(e, onAddDirectory)}
                   />
                 </>
-              )}
-              {isClient ? (
-                <ContextMenuItem
-                  label="Editar (não permitido para cliente)"
-                  onClick={handleClientBlockedAction}
-                />
-              ) : (
                 <ContextMenuItem
                   label="Editar"
                   onClick={(e) => handleMenuAction(e, onEdit)}
                 />
-              )}
-              {isClient ? (
-                <ContextMenuItem
-                  label="Deletar (não permitido para cliente)"
-                  onClick={handleClientBlockedAction}
-                  isLast
-                />
-              ) : (
                 <ContextMenuItem
                   label="Deletar"
                   onClick={(e) => { e.stopPropagation(); handleDelete(); }}
                   isLast
                 />
-              )}
-            </ContextMenu>
+              </ContextMenu>
+            )}
           </div>
         </td>
       </tr>

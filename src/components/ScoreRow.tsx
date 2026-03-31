@@ -159,24 +159,13 @@ function ScoreRow({
                     onClick={(e) => { e.stopPropagation(); handleSetAsMain(); }}
                   />
                 )}
-                {isClient ? (
-                  <ContextMenuItem
-                    label="Editar (não permitido para cliente)"
-                    onClick={(e) => { e.stopPropagation(); toast.error("Operação não permitida para cliente"); }}
-                  />
-                ) : (
+                {!isClient && (
                   <ContextMenuItem
                     label="Editar"
                     onClick={(e) => { e.stopPropagation(); onEdit(); onMenuClose(); }}
                   />
                 )}
-                {isClient ? (
-                  <ContextMenuItem
-                    label="Deletar (não permitido para cliente)"
-                    onClick={(e) => { e.stopPropagation(); toast.error("Operação não permitida para cliente"); }}
-                    isLast
-                  />
-                ) : (
+                {!isClient && (
                   <ContextMenuItem
                     label="Deletar"
                     onClick={(e) => { e.stopPropagation(); handleDelete(); }}
