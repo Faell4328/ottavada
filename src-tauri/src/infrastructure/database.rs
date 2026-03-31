@@ -695,15 +695,18 @@ impl Database {
     pub fn delete_score(&self, score_id: &str) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
 
-        conn.query_row(
-            "SELECT id FROM scores WHERE id = ?1",
+        let song_id: String = conn
+            .query_row(
+            "SELECT song_id FROM scores WHERE id = ?1",
             params![score_id],
             |row| row.get::<_, String>(0),
         )
-        .map_err(|e| match e {
-            rusqlite::Error::QueryReturnedNoRows => AppError::ScoreNotFound(score_id.to_string()),
-            other => AppError::Database(other),
-        })?;
+            .map_err(|e| match e {
+                rusqlite::Error::QueryReturnedNoRows => {
+                    AppError::ScoreNotFound(score_id.to_string())
+                }
+                other => AppError::Database(other),
+            })?;
 
         let affected = conn.execute("DELETE FROM scores WHERE id = ?1", params![score_id])?;
         if affected == 0 {
@@ -711,6 +714,19 @@ impl Database {
         }
 
         Self::insert_changed_field(&conn, "delete", "scores", score_id, None, None, None)?;
+
+        // Deletar uma partitura precisa invalidar o último backup da música,
+        // forçando a regeneração do arquivo {songId}.tar.zst no próximo ciclo.
+        let backup_status_id = uuid::Uuid::new_v4().to_string();
+        conn.execute(
+            "INSERT INTO backupSongs (id, song_id, status, last_backup_at, error_message)
+             VALUES (?1, ?2, 'processing', NULL, NULL)
+             ON CONFLICT(song_id) DO UPDATE SET
+                status = 'processing',
+                last_backup_at = NULL,
+                error_message = NULL",
+            params![backup_status_id, song_id],
+        )?;
 
         Ok(())
     }

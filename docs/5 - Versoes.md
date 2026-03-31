@@ -136,9 +136,9 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [x] Corrigindo o problema de estar enviando partitura "draft" para a nuvem
 
 ## v0.7
-- [ ] Quando clicar em "verificar alterações" e não tiver internet, deve emitir um toast avisando.
-- [ ] Corrigir problema de não deletar o arquivo de partitura ao deletar a música/partituras no aplicativo.
-- [ ] Corrigir problema de não gerar o `{songId}.tar.zst` ao deletar uma partitura da música.
+- [x] Quando clicar em "verificar alterações" e não tiver internet, deve emitir um toast avisando.
+- [x] Corrigir problema de não deletar o arquivo de partitura ao deletar a música/partituras no aplicativo.
+- [x] Corrigir problema de não gerar o `{songId}.tar.zst` ao deletar uma partitura da música.
 - [ ] Arrumar o diretório temporário não é `/cloud/tmp` é `/tmp`, igual na documentação.
 ! Se não for dessa forma vai arquivo temporário para o cliente.
 - [ ] Arrumar a geração de snapshot (não está gerado)

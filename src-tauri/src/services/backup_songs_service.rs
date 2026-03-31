@@ -1,5 +1,6 @@
 use std::ffi::OsString;
 use std::fs::{self, File};
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
 use rusqlite::params;
@@ -282,6 +283,44 @@ fn remove_dir_if_exists(path: &Path) {
     }
 }
 
+fn cleanup_orphan_archives(songs_dir: &Path, rows: &[SongBackupRow]) -> Result<usize, AppError> {
+    let valid_song_ids: HashSet<&str> = rows.iter().map(|row| row.song_id.as_str()).collect();
+    let mut removed_count = 0usize;
+
+    for entry in fs::read_dir(songs_dir)? {
+        let path = entry?.path();
+        if !path.is_file() {
+            continue;
+        }
+
+        let file_name = match path.file_name().and_then(|name| name.to_str()) {
+            Some(name) => name,
+            None => continue,
+        };
+
+        if !file_name.ends_with(".tar.zst") {
+            continue;
+        }
+
+        let Some(song_id) = file_name.strip_suffix(".tar.zst") else {
+            continue;
+        };
+
+        if valid_song_ids.contains(song_id) {
+            continue;
+        }
+
+        fs::remove_file(&path)?;
+        removed_count += 1;
+        info!(
+            "Arquivo órfão removido do cache local da nuvem: {}",
+            path.display()
+        );
+    }
+
+    Ok(removed_count)
+}
+
 fn generate_archive_with_retry(
     db: &Database,
     song_id: &str,
@@ -342,6 +381,15 @@ pub fn generate_song_archives(
     fs::create_dir_all(&temp_root)?;
 
     let rows = list_song_backup_rows(db)?;
+
+    let removed_orphans = cleanup_orphan_archives(&songs_dir, &rows)?;
+    if removed_orphans > 0 {
+        info!(
+            "Limpeza de arquivos órfãos concluída: {} arquivo(s) removido(s)",
+            removed_orphans
+        );
+    }
+
     let mut results = Vec::with_capacity(rows.len());
 
     for row in rows {
@@ -457,7 +505,7 @@ pub fn generate_song_archives(
 mod tests {
     use tempfile::tempdir;
 
-    use super::{should_generate_archive, SongBackupRow};
+    use super::{cleanup_orphan_archives, should_generate_archive, SongBackupRow};
 
     #[test]
     fn generates_when_archive_is_missing_even_if_last_backup_is_up_to_date() {
@@ -531,5 +579,45 @@ mod tests {
             .expect("create archive placeholder");
 
         assert!(!should_generate_archive(&row, &songs_dir));
+    }
+
+    #[test]
+    fn removes_orphan_archives_from_songs_dir() {
+        let temp = tempdir().expect("temp dir");
+        let songs_dir = temp.path().join("songs");
+        std::fs::create_dir_all(&songs_dir).expect("create songs dir");
+
+        std::fs::write(songs_dir.join("valid-song.tar.zst"), b"valid")
+            .expect("write valid archive");
+        std::fs::write(songs_dir.join("orphan-song.tar.zst"), b"orphan")
+            .expect("write orphan archive");
+
+        let rows = vec![SongBackupRow {
+            song_id: "valid-song".to_string(),
+            song_name: "Valid Song".to_string(),
+            last_uploadable_score_modified_at: Some(100),
+            last_backup_at: Some(100),
+        }];
+
+        let removed = cleanup_orphan_archives(&songs_dir, &rows).expect("cleanup archives");
+
+        assert_eq!(removed, 1);
+        assert!(songs_dir.join("valid-song.tar.zst").is_file());
+        assert!(!songs_dir.join("orphan-song.tar.zst").exists());
+    }
+
+    #[test]
+    fn ignores_non_archive_files_when_cleaning_orphans() {
+        let temp = tempdir().expect("temp dir");
+        let songs_dir = temp.path().join("songs");
+        std::fs::create_dir_all(&songs_dir).expect("create songs dir");
+
+        std::fs::write(songs_dir.join("notes.txt"), b"noop").expect("write notes file");
+
+        let rows = Vec::<SongBackupRow>::new();
+        let removed = cleanup_orphan_archives(&songs_dir, &rows).expect("cleanup archives");
+
+        assert_eq!(removed, 0);
+        assert!(songs_dir.join("notes.txt").is_file());
     }
 }

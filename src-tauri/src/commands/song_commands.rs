@@ -396,7 +396,24 @@ pub fn delete_song(
     settings.require_server_only()?;
 
     info!("Deletando música: {}", song_id);
+
     db.delete_song(&song_id)?;
+
+    let archive_path = store
+        .app_data_dir()
+        .join("cloud")
+        .join("songs")
+        .join(format!("{}.tar.zst", song_id));
+    if archive_path.is_file() {
+        std::fs::remove_file(&archive_path).map_err(|e| {
+            AppError::Generic(format!(
+                "Erro ao deletar arquivo compactado da música '{}': {}",
+                archive_path.display(),
+                e
+            ))
+        })?;
+    }
+
     info!("Música deletada com sucesso: {}", song_id);
     Ok(())
 }
