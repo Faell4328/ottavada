@@ -17,7 +17,6 @@ export default function FirstRunPage() {
   const [rclonePath, setRclonePath] = useState("ScoreMaestro");
   const [rcloneConfigured, setRcloneConfigured] = useState(false);
   const [isTestingRclone, setIsTestingRclone] = useState(false);
-  const [useOfflineMode, setUseOfflineMode] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -64,13 +63,13 @@ export default function FirstRunPage() {
     setStep("rclone-setup");
   }
 
-  async function handleOfflineMode() {
-    setUseOfflineMode(true);
-    setStep("confirm");
-  }
-
   async function handleWithRclone() {
-    if (!rcloneConfigured && rcloneRemote.trim()) {
+    if (!rcloneRemote.trim()) {
+      toast.error("Preencha o nome do remote do rclone");
+      return;
+    }
+
+    if (!rcloneConfigured) {
       toast.error("Teste a conexão com rclone antes de continuar");
       return;
     }
@@ -89,11 +88,9 @@ export default function FirstRunPage() {
   async function handleConfirm() {
     setIsLoading(true);
     try {
-      const rcloneJson = !useOfflineMode && rcloneRemote
-        ? JSON.stringify({ remote: rcloneRemote, path: rclonePath })
-        : null;
+      const rcloneJson = JSON.stringify({ remote: rcloneRemote, path: rclonePath });
 
-      await completeFirstRun(computerId, computerName.trim(), computerType, "rclone", null, rcloneJson);
+      await completeFirstRun(computerId, computerName.trim(), computerType, rcloneJson);
     } catch (error) {
       toast.error(`Erro: ${getErrorMessage(error)}`);
       setIsLoading(false);
@@ -252,12 +249,11 @@ export default function FirstRunPage() {
         {step === "rclone-setup" && (
           <>
             <h2 className="text-lg font-semibold text-[#34485d] mb-4">
-              Configure o Rclone (opcional)
+              Configure o Rclone
             </h2>
 
             <p className="text-sm text-[#6b849e] mb-6">
-              Rclone permite sincronizar seus backups com provedores em nuvem. 
-              Você pode configurar depois nas definições se preferir usar modo offline.
+              Rclone sincroniza seus backups com a nuvem. Configure e valide agora para concluir o primeiro acesso.
             </p>
 
             {/* Option 1: With Rclone */}
@@ -369,24 +365,9 @@ export default function FirstRunPage() {
               </button>
             </div>
 
-            {/* Option 2: Offline Mode */}
-            <div className="p-4 border border-[#c5cfdb] rounded-lg">
-              <h3 className="font-semibold text-[#34485d] mb-2">Modo Offline</h3>
-              <p className="text-xs text-[#6b849e] mb-4">
-                Use o aplicativo sem sincronização em nuvem. Você pode configurar 
-                depois nas definições.
-              </p>
-              <button
-                onClick={handleOfflineMode}
-                className="w-full h-10 rounded-lg bg-[#e8eef8] text-sm font-bold text-[#4f84d7] hover:bg-[#dce4f0] transition-colors cursor-pointer border-0"
-              >
-                Usar Offline
-              </button>
-            </div>
-
             <button
               onClick={() => setStep("type")}
-              className="w-full h-10 rounded-lg bg-white text-sm font-semibold text-[#4f84d7] border border-[#7ba0d4] hover:bg-[#f8fafd] transition-colors cursor-pointer mt-3"
+              className="w-full h-10 rounded-lg bg-white text-sm font-semibold text-[#4f84d7] border border-[#7ba0d4] hover:bg-[#f8fafd] transition-colors cursor-pointer mt-2"
             >
               Voltar
             </button>
@@ -425,17 +406,8 @@ export default function FirstRunPage() {
               <div className="p-4 bg-[#f8fafd] rounded-lg border border-[#c5cfdb]">
                 <p className="text-xs text-[#8b9db2] mb-1">Modo de sincronização</p>
                 <p className="text-sm font-semibold text-[#34485d]">
-                  {useOfflineMode ? (
-                    <>
-                      <span className="text-orange-600">Offline</span>
-                      <span className="text-xs text-[#6b849e]"> (sem sincronização em nuvem)</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="text-green-600">Rclone</span>
-                      <span className="text-xs text-[#6b849e]"> ({rcloneRemote})</span>
-                    </>
-                  )}
+                  <span className="text-green-600">Rclone</span>
+                  <span className="text-xs text-[#6b849e]"> ({rcloneRemote}:{rclonePath})</span>
                 </p>
               </div>
             </div>

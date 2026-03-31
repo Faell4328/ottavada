@@ -175,16 +175,12 @@ export async function completeFirstRun(
   computerId: string,
   computerName: string,
   computerType: string,
-  googleDriveMode: string,
-  googleServiceAccountJson?: string | null,
-  rcloneConfigJson?: string | null
+  rcloneConfigJson: string
 ): Promise<void> {
   return invoke("complete_first_run", {
     computerId,
     computerName,
     computerType,
-    googleDriveMode,
-    googleServiceAccountJson,
     rcloneConfigJson,
   });
 }
