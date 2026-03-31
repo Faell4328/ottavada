@@ -462,7 +462,8 @@ impl Database {
         Self::query_song_list_items(
             &conn,
             "SELECT id, name, composer, arranger, datetime('now') AS updated_at, is_favorite
-             FROM songs ORDER BY last_score_file_modified_at DESC",
+             FROM songs
+             ORDER BY name COLLATE NOCASE ASC, id ASC",
             &[],
         )
     }
@@ -472,7 +473,9 @@ impl Database {
         Self::query_song_list_items(
             &conn,
             "SELECT id, name, composer, arranger, datetime('now') AS updated_at, is_favorite
-             FROM songs WHERE is_favorite = 1 ORDER BY last_score_file_modified_at DESC",
+             FROM songs
+             WHERE is_favorite = 1
+             ORDER BY name COLLATE NOCASE ASC, id ASC",
             &[],
         )
     }
@@ -504,7 +507,7 @@ impl Database {
              WHERE s.name LIKE ?1
                 OR COALESCE(s.composer, '') LIKE ?1
                 OR COALESCE(s.arranger, '') LIKE ?1
-             ORDER BY s.last_score_file_modified_at DESC",
+             ORDER BY s.name COLLATE NOCASE ASC, s.id ASC",
             &[&like_query as &dyn rusqlite::ToSql],
         )
     }
@@ -517,7 +520,7 @@ impl Database {
              FROM songs s
              INNER JOIN categoriesSongs cs ON cs.song_id = s.id
              WHERE cs.category_id = ?1
-             ORDER BY s.last_score_file_modified_at DESC",
+             ORDER BY s.name COLLATE NOCASE ASC, s.id ASC",
             &[&category_id as &dyn rusqlite::ToSql],
         )
     }
@@ -530,7 +533,7 @@ impl Database {
              FROM songs s
              INNER JOIN scores sc ON sc.song_id = s.id
              WHERE sc.status = 'draft'
-             ORDER BY s.last_score_file_modified_at DESC",
+             ORDER BY s.name COLLATE NOCASE ASC, s.id ASC",
             &[],
         )
     }
@@ -544,7 +547,7 @@ impl Database {
              FROM songs s
              INNER JOIN scores sc ON sc.song_id = s.id
              WHERE sc.status = 'not_found'
-             ORDER BY s.last_score_file_modified_at DESC",
+             ORDER BY s.name COLLATE NOCASE ASC, s.id ASC",
             &[],
         )
     }
@@ -994,7 +997,7 @@ impl Database {
             "SELECT s.id, s.name, s.file_path, s.file_name, s.file_modified_at, s.status
              FROM scores s
              WHERE s.song_id = ?1
-             ORDER BY s.name",
+               ORDER BY COALESCE(s.name, s.file_name) COLLATE NOCASE ASC, s.id ASC",
         )?;
 
         let scores = stmt

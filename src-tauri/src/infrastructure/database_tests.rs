@@ -92,6 +92,19 @@ mod tests {
     }
 
     #[test]
+    fn test_get_all_songs_returns_alphabetical_order_case_insensitive() {
+        let db = make_db();
+        db.insert_song(&make_song("s1", "zeta"), &[]).unwrap();
+        db.insert_song(&make_song("s2", "Alpha"), &[]).unwrap();
+        db.insert_song(&make_song("s3", "beta"), &[]).unwrap();
+
+        let songs = db.get_all_songs().unwrap();
+        let names: Vec<&str> = songs.iter().map(|song| song.name.as_str()).collect();
+
+        assert_eq!(names, vec!["Alpha", "beta", "zeta"]);
+    }
+
+    #[test]
     fn test_get_song_by_id() {
         let db = make_db();
         db.insert_song(&make_song("s1", "Canon in D"), &[]).unwrap();
@@ -251,6 +264,63 @@ mod tests {
         let songs = db.get_all_songs().unwrap();
         assert_eq!(songs.len(), 1);
         assert_eq!(songs[0].scores.len(), 2);
+    }
+
+    #[test]
+    fn test_scores_are_returned_in_alphabetical_order() {
+        let db = make_db();
+        db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
+
+        let score_a = Score {
+            id: "sc-a".to_string(),
+            song_id: "s1".to_string(),
+            name: Some("Viola".to_string()),
+            host_id: "test-computer".to_string(),
+            file_path: "/tmp/music".to_string(),
+            file_name: "viola.pdf".to_string(),
+            file_size: 1024,
+            file_modified_at: now(),
+            updated_at: now(),
+            status: ScoreStatus::Main,
+            updated_by: "test-computer".to_string(),
+        };
+
+        let score_b = Score {
+            id: "sc-b".to_string(),
+            song_id: "s1".to_string(),
+            name: Some("clarinete".to_string()),
+            host_id: "test-computer".to_string(),
+            file_path: "/tmp/music".to_string(),
+            file_name: "clarinete.pdf".to_string(),
+            file_size: 1024,
+            file_modified_at: now(),
+            updated_at: now(),
+            status: ScoreStatus::Main,
+            updated_by: "test-computer".to_string(),
+        };
+
+        let score_c = Score {
+            id: "sc-c".to_string(),
+            song_id: "s1".to_string(),
+            name: None,
+            host_id: "test-computer".to_string(),
+            file_path: "/tmp/music".to_string(),
+            file_name: "Flauta.pdf".to_string(),
+            file_size: 1024,
+            file_modified_at: now(),
+            updated_at: now(),
+            status: ScoreStatus::Main,
+            updated_by: "test-computer".to_string(),
+        };
+
+        db.insert_score(&score_a).unwrap();
+        db.insert_score(&score_b).unwrap();
+        db.insert_score(&score_c).unwrap();
+
+        let songs = db.get_all_songs().unwrap();
+        let ordered_ids: Vec<&str> = songs[0].scores.iter().map(|score| score.id.as_str()).collect();
+
+        assert_eq!(ordered_ids, vec!["sc-b", "sc-c", "sc-a"]);
     }
 
     #[test]
