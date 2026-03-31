@@ -133,7 +133,12 @@ pub fn generate_snapshot_msgpack(
         .map_err(|e| AppError::Generic(format!("Erro ao finalizar snapshot.msgpack: {}", e)))?;
 
     let file_size = fs::metadata(&output_path)
-        .map_err(|e| AppError::Generic(format!("Erro ao obter metadados de snapshot.msgpack: {}", e)))?
+        .map_err(|e| {
+            AppError::Generic(format!(
+                "Erro ao obter metadados de snapshot.msgpack: {}",
+                e
+            ))
+        })?
         .len();
 
     let cleared_changed_fields = db.clear_changed_fields()?;
@@ -141,7 +146,10 @@ pub fn generate_snapshot_msgpack(
     let events_path = cloud_dir.join(EVENTS_DIR_NAME).join(EVENTS_FILE_NAME);
     if events_path.exists() {
         fs::remove_file(&events_path).map_err(|e| {
-            AppError::Generic(format!("Erro ao remover events.msgpack.zst após snapshot: {}", e))
+            AppError::Generic(format!(
+                "Erro ao remover events.msgpack.zst após snapshot: {}",
+                e
+            ))
         })?;
     }
 

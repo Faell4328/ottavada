@@ -282,3 +282,28 @@ export interface SnapshotFileSummary {
 export async function generateSnapshotFile(): Promise<SnapshotFileSummary> {
   return invoke("generate_snapshot_file");
 }
+
+export interface BackupFileSummary {
+  output_path: string;
+  file_size: number;
+  generated_at: number;
+  songs_count: number;
+  scores_count: number;
+  categories_count: number;
+}
+
+export interface BackupImportSummary {
+  input_path: string;
+  generated_at: number;
+  songs_count: number;
+  scores_count: number;
+  categories_count: number;
+}
+
+export async function exportBackupFile(outputPath?: string | null): Promise<BackupFileSummary> {
+  return invoke("export_backup_file", { outputPath: outputPath ?? null });
+}
+
+export async function importBackupFile(backupPath: string): Promise<BackupImportSummary> {
+  return invoke("import_backup_file", { backupPath });
+}

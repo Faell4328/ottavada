@@ -257,21 +257,22 @@ impl Database {
     pub fn update_song(&self, song: &Song, category_ids: &[String]) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
 
-        let original_song = conn.query_row(
-            "SELECT name, composer, arranger FROM songs WHERE id = ?1",
-            params![song.id],
-            |row| {
-                Ok((
-                    row.get::<_, String>(0)?,
-                    row.get::<_, Option<String>>(1)?,
-                    row.get::<_, Option<String>>(2)?,
-                ))
-            },
-        )
-        .map_err(|e| match e {
-            rusqlite::Error::QueryReturnedNoRows => AppError::SongNotFound(song.id.clone()),
-            other => AppError::Database(other),
-        })?;
+        let original_song = conn
+            .query_row(
+                "SELECT name, composer, arranger FROM songs WHERE id = ?1",
+                params![song.id],
+                |row| {
+                    Ok((
+                        row.get::<_, String>(0)?,
+                        row.get::<_, Option<String>>(1)?,
+                        row.get::<_, Option<String>>(2)?,
+                    ))
+                },
+            )
+            .map_err(|e| match e {
+                rusqlite::Error::QueryReturnedNoRows => AppError::SongNotFound(song.id.clone()),
+                other => AppError::Database(other),
+            })?;
 
         let old_category_ids = Self::get_category_ids(&conn, &song.id)?;
 
@@ -629,7 +630,9 @@ impl Database {
                 },
             )
             .map_err(|e| match e {
-                rusqlite::Error::QueryReturnedNoRows => AppError::ScoreNotFound(score_id.to_string()),
+                rusqlite::Error::QueryReturnedNoRows => {
+                    AppError::ScoreNotFound(score_id.to_string())
+                }
                 other => AppError::Database(other),
             })?;
 
@@ -840,7 +843,9 @@ impl Database {
                 |row| row.get::<_, String>(0),
             )
             .map_err(|e| match e {
-                rusqlite::Error::QueryReturnedNoRows => AppError::ScoreNotFound(score_id.to_string()),
+                rusqlite::Error::QueryReturnedNoRows => {
+                    AppError::ScoreNotFound(score_id.to_string())
+                }
                 other => AppError::Database(other),
             })?;
 
@@ -1026,15 +1031,7 @@ impl Database {
             )?;
         }
 
-        Self::insert_changed_field(
-            &conn,
-            "delete",
-            "categories",
-            category_id,
-            None,
-            None,
-            None,
-        )?;
+        Self::insert_changed_field(&conn, "delete", "categories", category_id, None, None, None)?;
 
         Ok(())
     }
@@ -1042,9 +1039,11 @@ impl Database {
     pub fn delete_song(&self, song_id: &str) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
 
-        conn.query_row("SELECT id FROM songs WHERE id = ?1", params![song_id], |row| {
-            row.get::<_, String>(0)
-        })
+        conn.query_row(
+            "SELECT id FROM songs WHERE id = ?1",
+            params![song_id],
+            |row| row.get::<_, String>(0),
+        )
         .map_err(|e| match e {
             rusqlite::Error::QueryReturnedNoRows => AppError::SongNotFound(song_id.to_string()),
             other => AppError::Database(other),

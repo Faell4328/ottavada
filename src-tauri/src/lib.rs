@@ -126,6 +126,8 @@ pub fn run() {
             commands::backup_commands::generate_song_archives_files,
             commands::backup_commands::generate_events_file,
             commands::backup_commands::generate_snapshot_file,
+            commands::backup_commands::export_backup_file,
+            commands::backup_commands::import_backup_file,
             // Rclone
             commands::rclone_commands::test_rclone_connection,
             commands::rclone_commands::upload_with_rclone,

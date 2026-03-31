@@ -107,13 +107,19 @@ pub fn generate_events_msgpack(
     let output_path = events_dir.join(EVENTS_FILE_NAME);
     let temp_path = temp_path_for(&output_path);
 
-    fs::write(&temp_path, &compressed_bytes)
-        .map_err(|e| AppError::Generic(format!("Erro ao escrever arquivo temporário de eventos: {}", e)))?;
+    fs::write(&temp_path, &compressed_bytes).map_err(|e| {
+        AppError::Generic(format!(
+            "Erro ao escrever arquivo temporário de eventos: {}",
+            e
+        ))
+    })?;
     fs::rename(&temp_path, &output_path)
         .map_err(|e| AppError::Generic(format!("Erro ao finalizar events.msgpack: {}", e)))?;
 
     let file_size = fs::metadata(&output_path)
-        .map_err(|e| AppError::Generic(format!("Erro ao obter metadados de events.msgpack: {}", e)))?
+        .map_err(|e| {
+            AppError::Generic(format!("Erro ao obter metadados de events.msgpack: {}", e))
+        })?
         .len();
 
     Ok(EventsFileSummary {
@@ -131,10 +137,12 @@ fn temp_path_for(path: &PathBuf) -> PathBuf {
 
 fn compress_events_payload(data: &[u8]) -> Result<Vec<u8>, AppError> {
     let level = 10;
-    let mut encoder =
-        zstd::stream::Encoder::new(Vec::new(), level).map_err(|e| {
-            AppError::Generic(format!("Erro ao iniciar compressão zstd de events.msgpack: {}", e))
-        })?;
+    let mut encoder = zstd::stream::Encoder::new(Vec::new(), level).map_err(|e| {
+        AppError::Generic(format!(
+            "Erro ao iniciar compressão zstd de events.msgpack: {}",
+            e
+        ))
+    })?;
 
     let worker_count = std::thread::available_parallelism()
         .map(usize::from)
@@ -148,11 +156,17 @@ fn compress_events_payload(data: &[u8]) -> Result<Vec<u8>, AppError> {
     })?;
 
     std::io::Write::write_all(&mut encoder, data).map_err(|e| {
-        AppError::Generic(format!("Erro ao escrever payload de events.msgpack no zstd: {}", e))
+        AppError::Generic(format!(
+            "Erro ao escrever payload de events.msgpack no zstd: {}",
+            e
+        ))
     })?;
 
     encoder.finish().map_err(|e| {
-        AppError::Generic(format!("Erro ao finalizar compressão zstd de events.msgpack: {}", e))
+        AppError::Generic(format!(
+            "Erro ao finalizar compressão zstd de events.msgpack: {}",
+            e
+        ))
     })
 }
 
@@ -206,6 +220,8 @@ mod tests {
 
         assert!(summary.events_count > 0);
         assert!(summary.file_size > 0);
-        assert!(summary.output_path.ends_with("/nuvem/events/events.msgpack.zst"));
+        assert!(summary
+            .output_path
+            .ends_with("/nuvem/events/events.msgpack.zst"));
     }
 }

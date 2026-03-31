@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { ArrowLeft } from "lucide-react";
+import { open, save } from "@tauri-apps/plugin-dialog";
 import toast from "react-hot-toast";
 import { useAppState } from "../context/AppContext";
 import * as api from "../api/commands";
@@ -8,7 +9,7 @@ import { ChangeComputerTypeModal } from "./ChangeComputerTypeModal";
 import type { AppSettings } from "../types";
 
 export default function SettingsPage() {
-  const { state, saveSettings, loadSettings } = useAppState();
+  const { state, saveSettings, loadSettings, loadSongs, loadCategories } = useAppState();
   const navigate = useNavigate();
   const [settings, setSettings] = useState<AppSettings>(
     state.settings ?? {
@@ -25,6 +26,8 @@ export default function SettingsPage() {
   const [isChangeComputerTypeModalOpen, setIsChangeComputerTypeModalOpen] = useState(false);
   const [isTestingRclone, setIsTestingRclone] = useState(false);
   const [isGeneratingSnapshot, setIsGeneratingSnapshot] = useState(false);
+  const [isExportingBackup, setIsExportingBackup] = useState(false);
+  const [isImportingBackup, setIsImportingBackup] = useState(false);
   const [rcloneRemote, setRcloneRemote] = useState("");
   const [rclonePath, setRclonePath] = useState("ScoreMaestro");
 
@@ -33,6 +36,12 @@ export default function SettingsPage() {
     if (state.settings?.rclone_config) {
       setRcloneRemote(state.settings.rclone_config.remote);
       setRclonePath(state.settings.rclone_config.path);
+    }
+  }, [state.settings]);
+
+  useEffect(() => {
+    if (state.settings) {
+      setSettings(state.settings);
     }
   }, [state.settings]);
 
@@ -122,6 +131,70 @@ export default function SettingsPage() {
       );
     } finally {
       setIsGeneratingSnapshot(false);
+    }
+  }
+
+  async function handleExportBackup() {
+    if (settings.computer_type !== "Server") {
+      toast.error("A exportacao de backup e permitida apenas no servidor");
+      return;
+    }
+
+    const selectedPath = await save({
+      title: "Salvar backup.msgpack",
+      defaultPath: "backup.msgpack",
+      filters: [{ name: "MessagePack", extensions: ["msgpack"] }],
+    });
+
+    if (!selectedPath) {
+      return;
+    }
+
+    setIsExportingBackup(true);
+    try {
+      const summary = await api.exportBackupFile(String(selectedPath));
+      toast.success(
+        `Backup exportado (${summary.songs_count} musica(s), ${summary.scores_count} partitura(s))`
+      );
+    } catch (error) {
+      toast.error(
+        `Erro ao exportar backup: ${error instanceof Error ? error.message : "Erro desconhecido"}`
+      );
+    } finally {
+      setIsExportingBackup(false);
+    }
+  }
+
+  async function handleImportBackup() {
+    if (settings.computer_type !== "Server") {
+      toast.error("A importacao de backup e permitida apenas no servidor");
+      return;
+    }
+
+    const selectedPath = await open({
+      title: "Selecionar backup.msgpack",
+      directory: false,
+      multiple: false,
+      filters: [{ name: "MessagePack", extensions: ["msgpack"] }],
+    });
+
+    if (!selectedPath || Array.isArray(selectedPath)) {
+      return;
+    }
+
+    setIsImportingBackup(true);
+    try {
+      const summary = await api.importBackupFile(selectedPath);
+      await Promise.all([loadSettings(), loadSongs(), loadCategories()]);
+      toast.success(
+        `Backup importado (${summary.songs_count} musica(s), ${summary.scores_count} partitura(s))`
+      );
+    } catch (error) {
+      toast.error(
+        `Erro ao importar backup: ${error instanceof Error ? error.message : "Erro desconhecido"}`
+      );
+    } finally {
+      setIsImportingBackup(false);
     }
   }
 
@@ -240,6 +313,33 @@ export default function SettingsPage() {
               Último snapshot: {lastSnapshotLabel}
             </p>
           </div>
+        </Section>
+
+        {/* Backup */}
+        <Section title="Backup">
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={handleExportBackup}
+              disabled={isExportingBackup || settings.computer_type !== "Server"}
+              className="h-9 px-4 rounded border border-[#c5cfdb] bg-white hover:bg-[#f2f5fa] text-sm font-medium text-[#344b61] disabled:opacity-50 transition-colors cursor-pointer"
+            >
+              {isExportingBackup ? "Exportando..." : "Exportar backup.msgpack"}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleImportBackup}
+              disabled={isImportingBackup || settings.computer_type !== "Server"}
+              className="h-9 px-4 rounded border border-[#c5cfdb] bg-white hover:bg-[#f2f5fa] text-sm font-medium text-[#344b61] disabled:opacity-50 transition-colors cursor-pointer"
+            >
+              {isImportingBackup ? "Importando..." : "Importar backup.msgpack"}
+            </button>
+          </div>
+
+          <p className="text-xs text-[#8b9db2] mt-1">
+            Exporta e importa o estado completo do banco de dados e do app-store.
+          </p>
         </Section>
 
         {/* Save */}

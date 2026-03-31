@@ -4,6 +4,9 @@ use crate::domain::errors::AppError;
 use crate::domain::models::OperationGuard;
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
+use crate::services::backup_msgpack_service::{
+    export_backup_msgpack, import_backup_msgpack, BackupFileSummary, BackupImportSummary,
+};
 use crate::services::backup_songs_service::{generate_song_archives, SongArchiveSummary};
 use crate::services::events_service::{generate_events_msgpack, EventsFileSummary};
 use crate::services::snapshot_service::{generate_snapshot_msgpack, SnapshotFileSummary};
@@ -43,4 +46,28 @@ pub fn generate_snapshot_file(
     settings.require_server_only()?;
 
     generate_snapshot_msgpack(&db, &store)
+}
+
+#[tauri::command]
+pub fn export_backup_file(
+    db: State<'_, Database>,
+    store: State<'_, SystemStore>,
+    output_path: Option<String>,
+) -> Result<BackupFileSummary, AppError> {
+    let settings = store.get_app_settings()?;
+    settings.require_server_only()?;
+
+    export_backup_msgpack(&db, &store, output_path)
+}
+
+#[tauri::command]
+pub fn import_backup_file(
+    db: State<'_, Database>,
+    store: State<'_, SystemStore>,
+    backup_path: String,
+) -> Result<BackupImportSummary, AppError> {
+    let settings = store.get_app_settings()?;
+    settings.require_server_only()?;
+
+    import_backup_msgpack(&db, &store, backup_path)
 }
