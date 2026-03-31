@@ -469,6 +469,29 @@ mod tests {
             assert_eq!(not_found_events, 0);
         }
 
+    #[test]
+    fn test_update_score_status_draft_does_not_create_changed_field_event() {
+        let db = make_db();
+        db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
+        db.insert_score(&make_score(&db, "sc1", "s1", Some("Violino")))
+            .unwrap();
+
+        db.update_score_status("sc1", ScoreStatus::Draft, "test-computer", None)
+            .unwrap();
+
+        let conn = db.conn.lock().unwrap();
+        let draft_events: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM changedField
+                 WHERE entity = 'scores' AND field = 'status' AND newValue = 'draft'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+
+        assert_eq!(draft_events, 0);
+    }
+
     // ── Score Metadata for Scanning ──
 
     #[test]

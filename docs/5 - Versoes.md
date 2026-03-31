@@ -101,13 +101,9 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 
 ## Etapas
 - v0.4 - Casa limpa
-	- O objetivo dessa versão é "limpar a casa".
-	- Corrigir tudo que está errado ou obsoleto.
 - v0.5 - Implementando as funcionalidades
-	- Implementar o `changedField`
-	- Implementar o `events.msgpack`
 - v0.6 - Foco no `client`
-
+- v0.7 - Arrumando os bugs
 ## v0.4
 - [x] Atualizar bando de dados
 - [x] Atualizar `tauri-plugin-store`
@@ -135,10 +131,18 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 	- [x] Não é para aparecer os opções no overflow menu e tirar essa merda de texto: "não permitido para cliente"
 	- [x] Adicionar fluxo para abrir a partitura localmente, como especificado
 - [x] Limpar o diretório `/tmp` ao iniciar o aplicativo
-- [x] Corrigir o problema e estar enviado partitura "not found" para o cliente
+- [x] Corrigir o problema e estar enviado partitura "not found" para a nuvem
 	- [x] Removendo o registro do evento "not found" no "changedField"
+- [x] Corrigindo o problema de estar enviando partitura "draft" para a nuvem
+
+## v0.7
+- [ ] Quando clicar em "verificar alterações" e não tiver internet, deve emitir um toast avisando.
 - [ ] Corrigir problema de não deletar o arquivo de partitura ao deletar a música/partituras no aplicativo.
 - [ ] Corrigir problema de não gerar o `{songId}.tar.zst` ao deletar uma partitura da música.
+- [ ] Arrumar o diretório temporário não é `/cloud/tmp` é `/tmp`, igual na documentação.
+! Se não for dessa forma vai arquivo temporário para o cliente.
+- [ ] Arrumar a geração de snaphot (não está gerado)
+	- [ ] Verificar se está forçando o cliente a implementar o snaphot, igual a documentação
 - [ ] Refatorar o front e back
 
 ## Funcionalidades para v2 (apenas rascunho/ideias)

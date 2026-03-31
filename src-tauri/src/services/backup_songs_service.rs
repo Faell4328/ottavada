@@ -32,7 +32,7 @@ pub struct SongArchiveSummary {
 struct SongBackupRow {
     song_id: String,
     song_name: String,
-    last_score_file_modified_at: i64,
+    last_uploadable_score_modified_at: Option<i64>,
     last_backup_at: Option<i64>,
 }
 
@@ -50,6 +50,12 @@ const PROCESSING_STATUS: &str = "processing";
 fn should_generate_archive(row: &SongBackupRow, songs_dir: &Path) -> bool {
     let archive_exists = songs_dir.join(format!("{}.tar.zst", row.song_id)).is_file();
 
+    // Se não existe partitura elegível para nuvem (main/pending),
+    // nunca deve regerar o arquivo com conteúdo draft/not_found.
+    let Some(last_uploadable_modified_at) = row.last_uploadable_score_modified_at else {
+        return false;
+    };
+
     // Após importar backup.msgpack, o registro em backupSongs pode indicar "ok"
     // mesmo quando o arquivo local ainda não existe. Nesse caso, deve gerar novamente.
     if !archive_exists {
@@ -57,7 +63,7 @@ fn should_generate_archive(row: &SongBackupRow, songs_dir: &Path) -> bool {
     }
 
     row.last_backup_at
-        .map(|last_backup| row.last_score_file_modified_at > last_backup)
+        .map(|last_backup| last_uploadable_modified_at > last_backup)
         .unwrap_or(true)
 }
 
@@ -97,9 +103,17 @@ fn update_backup_status(
 fn list_song_backup_rows(db: &Database) -> Result<Vec<SongBackupRow>, AppError> {
     let conn = db.conn.lock().unwrap();
     let mut stmt = conn.prepare(
-        "SELECT s.id, s.name, s.last_score_file_modified_at, b.last_backup_at
+        "SELECT
+            s.id,
+            s.name,
+            MAX(CAST(strftime('%s', sc.file_modified_at) AS INTEGER)) AS last_uploadable_score_modified_at,
+            b.last_backup_at
          FROM songs s
+         LEFT JOIN scores sc
+            ON s.id = sc.song_id
+           AND sc.status IN ('main', 'pending')
          LEFT JOIN backupSongs b ON s.id = b.song_id
+         GROUP BY s.id, s.name, b.last_backup_at
          ORDER BY s.name",
     )?;
 
@@ -107,7 +121,7 @@ fn list_song_backup_rows(db: &Database) -> Result<Vec<SongBackupRow>, AppError> 
         Ok(SongBackupRow {
             song_id: row.get(0)?,
             song_name: row.get(1)?,
-            last_score_file_modified_at: row.get(2)?,
+            last_uploadable_score_modified_at: row.get(2)?,
             last_backup_at: row.get(3)?,
         })
     })?;
@@ -375,7 +389,7 @@ pub fn generate_song_archives(
                     db,
                     &row.song_id,
                     "ok",
-                    Some(row.last_score_file_modified_at),
+                    row.last_uploadable_score_modified_at,
                     None,
                 ) {
                     error!(
@@ -454,7 +468,7 @@ mod tests {
         let row = SongBackupRow {
             song_id: "song-1".to_string(),
             song_name: "Musica".to_string(),
-            last_score_file_modified_at: 100,
+            last_uploadable_score_modified_at: Some(100),
             last_backup_at: Some(100),
         };
 
@@ -470,7 +484,7 @@ mod tests {
         let row = SongBackupRow {
             song_id: "song-2".to_string(),
             song_name: "Musica".to_string(),
-            last_score_file_modified_at: 100,
+            last_uploadable_score_modified_at: Some(100),
             last_backup_at: Some(100),
         };
 
@@ -489,7 +503,7 @@ mod tests {
         let row = SongBackupRow {
             song_id: "song-3".to_string(),
             song_name: "Musica".to_string(),
-            last_score_file_modified_at: 200,
+            last_uploadable_score_modified_at: Some(200),
             last_backup_at: Some(100),
         };
 
@@ -497,5 +511,25 @@ mod tests {
         std::fs::write(&archive_path, b"old archive").expect("create archive placeholder");
 
         assert!(should_generate_archive(&row, &songs_dir));
+    }
+
+    #[test]
+    fn skips_when_only_draft_or_not_found_scores_exist() {
+        let temp = tempdir().expect("temp dir");
+        let songs_dir = temp.path().join("songs");
+        std::fs::create_dir_all(&songs_dir).expect("create songs dir");
+
+        let row = SongBackupRow {
+            song_id: "song-4".to_string(),
+            song_name: "Musica".to_string(),
+            last_uploadable_score_modified_at: None,
+            last_backup_at: Some(100),
+        };
+
+        let archive_path = songs_dir.join("song-4.tar.zst");
+        std::fs::write(&archive_path, b"existing main archive")
+            .expect("create archive placeholder");
+
+        assert!(!should_generate_archive(&row, &songs_dir));
     }
 }

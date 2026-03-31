@@ -130,7 +130,7 @@ pub fn generate_events_msgpack(
 fn is_not_found_status_change(change: &crate::infrastructure::database::ChangedFieldRecord) -> bool {
     change.entity == "scores"
         && change.field.as_deref() == Some("status")
-        && change.new_value.as_deref() == Some("not_found")
+        && matches!(change.new_value.as_deref(), Some("not_found") | Some("draft"))
 }
 
 fn temp_path_for(path: &PathBuf) -> PathBuf {
@@ -282,6 +282,23 @@ mod tests {
             ],
         )
         .expect("insert draft event");
+
+        conn.execute(
+            "INSERT INTO changedField (id, origin, type, entity, entityId, field, oldValue, newValue, timestamp)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+            params![
+                "evt-song-name",
+                "server",
+                "update",
+                "songs",
+                "song-1",
+                "name",
+                "Old Name",
+                "New Name",
+                chrono::Local::now().timestamp() + 2,
+            ],
+        )
+        .expect("insert allowed event");
         drop(conn);
 
         let summary = generate_events_msgpack(&db, &store).expect("generate events");
