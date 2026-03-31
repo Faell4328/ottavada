@@ -243,10 +243,23 @@ export interface RcloneSyncSummary {
   duration_ms: number;
 }
 
+export interface RcloneRcStats {
+  active: boolean;
+  bytes: number;
+  total_bytes: number | null;
+  speed_bytes_per_sec: number;
+  eta_seconds: number | null;
+  percentage: number | null;
+}
+
 export async function syncCloudWithRclone(
   direction: "upload" | "download"
 ): Promise<RcloneSyncSummary> {
   return invoke("sync_cloud_with_rclone", { direction });
+}
+
+export async function getRcloneRcStats(): Promise<RcloneRcStats | null> {
+  return invoke("get_rclone_rc_stats");
 }
 
 // ── Backup Songs Archives ──

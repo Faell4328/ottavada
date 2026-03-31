@@ -165,32 +165,12 @@ pub fn generate_snapshot_msgpack(
 fn clear_events_artifacts(cloud_dir: &std::path::Path) -> Result<(), AppError> {
     let events_dir = cloud_dir.join(EVENTS_DIR_NAME);
     if events_dir.exists() {
-        let entries = fs::read_dir(&events_dir).map_err(|e| {
+        fs::remove_dir_all(&events_dir).map_err(|e| {
             AppError::Generic(format!(
-                "Erro ao listar diretório de eventos após snapshot: {}",
+                "Erro ao remover diretório de eventos após snapshot: {}",
                 e
             ))
         })?;
-
-        for entry in entries {
-            let entry = entry.map_err(|e| {
-                AppError::Generic(format!(
-                    "Erro ao ler entrada do diretório de eventos após snapshot: {}",
-                    e
-                ))
-            })?;
-            let path = entry.path();
-
-            if path.is_file() {
-                fs::remove_file(&path).map_err(|e| {
-                    AppError::Generic(format!(
-                        "Erro ao remover arquivo de evento '{}' após snapshot: {}",
-                        path.display(),
-                        e
-                    ))
-                })?;
-            }
-        }
     }
 
     // Compatibilidade com versões antigas que escreviam events na raiz de /cloud.

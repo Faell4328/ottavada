@@ -1,102 +1,112 @@
-import { Cloud, Usb, Settings, Loader } from "lucide-react";
-import { useNavigate } from "react-router";
+import { Cloud, Loader } from "lucide-react";
 import { useAppState } from "../context/AppContext";
 
 export default function StatusBar() {
-  const navigate = useNavigate();
   const { state } = useAppState();
+
+  const formatBytes = (value: number) => {
+    if (!Number.isFinite(value) || value <= 0) return "0 B";
+    const units = ["B", "KB", "MB", "GB", "TB"];
+    let index = 0;
+    let current = value;
+    while (current >= 1024 && index < units.length - 1) {
+      current /= 1024;
+      index += 1;
+    }
+    return `${current.toFixed(current >= 10 ? 0 : 1)} ${units[index]}`;
+  };
 
   const progressPercentage =
     state.scanProgress.total > 0
       ? Math.round((state.scanProgress.completed / state.scanProgress.total) * 100)
       : 0;
 
+  const rclonePercentage =
+    state.rcloneProgress.percentage !== null
+      ? Math.round(state.rcloneProgress.percentage)
+      : null;
+
+  const isRcloneActive =
+    state.isScanningFiles &&
+    state.rcloneProgress.direction !== null &&
+    state.rcloneProgress.active;
+
+  const formatEta = (seconds: number | null) => {
+    if (seconds === null || seconds < 0) return null;
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${minutes}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  const etaText = formatEta(state.rcloneProgress.etaSeconds);
+
+  if (!state.isScanningFiles) {
+    return null;
+  }
+
+  const title = state.operationStatus.title || "Verificando alteracoes";
+  const detail = state.operationStatus.detail;
+  const activePercentage = isRcloneActive
+    ? (rclonePercentage ?? 0)
+    : progressPercentage;
+
   return (
-    <footer className="fixed bottom-0 left-0 right-0 w-full flex h-10 items-center justify-between border-t border-[#c0cad7] bg-gradient-to-b from-[#e9edf3] to-[#dde3eb] px-3 z-50">
-      <div className="flex items-center gap-4">
-        {state.isScanningFiles ? (
-          <div className="flex items-center gap-2 text-xs font-semibold text-[#354c63]">
-            <Loader className="h-3.5 w-3.5 animate-spin text-blue-600" />
-            {state.scanProgress.total > 0 ? (
-              <>
-                <div className="h-1.5 w-24 rounded-full bg-[#dde3eb] overflow-hidden">
-                  <div
-                    className="h-full bg-blue-500 transition-all duration-300"
-                    style={{ width: `${progressPercentage}%` }}
-                  />
-                </div>
-                <span className="text-blue-600">{progressPercentage}%</span>
-                {state.scanProgress.changedFiles > 0 && (
-                  <span className="text-green-600 font-semibold">
-                    {state.scanProgress.changedFiles} alterado(s)
-                  </span>
-                )}
-              </>
-            ) : (
-              <span className="text-blue-600">Verificando alterações...</span>
+    <footer className="fixed bottom-4 left-1/2 z-50 w-[min(680px,calc(100%-1.5rem))] -translate-x-1/2">
+      <div className="rounded-xl border border-[#c8d9ee] bg-white/95 px-4 py-3 shadow-[0_10px_30px_rgba(22,55,90,0.18)] backdrop-blur-sm">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 text-[12px] font-semibold text-[#21476c]">
+              <Loader className="h-3.5 w-3.5 animate-spin text-blue-600" />
+              <span className="truncate">{title}</span>
+              {isRcloneActive && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-[#eaf3ff] px-2 py-0.5 text-[11px] font-semibold text-[#23558b]">
+                  <Cloud className="h-3 w-3" />
+                  Nuvem {state.rcloneProgress.direction === "upload" ? "upload" : "download"}
+                </span>
+              )}
+            </div>
+            {detail && (
+              <p className="mt-1 truncate text-[11px] text-[#5e7390]">{detail}</p>
             )}
           </div>
-        ) : (
-          <>
-            <StatusIndicator
-              icon={<Cloud className="h-4 w-4" />}
-              label="Google Drive"
-              status="Sincronizado"
-              highlight
-            />
-            <StatusIndicator
-              icon={<Usb className="h-4 w-4" />}
-              label="Backup USB"
-              actionLabel="Fazer backup"
-            />
-          </>
-        )}
+          <span className="shrink-0 text-[12px] font-bold text-[#2464a8]">{activePercentage}%</span>
+        </div>
+
+        <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-[#e8f0fa]">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-[#2f7fd1] to-[#40b0ff] transition-all duration-300"
+            style={{ width: `${activePercentage}%` }}
+          />
+        </div>
+
+        <div className="mt-2 flex items-center gap-3 text-[11px] text-[#4f6887]">
+          {isRcloneActive ? (
+            <>
+              <span>
+                {formatBytes(state.rcloneProgress.bytes)}
+                {state.rcloneProgress.totalBytes
+                  ? ` / ${formatBytes(state.rcloneProgress.totalBytes)}`
+                  : ""}
+              </span>
+              {state.rcloneProgress.speedBytesPerSec > 0 && (
+                <span>{formatBytes(state.rcloneProgress.speedBytesPerSec)}/s</span>
+              )}
+              {etaText && <span>ETA {etaText}</span>}
+            </>
+          ) : (
+            <>
+              <span>
+                Etapa {Math.min(state.scanProgress.completed, state.scanProgress.total)} de {state.scanProgress.total}
+              </span>
+              {state.scanProgress.changedFiles > 0 && (
+                <span className="font-semibold text-green-700">
+                  {state.scanProgress.changedFiles} alterado(s)
+                </span>
+              )}
+            </>
+          )}
+        </div>
       </div>
-
-      <button
-        type="button"
-        onClick={() => navigate("/settings")}
-        className="flex h-7 items-center gap-1.5 rounded-md border border-[#b5c1cf] bg-[#f7f9fc] px-3 text-xs font-semibold text-[#374f67] hover:bg-[#eef2f7] transition-colors cursor-pointer"
-      >
-        <Settings className="h-3.5 w-3.5" />
-        <span>Configurações</span>
-      </button>
     </footer>
-  );
-}
-
-function StatusIndicator({
-  icon,
-  label,
-  status,
-  highlight,
-  actionLabel,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  status?: string;
-  highlight?: boolean;
-  actionLabel?: string;
-}) {
-  return (
-    <span className="flex items-center gap-1.5 text-xs font-semibold text-[#354c63]">
-      <span
-        className={`${highlight ? "text-green-600" : "text-[#6b849e]"}`}
-      >
-        {icon}
-      </span>
-      {label}
-      {status && (
-        <strong className="text-green-600">{status}</strong>
-      )}
-      {actionLabel && (
-        <button
-          type="button"
-          className="ml-1 text-[11px] text-[#4f84d7] hover:underline bg-transparent border-0 cursor-pointer"
-        >
-          {actionLabel}
-        </button>
-      )}
-    </span>
   );
 }

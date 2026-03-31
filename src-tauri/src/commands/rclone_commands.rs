@@ -1,7 +1,12 @@
 use crate::domain::errors::AppError;
 use crate::infrastructure::store::SystemStore;
+use serde_json::Value;
+use std::io::{Read, Write};
+use std::net::TcpStream;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::thread;
+use std::time::Duration;
 use std::time::Instant;
 use tauri::State;
 use tracing::{error, info};
@@ -66,6 +71,85 @@ fn ensure_cloud_dir(app_data_dir: &Path) -> Result<PathBuf, AppError> {
     Ok(cloud_dir)
 }
 
+const RCLONE_TRANSFERS: &str = "10";
+const RCLONE_CHECKERS: &str = "10";
+const RCLONE_RETRIES: &str = "2";
+const RCLONE_LOW_LEVEL_RETRIES: &str = "10";
+const RCLONE_CONNECT_TIMEOUT: &str = "10s";
+const RCLONE_IO_TIMEOUT: &str = "60s";
+
+fn run_rclone_with_retry(args: &[&str], operation_label: &str) -> Result<std::process::Output, AppError> {
+    let execute = || -> Result<std::process::Output, AppError> {
+        let mut cmd = configure_no_window_command(Command::new(get_rclone_command()));
+        cmd.args(args).output().map_err(|e| {
+            error!("Erro ao executar rclone [{}]: {:?}", operation_label, e);
+            AppError::Generic(format!("Erro ao executar rclone ({}): {}", operation_label, e))
+        })
+    };
+
+    let mut output = execute()?;
+    if output.status.success() {
+        return Ok(output);
+    }
+
+    let first_stderr = String::from_utf8_lossy(&output.stderr);
+    error!(
+        "Falha na 1a tentativa do rclone [{}]: {}",
+        operation_label, first_stderr
+    );
+    info!(
+        "Tentando novamente rclone [{}] por falha transitória",
+        operation_label
+    );
+
+    thread::sleep(Duration::from_millis(350));
+    output = execute()?;
+    Ok(output)
+}
+
+fn append_common_copy_flags(args: &mut Vec<&str>) {
+    args.extend([
+        "--transfers",
+        RCLONE_TRANSFERS,
+        "--checkers",
+        RCLONE_CHECKERS,
+        "--retries",
+        RCLONE_RETRIES,
+        "--low-level-retries",
+        RCLONE_LOW_LEVEL_RETRIES,
+        "--contimeout",
+        RCLONE_CONNECT_TIMEOUT,
+        "--timeout",
+        RCLONE_IO_TIMEOUT,
+        "--fast-list",
+    ]);
+}
+
+fn append_common_sync_flags(args: &mut Vec<&str>) {
+    args.extend([
+        "--rc",
+        "--rc-addr=127.0.0.1:5572",
+        "--transfers",
+        RCLONE_TRANSFERS,
+        "--checkers",
+        RCLONE_CHECKERS,
+        "--retries",
+        RCLONE_RETRIES,
+        "--low-level-retries",
+        RCLONE_LOW_LEVEL_RETRIES,
+        "--contimeout",
+        RCLONE_CONNECT_TIMEOUT,
+        "--timeout",
+        RCLONE_IO_TIMEOUT,
+        // Evita sincronizar artefatos temporários do pipeline de geração.
+        "--exclude",
+        "*.tmp",
+        "--exclude",
+        "**/*.tmp",
+        "--fast-list",
+    ]);
+}
+
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum RcloneSyncDirection {
@@ -92,6 +176,98 @@ pub struct RcloneSyncSummary {
     pub source: String,
     pub destination: String,
     pub duration_ms: u128,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct RcloneRcStats {
+    pub active: bool,
+    pub bytes: u64,
+    pub total_bytes: Option<u64>,
+    pub speed_bytes_per_sec: f64,
+    pub eta_seconds: Option<i64>,
+    pub percentage: Option<f64>,
+}
+
+fn fetch_rclone_rc_stats() -> Result<Option<RcloneRcStats>, AppError> {
+    let mut stream = match TcpStream::connect("127.0.0.1:5572") {
+        Ok(stream) => stream,
+        Err(_) => return Ok(None),
+    };
+
+    stream
+        .set_read_timeout(Some(Duration::from_millis(900)))
+        .map_err(|e| AppError::Generic(format!("Erro ao configurar timeout de leitura RC: {}", e)))?;
+    stream
+        .set_write_timeout(Some(Duration::from_millis(900)))
+        .map_err(|e| AppError::Generic(format!("Erro ao configurar timeout de escrita RC: {}", e)))?;
+
+    let request = concat!(
+        "POST /core/stats HTTP/1.1\r\n",
+        "Host: 127.0.0.1:5572\r\n",
+        "Content-Type: application/json\r\n",
+        "Content-Length: 2\r\n",
+        "Connection: close\r\n\r\n",
+        "{}"
+    );
+
+    stream
+        .write_all(request.as_bytes())
+        .map_err(|e| AppError::Generic(format!("Erro ao consultar RC do rclone: {}", e)))?;
+
+    let mut response = Vec::new();
+    stream
+        .read_to_end(&mut response)
+        .map_err(|e| AppError::Generic(format!("Erro ao ler resposta RC do rclone: {}", e)))?;
+
+    let response_text = String::from_utf8_lossy(&response);
+    let (_, body) = response_text
+        .split_once("\r\n\r\n")
+        .ok_or_else(|| AppError::Generic("Resposta RC inválida do rclone".to_string()))?;
+
+    let parsed: Value = serde_json::from_str(body)
+        .map_err(|e| AppError::Generic(format!("Erro ao parsear core/stats do rclone: {}", e)))?;
+
+    let bytes = parsed.get("bytes").and_then(Value::as_u64).unwrap_or(0);
+    let total_bytes_raw = parsed.get("totalBytes").and_then(Value::as_u64).unwrap_or(0);
+    let total_bytes = if total_bytes_raw > 0 {
+        Some(total_bytes_raw)
+    } else {
+        None
+    };
+
+    let speed_bytes_per_sec = parsed.get("speed").and_then(Value::as_f64).unwrap_or(0.0);
+    let eta_seconds = parsed.get("eta").and_then(Value::as_i64).filter(|eta| *eta >= 0);
+
+    let transferring_count = parsed
+        .get("transferring")
+        .and_then(Value::as_array)
+        .map(|items| items.len())
+        .unwrap_or(0);
+    let checking_count = parsed
+        .get("checking")
+        .and_then(Value::as_array)
+        .map(|items| items.len())
+        .unwrap_or(0);
+
+    let active = transferring_count > 0 || checking_count > 0 || speed_bytes_per_sec > 0.0;
+
+    let percentage = total_bytes
+        .filter(|total| *total > 0)
+        .map(|total| ((bytes as f64 / total as f64) * 100.0).clamp(0.0, 100.0));
+
+    Ok(Some(RcloneRcStats {
+        active,
+        bytes,
+        total_bytes,
+        speed_bytes_per_sec,
+        eta_seconds,
+        percentage,
+    }))
+}
+
+#[tauri::command]
+pub fn get_rclone_rc_stats() -> Result<Option<RcloneRcStats>, AppError> {
+    fetch_rclone_rc_stats()
 }
 
 /// Testa a conexão com um remote do rclone
@@ -207,14 +383,10 @@ pub fn upload_with_rclone(
         .ok_or_else(|| AppError::Generic("Caminho inválido".to_string()))?;
 
     // Executar upload
-    let mut cmd = configure_no_window_command(Command::new(get_rclone_command()));
-    let output = cmd
-        .args(&["copy", &file_path, &format!("{}:{}", remote, path)])
-        .output()
-        .map_err(|e| {
-            error!("Erro ao executar rclone upload: {:?}", e);
-            AppError::Generic(format!("Erro ao fazer upload com rclone: {}", e))
-        })?;
+    let destination = format!("{}:{}", remote, path);
+    let mut args = vec!["copy", file_path.as_str(), destination.as_str()];
+    append_common_copy_flags(&mut args);
+    let output = run_rclone_with_retry(&args, "upload")?;
 
     if output.status.success() {
         let remote_path = format!("{}:{}/{}", remote, path, file_name);
@@ -291,36 +463,9 @@ fn sync_cloud_with_rclone_impl(
 
     let started_at = Instant::now();
 
-    let execute_sync = || -> Result<std::process::Output, AppError> {
-        let mut cmd = configure_no_window_command(Command::new(get_rclone_command()));
-        cmd.args(&[
-            "sync",
-            &source,
-            &destination,
-            "--rc",
-            "--rc-addr=127.0.0.1:5572",
-            "--transfers=10",
-        ])
-        .output()
-        .map_err(|e| {
-            error!("Erro ao executar rclone sync: {:?}", e);
-            AppError::Generic(format!("Erro ao executar rclone sync: {}", e))
-        })
-    };
-
-    let mut output = execute_sync()?;
-    if !output.status.success() {
-        let first_stderr = String::from_utf8_lossy(&output.stderr);
-        error!(
-            "Falha na 1a tentativa do rclone sync [{}]: {}",
-            direction_label, first_stderr
-        );
-        info!(
-            "Tentando novamente rclone sync [{}] por falha transitória",
-            direction_label
-        );
-        output = execute_sync()?;
-    }
+    let mut args = vec!["sync", source.as_str(), destination.as_str()];
+    append_common_sync_flags(&mut args);
+    let output = run_rclone_with_retry(&args, &format!("sync:{}", direction_label))?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -403,14 +548,13 @@ fn test_rclone_upload_impl(store: &SystemStore, remote: &str, path: &str) -> Res
 
     // Fazer upload do arquivo de teste
     info!("Iniciando upload para: {}", remote_path);
-    let mut cmd = configure_no_window_command(Command::new(get_rclone_command()));
-    let output = cmd
-        .args(&["copy", test_file_path.to_str().unwrap_or(""), &remote_path])
-        .output()
-        .map_err(|e| {
-            error!("Erro ao executar rclone upload: {:?}", e);
-            AppError::Generic(format!("Erro ao fazer upload com rclone: {}", e))
-        })?;
+    let test_file_str = test_file_path.to_str().ok_or_else(|| {
+        AppError::Generic("Caminho local de teste inválido para upload rclone".to_string())
+    })?;
+
+    let mut args = vec!["copy", test_file_str, remote_path.as_str(), "--no-traverse"];
+    append_common_copy_flags(&mut args);
+    let output = run_rclone_with_retry(&args, "test-upload")?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);

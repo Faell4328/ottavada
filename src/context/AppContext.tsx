@@ -5,6 +5,7 @@ import {
   useEffect,
   useCallback,
   useMemo,
+  useRef,
   type ReactNode,
 } from "react";
 import toast from "react-hot-toast";
@@ -71,6 +72,8 @@ export function useAppState() {
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
+  const skipNextAutoSongReloadRef = useRef(false);
+  const scanResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const getErrorMessage = useCallback((err: unknown, fallback: string) => {
     return err instanceof Error ? err.message : fallback;
@@ -127,6 +130,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         dispatch({ type: "SET_FIRST_RUN", payload: firstRun });
 
         if (!firstRun) {
+          skipNextAutoSongReloadRef.current = true;
           // Carregar dados imediatamente
           await Promise.all([loadSongs(), loadCategories(), loadSettings()]);
           
@@ -160,6 +164,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // Re-load songs when sidebar or search changes
   useEffect(() => {
     if (!state.isFirstRun && !state.isLoading) {
+      if (skipNextAutoSongReloadRef.current) {
+        skipNextAutoSongReloadRef.current = false;
+        return;
+      }
       loadSongs();
     }
   }, [state.sidebarView, state.searchQuery, state.isFirstRun, state.isLoading]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -385,7 +393,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const isAutomatic =
         typeof isAutomaticOrEvent === "boolean" ? isAutomaticOrEvent : false;
 
+      const clearScheduledScanReset = () => {
+        if (scanResetTimerRef.current !== null) {
+          clearTimeout(scanResetTimerRef.current);
+          scanResetTimerRef.current = null;
+        }
+      };
+
+      const scheduleScanReset = (delayMs: number) => {
+        clearScheduledScanReset();
+        scanResetTimerRef.current = setTimeout(() => {
+          dispatch({ type: "SET_SCANNING_FILES", payload: false });
+          dispatch({ type: "RESET_OPERATION_STATUS" });
+          dispatch({ type: "RESET_RCLONE_PROGRESS" });
+          dispatch({
+            type: "SET_SCAN_PROGRESS",
+            payload: { total: 0, completed: 0, changedFiles: 0 },
+          });
+          scanResetTimerRef.current = null;
+        }, delayMs);
+      };
+
       try {
+        clearScheduledScanReset();
+
         const hasInternet = await api.hasInternetConnection();
         if (!hasInternet) {
           if (!isAutomatic) {
@@ -396,11 +427,68 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
         dispatch({ type: "SET_SCANNING_FILES", payload: true });
         dispatch({
+          type: "SET_OPERATION_STATUS",
+          payload: { title: "Iniciando verificação", detail: "Preparando fluxo de sincronização" },
+        });
+        dispatch({
           type: "SET_SCAN_PROGRESS",
           payload: { total: 0, completed: 0, changedFiles: 0 },
         });
 
         const isClient = state.settings?.computer_type === "Client";
+
+        const runSyncWithProgress = async (direction: "upload" | "download") => {
+          let stopPolling = false;
+
+          dispatch({
+            type: "SET_RCLONE_PROGRESS",
+            payload: {
+              active: true,
+              direction,
+              bytes: 0,
+              totalBytes: null,
+              percentage: 0,
+              speedBytesPerSec: 0,
+              etaSeconds: null,
+            },
+          });
+
+          const syncPromise = api.syncCloudWithRclone(direction);
+
+          const pollingPromise = (async () => {
+            while (!stopPolling) {
+              try {
+                const stats = await api.getRcloneRcStats();
+                if (stats) {
+                  dispatch({
+                    type: "SET_RCLONE_PROGRESS",
+                    payload: {
+                      active: stats.active,
+                      direction,
+                      bytes: stats.bytes,
+                      totalBytes: stats.total_bytes,
+                      percentage: stats.percentage,
+                      speedBytesPerSec: stats.speed_bytes_per_sec,
+                      etaSeconds: stats.eta_seconds,
+                    },
+                  });
+                }
+              } catch {
+                // Ignora erro de polling para não interromper o sync principal.
+              }
+
+              await new Promise((resolve) => setTimeout(resolve, 1000));
+            }
+          })();
+
+          try {
+            return await syncPromise;
+          } finally {
+            stopPolling = true;
+            dispatch({ type: "RESET_RCLONE_PROGRESS" });
+            void pollingPromise.catch(() => undefined);
+          }
+        };
 
         if (isClient) {
           dispatch({
@@ -408,13 +496,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
             payload: { total: 2, completed: 0, changedFiles: 0 },
           });
 
-          await api.syncCloudWithRclone("download");
+          dispatch({
+            type: "SET_OPERATION_STATUS",
+            payload: { title: "Sincronizando download", detail: "Baixando alterações da nuvem" },
+          });
+          await runSyncWithProgress("download");
 
           dispatch({
             type: "SET_SCAN_PROGRESS",
             payload: { total: 2, completed: 1, changedFiles: 0 },
           });
 
+          dispatch({
+            type: "SET_OPERATION_STATUS",
+            payload: { title: "Aplicando alterações", detail: "Atualizando base local do cliente" },
+          });
           const syncSummary = await api.applyServerChangesOnClient();
 
           await Promise.all([loadSongs(), loadCategories()]);
@@ -435,13 +531,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             toast.success(`Sincronização concluída: ${appliedSummary}`);
           }
 
-          setTimeout(() => {
-            dispatch({ type: "SET_SCANNING_FILES", payload: false });
-            dispatch({
-              type: "SET_SCAN_PROGRESS",
-              payload: { total: 0, completed: 0, changedFiles: 0 },
-            });
-          }, 1500);
+          scheduleScanReset(1500);
 
           return;
         }
@@ -460,16 +550,32 @@ export function AppProvider({ children }: { children: ReactNode }) {
         };
 
         updateStepProgress(0);
-        await api.syncCloudWithRclone("download");
+        dispatch({
+          type: "SET_OPERATION_STATUS",
+          payload: { title: "Sincronizando download", detail: "Baixando estado atual da nuvem" },
+        });
+        await runSyncWithProgress("download");
         completedSteps += 1;
         updateStepProgress(0);
 
+        dispatch({
+          type: "SET_OPERATION_STATUS",
+          payload: { title: "Verificando alterações", detail: "Comparando arquivos locais" },
+        });
         const result = await api.scanFilesForChanges();
         completedSteps += 1;
 
+        dispatch({
+          type: "SET_OPERATION_STATUS",
+          payload: { title: "Comprimindo arquivos", detail: "Gerando .tar.zst das músicas" },
+        });
         const archiveSummary = await api.generateSongArchivesFiles();
         completedSteps += 1;
 
+        dispatch({
+          type: "SET_OPERATION_STATUS",
+          payload: { title: "Gerando events", detail: "Atualizando events.msgpack.zst" },
+        });
         const eventsSummary = await api.generateEventsFile();
         completedSteps += 1;
 
@@ -482,6 +588,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         updateStepProgress(changedCount);
 
         if (eventsSummary.payload_size >= 2 * 1024 * 1024) {
+          dispatch({
+            type: "SET_OPERATION_STATUS",
+            payload: { title: "Gerando snapshot", detail: "Events atingiu 2MB" },
+          });
           await api.generateSnapshotFile();
           if (!isAutomatic) {
             toast("Snapshot forçado: events.msgpack atingiu 2MB", {
@@ -489,7 +599,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
             });
           }
         }
-        await api.syncCloudWithRclone("upload");
+        dispatch({
+          type: "SET_OPERATION_STATUS",
+          payload: { title: "Sincronizando upload", detail: "Enviando arquivos para a nuvem" },
+        });
+        await runSyncWithProgress("upload");
         completedSteps += 1;
         updateStepProgress(changedCount);
 
@@ -548,19 +662,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
         // Limpar progresso após tempo apropriado
         const delay = changedCount > 0 || recoveredCount > 0 ? 3000 : 1500;
-        setTimeout(() => {
-          dispatch({ type: "SET_SCANNING_FILES", payload: false });
-          dispatch({
-            type: "SET_SCAN_PROGRESS",
-            payload: { total: 0, completed: 0, changedFiles: 0 },
-          });
-        }, delay);
+        scheduleScanReset(delay);
       } catch (err) {
         console.error("Failed to scan files for changes:", err);
         if (!isAutomatic) {
           toast.error(getErrorMessage(err, "Erro ao verificar alterações nos arquivos"));
         }
+        clearScheduledScanReset();
         dispatch({ type: "SET_SCANNING_FILES", payload: false });
+        dispatch({ type: "RESET_RCLONE_PROGRESS" });
+        dispatch({ type: "RESET_OPERATION_STATUS" });
         dispatch({
           type: "SET_SCAN_PROGRESS",
           payload: { total: 0, completed: 0, changedFiles: 0 },

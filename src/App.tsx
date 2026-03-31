@@ -22,7 +22,7 @@ function LoadingScreen() {
 
 function MainPage() {
   return (
-    <div className="flex min-h-screen flex-col bg-gradient-to-b from-[#5d6d82] via-[#73849a] to-[#d8dee8] select-none pt-[70px] pb-10">
+    <div className="flex min-h-screen flex-col bg-gradient-to-b from-[#5d6d82] via-[#73849a] to-[#d8dee8] select-none pt-[70px]">
       <TopBar />
       <div className="flex flex-1 min-h-0">
         <Sidebar />

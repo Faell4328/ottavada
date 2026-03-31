@@ -1,4 +1,5 @@
 use rusqlite::{params, Connection};
+use std::collections::HashMap;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 
@@ -431,7 +432,7 @@ impl Database {
     ) -> Result<Vec<SongListItem>, AppError> {
         let mut stmt = conn.prepare(sql)?;
 
-        let songs: Vec<SongListItem> = stmt
+        let mut songs: Vec<SongListItem> = stmt
             .query_map(rusqlite::params_from_iter(params), |row| {
                 Ok(SongListItem {
                     id: row.get(0)?,
@@ -444,17 +445,117 @@ impl Database {
                     scores: Vec::new(),
                 })
             })?
-            .filter_map(|r| r.ok())
-            .collect();
+            .collect::<Result<Vec<_>, _>>()?;
 
-        let mut result = Vec::with_capacity(songs.len());
-        for mut song in songs {
-            song.scores = Self::get_scores_for_song(conn, &song.id)?;
-            song.category_ids = Self::get_category_ids(conn, &song.id)?;
-            result.push(song);
+        if songs.is_empty() {
+            return Ok(songs);
         }
 
-        Ok(result)
+        let song_ids: Vec<String> = songs.iter().map(|song| song.id.clone()).collect();
+        let mut scores_by_song = Self::get_scores_for_songs(conn, &song_ids)?;
+        let mut category_ids_by_song = Self::get_category_ids_for_songs(conn, &song_ids)?;
+
+        for song in &mut songs {
+            if let Some(scores) = scores_by_song.remove(&song.id) {
+                song.scores = scores;
+            }
+
+            if let Some(category_ids) = category_ids_by_song.remove(&song.id) {
+                song.category_ids = category_ids;
+            }
+        }
+
+        Ok(songs)
+    }
+
+    fn get_scores_for_songs(
+        conn: &Connection,
+        song_ids: &[String],
+    ) -> Result<HashMap<String, Vec<ScoreListItem>>, AppError> {
+        let placeholders = std::iter::repeat("?")
+            .take(song_ids.len())
+            .collect::<Vec<_>>()
+            .join(", ");
+
+        let sql = format!(
+            "SELECT s.song_id, s.id, s.name, s.file_path, s.file_name, s.file_modified_at, s.status
+             FROM scores s
+             WHERE s.song_id IN ({})
+             ORDER BY s.song_id ASC, COALESCE(s.name, s.file_name) COLLATE NOCASE ASC, s.id ASC",
+            placeholders
+        );
+
+        let mut stmt = conn.prepare(&sql)?;
+        let params: Vec<&dyn rusqlite::ToSql> = song_ids
+            .iter()
+            .map(|id| id as &dyn rusqlite::ToSql)
+            .collect();
+
+        let mut grouped: HashMap<String, Vec<ScoreListItem>> = HashMap::new();
+        let rows = stmt.query_map(rusqlite::params_from_iter(params), |row| {
+            let dir_path: String = row.get(3)?;
+            let file_name: String = row.get(4)?;
+            let file_path = std::path::PathBuf::from(&dir_path)
+                .join(&file_name)
+                .to_string_lossy()
+                .to_string();
+            let file_extension = file_name.rsplit('.').next().unwrap_or("").to_lowercase();
+
+            Ok((
+                row.get::<_, String>(0)?,
+                ScoreListItem {
+                    id: row.get(1)?,
+                    name: row.get(2)?,
+                    file_path,
+                    file_extension,
+                    updated_at: parse_datetime(&row.get::<_, String>(5)?),
+                    status: ScoreStatus::from_str(&row.get::<_, String>(6)?),
+                },
+            ))
+        })?;
+
+        for row in rows {
+            let (song_id, score) = row?;
+            grouped.entry(song_id).or_default().push(score);
+        }
+
+        Ok(grouped)
+    }
+
+    fn get_category_ids_for_songs(
+        conn: &Connection,
+        song_ids: &[String],
+    ) -> Result<HashMap<String, Vec<String>>, AppError> {
+        let placeholders = std::iter::repeat("?")
+            .take(song_ids.len())
+            .collect::<Vec<_>>()
+            .join(", ");
+
+        let sql = format!(
+            "SELECT song_id, category_id
+             FROM categoriesSongs
+             WHERE song_id IN ({})
+             ORDER BY song_id ASC, category_id ASC",
+            placeholders
+        );
+
+        let mut stmt = conn.prepare(&sql)?;
+        let params: Vec<&dyn rusqlite::ToSql> = song_ids
+            .iter()
+            .map(|id| id as &dyn rusqlite::ToSql)
+            .collect();
+
+        let rows = stmt.query_map(rusqlite::params_from_iter(params), |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })?;
+
+        let mut grouped: HashMap<String, Vec<String>> = HashMap::new();
+        for row in rows {
+            let (song_id, category_id) = row?;
+            grouped.entry(song_id).or_default().push(category_id);
+        }
+
+        Ok(grouped)
     }
 
     pub fn get_all_songs(&self) -> Result<Vec<SongListItem>, AppError> {
@@ -986,43 +1087,6 @@ impl Database {
             rusqlite::Error::QueryReturnedNoRows => AppError::ScoreNotFound(score_id.to_string()),
             other => AppError::Database(other),
         })
-    }
-
-    /// Busca scores de uma música com caminho completo reconstruído
-    fn get_scores_for_song(
-        conn: &Connection,
-        song_id: &str,
-    ) -> Result<Vec<ScoreListItem>, AppError> {
-        let mut stmt = conn.prepare(
-            "SELECT s.id, s.name, s.file_path, s.file_name, s.file_modified_at, s.status
-             FROM scores s
-             WHERE s.song_id = ?1
-               ORDER BY COALESCE(s.name, s.file_name) COLLATE NOCASE ASC, s.id ASC",
-        )?;
-
-        let scores = stmt
-            .query_map(params![song_id], |row| {
-                let dir_path: String = row.get(2)?;
-                let file_name: String = row.get(3)?;
-                let file_path = std::path::PathBuf::from(&dir_path)
-                    .join(&file_name)
-                    .to_string_lossy()
-                    .to_string();
-                let file_extension = file_name.rsplit('.').next().unwrap_or("").to_lowercase();
-
-                Ok(ScoreListItem {
-                    id: row.get(0)?,
-                    name: row.get(1)?,
-                    file_path,
-                    file_extension,
-                    updated_at: parse_datetime(&row.get::<_, String>(4)?),
-                    status: ScoreStatus::from_str(&row.get::<_, String>(5)?),
-                })
-            })?
-            .filter_map(|r| r.ok())
-            .collect();
-
-        Ok(scores)
     }
 
     fn get_category_ids(conn: &Connection, song_id: &str) -> Result<Vec<String>, AppError> {

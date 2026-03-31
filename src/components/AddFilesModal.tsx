@@ -169,13 +169,22 @@ export function AddFilesModal({
           <div className="rounded border border-[#c5cfdb] bg-white p-3 space-y-4 max-h-75 overflow-y-auto">
             {files.map((file, idx) => {
               if (removedFileIndices.has(idx)) return null;
+
+              const fileName = file.path.split('/').pop() ?? file.name;
+              const lastSlash = file.path.lastIndexOf('/');
+              const directoryPath = lastSlash >= 0 ? file.path.slice(0, lastSlash) : file.path;
               
               return (
                 <div key={idx} className="space-y-1">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs text-[#8b9db2] font-medium truncate">
-                      {file.path.split('/').pop()}
-                    </label>
+                    <div className="min-w-0 flex-1 pr-2">
+                      <p className="text-xs text-[#5d738b] font-semibold break-all whitespace-normal">
+                        {fileName}
+                      </p>
+                      <p className="text-[11px] text-[#8b9db2] break-all whitespace-normal mt-0.5">
+                        {directoryPath}
+                      </p>
+                    </div>
                     <button
                       type="button"
                       onClick={() => removeFile(idx)}

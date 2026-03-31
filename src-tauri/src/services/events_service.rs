@@ -11,6 +11,7 @@ use crate::infrastructure::store::SystemStore;
 const CLOUD_DIR_NAME: &str = "cloud";
 const EVENTS_DIR_NAME: &str = "events";
 const EVENTS_FILE_NAME: &str = "events.msgpack.zst";
+const ZSTD_LEVEL: i32 = 10;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct EventsFileSummary {
@@ -60,28 +61,28 @@ pub fn generate_events_msgpack(
 
     let changed_fields = db.get_changed_fields_ordered()?;
 
-    let events = changed_fields
+    let mut events = Vec::with_capacity(changed_fields.len());
+    for change in changed_fields
         .iter()
         .filter(|change| !is_not_found_status_change(change))
-        .map(|change| {
-            let data = change.field.as_ref().map(|field| {
-                vec![EventDataMessagePack {
-                    field: field.clone(),
-                    old_value: change.old_value.clone(),
-                    new_value: change.new_value.clone(),
-                }]
-            });
+    {
+        let data = change.field.as_ref().map(|field| {
+            vec![EventDataMessagePack {
+                field: field.clone(),
+                old_value: change.old_value.clone(),
+                new_value: change.new_value.clone(),
+            }]
+        });
 
-            EventMessagePack {
-                id: change.id.clone(),
-                timestamp: change.timestamp,
-                event_type: change.change_type.clone(),
-                entity: change.entity.clone(),
-                entity_id: change.entity_id.clone(),
-                data,
-            }
-        })
-        .collect::<Vec<_>>();
+        events.push(EventMessagePack {
+            id: change.id.clone(),
+            timestamp: change.timestamp,
+            event_type: change.change_type.clone(),
+            entity: change.entity.clone(),
+            entity_id: change.entity_id.clone(),
+            data,
+        });
+    }
 
     let origin = settings.computer_type.as_store_str().to_string();
 
@@ -127,6 +128,25 @@ pub fn generate_events_msgpack(
 
     let temp_path = temp_path_for(&output_path);
 
+    if output_path.exists() {
+        let existing_bytes = fs::read(&output_path).map_err(|e| {
+            AppError::Generic(format!(
+                "Erro ao ler events.msgpack atual para comparação: {}",
+                e
+            ))
+        })?;
+
+        if existing_bytes == compressed_bytes {
+            let file_size = existing_bytes.len() as u64;
+            return Ok(EventsFileSummary {
+                output_path: output_path.to_string_lossy().to_string(),
+                payload_size,
+                file_size,
+                events_count: payload.events.len(),
+            });
+        }
+    }
+
     fs::write(&temp_path, &compressed_bytes).map_err(|e| {
         AppError::Generic(format!(
             "Erro ao escrever arquivo temporário de eventos: {}",
@@ -163,8 +183,7 @@ fn temp_path_for(path: &PathBuf) -> PathBuf {
 }
 
 fn compress_events_payload(data: &[u8]) -> Result<Vec<u8>, AppError> {
-    let level = 10;
-    let mut encoder = zstd::stream::Encoder::new(Vec::new(), level).map_err(|e| {
+    let mut encoder = zstd::stream::Encoder::new(Vec::new(), ZSTD_LEVEL).map_err(|e| {
         AppError::Generic(format!(
             "Erro ao iniciar compressão zstd de events.msgpack: {}",
             e

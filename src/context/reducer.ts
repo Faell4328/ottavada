@@ -24,6 +24,19 @@ export interface State {
     completed: number;
     changedFiles: number;
   };
+  rcloneProgress: {
+    active: boolean;
+    direction: "upload" | "download" | null;
+    bytes: number;
+    totalBytes: number | null;
+    percentage: number | null;
+    speedBytesPerSec: number;
+    etaSeconds: number | null;
+  };
+  operationStatus: {
+    title: string;
+    detail: string | null;
+  };
 }
 
 export const initialState: State = {
@@ -41,6 +54,19 @@ export const initialState: State = {
     total: 0,
     completed: 0,
     changedFiles: 0,
+  },
+  rcloneProgress: {
+    active: false,
+    direction: null,
+    bytes: 0,
+    totalBytes: null,
+    percentage: null,
+    speedBytesPerSec: 0,
+    etaSeconds: null,
+  },
+  operationStatus: {
+    title: "",
+    detail: null,
   },
 };
 
@@ -62,7 +88,22 @@ export type Action =
   | {
       type: "SET_SCAN_PROGRESS";
       payload: { total: number; completed: number; changedFiles: number };
-    };
+    }
+  | {
+      type: "SET_RCLONE_PROGRESS";
+      payload: {
+        active: boolean;
+        direction: "upload" | "download" | null;
+        bytes: number;
+        totalBytes: number | null;
+        percentage: number | null;
+        speedBytesPerSec: number;
+        etaSeconds: number | null;
+      };
+    }
+  | { type: "RESET_RCLONE_PROGRESS" }
+  | { type: "SET_OPERATION_STATUS"; payload: { title: string; detail?: string | null } }
+  | { type: "RESET_OPERATION_STATUS" };
 
 // ── Reducer ──
 
@@ -116,6 +157,37 @@ export function reducer(state: State, action: Action): State {
       return { ...state, isScanningFiles: action.payload };
     case "SET_SCAN_PROGRESS":
       return { ...state, scanProgress: action.payload };
+    case "SET_RCLONE_PROGRESS":
+      return { ...state, rcloneProgress: action.payload };
+    case "RESET_RCLONE_PROGRESS":
+      return {
+        ...state,
+        rcloneProgress: {
+          active: false,
+          direction: null,
+          bytes: 0,
+          totalBytes: null,
+          percentage: null,
+          speedBytesPerSec: 0,
+          etaSeconds: null,
+        },
+      };
+    case "SET_OPERATION_STATUS":
+      return {
+        ...state,
+        operationStatus: {
+          title: action.payload.title,
+          detail: action.payload.detail ?? null,
+        },
+      };
+    case "RESET_OPERATION_STATUS":
+      return {
+        ...state,
+        operationStatus: {
+          title: "",
+          detail: null,
+        },
+      };
     default:
       return state;
   }

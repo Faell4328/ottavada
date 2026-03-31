@@ -152,8 +152,12 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 ! Se não for dessa forma vai arquivo temporário para o cliente.
 - [x] Arrumar a geração de snapshot (não está gerado)
 	- [x] Verificar se está forçando o cliente a implementar o snapshot, igual a documentação
-- [ ] Ordenar tanto o servidor e cliente em ordem alfabetica (música e partitura)
-- [ ] Refatorar o front e back
+- [x] Ordenar tanto o servidor e cliente em ordem alfabetica (música e partitura)
+- [x] Refatorar o front e back
+	- [x] Mostrando o progresso de upload e download
+	- [x] Melhorando o rclone e a compressão (`tar.zst`) e outras melhorias
+	- [x] Corrigindo problema de nome truncado ao adicionar música com partitura
+	- [x] Melhorando o `StatusBar`.
 
 ## Funcionalidades para v2 (apenas rascunho/ideias)
 

@@ -1,7 +1,8 @@
+use std::collections::HashSet;
 use std::ffi::OsString;
 use std::fs::{self, File};
-use std::collections::HashSet;
 use std::path::{Path, PathBuf};
+use std::sync::mpsc;
 
 use rusqlite::params;
 use tar::Builder;
@@ -29,7 +30,7 @@ pub struct SongArchiveSummary {
     pub results: Vec<SongArchiveResult>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct SongBackupRow {
     song_id: String,
     song_name: String,
@@ -37,7 +38,7 @@ struct SongBackupRow {
     last_backup_at: Option<i64>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct ScoreArchiveEntry {
     score_id: String,
     source_path: PathBuf,
@@ -47,6 +48,13 @@ struct ScoreArchiveEntry {
 const SONGS_DIR_NAME: &str = "songs";
 const TMP_DIR_NAME: &str = "tmp";
 const PROCESSING_STATUS: &str = "processing";
+const MAX_ARCHIVE_WORKERS: usize = 4;
+
+#[derive(Debug)]
+struct ArchiveJob {
+    row: SongBackupRow,
+    entries: Vec<ScoreArchiveEntry>,
+}
 
 fn should_generate_archive(row: &SongBackupRow, songs_dir: &Path) -> bool {
     let archive_exists = songs_dir.join(format!("{}.tar.zst", row.song_id)).is_file();
@@ -208,7 +216,22 @@ fn copy_and_rename_scores(entries: &[ScoreArchiveEntry], temp_dir: &Path) -> Res
     Ok(())
 }
 
-fn create_tar_zst_from_temp_dir(temp_dir: &Path, output_file: &Path) -> Result<u64, AppError> {
+fn zstd_threads_per_archive(archive_workers: usize) -> u32 {
+    let total_cores = std::thread::available_parallelism()
+        .map(usize::from)
+        .unwrap_or(1)
+        .max(1);
+    let workers = archive_workers.max(1);
+
+    // Divide os núcleos entre os arquivos paralelos para evitar oversubscription.
+    (total_cores / workers).max(1) as u32
+}
+
+fn create_tar_zst_from_temp_dir_with_threads(
+    temp_dir: &Path,
+    output_file: &Path,
+    zstd_threads: u32,
+) -> Result<u64, AppError> {
     let output = File::create(output_file).map_err(|e| {
         AppError::Generic(format!(
             "Erro ao criar arquivo temporário {}: {}",
@@ -221,11 +244,8 @@ fn create_tar_zst_from_temp_dir(temp_dir: &Path, output_file: &Path) -> Result<u
     let mut encoder = zstd::stream::Encoder::new(output, level)
         .map_err(|e| AppError::Generic(format!("Erro ao inicializar encoder zstd: {}", e)))?;
 
-    let worker_count = std::thread::available_parallelism()
-        .map(usize::from)
-        .unwrap_or(1);
     encoder
-        .multithread(worker_count as u32)
+        .multithread(zstd_threads)
         .map_err(|e| AppError::Generic(format!("Erro ao configurar multithread do zstd: {}", e)))?;
 
     {
@@ -322,12 +342,12 @@ fn cleanup_orphan_archives(songs_dir: &Path, rows: &[SongBackupRow]) -> Result<u
 }
 
 fn generate_archive_with_retry(
-    db: &Database,
+    entries: &[ScoreArchiveEntry],
     song_id: &str,
     songs_dir: &Path,
     temp_root: &Path,
+    zstd_threads: u32,
 ) -> Result<(String, u64), AppError> {
-    let entries = list_scores_for_archive(db, song_id)?;
     let final_file = songs_dir.join(format!("{}.tar.zst", song_id));
     let tmp_file = songs_dir.join(format!("{}.tar.zst.tmp", song_id));
 
@@ -340,7 +360,11 @@ fn generate_archive_with_retry(
             copy_and_rename_scores(&entries, &song_temp_dir)?;
 
             remove_if_exists(&tmp_file);
-            let size = create_tar_zst_from_temp_dir(&song_temp_dir, &tmp_file)?;
+            let size = create_tar_zst_from_temp_dir_with_threads(
+                &song_temp_dir,
+                &tmp_file,
+                zstd_threads,
+            )?;
 
             if final_file.exists() {
                 fs::remove_file(&final_file)?;
@@ -370,6 +394,93 @@ fn generate_archive_with_retry(
     })))
 }
 
+fn archive_worker_count(total_jobs: usize) -> usize {
+    let cpu_based = std::thread::available_parallelism()
+        .map(usize::from)
+        .unwrap_or(1)
+        .max(1);
+
+    cpu_based.min(MAX_ARCHIVE_WORKERS).min(total_jobs).max(1)
+}
+
+fn run_archive_jobs_parallel(
+    jobs: Vec<ArchiveJob>,
+    songs_dir: &Path,
+    temp_root: &Path,
+) -> Vec<(SongBackupRow, Result<(String, u64), AppError>)> {
+    if jobs.is_empty() {
+        return Vec::new();
+    }
+
+    let workers = archive_worker_count(jobs.len());
+    let zstd_threads = zstd_threads_per_archive(workers);
+    if workers == 1 {
+        return jobs
+            .into_iter()
+            .map(|job| {
+                let result = generate_archive_with_retry(
+                    &job.entries,
+                    &job.row.song_id,
+                    songs_dir,
+                    temp_root,
+                    zstd_threads,
+                );
+                (job.row, result)
+            })
+            .collect();
+    }
+
+    let (tx, rx) = mpsc::channel::<(
+        usize,
+        SongBackupRow,
+        Result<(String, u64), AppError>,
+    )>();
+
+    std::thread::scope(|scope| {
+        for worker_idx in 0..workers {
+            let tx = tx.clone();
+            let jobs_ref = &jobs;
+
+            scope.spawn(move || {
+                for (idx, job) in jobs_ref.iter().enumerate() {
+                    if idx % workers != worker_idx {
+                        continue;
+                    }
+
+                    let result = generate_archive_with_retry(
+                        &job.entries,
+                        &job.row.song_id,
+                        songs_dir,
+                        temp_root,
+                        zstd_threads,
+                    );
+
+                    // Se o receiver foi encerrado antecipadamente, só interrompe o worker.
+                    if tx.send((idx, job.row.clone(), result)).is_err() {
+                        break;
+                    }
+                }
+            });
+        }
+    });
+
+    drop(tx);
+
+    let mut ordered: Vec<Option<(SongBackupRow, Result<(String, u64), AppError>)>> =
+        Vec::with_capacity(jobs.len());
+    ordered.resize_with(jobs.len(), || None);
+    for _ in 0..jobs.len() {
+        if let Ok((idx, row, result)) = rx.recv() {
+            ordered[idx] = Some((row, result));
+        }
+    }
+
+    ordered
+        .into_iter()
+        .flatten()
+        .collect::<Vec<(SongBackupRow, Result<(String, u64), AppError>)>>()
+}
+
 pub fn generate_song_archives(
     db: &Database,
     app_data_dir: &Path,
@@ -392,6 +503,7 @@ pub fn generate_song_archives(
     }
 
     let mut results = Vec::with_capacity(rows.len());
+    let mut jobs = Vec::new();
 
     for row in rows {
         if let Err(err) = upsert_processing_status(db, &row.song_id) {
@@ -432,7 +544,51 @@ pub fn generate_song_archives(
             continue;
         }
 
-        match generate_archive_with_retry(db, &row.song_id, &songs_dir, &temp_root) {
+        let entries = match list_scores_for_archive(db, &row.song_id) {
+            Ok(entries) => entries,
+            Err(err) => {
+                let error_text = err.to_string();
+                if let Err(status_err) = update_backup_status(
+                    db,
+                    &row.song_id,
+                    "error",
+                    row.last_backup_at,
+                    Some(&error_text),
+                ) {
+                    error!(
+                        "Erro ao atualizar status de backup (error) para {}: {}",
+                        row.song_id, status_err
+                    );
+                }
+
+                results.push(SongArchiveResult {
+                    song_id: row.song_id,
+                    song_name: row.song_name,
+                    archive_path: None,
+                    archive_size: None,
+                    generated: false,
+                    error: Some(error_text),
+                });
+                continue;
+            }
+        };
+
+        jobs.push(ArchiveJob { row, entries });
+    }
+
+    if !jobs.is_empty() {
+        let workers = archive_worker_count(jobs.len());
+        let zstd_threads = zstd_threads_per_archive(workers);
+        info!(
+            "Gerando {} arquivo(s) .tar.zst com até {} worker(s) e {} thread(s) zstd por arquivo",
+            jobs.len(),
+            workers,
+            zstd_threads
+        );
+    }
+
+    for (row, archive_result) in run_archive_jobs_parallel(jobs, &songs_dir, &temp_root) {
+        match archive_result {
             Ok((archive_path, archive_size)) => {
                 if let Err(err) = update_backup_status(
                     db,
