@@ -446,6 +446,29 @@ mod tests {
         assert!(status_events > 0);
     }
 
+        #[test]
+        fn test_update_score_status_not_found_does_not_create_changed_field_event() {
+            let db = make_db();
+            db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
+            db.insert_score(&make_score(&db, "sc1", "s1", Some("Violino")))
+                .unwrap();
+
+            db.update_score_status("sc1", ScoreStatus::NotFound, "test-computer", None)
+                .unwrap();
+
+            let conn = db.conn.lock().unwrap();
+            let not_found_events: i64 = conn
+                .query_row(
+                    "SELECT COUNT(*) FROM changedField
+                     WHERE entity = 'scores' AND field = 'status' AND newValue = 'not_found'",
+                    [],
+                    |row| row.get(0),
+                )
+                .unwrap();
+
+            assert_eq!(not_found_events, 0);
+        }
+
     // ── Score Metadata for Scanning ──
 
     #[test]

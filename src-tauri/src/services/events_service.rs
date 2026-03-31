@@ -61,6 +61,7 @@ pub fn generate_events_msgpack(
 
     let events = changed_fields
         .iter()
+        .filter(|change| !is_not_found_status_change(change))
         .map(|change| {
             let data = change.field.as_ref().map(|field| {
                 vec![EventDataMessagePack {
@@ -126,6 +127,12 @@ pub fn generate_events_msgpack(
     })
 }
 
+fn is_not_found_status_change(change: &crate::infrastructure::database::ChangedFieldRecord) -> bool {
+    change.entity == "scores"
+        && change.field.as_deref() == Some("status")
+        && change.new_value.as_deref() == Some("not_found")
+}
+
 fn temp_path_for(path: &PathBuf) -> PathBuf {
     let mut temp = path.clone();
     temp.set_extension("zst.tmp");
@@ -169,6 +176,7 @@ fn compress_events_payload(data: &[u8]) -> Result<Vec<u8>, AppError> {
 
 #[cfg(test)]
 mod tests {
+    use rusqlite::params;
     use tempfile::tempdir;
 
     use crate::domain::models::{Category, Song};
@@ -220,5 +228,64 @@ mod tests {
         assert!(summary
             .output_path
             .ends_with("/cloud/events/events.msgpack.zst"));
+    }
+
+    #[test]
+    fn skips_not_found_status_events_when_generating_events_file() {
+        let dir = tempdir().expect("temp dir");
+        let db_path = dir.path().join("test.db");
+        let db = Database::new(&db_path).expect("db init");
+        let store = SystemStore::new(dir.path().to_path_buf());
+
+        let settings = crate::domain::models::AppSettings {
+            computer_id: "server-1".to_string(),
+            computer_name: Some("Servidor".to_string()),
+            computer_type: crate::domain::models::ComputerType::Server,
+            ..Default::default()
+        };
+        store.save_app_settings(&settings).expect("save settings");
+
+        let conn = db.conn.lock().expect("lock db");
+        conn.execute("DELETE FROM changedField", [])
+            .expect("clear changed fields");
+
+        conn.execute(
+            "INSERT INTO changedField (id, origin, type, entity, entityId, field, oldValue, newValue, timestamp)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+            params![
+                "evt-not-found",
+                "server",
+                "update",
+                "scores",
+                "score-1",
+                "status",
+                "main",
+                "not_found",
+                chrono::Local::now().timestamp(),
+            ],
+        )
+        .expect("insert not_found event");
+
+        conn.execute(
+            "INSERT INTO changedField (id, origin, type, entity, entityId, field, oldValue, newValue, timestamp)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+            params![
+                "evt-draft",
+                "server",
+                "update",
+                "scores",
+                "score-1",
+                "status",
+                "main",
+                "draft",
+                chrono::Local::now().timestamp() + 1,
+            ],
+        )
+        .expect("insert draft event");
+        drop(conn);
+
+        let summary = generate_events_msgpack(&db, &store).expect("generate events");
+
+        assert_eq!(summary.events_count, 1);
     }
 }

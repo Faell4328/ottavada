@@ -135,7 +135,10 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 	- [x] Não é para aparecer os opções no overflow menu e tirar essa merda de texto: "não permitido para cliente"
 	- [x] Adicionar fluxo para abrir a partitura localmente, como especificado
 - [x] Limpar o diretório `/tmp` ao iniciar o aplicativo
-- [ ] Implementar função para abrir a partitura no cliente
+- [x] Corrigir o problema e estar enviado partitura "not found" para o cliente
+	- [x] Removendo o registro do evento "not found" no "changedField"
+- [ ] Corrigir problema de não deletar o arquivo de partitura ao deletar a música/partituras no aplicativo.
+- [ ] Corrigir problema de não gerar o `{songId}.tar.zst` ao deletar uma partitura da música.
 - [ ] Refatorar o front e back
 
 ## Funcionalidades para v2 (apenas rascunho/ideias)
