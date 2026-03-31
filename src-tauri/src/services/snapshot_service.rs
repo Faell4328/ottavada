@@ -8,7 +8,7 @@ use crate::domain::models::OperationGuard;
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
 
-const CLOUD_DIR_NAME: &str = "nuvem";
+const CLOUD_DIR_NAME: &str = "cloud";
 const EVENTS_DIR_NAME: &str = "events";
 const EVENTS_FILE_NAME: &str = "events.msgpack.zst";
 const SNAPSHOT_FILE_NAME: &str = "snapshot.msgpack.zst";
@@ -257,7 +257,7 @@ mod tests {
         db.insert_song(&song, &[category.id.clone()])
             .expect("insert song");
 
-        let events_dir = dir.path().join("nuvem").join("events");
+        let events_dir = dir.path().join("cloud").join("events");
         fs::create_dir_all(&events_dir).expect("create events dir");
         let events_file = events_dir.join("events.msgpack.zst");
         fs::write(&events_file, b"events").expect("write events file");
@@ -266,7 +266,7 @@ mod tests {
 
         assert!(summary.file_size > 0);
         assert!(summary.generated_at > 0);
-        assert!(summary.output_path.ends_with("/nuvem/snapshot.msgpack.zst"));
+        assert!(summary.output_path.ends_with("/cloud/snapshot.msgpack.zst"));
         assert!(!events_file.exists());
 
         let changed_fields = db

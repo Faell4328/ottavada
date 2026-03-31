@@ -130,8 +130,12 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 
 ## v0.6
 - [x] Sincronização do rclone na Nuvem
-- [ ] Consultar e implementar as alterações do servidor no cliente
-- [ ] Limitar as funcionalidades do cliente
+- [x] Consultar e implementar as alterações do servidor no cliente
+- [ ] Corrigir cliente
+	- [ ] Não é para aparecer os opções no overflow menu e tirar essa merda de texto: "não permitido para cliente"
+	- [ ] Adicionar fluxo para abrir a partitura localmente, como especificado
+- [ ] Implementar função para abrir a partitura no cliente
+- [ ] Refatorar o front e back
 
 ## Funcionalidades para v2 (apenas rascunho/ideias)
 

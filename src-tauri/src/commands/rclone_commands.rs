@@ -1,5 +1,6 @@
 use crate::domain::errors::AppError;
 use crate::infrastructure::store::SystemStore;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::Instant;
 use tauri::State;
@@ -38,6 +39,31 @@ fn configure_no_window_command(cmd: Command) -> Command {
     {
         cmd
     }
+}
+
+fn ensure_cloud_dir(app_data_dir: &Path) -> Result<PathBuf, AppError> {
+    let cloud_dir = app_data_dir.join("cloud");
+    let legacy_dir = app_data_dir.join("nuvem");
+
+    if cloud_dir.exists() {
+        return Ok(cloud_dir);
+    }
+
+    if legacy_dir.exists() {
+        std::fs::rename(&legacy_dir, &cloud_dir).map_err(|e| {
+            AppError::Generic(format!(
+                "Erro ao migrar diretório legado '{}' para '{}': {}",
+                legacy_dir.display(),
+                cloud_dir.display(),
+                e
+            ))
+        })?;
+    }
+
+    std::fs::create_dir_all(&cloud_dir)
+        .map_err(|e| AppError::Generic(format!("Erro ao preparar pasta local cloud: {}", e)))?;
+
+    Ok(cloud_dir)
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -201,7 +227,7 @@ pub fn upload_with_rclone(
     }
 }
 
-/// Sincroniza a pasta local `/nuvem` com o remote configurado no rclone usando `rclone sync`.
+/// Sincroniza a pasta local `/cloud` com o remote configurado no rclone usando `rclone sync`.
 ///
 /// Sempre utiliza os parâmetros exigidos pelo projeto:
 /// - `--rc`
@@ -245,9 +271,7 @@ fn sync_cloud_with_rclone_impl(
         format!("{}:{}", rclone_config.remote, clean_remote_path)
     };
 
-    let cloud_local_dir = store.app_data_dir().join("nuvem");
-    std::fs::create_dir_all(&cloud_local_dir)
-        .map_err(|e| AppError::Generic(format!("Erro ao preparar pasta local da nuvem: {}", e)))?;
+    let cloud_local_dir = ensure_cloud_dir(store.app_data_dir())?;
 
     let local_target = cloud_local_dir.to_string_lossy().to_string();
 
@@ -347,14 +371,12 @@ pub fn test_rclone_upload(
     let app_data_dir = store.app_data_dir();
 
     // Criar diretório de testes se não existir
-    let nuvem_dir = app_data_dir.join("nuvem");
-    std::fs::create_dir_all(&nuvem_dir)
-        .map_err(|e| AppError::Generic(format!("Erro ao criar diretório nuvem: {}", e)))?;
+    let cloud_dir = ensure_cloud_dir(app_data_dir)?;
 
-    info!("Diretório de teste: {:?}", nuvem_dir);
+    info!("Diretório de teste: {:?}", cloud_dir);
 
     // Criar arquivo de teste
-    let test_file_path = nuvem_dir.join("rclone_test.txt");
+    let test_file_path = cloud_dir.join("rclone_test.txt");
     let test_content = "Upload feito com sucesso";
 
     std::fs::write(&test_file_path, test_content)
@@ -406,7 +428,7 @@ pub fn test_rclone_upload(
     Ok(())
 }
 
-/// Deleta o arquivo de teste local em /nuvem após o usuário prosseguir com rclone
+/// Deleta o arquivo de teste local em /cloud após o usuário prosseguir com rclone
 ///
 /// # Parâmetros
 /// - `store`: SystemStore para obter o diretório de dados
@@ -418,8 +440,8 @@ pub fn delete_rclone_test_file(store: State<'_, SystemStore>) -> Result<(), AppE
     info!("Deletando arquivo de teste local");
 
     let app_data_dir = store.app_data_dir();
-    let nuvem_dir = app_data_dir.join("nuvem");
-    let test_file_path = nuvem_dir.join("rclone_test.txt");
+    let cloud_dir = ensure_cloud_dir(app_data_dir)?;
+    let test_file_path = cloud_dir.join("rclone_test.txt");
 
     // Deletar arquivo local se existir
     if test_file_path.exists() {

@@ -8,6 +8,7 @@ use crate::services::backup_msgpack_service::{
     export_backup_msgpack, import_backup_msgpack, BackupFileSummary, BackupImportSummary,
 };
 use crate::services::backup_songs_service::{generate_song_archives, SongArchiveSummary};
+use crate::services::client_sync_service::{apply_server_changes_for_client, ClientSyncSummary};
 use crate::services::events_service::{generate_events_msgpack, EventsFileSummary};
 use crate::services::snapshot_service::{generate_snapshot_msgpack, SnapshotFileSummary};
 
@@ -24,9 +25,9 @@ pub async fn generate_song_archives_files(
         let settings = store.get_app_settings()?;
         settings.require_server_only()?;
 
-        let cloud_root = app_data_dir.join("nuvem");
+        let cloud_root = app_data_dir.join("cloud");
         std::fs::create_dir_all(&cloud_root)
-            .map_err(|e| AppError::Generic(format!("Erro ao preparar diretório nuvem: {}", e)))?;
+            .map_err(|e| AppError::Generic(format!("Erro ao preparar diretório cloud: {}", e)))?;
 
         generate_song_archives(&db, &cloud_root)
     })
@@ -94,4 +95,25 @@ pub fn import_backup_file(
     settings.require_server_only()?;
 
     import_backup_msgpack(&db, &store, backup_path)
+}
+
+#[tauri::command]
+pub async fn apply_server_changes_on_client(
+    db: State<'_, Database>,
+    store: State<'_, SystemStore>,
+) -> Result<ClientSyncSummary, AppError> {
+    let db = db.inner().clone();
+    let app_data_dir = store.app_data_dir().clone();
+
+    tauri::async_runtime::spawn_blocking(move || {
+        let store = SystemStore::new(app_data_dir);
+        apply_server_changes_for_client(&db, &store)
+    })
+    .await
+    .map_err(|e| {
+        AppError::Generic(format!(
+            "Falha interna ao aplicar alterações do servidor no cliente: {}",
+            e
+        ))
+    })?
 }

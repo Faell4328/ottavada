@@ -396,7 +396,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (isClient) {
           dispatch({
             type: "SET_SCAN_PROGRESS",
-            payload: { total: 1, completed: 0, changedFiles: 0 },
+            payload: { total: 2, completed: 0, changedFiles: 0 },
           });
 
           if (!isAutomatic) {
@@ -407,11 +407,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
           dispatch({
             type: "SET_SCAN_PROGRESS",
-            payload: { total: 1, completed: 1, changedFiles: 0 },
+            payload: { total: 2, completed: 1, changedFiles: 0 },
           });
 
           if (!isAutomatic) {
-            toast.success("Sincronização da nuvem concluída");
+            toast("Aplicando alterações do servidor...", { icon: "🧩" });
+          }
+
+          const syncSummary = await api.applyServerChangesOnClient();
+
+          await Promise.all([loadSongs(), loadCategories()]);
+
+          dispatch({
+            type: "SET_SCAN_PROGRESS",
+            payload: {
+              total: 2,
+              completed: 2,
+              changedFiles: syncSummary.events_applied,
+            },
+          });
+
+          if (!isAutomatic) {
+            const appliedSummary = syncSummary.snapshot_applied
+              ? `snapshot aplicado + ${syncSummary.events_applied} evento(s)`
+              : `${syncSummary.events_applied} evento(s) aplicado(s)`;
+            toast.success(`Sincronização concluída: ${appliedSummary}`);
           }
 
           setTimeout(() => {
@@ -556,7 +576,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         });
       }
     },
-    [loadSongs, state.settings?.computer_type, getErrorMessage]
+    [
+      loadSongs,
+      loadCategories,
+      state.settings?.computer_type,
+      getErrorMessage,
+    ]
   );
 
   const value: AppContextValue = useMemo(

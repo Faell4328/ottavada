@@ -8,7 +8,7 @@ use crate::domain::models::OperationGuard;
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
 
-const CLOUD_DIR_NAME: &str = "nuvem";
+const CLOUD_DIR_NAME: &str = "cloud";
 const EVENTS_DIR_NAME: &str = "events";
 const EVENTS_FILE_NAME: &str = "events.msgpack.zst";
 
@@ -219,6 +219,6 @@ mod tests {
         assert!(summary.file_size > 0);
         assert!(summary
             .output_path
-            .ends_with("/nuvem/events/events.msgpack.zst"));
+            .ends_with("/cloud/events/events.msgpack.zst"));
     }
 }

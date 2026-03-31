@@ -296,6 +296,17 @@ export async function generateSnapshotFile(): Promise<SnapshotFileSummary> {
   return invoke("generate_snapshot_file");
 }
 
+export interface ClientSyncSummary {
+  snapshot_applied: boolean;
+  events_applied: number;
+  last_snapshot_timestamp: number;
+  last_change_timestamp: number;
+}
+
+export async function applyServerChangesOnClient(): Promise<ClientSyncSummary> {
+  return invoke("apply_server_changes_on_client");
+}
+
 export interface BackupFileSummary {
   output_path: string;
   file_size: number;
