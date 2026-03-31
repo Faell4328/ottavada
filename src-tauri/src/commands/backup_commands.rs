@@ -12,6 +12,33 @@ use crate::services::client_sync_service::{apply_server_changes_for_client, Clie
 use crate::services::events_service::{generate_events_msgpack, EventsFileSummary};
 use crate::services::snapshot_service::{generate_snapshot_msgpack, SnapshotFileSummary};
 
+fn delete_existing_song_archives(app_data_dir: &std::path::Path) -> Result<usize, AppError> {
+    let songs_dir = app_data_dir.join("cloud").join("songs");
+    if !songs_dir.exists() {
+        return Ok(0);
+    }
+
+    let deleted_count = std::fs::read_dir(&songs_dir)
+        .map_err(|e| AppError::Generic(format!("Erro ao listar diretório de músicas: {}", e)))?
+        .count();
+
+    std::fs::remove_dir_all(&songs_dir).map_err(|e| {
+        AppError::Generic(format!(
+            "Erro ao limpar diretório de músicas durante regeneração forçada: {}",
+            e
+        ))
+    })?;
+
+    std::fs::create_dir_all(&songs_dir).map_err(|e| {
+        AppError::Generic(format!(
+            "Erro ao recriar diretório de músicas após limpeza forçada: {}",
+            e
+        ))
+    })?;
+
+    Ok(deleted_count)
+}
+
 #[tauri::command]
 pub async fn generate_song_archives_files(
     db: State<'_, Database>,
@@ -63,11 +90,14 @@ pub async fn generate_snapshot_file(
     let app_data_dir = store.app_data_dir().clone();
 
     tauri::async_runtime::spawn_blocking(move || {
-        let store = SystemStore::new(app_data_dir);
+        let store = SystemStore::new(app_data_dir.clone());
         let settings = store.get_app_settings()?;
         settings.require_server_only()?;
 
-        generate_snapshot_msgpack(&db, &store)
+        let summary = generate_snapshot_msgpack(&db, &store)?;
+        delete_existing_song_archives(&app_data_dir)?;
+        db.mark_all_song_archives_for_regeneration()?;
+        Ok(summary)
     })
     .await
     .map_err(|e| AppError::Generic(format!("Falha interna ao gerar snapshot.msgpack: {}", e)))?
@@ -94,7 +124,10 @@ pub fn import_backup_file(
     let settings = store.get_app_settings()?;
     settings.require_server_only()?;
 
-    import_backup_msgpack(&db, &store, backup_path)
+    let summary = import_backup_msgpack(&db, &store, backup_path)?;
+    delete_existing_song_archives(store.app_data_dir())?;
+    db.mark_all_song_archives_for_regeneration()?;
+    Ok(summary)
 }
 
 #[tauri::command]

@@ -158,6 +158,9 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 	- [x] Melhorando o rclone e a compressão (`tar.zst`) e outras melhorias
 	- [x] Corrigindo problema de nome truncado ao adicionar música com partitura
 	- [x] Melhorando o `StatusBar`.
+- [x] Mais refatoração
+- [x] Forçando a regerar os arquivos `{songId}.tar.zts` ao "importar database" e "força snaphost"
+- [x] Melhorando a sincronização do servidor com a nuvem
 
 ## Funcionalidades para v2 (apenas rascunho/ideias)
 

@@ -354,6 +354,8 @@
 
 6. Deleta o arquivo `events.msgpack.zst`
 
+6.1. Deleta todos os arquivos `{songId}.tar.zst` existentes em `/cloud/songs` para forçar a regeneração completa
+
 7. Chama o rclone para sincronizar a pasta local com a "Nuvem"
 	- Caso de erro:
 		- Tentar compactar mais uma vez
@@ -493,9 +495,9 @@
 	- Caso tenha:
 		- Continua o fluxo
 
-2. Executa o fluxo "Consultar Nuvem"
+2. Não executa o fluxo "Consultar Nuvem" (no cenário atual com cliente read-only)
 
-3. Executa o fluxo "Gerando o arquivo de alteração events.msgpack"
+3. Executa o fluxo "Verificar alteração dos arquivos"
 	- Caso ocorra tudo certo vai para o próximo
 	- Caso ocorra algum erro, emite um toast avisando e interrompe o fluxo
 
@@ -503,13 +505,19 @@
 	- Caso ocorra tudo certo vai para o próximo
 	- Caso ocorra algum erro, emite um toast avisando e interrompe o fluxo
 
-5. Faz o upload para a nuvem com rclone (sync)
+5. Executa o fluxo "Gerando o arquivo de alteração events.msgpack"
+	- Caso ocorra tudo certo vai para o próximo
+	- Caso ocorra algum erro, emite um toast avisando e interrompe o fluxo
+
+6. Faz o upload para a nuvem apenas se houver alteração nova (`.tar.zst`, `events.msgpack.zst` ou `snapshot.msgpack.zst`)
+	- Padrão: upload incremental apenas dos caminhos alterados
+	- Exceção: usa `rclone sync` completo quando precisar refletir remoções no remoto (ex: limpeza de `events.msgpack.zst`)
 	- Caso de erro:
 		- Tenta mais uma vez
 		- Se ocorrer erro novamente, deve ser emitido um toast avisando o usuário que não é possível compactar o arquivo de alteração.
 		- O fluxo deve ser encerrado (caso esse fluxo esteja em outro, o fluxo pai deve ser encerrado também)
 
-6. Deleta todas as alterações (changedField) utilizando como referência o timestamp mais recente das alterações feitas. Apagando a apartir dele e todos os menores
+7. Deleta todas as alterações (changedField) utilizando como referência o timestamp mais recente das alterações feitas. Apagando a apartir dele e todos os menores
 ```
 
 ! Em caso de problema, deve ser feito o rallback das alterações. Ou é feito tudo ou nada.
@@ -1008,9 +1016,9 @@
 	- Caso tenha:
 		- Continua o fluxo
 
-2. Executa o fluxo "Consultar Nuvem"
+2. Não executa o fluxo "Consultar Nuvem" (no cenário atual com cliente read-only)
 
-3. Executa o fluxo "Gerando o arquivo de alteração events.msgpack"
+3. Executa o fluxo "Verificar alteração dos arquivos"
 	- Caso ocorra tudo certo vai para o próximo
 	- Caso ocorra algum erro, emite um toast avisando e interrompe o fluxo
 
@@ -1018,13 +1026,19 @@
 	- Caso ocorra tudo certo vai para o próximo
 	- Caso ocorra algum erro, emite um toast avisando e interrompe o fluxo
 
-5. Faz o upload para a nuvem com rclone (sync)
+5. Executa o fluxo "Gerando o arquivo de alteração events.msgpack"
+	- Caso ocorra tudo certo vai para o próximo
+	- Caso ocorra algum erro, emite um toast avisando e interrompe o fluxo
+
+6. Faz o upload para a nuvem apenas se houver alteração nova (`.tar.zst`, `events.msgpack.zst` ou `snapshot.msgpack.zst`)
+	- Padrão: upload incremental apenas dos caminhos alterados
+	- Exceção: usa `rclone sync` completo quando precisar refletir remoções no remoto (ex: limpeza de `events.msgpack.zst`)
 	- Caso de erro:
 		- Tenta mais uma vez
 		- Se ocorrer erro novamente, deve ser emitido um toast avisando o usuário que não é possível compactar o arquivo de alteração.
 		- O fluxo deve ser encerrado (caso esse fluxo esteja em outro, o fluxo pai deve ser encerrado também)
 
-6. Deleta todas as alterações (changedField) utilizando como referência o timestamp mais recente das alterações feitas. Apagando a apartir dele e todos os menores
+7. Deleta todas as alterações (changedField) utilizando como referência o timestamp mais recente das alterações feitas. Apagando a apartir dele e todos os menores
 ```
 
 **Apenas Cliente**

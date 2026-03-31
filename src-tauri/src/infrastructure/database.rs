@@ -1251,6 +1251,29 @@ impl Database {
 
 #[allow(dead_code)]
 impl Database {
+    pub fn mark_all_song_archives_for_regeneration(&self) -> Result<usize, AppError> {
+        let conn = self.conn.lock().unwrap();
+
+        conn.execute(
+            "INSERT OR IGNORE INTO backupSongs (id, song_id, status, last_backup_at, error_message)
+             SELECT lower(hex(randomblob(16))), s.id, 'processing', NULL, NULL
+             FROM songs s",
+            [],
+        )
+        .map_err(AppError::Database)?;
+
+        conn.execute(
+            "UPDATE backupSongs
+             SET
+                status = 'processing',
+                last_backup_at = NULL,
+                error_message = NULL
+             WHERE song_id IN (SELECT id FROM songs)",
+            [],
+        )
+        .map_err(AppError::Database)
+    }
+
     pub fn upsert_backup_song_status(
         &self,
         song_id: &str,

@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import { useAppState } from "../context/AppContext";
 import * as api from "../api/commands";
 import { getErrorMessage } from "../utils/errors";
+import { useRcloneTest } from "../hooks/useRcloneTest";
 import { ChangeComputerTypeModal } from "./ChangeComputerTypeModal";
 import type { AppSettings } from "../types";
 
@@ -25,12 +26,16 @@ export default function SettingsPage() {
   );
   const [isTogglingType, setIsTogglingType] = useState(false);
   const [isChangeComputerTypeModalOpen, setIsChangeComputerTypeModalOpen] = useState(false);
-  const [isTestingRclone, setIsTestingRclone] = useState(false);
   const [isGeneratingSnapshot, setIsGeneratingSnapshot] = useState(false);
   const [isExportingBackup, setIsExportingBackup] = useState(false);
   const [isImportingBackup, setIsImportingBackup] = useState(false);
   const [rcloneRemote, setRcloneRemote] = useState("");
   const [rclonePath, setRclonePath] = useState("ScoreMaestro");
+
+  const { isTestingRclone, testRclone } = useRcloneTest({
+    remote: rcloneRemote,
+    path: rclonePath,
+  });
 
   // Carregar dados do rclone da store quando o componente monta ou settings muda
   useEffect(() => {
@@ -72,23 +77,6 @@ export default function SettingsPage() {
     }
   }
 
-  async function handleTestRclone() {
-    if (!rcloneRemote.trim()) {
-      toast.error("Especifique o nome do remote do rclone");
-      return;
-    }
-
-    setIsTestingRclone(true);
-    try {
-      await api.testRcloneUpload(rcloneRemote, rclonePath);
-      toast.success("Teste realizado com sucesso! Arquivo enviado para o rclone.");
-    } catch (error) {
-      toast.error(`Erro ao testar rclone: ${getErrorMessage(error)}`);
-    } finally {
-      setIsTestingRclone(false);
-    }
-  }
-
   async function handleSave() {
     // Atualizar os dados de rclone no objeto settings antes de salvar
     const updatedSettings: AppSettings = {
@@ -120,7 +108,16 @@ export default function SettingsPage() {
     setIsGeneratingSnapshot(true);
     try {
       const summary = await api.generateSnapshotFile();
-      await api.syncCloudWithRclone("upload");
+
+      try {
+        await api.syncCloudWithRclone("upload");
+      } catch (uploadError) {
+        toast.error(
+          `Snapshot gerado, mas falhou no upload: ${getErrorMessage(uploadError)}`
+        );
+        return;
+      }
+
       await loadSettings();
       toast.success(
         `Snapshot gerado e enviado com sucesso (${summary.songs_count} música(s), ${summary.scores_count} partitura(s))`
@@ -277,7 +274,9 @@ export default function SettingsPage() {
           <div>
             <button
               type="button"
-              onClick={handleTestRclone}
+              onClick={() => {
+                void testRclone();
+              }}
               disabled={isTestingRclone || !rcloneRemote.trim()}
               className="h-9 px-4 rounded border border-[#c5cfdb] bg-white hover:bg-[#f2f5fa] text-sm font-medium text-[#344b61] disabled:opacity-50 transition-colors cursor-pointer"
             >

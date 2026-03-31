@@ -179,6 +179,13 @@ pub struct RcloneSyncSummary {
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct RcloneSelectiveUploadSummary {
+    pub uploaded_count: usize,
+    pub skipped_count: usize,
+    pub duration_ms: u128,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct RcloneRcStats {
     pub active: bool,
     pub bytes: u64,
@@ -418,6 +425,116 @@ pub async fn sync_cloud_with_rclone(
     })
     .await
     .map_err(|e| AppError::Generic(format!("Falha interna ao sincronizar com rclone: {}", e)))?
+}
+
+#[tauri::command]
+pub async fn upload_cloud_paths_with_rclone(
+    store: State<'_, SystemStore>,
+    relative_paths: Vec<String>,
+) -> Result<RcloneSelectiveUploadSummary, AppError> {
+    let app_data_dir = store.app_data_dir().clone();
+
+    tauri::async_runtime::spawn_blocking(move || {
+        let store = SystemStore::new(app_data_dir);
+        upload_cloud_paths_with_rclone_impl(&store, &relative_paths)
+    })
+    .await
+    .map_err(|e| {
+        AppError::Generic(format!(
+            "Falha interna ao enviar caminhos selecionados com rclone: {}",
+            e
+        ))
+    })?
+}
+
+fn upload_cloud_paths_with_rclone_impl(
+    store: &SystemStore,
+    relative_paths: &[String],
+) -> Result<RcloneSelectiveUploadSummary, AppError> {
+    let settings = store.get_app_settings()?;
+    let rclone_config = settings
+        .rclone_config
+        .ok_or_else(|| AppError::Generic("Configuração do rclone não encontrada".to_string()))?;
+
+    let clean_remote_path = rclone_config
+        .path
+        .trim()
+        .trim_start_matches('/')
+        .trim_end_matches('/');
+
+    let remote_target = if clean_remote_path.is_empty() {
+        format!("{}:", rclone_config.remote)
+    } else {
+        format!("{}:{}", rclone_config.remote, clean_remote_path)
+    };
+
+    let cloud_local_dir = ensure_cloud_dir(store.app_data_dir())?;
+    let started_at = Instant::now();
+    let mut uploaded_count: usize = 0;
+    let mut skipped_count: usize = 0;
+
+    for relative_path in relative_paths {
+        let normalized_relative = relative_path
+            .trim()
+            .trim_start_matches('/')
+            .replace('\\', "/");
+
+        if normalized_relative.is_empty() {
+            skipped_count += 1;
+            continue;
+        }
+
+        let local_path = cloud_local_dir.join(&normalized_relative);
+        if !local_path.exists() {
+            info!(
+                "Pulando upload incremental de '{}' (arquivo local não existe)",
+                normalized_relative
+            );
+            skipped_count += 1;
+            continue;
+        }
+
+        let local_path_str = local_path.to_str().ok_or_else(|| {
+            AppError::Generic(format!(
+                "Caminho local inválido para upload incremental: {}",
+                local_path.display()
+            ))
+        })?;
+
+        let remote_path = format!("{}/{}", remote_target, normalized_relative);
+
+        let mut args = if local_path.is_dir() {
+            vec!["copy", local_path_str, remote_path.as_str()]
+        } else {
+            vec!["copyto", local_path_str, remote_path.as_str(), "--no-traverse"]
+        };
+
+        args.extend(["--rc", "--rc-addr=127.0.0.1:5572"]);
+
+        append_common_copy_flags(&mut args);
+        let operation_label = format!("upload-selective:{}", normalized_relative);
+        let output = run_rclone_with_retry(&args, &operation_label)?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            error!(
+                "Falha no upload incremental [{}]: {}",
+                normalized_relative, stderr
+            );
+            return Err(AppError::Generic(format!(
+                "Falha no upload incremental de '{}': {}",
+                normalized_relative, stderr
+            )));
+        }
+
+        uploaded_count += 1;
+    }
+
+    Ok(RcloneSelectiveUploadSummary {
+        uploaded_count,
+        skipped_count,
+        duration_ms: started_at.elapsed().as_millis(),
+    })
 }
 
 fn sync_cloud_with_rclone_impl(

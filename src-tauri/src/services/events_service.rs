@@ -1,5 +1,4 @@
 use std::fs;
-use std::path::PathBuf;
 
 use serde::Serialize;
 
@@ -7,11 +6,13 @@ use crate::domain::errors::AppError;
 use crate::domain::models::OperationGuard;
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
+use crate::services::msgpack_zstd::{
+    compress_zstd_with_threads, serialize_msgpack_named, write_atomic, ZSTD_LEVEL_BALANCED,
+};
 
 const CLOUD_DIR_NAME: &str = "cloud";
 const EVENTS_DIR_NAME: &str = "events";
 const EVENTS_FILE_NAME: &str = "events.msgpack.zst";
-const ZSTD_LEVEL: i32 = 10;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct EventsFileSummary {
@@ -116,17 +117,15 @@ pub fn generate_events_msgpack(
         });
     }
 
-    let msgpack_bytes = rmp_serde::to_vec_named(&payload)
-        .map_err(|e| AppError::Generic(format!("Erro ao serializar events.msgpack: {}", e)))?;
+    let msgpack_bytes = serialize_msgpack_named(&payload, "events.msgpack")?;
 
     let payload_size = msgpack_bytes.len() as u64;
 
-    let compressed_bytes = compress_events_payload(&msgpack_bytes)?;
+    let compressed_bytes =
+        compress_zstd_with_threads(&msgpack_bytes, ZSTD_LEVEL_BALANCED, "events.msgpack")?;
 
     fs::create_dir_all(&events_dir)
         .map_err(|e| AppError::Generic(format!("Erro ao criar diretório de eventos: {}", e)))?;
-
-    let temp_path = temp_path_for(&output_path);
 
     if output_path.exists() {
         let existing_bytes = fs::read(&output_path).map_err(|e| {
@@ -147,14 +146,7 @@ pub fn generate_events_msgpack(
         }
     }
 
-    fs::write(&temp_path, &compressed_bytes).map_err(|e| {
-        AppError::Generic(format!(
-            "Erro ao escrever arquivo temporário de eventos: {}",
-            e
-        ))
-    })?;
-    fs::rename(&temp_path, &output_path)
-        .map_err(|e| AppError::Generic(format!("Erro ao finalizar events.msgpack: {}", e)))?;
+    write_atomic(&output_path, &compressed_bytes, "events.msgpack")?;
 
     let file_size = fs::metadata(&output_path)
         .map_err(|e| {
@@ -174,46 +166,6 @@ fn is_not_found_status_change(change: &crate::infrastructure::database::ChangedF
     change.entity == "scores"
         && change.field.as_deref() == Some("status")
         && matches!(change.new_value.as_deref(), Some("not_found") | Some("draft"))
-}
-
-fn temp_path_for(path: &PathBuf) -> PathBuf {
-    let mut temp = path.clone();
-    temp.set_extension("zst.tmp");
-    temp
-}
-
-fn compress_events_payload(data: &[u8]) -> Result<Vec<u8>, AppError> {
-    let mut encoder = zstd::stream::Encoder::new(Vec::new(), ZSTD_LEVEL).map_err(|e| {
-        AppError::Generic(format!(
-            "Erro ao iniciar compressão zstd de events.msgpack: {}",
-            e
-        ))
-    })?;
-
-    let worker_count = std::thread::available_parallelism()
-        .map(usize::from)
-        .unwrap_or(1);
-
-    encoder.multithread(worker_count as u32).map_err(|e| {
-        AppError::Generic(format!(
-            "Erro ao configurar multithread da compressão zstd de events.msgpack: {}",
-            e
-        ))
-    })?;
-
-    std::io::Write::write_all(&mut encoder, data).map_err(|e| {
-        AppError::Generic(format!(
-            "Erro ao escrever payload de events.msgpack no zstd: {}",
-            e
-        ))
-    })?;
-
-    encoder.finish().map_err(|e| {
-        AppError::Generic(format!(
-            "Erro ao finalizar compressão zstd de events.msgpack: {}",
-            e
-        ))
-    })
 }
 
 #[cfg(test)]

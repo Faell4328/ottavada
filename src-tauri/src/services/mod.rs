@@ -4,4 +4,5 @@ pub mod backup_songs_service;
 pub mod client_sync_service;
 pub mod events_service;
 pub mod indexer;
+pub mod msgpack_zstd;
 pub mod snapshot_service;

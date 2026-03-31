@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import { useAppState } from "../context/AppContext";
 import * as api from "../api/commands";
 import { getErrorMessage } from "../utils/errors";
+import { useRcloneTest } from "../hooks/useRcloneTest";
 
 type Step = "name" | "type" | "rclone-setup" | "confirm";
 
@@ -16,8 +17,14 @@ export default function FirstRunPage() {
   const [rcloneRemote, setRcloneRemote] = useState("");
   const [rclonePath, setRclonePath] = useState("ScoreMaestro");
   const [rcloneConfigured, setRcloneConfigured] = useState(false);
-  const [isTestingRclone, setIsTestingRclone] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  const { isTestingRclone, testRclone } = useRcloneTest({
+    remote: rcloneRemote,
+    path: rclonePath,
+    onSuccess: () => setRcloneConfigured(true),
+    onFailure: () => setRcloneConfigured(false),
+  });
 
   useEffect(() => {
     // Generate a UUID for the computer
@@ -27,25 +34,6 @@ export default function FirstRunPage() {
         toast.error("Erro ao gerar ID do computador");
       });
   }, []);
-
-  async function handleTestRclone() {
-    if (!rcloneRemote.trim()) {
-      toast.error("Especifique o nome do remote do rclone");
-      return;
-    }
-
-    setIsTestingRclone(true);
-    try {
-      await api.testRcloneUpload(rcloneRemote, rclonePath);
-      toast.success("Teste realizado com sucesso! Arquivo enviado para o rclone.");
-      setRcloneConfigured(true);
-    } catch (error) {
-      toast.error(`Erro ao testar rclone: ${getErrorMessage(error)}`);
-      setRcloneConfigured(false);
-    } finally {
-      setIsTestingRclone(false);
-    }
-  }
 
   async function handleNameSubmit() {
     if (!computerName.trim()) {
@@ -308,7 +296,9 @@ export default function FirstRunPage() {
 
               {/* Test Button */}
               <button
-                onClick={handleTestRclone}
+                onClick={() => {
+                  void testRclone();
+                }}
                 disabled={isTestingRclone || !rcloneRemote.trim()}
                 className={`w-full h-10 rounded-lg text-sm font-bold transition-colors cursor-pointer border-0 mb-4 flex items-center justify-center gap-2 ${
                   isTestingRclone || !rcloneRemote.trim()

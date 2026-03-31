@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use rusqlite::params;
 use serde::{Deserialize, Serialize};
@@ -8,6 +8,7 @@ use crate::domain::errors::AppError;
 use crate::domain::models::{AppSettings, OperationGuard};
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
+use crate::services::msgpack_zstd::{serialize_msgpack_named, write_atomic};
 
 const BACKUP_FILE_NAME: &str = "backup.msgpack";
 const BACKUP_SCHEMA_VERSION: u32 = 1;
@@ -118,11 +119,9 @@ pub fn export_backup_msgpack(
     settings.require_server_only()?;
 
     let payload = collect_backup_payload(db, settings)?;
-    let bytes = rmp_serde::to_vec_named(&payload)
-        .map_err(|e| AppError::Generic(format!("Erro ao serializar backup.msgpack: {}", e)))?;
+    let bytes = serialize_msgpack_named(&payload, "backup.msgpack")?;
 
     let output_path = resolve_output_path(store, output_path)?;
-    let temp_path = temp_path_for(&output_path);
 
     if let Some(parent) = output_path.parent() {
         fs::create_dir_all(parent).map_err(|e| {
@@ -133,15 +132,7 @@ pub fn export_backup_msgpack(
         })?;
     }
 
-    fs::write(&temp_path, &bytes).map_err(|e| {
-        AppError::Generic(format!(
-            "Erro ao escrever arquivo temporario de backup.msgpack: {}",
-            e
-        ))
-    })?;
-
-    fs::rename(&temp_path, &output_path)
-        .map_err(|e| AppError::Generic(format!("Erro ao finalizar backup.msgpack: {}", e)))?;
+    write_atomic(&output_path, &bytes, "backup.msgpack")?;
 
     let file_size = fs::metadata(&output_path)
         .map_err(|e| {
@@ -439,16 +430,6 @@ fn resolve_output_path(
     }
 
     Ok(path)
-}
-
-fn temp_path_for(path: &Path) -> PathBuf {
-    let mut temp = path.to_path_buf();
-    let extension = path
-        .extension()
-        .map(|ext| format!("{}.tmp", ext.to_string_lossy()))
-        .unwrap_or_else(|| "tmp".to_string());
-    temp.set_extension(extension);
-    temp
 }
 
 #[cfg(test)]

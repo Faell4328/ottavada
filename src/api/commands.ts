@@ -262,6 +262,18 @@ export async function getRcloneRcStats(): Promise<RcloneRcStats | null> {
   return invoke("get_rclone_rc_stats");
 }
 
+export interface RcloneSelectiveUploadSummary {
+  uploaded_count: number;
+  skipped_count: number;
+  duration_ms: number;
+}
+
+export async function uploadCloudPathsWithRclone(
+  relativePaths: string[]
+): Promise<RcloneSelectiveUploadSummary> {
+  return invoke("upload_cloud_paths_with_rclone", { relativePaths });
+}
+
 // ── Backup Songs Archives ──
 
 export interface SongArchiveResult {

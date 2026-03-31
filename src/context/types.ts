@@ -1,0 +1,39 @@
+import type { AppSettings, ScoreListItem, SidebarView, SongListItem } from "../types";
+import type { State } from "./reducer";
+
+export interface AppContextValue {
+  state: State;
+  loadSongs: () => Promise<void>;
+  loadCategories: () => Promise<void>;
+  loadSettings: () => Promise<void>;
+  setSidebarView: (view: SidebarView) => void;
+  selectSong: (song: SongListItem | null) => void;
+  selectScore: (score: ScoreListItem | null) => void;
+  setSearchQuery: (query: string) => void;
+  toggleFavorite: (songId: string) => Promise<void>;
+  createCategory: (name: string) => Promise<void>;
+  deleteCategory: (categoryId: string) => Promise<void>;
+  saveSettings: (settings: AppSettings) => Promise<void>;
+  updateSong: (
+    songId: string,
+    name: string,
+    composer: string | null,
+    arranger: string | null,
+    categoryIds: string[]
+  ) => Promise<void>;
+  updateScore: (
+    scoreId: string,
+    instrumentName: string | null,
+    filePath: string
+  ) => Promise<void>;
+  updateScoreStatus: (scoreId: string, status: "main") => Promise<void>;
+  deleteScore: (scoreId: string) => Promise<void>;
+  deleteSong: (songId: string) => Promise<void>;
+  completeFirstRun: (
+    computerId: string,
+    computerName: string,
+    computerType: string,
+    rcloneConfigJson: string
+  ) => Promise<void>;
+  scanFilesForChanges: () => Promise<void>;
+}

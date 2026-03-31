@@ -1,5 +1,4 @@
 use std::fs;
-use std::path::PathBuf;
 
 use serde::Serialize;
 
@@ -7,6 +6,9 @@ use crate::domain::errors::AppError;
 use crate::domain::models::OperationGuard;
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
+use crate::services::msgpack_zstd::{
+    compress_zstd_with_threads, serialize_msgpack_named, write_atomic, ZSTD_LEVEL_BALANCED,
+};
 
 const CLOUD_DIR_NAME: &str = "cloud";
 const EVENTS_DIR_NAME: &str = "events";
@@ -112,27 +114,17 @@ pub fn generate_snapshot_msgpack(
         songs,
     };
 
-    let msgpack_bytes = rmp_serde::to_vec_named(&payload)
-        .map_err(|e| AppError::Generic(format!("Erro ao serializar snapshot.msgpack: {}", e)))?;
+    let msgpack_bytes = serialize_msgpack_named(&payload, "snapshot.msgpack")?;
 
-    let compressed_bytes = compress_snapshot_payload(&msgpack_bytes)?;
+    let compressed_bytes =
+        compress_zstd_with_threads(&msgpack_bytes, ZSTD_LEVEL_BALANCED, "snapshot.msgpack")?;
 
     let cloud_dir = store.app_data_dir().join(CLOUD_DIR_NAME);
     fs::create_dir_all(&cloud_dir)
         .map_err(|e| AppError::Generic(format!("Erro ao criar diretório de nuvem: {}", e)))?;
 
     let output_path = cloud_dir.join(SNAPSHOT_FILE_NAME);
-    let temp_path = temp_path_for(&output_path);
-
-    fs::write(&temp_path, &compressed_bytes).map_err(|e| {
-        AppError::Generic(format!(
-            "Erro ao escrever arquivo temporário de snapshot: {}",
-            e
-        ))
-    })?;
-
-    fs::rename(&temp_path, &output_path)
-        .map_err(|e| AppError::Generic(format!("Erro ao finalizar snapshot.msgpack: {}", e)))?;
+    write_atomic(&output_path, &compressed_bytes, "snapshot.msgpack")?;
 
     let file_size = fs::metadata(&output_path)
         .map_err(|e| {
@@ -185,47 +177,6 @@ fn clear_events_artifacts(cloud_dir: &std::path::Path) -> Result<(), AppError> {
     }
 
     Ok(())
-}
-
-fn temp_path_for(path: &PathBuf) -> PathBuf {
-    let mut temp = path.clone();
-    temp.set_extension("zst.tmp");
-    temp
-}
-
-fn compress_snapshot_payload(data: &[u8]) -> Result<Vec<u8>, AppError> {
-    let level = 10;
-    let mut encoder = zstd::stream::Encoder::new(Vec::new(), level).map_err(|e| {
-        AppError::Generic(format!(
-            "Erro ao iniciar compressão zstd de snapshot.msgpack: {}",
-            e
-        ))
-    })?;
-
-    let worker_count = std::thread::available_parallelism()
-        .map(usize::from)
-        .unwrap_or(1);
-
-    encoder.multithread(worker_count as u32).map_err(|e| {
-        AppError::Generic(format!(
-            "Erro ao configurar multithread da compressão zstd de snapshot.msgpack: {}",
-            e
-        ))
-    })?;
-
-    std::io::Write::write_all(&mut encoder, data).map_err(|e| {
-        AppError::Generic(format!(
-            "Erro ao escrever payload de snapshot.msgpack no zstd: {}",
-            e
-        ))
-    })?;
-
-    encoder.finish().map_err(|e| {
-        AppError::Generic(format!(
-            "Erro ao finalizar compressão zstd de snapshot.msgpack: {}",
-            e
-        ))
-    })
 }
 
 #[cfg(test)]

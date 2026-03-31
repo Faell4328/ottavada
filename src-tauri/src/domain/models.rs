@@ -222,6 +222,7 @@ pub struct GoogleServiceAccount {
 }
 
 impl GoogleServiceAccount {
+    #[allow(dead_code)]
     pub fn validate(&self) -> Result<(), String> {
         if self.r#type != "service_account" {
             return Err("Tipo deve ser 'service_account'".to_string());

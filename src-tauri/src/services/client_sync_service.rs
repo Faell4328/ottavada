@@ -8,6 +8,7 @@ use crate::domain::errors::AppError;
 use crate::domain::models::ComputerType;
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
+use crate::services::msgpack_zstd::read_zstd_msgpack;
 
 const CLOUD_DIR_NAME: &str = "cloud";
 const LEGACY_CLOUD_DIR_NAME: &str = "nuvem";
@@ -117,7 +118,8 @@ pub fn apply_server_changes_for_client(
     let mut snapshot_applied = false;
 
     if snapshot_path.exists() {
-        let snapshot_payload: SnapshotMessagePack = read_zstd_msgpack(&snapshot_path)?;
+        let snapshot_payload: SnapshotMessagePack =
+            read_zstd_msgpack(&snapshot_path, "snapshot.msgpack")?;
         let known_snapshot_timestamp = settings.last_snapshot_timestamp.unwrap_or(0);
         let known_change_timestamp = settings.last_change_timestamp.unwrap_or(0);
 
@@ -138,7 +140,8 @@ pub fn apply_server_changes_for_client(
     let mut events_applied = 0usize;
 
     if events_path.exists() {
-        let events_payload: EventsMessagePack = read_zstd_msgpack(&events_path)?;
+        let events_payload: EventsMessagePack =
+            read_zstd_msgpack(&events_path, "events.msgpack")?;
         if events_payload.origin != "server" {
             return Err(AppError::Generic(format!(
                 "Arquivo de eventos inválido para cliente: origin='{}'",
@@ -579,27 +582,6 @@ fn resolve_cloud_dir(app_data_dir: &std::path::Path) -> Result<std::path::PathBu
         .map_err(|e| AppError::Generic(format!("Erro ao criar diretório cloud: {}", e)))?;
 
     Ok(cloud_dir)
-}
-
-fn read_zstd_msgpack<T: serde::de::DeserializeOwned>(path: &std::path::Path) -> Result<T, AppError> {
-    let compressed = fs::read(path)
-        .map_err(|e| AppError::Generic(format!("Erro ao ler arquivo {}: {}", path.display(), e)))?;
-
-    let decompressed = zstd::stream::decode_all(compressed.as_slice()).map_err(|e| {
-        AppError::Generic(format!(
-            "Erro ao descompactar arquivo {}: {}",
-            path.display(),
-            e
-        ))
-    })?;
-
-    rmp_serde::from_slice::<T>(&decompressed).map_err(|e| {
-        AppError::Generic(format!(
-            "Erro ao desserializar MessagePack {}: {}",
-            path.display(),
-            e
-        ))
-    })
 }
 
 #[cfg(test)]
