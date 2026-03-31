@@ -345,6 +345,42 @@ mod tests {
     }
 
     #[test]
+    fn test_insert_score_marks_song_backup_as_processing_and_stale() {
+        let db = make_db();
+        db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
+
+        {
+            let conn = db.conn.lock().unwrap();
+            conn.execute(
+                "INSERT INTO backupSongs (id, song_id, status, last_backup_at, error_message)
+                 VALUES (?1, ?2, ?3, ?4, NULL)",
+                rusqlite::params!["b1", "s1", "ok", 123_i64],
+            )
+            .unwrap();
+        }
+
+        db.insert_score(&make_score(&db, "sc1", "s1", Some("Violino")))
+            .unwrap();
+
+        let conn = db.conn.lock().unwrap();
+        let backup = conn
+            .query_row(
+                "SELECT status, last_backup_at FROM backupSongs WHERE song_id = ?1",
+                ["s1"],
+                |row| {
+                    Ok((
+                        row.get::<_, String>(0)?,
+                        row.get::<_, Option<i64>>(1)?,
+                    ))
+                },
+            )
+            .unwrap();
+
+        assert_eq!(backup.0, "processing");
+        assert!(backup.1.is_none());
+    }
+
+    #[test]
     fn test_delete_score() {
         let db = make_db();
         db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();

@@ -600,6 +600,19 @@ impl Database {
             Some(score.status.as_str().to_string()),
         )?;
 
+        // Inserir uma nova partitura invalida o backup atual da música,
+        // forçando a regeneração do arquivo {songId}.tar.zst.
+        let backup_status_id = uuid::Uuid::new_v4().to_string();
+        conn.execute(
+            "INSERT INTO backupSongs (id, song_id, status, last_backup_at, error_message)
+             VALUES (?1, ?2, 'processing', NULL, NULL)
+             ON CONFLICT(song_id) DO UPDATE SET
+                status = 'processing',
+                last_backup_at = NULL,
+                error_message = NULL",
+            params![backup_status_id, score.song_id],
+        )?;
+
         Ok(())
     }
 

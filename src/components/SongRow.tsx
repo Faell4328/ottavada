@@ -12,7 +12,6 @@ interface SongRowProps {
   onToggle: () => void;
   onToggleFavorite: () => void;
   onAddFile: () => void;
-  onAddDirectory: () => void;
   onEdit: () => void;
   onDelete: (songId: string) => Promise<void>;
   menuId: string;
@@ -28,7 +27,6 @@ function SongRow({
   onToggle,
   onToggleFavorite,
   onAddFile,
-  onAddDirectory,
   onEdit,
   onDelete,
   menuId,
@@ -101,10 +99,6 @@ function SongRow({
                   <ContextMenuItem
                     label="Adicionar arquivo"
                     onClick={(e) => handleMenuAction(e, onAddFile)}
-                  />
-                  <ContextMenuItem
-                    label="Adicionar diretório"
-                    onClick={(e) => handleMenuAction(e, onAddDirectory)}
                   />
                 </>
                 <ContextMenuItem

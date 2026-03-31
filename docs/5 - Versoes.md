@@ -139,6 +139,11 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [x] Quando clicar em "verificar alterações" e não tiver internet, deve emitir um toast avisando.
 - [x] Corrigir problema de não deletar o arquivo de partitura ao deletar a música/partituras no aplicativo.
 - [x] Corrigir problema de não gerar o `{songId}.tar.zst` ao deletar uma partitura da música.
+- [x] Ajustes
+	- [x] Remover a opção "adicionar diretório" no overflow menu de uma música.
+	- [x] Regerar o `{songId}.tar.zst` quando uma nova partitura for adicionada a música.
+	- [x] Atualizar a lista da música quando uma nova partitura for adicionada a música.
+- [ ] Arrumar o testar rclone na página de primeiro acesso e configurações, para que seja assíncrono.
 - [ ] Arrumar o diretório temporário não é `/cloud/tmp` é `/tmp`, igual na documentação.
 ! Se não for dessa forma vai arquivo temporário para o cliente.
 - [ ] Arrumar a geração de snapshot (não está gerado)

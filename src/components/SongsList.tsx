@@ -70,39 +70,15 @@ export default function SongsList() {
       const indexed = scannedFiles.filter((file) => file.path === selectedPath);
 
       if (indexed.length > 0) {
-        await api.addScoreToSong(songId, indexed[0]);
+        const updatedSong = await api.addScoreToSong(songId, indexed[0]);
         search.clearSearch();
         await loadSongs();
+        selectSong(updatedSong);
         toast.success("Arquivo adicionado com sucesso");
       }
     } catch (err) {
       console.error("Failed to add file to song:", err);
       toast.error("Erro ao adicionar arquivo");
-    }
-  }
-
-  async function handleAddDirectoryToSong(songId: string) {
-    try {
-      const selected = await open({ directory: true, multiple: false });
-      if (!selected) return;
-
-      const files = await api.scanDirectory(selected as string);
-      if (files.length === 0) {
-        toast.error("Nenhuma música encontrada neste diretório");
-        return;
-      }
-
-      await api.addScoresToSong(songId, files);
-      search.clearSearch();
-      await loadSongs();
-      toast.success(`${files.length} arquivo(s) adicionado(s) com sucesso`);
-    } catch (err) {
-      console.error("Failed to add directory to song:", err);
-      const errorMsg =
-        typeof err === "string" ? err
-        : err instanceof Error ? err.message
-        : "Erro ao adicionar diretório";
-      toast.error(errorMsg);
     }
   }
 
@@ -182,7 +158,6 @@ export default function SongsList() {
                       }}
                       onToggleFavorite={() => toggleFavorite(song.id)}
                       onAddFile={() => handleAddFileToSong(song.id)}
-                      onAddDirectory={() => handleAddDirectoryToSong(song.id)}
                       onEdit={() => {
                         setEditingSong(song);
                         setIsEditMusicModalOpen(true);
