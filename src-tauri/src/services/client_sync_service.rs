@@ -52,6 +52,8 @@ struct SnapshotSong {
 struct SnapshotScore {
     id: String,
     name: Option<String>,
+    #[serde(default)]
+    extension: Option<String>,
     status: String,
     #[serde(rename = "updatedAt")]
     updated_at: i64,
@@ -94,6 +96,7 @@ struct PendingCategorySong {
 struct PendingScore {
     name: Option<String>,
     status: Option<String>,
+    extension: Option<String>,
 }
 
 pub fn apply_server_changes_for_client(
@@ -220,6 +223,9 @@ fn apply_snapshot(db: &Database, payload: &SnapshotMessagePack) -> Result<(), Ap
         }
 
         for score in &song.scores {
+            let file_extension = normalize_extension(score.extension.as_deref())
+                .unwrap_or_else(|| "score".to_string());
+
             tx.execute(
                 "INSERT INTO scores (id, song_id, name, host_id, file_path, file_name, file_size, file_modified_at, status)
                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, 0, datetime(?7, 'unixepoch'), ?8)",
@@ -229,7 +235,7 @@ fn apply_snapshot(db: &Database, payload: &SnapshotMessagePack) -> Result<(), Ap
                     score.name,
                     "server",
                     format!("/cloud/songs/{}", song.id),
-                    format!("{}.score", score.id),
+                    format!("{}.{}", score.id, file_extension),
                     score.updated_at,
                     score.status,
                 ],
@@ -399,6 +405,13 @@ fn apply_upsert_field_event(
                             params![status, event.entity_id],
                         )?;
                     }
+
+                    if let Some(extension) = pending.extension {
+                        tx.execute(
+                            "UPDATE scores SET file_name = ?1 WHERE id = ?2",
+                            params![format!("{}.{}", event.entity_id, extension), event.entity_id],
+                        )?;
+                    }
                 }
             }
             "name" => {
@@ -425,6 +438,23 @@ fn apply_upsert_field_event(
                         .entry(event.entity_id.clone())
                         .or_default();
                     pending.status = item.new_value.clone();
+                }
+            }
+            "extension" => {
+                let Some(extension) = normalize_extension(item.new_value.as_deref()) else {
+                    return Ok(());
+                };
+
+                if score_exists(tx, &event.entity_id)? {
+                    tx.execute(
+                        "UPDATE scores SET file_name = ?1 WHERE id = ?2",
+                        params![format!("{}.{}", event.entity_id, extension), event.entity_id],
+                    )?;
+                } else {
+                    let pending = pending_scores
+                        .entry(event.entity_id.clone())
+                        .or_default();
+                    pending.extension = Some(extension);
                 }
             }
             // "file" é evento sem payload detalhado no design atual.
@@ -500,6 +530,14 @@ fn ensure_score_exists(
         ],
     )?;
     Ok(())
+}
+
+fn normalize_extension(raw_extension: Option<&str>) -> Option<String> {
+    raw_extension
+        .map(str::trim)
+        .map(|value| value.trim_start_matches('.'))
+        .filter(|value| !value.is_empty())
+        .map(|value| value.to_lowercase())
 }
 
 fn score_exists(tx: &rusqlite::Transaction<'_>, score_id: &str) -> Result<bool, AppError> {
@@ -599,6 +637,7 @@ mod tests {
     struct SnapshotScoreTestPayload {
         id: String,
         name: Option<String>,
+        extension: Option<String>,
         status: String,
         #[serde(rename = "updatedAt")]
         updated_at: i64,
@@ -668,6 +707,7 @@ mod tests {
                 scores: vec![SnapshotScoreTestPayload {
                     id: "score-1".to_string(),
                     name: Some("Flauta".to_string()),
+                    extension: Some("musx".to_string()),
                     status: "main".to_string(),
                     updated_at: 100,
                 }],
@@ -711,6 +751,7 @@ mod tests {
         assert_eq!(songs.len(), 1);
         assert_eq!(songs[0].name, "Musica 1 Atualizada");
         assert_eq!(songs[0].scores.len(), 1);
+        assert_eq!(songs[0].scores[0].file_extension, "musx");
 
         let categories = db.get_all_categories().expect("get categories");
         assert_eq!(categories.len(), 1);
@@ -766,6 +807,18 @@ mod tests {
                     }]),
                 },
                 EventTestPayload {
+                    id: "e2-1".to_string(),
+                    timestamp: 100,
+                    event_type: "insert".to_string(),
+                    entity: "scores".to_string(),
+                    entity_id: "score-10".to_string(),
+                    data: Some(vec![EventDataTestPayload {
+                        field: "extension".to_string(),
+                        old_value: None,
+                        new_value: Some("pdf".to_string()),
+                    }]),
+                },
+                EventTestPayload {
                     id: "e3".to_string(),
                     timestamp: 100,
                     event_type: "insert".to_string(),
@@ -799,7 +852,7 @@ mod tests {
 
         let summary = apply_server_changes_for_client(&db, &store).expect("sync client");
         assert!(!summary.snapshot_applied);
-        assert_eq!(summary.events_applied, 4);
+        assert_eq!(summary.events_applied, 5);
 
         let songs = db.get_all_songs().expect("get songs");
         assert_eq!(songs.len(), 1);
@@ -808,6 +861,7 @@ mod tests {
         assert_eq!(songs[0].scores.len(), 1);
         assert_eq!(songs[0].scores[0].id, "score-10");
         assert_eq!(songs[0].scores[0].name.as_deref(), Some("Tuba"));
+        assert_eq!(songs[0].scores[0].file_extension, "pdf");
     }
 
     fn write_zstd_msgpack<T: serde::Serialize>(path: &std::path::Path, payload: &T) {

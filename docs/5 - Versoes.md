@@ -145,13 +145,13 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 	- [x] Atualizar a lista da música quando uma nova partitura for adicionada a música.
 - [x] Reduza a quantidade de toast do "verificar alterações". Principalmente no servidor que fala quantos eventos foram adicionados. Deixe apenas os toast importantes
 - [x] Arrumar o testar rclone na página de primeiro acesso e configurações, para que seja assíncrono.
-- [ ] Atualizar o banco de dados e os eventos.
-	- [ ] Adicionar extensão no cliente, está como default `.score` (o que está horrível). Mostrar a extensão real.
+- [x] Atualizar o banco de dados, eventos e extensão do cliente.
+	- [x] Adicionar extensão no cliente, está como default `.score` (o que está horrível). Mostrar a extensão real.
+- [ ] Tirar a opção offline na página de primeiro acesso e no back.
 - [ ] Arrumar o diretório temporário não é `/cloud/tmp` é `/tmp`, igual na documentação.
 ! Se não for dessa forma vai arquivo temporário para o cliente.
 - [ ] Arrumar a geração de snapshot (não está gerado)
 	- [ ] Verificar se está forçando o cliente a implementar o snapshot, igual a documentação
-- [ ] Adicionar a extensão no cliente.
 - [ ] Refatorar o front e back
 
 ## Funcionalidades para v2 (apenas rascunho/ideias)

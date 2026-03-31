@@ -26,6 +26,15 @@ pub struct Database {
 }
 
 impl Database {
+    fn extract_file_extension(file_name: &str) -> Option<String> {
+        std::path::Path::new(file_name)
+            .extension()
+            .and_then(|ext| ext.to_str())
+            .map(str::trim)
+            .filter(|ext| !ext.is_empty())
+            .map(|ext| ext.to_lowercase())
+    }
+
     pub fn new(db_path: &Path) -> Result<Self, AppError> {
         let conn = Connection::open(db_path)?;
         let db = Self {
@@ -600,6 +609,18 @@ impl Database {
             Some(score.status.as_str().to_string()),
         )?;
 
+        if let Some(extension) = Self::extract_file_extension(&score.file_name) {
+            Self::insert_changed_field(
+                &conn,
+                "insert",
+                "scores",
+                &score.id,
+                Some("extension"),
+                None,
+                Some(extension),
+            )?;
+        }
+
         // Inserir uma nova partitura invalida o backup atual da música,
         // forçando a regeneração do arquivo {songId}.tar.zst.
         let backup_status_id = uuid::Uuid::new_v4().to_string();
@@ -700,6 +721,20 @@ impl Database {
                 None,
                 None,
             )?;
+
+            let old_extension = Self::extract_file_extension(&old_values.2);
+            let new_extension = Self::extract_file_extension(file_name);
+            if old_extension != new_extension {
+                Self::insert_changed_field(
+                    &conn,
+                    "update",
+                    "scores",
+                    score_id,
+                    Some("extension"),
+                    old_extension,
+                    new_extension,
+                )?;
+            }
         }
 
         Ok(())

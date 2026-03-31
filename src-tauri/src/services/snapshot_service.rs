@@ -56,6 +56,7 @@ struct SnapshotScore {
     id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     name: Option<String>,
+    extension: String,
     status: String,
     #[serde(rename = "updatedAt")]
     updated_at: i64,
@@ -87,6 +88,7 @@ pub fn generate_snapshot_msgpack(
                 .map(|score| SnapshotScore {
                     id: score.id.clone(),
                     name: score.name.clone(),
+                    extension: score.file_extension.clone(),
                     status: score.status.as_str().to_string(),
                     updated_at: score.updated_at.and_utc().timestamp(),
                 })
