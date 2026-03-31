@@ -10,8 +10,8 @@ use crate::infrastructure::store::SystemStore;
 
 const CLOUD_DIR_NAME: &str = "cloud";
 const EVENTS_DIR_NAME: &str = "events";
-const EVENTS_FILE_NAME: &str = "events.msgpack.zst";
 const SNAPSHOT_FILE_NAME: &str = "snapshot.msgpack.zst";
+const LEGACY_EVENTS_FILE_NAME: &str = "events.msgpack.zst";
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct SnapshotFileSummary {
@@ -145,15 +145,7 @@ pub fn generate_snapshot_msgpack(
 
     let cleared_changed_fields = db.clear_changed_fields()?;
 
-    let events_path = cloud_dir.join(EVENTS_DIR_NAME).join(EVENTS_FILE_NAME);
-    if events_path.exists() {
-        fs::remove_file(&events_path).map_err(|e| {
-            AppError::Generic(format!(
-                "Erro ao remover events.msgpack.zst após snapshot: {}",
-                e
-            ))
-        })?;
-    }
+    clear_events_artifacts(&cloud_dir)?;
 
     let mut updated_settings = settings;
     updated_settings.last_snapshot_timestamp = Some(generated_at);
@@ -168,6 +160,51 @@ pub fn generate_snapshot_msgpack(
         categories_count: payload.categories.len(),
         cleared_changed_fields,
     })
+}
+
+fn clear_events_artifacts(cloud_dir: &std::path::Path) -> Result<(), AppError> {
+    let events_dir = cloud_dir.join(EVENTS_DIR_NAME);
+    if events_dir.exists() {
+        let entries = fs::read_dir(&events_dir).map_err(|e| {
+            AppError::Generic(format!(
+                "Erro ao listar diretório de eventos após snapshot: {}",
+                e
+            ))
+        })?;
+
+        for entry in entries {
+            let entry = entry.map_err(|e| {
+                AppError::Generic(format!(
+                    "Erro ao ler entrada do diretório de eventos após snapshot: {}",
+                    e
+                ))
+            })?;
+            let path = entry.path();
+
+            if path.is_file() {
+                fs::remove_file(&path).map_err(|e| {
+                    AppError::Generic(format!(
+                        "Erro ao remover arquivo de evento '{}' após snapshot: {}",
+                        path.display(),
+                        e
+                    ))
+                })?;
+            }
+        }
+    }
+
+    // Compatibilidade com versões antigas que escreviam events na raiz de /cloud.
+    let legacy_events_path = cloud_dir.join(LEGACY_EVENTS_FILE_NAME);
+    if legacy_events_path.exists() {
+        fs::remove_file(&legacy_events_path).map_err(|e| {
+            AppError::Generic(format!(
+                "Erro ao remover events legado após snapshot: {}",
+                e
+            ))
+        })?;
+    }
+
+    Ok(())
 }
 
 fn temp_path_for(path: &PathBuf) -> PathBuf {
@@ -264,12 +301,20 @@ mod tests {
         let events_file = events_dir.join("events.msgpack.zst");
         fs::write(&events_file, b"events").expect("write events file");
 
+        let legacy_events_file = dir.path().join("cloud").join("events.msgpack.zst");
+        fs::write(&legacy_events_file, b"legacy events").expect("write legacy events file");
+
+        let stale_events_file = events_dir.join("old-events.msgpack.zst");
+        fs::write(&stale_events_file, b"old events").expect("write stale events file");
+
         let summary = generate_snapshot_msgpack(&db, &store).expect("generate snapshot");
 
         assert!(summary.file_size > 0);
         assert!(summary.generated_at > 0);
         assert!(summary.output_path.ends_with("/cloud/snapshot.msgpack.zst"));
         assert!(!events_file.exists());
+        assert!(!stale_events_file.exists());
+        assert!(!legacy_events_file.exists());
 
         let changed_fields = db
             .get_changed_fields_ordered()

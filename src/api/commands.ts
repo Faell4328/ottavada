@@ -274,6 +274,7 @@ export async function generateSongArchivesFiles(): Promise<SongArchiveSummary> {
 
 export interface EventsFileSummary {
   output_path: string;
+  payload_size: number;
   file_size: number;
   events_count: number;
 }

@@ -120,9 +120,10 @@ export default function SettingsPage() {
     setIsGeneratingSnapshot(true);
     try {
       const summary = await api.generateSnapshotFile();
+      await api.syncCloudWithRclone("upload");
       await loadSettings();
       toast.success(
-        `Snapshot gerado com sucesso (${summary.songs_count} música(s), ${summary.scores_count} partitura(s))`
+        `Snapshot gerado e enviado com sucesso (${summary.songs_count} música(s), ${summary.scores_count} partitura(s))`
       );
     } catch (error) {
       toast.error(`Erro ao gerar snapshot: ${getErrorMessage(error)}`);

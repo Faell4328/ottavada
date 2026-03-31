@@ -150,8 +150,9 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [x] Tirar a opção offline na página de primeiro acesso e no back.
 - [x] Arrumar o diretório temporário não é `/cloud/tmp` é `/tmp`, igual na documentação.
 ! Se não for dessa forma vai arquivo temporário para o cliente.
-- [ ] Arrumar a geração de snapshot (não está gerado)
-	- [ ] Verificar se está forçando o cliente a implementar o snapshot, igual a documentação
+- [x] Arrumar a geração de snapshot (não está gerado)
+	- [x] Verificar se está forçando o cliente a implementar o snapshot, igual a documentação
+- [ ] Ordenar tanto o servidor e cliente em ordem alfabetica (música e partitura)
 - [ ] Refatorar o front e back
 
 ## Funcionalidades para v2 (apenas rascunho/ideias)

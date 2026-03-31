@@ -119,15 +119,19 @@ pub fn apply_server_changes_for_client(
     if snapshot_path.exists() {
         let snapshot_payload: SnapshotMessagePack = read_zstd_msgpack(&snapshot_path)?;
         let known_snapshot_timestamp = settings.last_snapshot_timestamp.unwrap_or(0);
+        let known_change_timestamp = settings.last_change_timestamp.unwrap_or(0);
 
-        if snapshot_payload.generated_at > known_snapshot_timestamp {
+        let should_apply_snapshot = snapshot_payload.generated_at > known_snapshot_timestamp
+            || known_change_timestamp < snapshot_payload.generated_at;
+
+        if should_apply_snapshot {
             apply_snapshot(db, &snapshot_payload)?;
             settings.last_snapshot_timestamp = Some(snapshot_payload.generated_at);
             snapshot_applied = true;
 
             // Evita reaplicar eventos antigos em caso de reset por snapshot.
-            let previous_change_ts = settings.last_change_timestamp.unwrap_or(0);
-            settings.last_change_timestamp = Some(previous_change_ts.max(snapshot_payload.generated_at));
+            settings.last_change_timestamp =
+                Some(known_change_timestamp.max(snapshot_payload.generated_at));
         }
     }
 
@@ -862,6 +866,59 @@ mod tests {
         assert_eq!(songs[0].scores[0].id, "score-10");
         assert_eq!(songs[0].scores[0].name.as_deref(), Some("Tuba"));
         assert_eq!(songs[0].scores[0].file_extension, "pdf");
+    }
+
+    #[test]
+    fn reapplies_snapshot_when_client_is_outdated_even_with_same_snapshot_timestamp() {
+        let dir = tempdir().expect("temp dir");
+        let db_path = dir.path().join("test.db");
+        let db = Database::new(&db_path).expect("db init");
+        let store = SystemStore::new(dir.path().to_path_buf());
+
+        let settings = AppSettings {
+            computer_id: "client-3".to_string(),
+            computer_name: Some("Cliente".to_string()),
+            computer_type: ComputerType::Client,
+            first_run_completed: true,
+            last_snapshot_timestamp: Some(100),
+            last_change_timestamp: Some(10),
+            ..Default::default()
+        };
+        store.save_app_settings(&settings).expect("save settings");
+
+        let cloud_dir = dir.path().join("cloud");
+        std::fs::create_dir_all(cloud_dir.join("events")).expect("create dirs");
+
+        let snapshot_payload = SnapshotTestPayload {
+            generated_at: 100,
+            categories: vec![SnapshotCategoryTestPayload {
+                id: "cat-1".to_string(),
+                name: "Harpa".to_string(),
+            }],
+            songs: vec![SnapshotSongTestPayload {
+                id: "song-1".to_string(),
+                name: "Musica do Snapshot".to_string(),
+                composer: None,
+                arranger: None,
+                categories_id: vec!["cat-1".to_string()],
+                scores: vec![],
+            }],
+        };
+
+        write_zstd_msgpack(
+            &cloud_dir.join("snapshot.msgpack.zst"),
+            &snapshot_payload,
+        );
+
+        let summary = apply_server_changes_for_client(&db, &store).expect("sync client");
+
+        assert!(summary.snapshot_applied);
+        assert_eq!(summary.last_snapshot_timestamp, 100);
+        assert_eq!(summary.last_change_timestamp, 100);
+
+        let songs = db.get_all_songs().expect("get songs");
+        assert_eq!(songs.len(), 1);
+        assert_eq!(songs[0].name, "Musica do Snapshot");
     }
 
     fn write_zstd_msgpack<T: serde::Serialize>(path: &std::path::Path, payload: &T) {

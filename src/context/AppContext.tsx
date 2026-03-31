@@ -481,10 +481,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const failedArchives = archiveSummary.failed ?? 0;
         updateStepProgress(changedCount);
 
-        if (eventsSummary.file_size >= 2 * 1024 * 1024) {
+        if (eventsSummary.payload_size >= 2 * 1024 * 1024) {
           await api.generateSnapshotFile();
           if (!isAutomatic) {
-            toast("Snapshot forçado: events.msgpack.zst atingiu 2MB", {
+            toast("Snapshot forçado: events.msgpack atingiu 2MB", {
               icon: "📦",
             });
           }

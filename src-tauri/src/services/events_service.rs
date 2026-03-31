@@ -15,6 +15,7 @@ const EVENTS_FILE_NAME: &str = "events.msgpack.zst";
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct EventsFileSummary {
     pub output_path: String,
+    pub payload_size: u64,
     pub file_size: u64,
     pub events_count: usize,
 }
@@ -90,19 +91,40 @@ pub fn generate_events_msgpack(
         events,
     };
 
-    let msgpack_bytes = rmp_serde::to_vec_named(&payload)
-        .map_err(|e| AppError::Generic(format!("Erro ao serializar events.msgpack: {}", e)))?;
-
-    let compressed_bytes = compress_events_payload(&msgpack_bytes)?;
-
     let events_dir = store
         .app_data_dir()
         .join(CLOUD_DIR_NAME)
         .join(EVENTS_DIR_NAME);
+    let output_path = events_dir.join(EVENTS_FILE_NAME);
+
+    if payload.events.is_empty() {
+        if output_path.exists() {
+            fs::remove_file(&output_path).map_err(|e| {
+                AppError::Generic(format!(
+                    "Erro ao remover events.msgpack sem eventos novos: {}",
+                    e
+                ))
+            })?;
+        }
+
+        return Ok(EventsFileSummary {
+            output_path: output_path.to_string_lossy().to_string(),
+            payload_size: 0,
+            file_size: 0,
+            events_count: 0,
+        });
+    }
+
+    let msgpack_bytes = rmp_serde::to_vec_named(&payload)
+        .map_err(|e| AppError::Generic(format!("Erro ao serializar events.msgpack: {}", e)))?;
+
+    let payload_size = msgpack_bytes.len() as u64;
+
+    let compressed_bytes = compress_events_payload(&msgpack_bytes)?;
+
     fs::create_dir_all(&events_dir)
         .map_err(|e| AppError::Generic(format!("Erro ao criar diretório de eventos: {}", e)))?;
 
-    let output_path = events_dir.join(EVENTS_FILE_NAME);
     let temp_path = temp_path_for(&output_path);
 
     fs::write(&temp_path, &compressed_bytes).map_err(|e| {
@@ -122,6 +144,7 @@ pub fn generate_events_msgpack(
 
     Ok(EventsFileSummary {
         output_path: output_path.to_string_lossy().to_string(),
+        payload_size,
         file_size,
         events_count: payload.events.len(),
     })
@@ -304,5 +327,38 @@ mod tests {
         let summary = generate_events_msgpack(&db, &store).expect("generate events");
 
         assert_eq!(summary.events_count, 1);
+    }
+
+    #[test]
+    fn deletes_existing_events_file_when_there_are_no_events() {
+        let dir = tempdir().expect("temp dir");
+        let db_path = dir.path().join("test.db");
+        let db = Database::new(&db_path).expect("db init");
+        let store = SystemStore::new(dir.path().to_path_buf());
+
+        let settings = crate::domain::models::AppSettings {
+            computer_id: "server-1".to_string(),
+            computer_name: Some("Servidor".to_string()),
+            computer_type: crate::domain::models::ComputerType::Server,
+            ..Default::default()
+        };
+        store.save_app_settings(&settings).expect("save settings");
+
+        let events_dir = dir.path().join("cloud").join("events");
+        std::fs::create_dir_all(&events_dir).expect("create events dir");
+        let events_file = events_dir.join("events.msgpack.zst");
+        std::fs::write(&events_file, b"stale").expect("write stale events");
+
+        let conn = db.conn.lock().expect("lock db");
+        conn.execute("DELETE FROM changedField", [])
+            .expect("clear changed fields");
+        drop(conn);
+
+        let summary = generate_events_msgpack(&db, &store).expect("generate events");
+
+        assert_eq!(summary.events_count, 0);
+        assert_eq!(summary.payload_size, 0);
+        assert_eq!(summary.file_size, 0);
+        assert!(!events_file.exists());
     }
 }
