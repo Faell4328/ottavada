@@ -173,11 +173,23 @@ impl ComputerType {
         }
     }
 
-    pub fn from_str(s: &str) -> Self {
-        match s {
-            "Client" => ComputerType::Client,
-            _ => ComputerType::Server,
+    pub fn as_store_str(&self) -> &str {
+        match self {
+            ComputerType::Server => "server",
+            ComputerType::Client => "client",
         }
+    }
+
+    pub fn from_str(s: &str) -> Self {
+        if s.eq_ignore_ascii_case("client") {
+            ComputerType::Client
+        } else {
+            ComputerType::Server
+        }
+    }
+
+    pub fn from_store_str(s: &str) -> Self {
+        Self::from_str(s)
     }
 }
 

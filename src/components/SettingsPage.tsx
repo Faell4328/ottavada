@@ -5,6 +5,7 @@ import { open, save } from "@tauri-apps/plugin-dialog";
 import toast from "react-hot-toast";
 import { useAppState } from "../context/AppContext";
 import * as api from "../api/commands";
+import { getErrorMessage } from "../utils/errors";
 import { ChangeComputerTypeModal } from "./ChangeComputerTypeModal";
 import type { AppSettings } from "../types";
 
@@ -82,9 +83,7 @@ export default function SettingsPage() {
       await api.testRcloneUpload(rcloneRemote, rclonePath);
       toast.success("Teste realizado com sucesso! Arquivo enviado para o rclone.");
     } catch (error) {
-      toast.error(
-        `Erro ao testar rclone: ${error instanceof Error ? error.message : "Erro desconhecido"}`
-      );
+      toast.error(`Erro ao testar rclone: ${getErrorMessage(error)}`);
     } finally {
       setIsTestingRclone(false);
     }
@@ -126,9 +125,7 @@ export default function SettingsPage() {
         `Snapshot gerado com sucesso (${summary.songs_count} música(s), ${summary.scores_count} partitura(s))`
       );
     } catch (error) {
-      toast.error(
-        `Erro ao gerar snapshot: ${error instanceof Error ? error.message : "Erro desconhecido"}`
-      );
+      toast.error(`Erro ao gerar snapshot: ${getErrorMessage(error)}`);
     } finally {
       setIsGeneratingSnapshot(false);
     }
@@ -157,9 +154,7 @@ export default function SettingsPage() {
         `Backup exportado (${summary.songs_count} musica(s), ${summary.scores_count} partitura(s))`
       );
     } catch (error) {
-      toast.error(
-        `Erro ao exportar backup: ${error instanceof Error ? error.message : "Erro desconhecido"}`
-      );
+      toast.error(`Erro ao exportar backup: ${getErrorMessage(error)}`);
     } finally {
       setIsExportingBackup(false);
     }
@@ -190,9 +185,7 @@ export default function SettingsPage() {
         `Backup importado (${summary.songs_count} musica(s), ${summary.scores_count} partitura(s))`
       );
     } catch (error) {
-      toast.error(
-        `Erro ao importar backup: ${error instanceof Error ? error.message : "Erro desconhecido"}`
-      );
+      toast.error(`Erro ao importar backup: ${getErrorMessage(error)}`);
     } finally {
       setIsImportingBackup(false);
     }

@@ -3,6 +3,7 @@ import { Music, AlertCircle, CheckCircle, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAppState } from "../context/AppContext";
 import * as api from "../api/commands";
+import { getErrorMessage } from "../utils/errors";
 
 type Step = "name" | "type" | "rclone-setup" | "confirm";
 
@@ -40,9 +41,7 @@ export default function FirstRunPage() {
       toast.success("Teste realizado com sucesso! Arquivo enviado para o rclone.");
       setRcloneConfigured(true);
     } catch (error) {
-      toast.error(
-        `Erro ao testar rclone: ${error instanceof Error ? error.message : "Erro desconhecido"}`
-      );
+      toast.error(`Erro ao testar rclone: ${getErrorMessage(error)}`);
       setRcloneConfigured(false);
     } finally {
       setIsTestingRclone(false);
@@ -96,9 +95,7 @@ export default function FirstRunPage() {
 
       await completeFirstRun(computerId, computerName.trim(), computerType, "rclone", null, rcloneJson);
     } catch (error) {
-      toast.error(
-        `Erro: ${error instanceof Error ? error.message : "Erro desconhecido"}`
-      );
+      toast.error(`Erro: ${getErrorMessage(error)}`);
       setIsLoading(false);
     }
   }

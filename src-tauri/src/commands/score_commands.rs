@@ -12,6 +12,40 @@ use crate::services::indexer::{get_file_metadata, split_file_path};
 
 const VALID_SCORE_EXTENSIONS: [&str; 3] = ["pdf", "mus", "musx"];
 
+fn score_exists_for_indexed_file(
+    scores: &[ScoreListItem],
+    file: &IndexedFile,
+    treat_empty_instrument_as_duplicate: bool,
+) -> bool {
+    scores
+        .iter()
+        .any(|sc| match (&sc.name, &file.instrument) {
+            (Some(existing), Some(indexed)) => existing.eq_ignore_ascii_case(indexed),
+            (None, None) => {
+                treat_empty_instrument_as_duplicate || sc.file_path == file.path
+            }
+            _ => false,
+        })
+}
+
+fn build_score_from_indexed_file(
+    song_id: &str,
+    host_id: &str,
+    file: &IndexedFile,
+) -> Result<Score, AppError> {
+    let (file_size, file_modified_at) = read_score_file_metadata(Path::new(&file.path))?;
+    let (score_file_path, file_name) = split_file_path(&file.path);
+
+    Ok(Score::new_from_file(
+        song_id.to_string(),
+        host_id.to_string(),
+        file,
+        score_file_path,
+        file_name,
+        (file_size, file_modified_at),
+    ))
+}
+
 fn ensure_supported_score_file(path: &Path) -> Result<(), AppError> {
     if !path.exists() || !path.is_file() {
         warn!("Arquivo não encontrado: {}", path.display());
@@ -95,14 +129,7 @@ pub fn add_score_to_song(
     let song = db.get_song_list_item_by_id(&song_id)?;
 
     // Verificar se o instrumento já existe (case-insensitive)
-    let score_exists = song
-        .scores
-        .iter()
-        .any(|sc| match (&sc.name, &file.instrument) {
-            (Some(existing), Some(indexed)) => existing.eq_ignore_ascii_case(indexed),
-            (None, None) => true,
-            _ => false,
-        });
+    let score_exists = score_exists_for_indexed_file(&song.scores, &file, true);
 
     if score_exists {
         return Err(AppError::Generic(format!(
@@ -111,18 +138,7 @@ pub fn add_score_to_song(
         )));
     }
 
-    let (file_size, file_modified_at) = read_score_file_metadata(Path::new(&file.path))?;
-
-    let (score_file_path, file_name) = split_file_path(&file.path);
-
-    let score = Score::new_from_file(
-        song_id.clone(),
-        settings.computer_id.clone(),
-        &file,
-        score_file_path,
-        file_name,
-        (file_size, file_modified_at),
-    );
+    let score = build_score_from_indexed_file(&song_id, &settings.computer_id, &file)?;
 
     db.insert_score(&score)?;
     db.get_song_list_item_by_id(&song_id)
@@ -143,30 +159,13 @@ pub fn add_scores_to_song(
     let mut added_count = 0;
 
     for file in files {
-        let score_exists = existing_scores
-            .iter()
-            .any(|sc| match (&sc.name, &file.instrument) {
-                (Some(existing), Some(indexed)) => existing.eq_ignore_ascii_case(indexed),
-                (None, None) => sc.file_path == file.path,
-                _ => false,
-            });
+        let score_exists = score_exists_for_indexed_file(&existing_scores, &file, false);
 
         if score_exists {
             continue;
         }
 
-        let (file_size, file_modified_at) = read_score_file_metadata(Path::new(&file.path))?;
-
-        let (score_file_path, file_name) = split_file_path(&file.path);
-
-        let score = Score::new_from_file(
-            song_id.clone(),
-            settings.computer_id.clone(),
-            &file,
-            score_file_path,
-            file_name,
-            (file_size, file_modified_at),
-        );
+        let score = build_score_from_indexed_file(&song_id, &settings.computer_id, &file)?;
 
         db.insert_score(&score)?;
         added_count += 1;

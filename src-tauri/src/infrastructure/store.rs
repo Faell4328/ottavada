@@ -72,10 +72,7 @@ impl SystemStore {
             .or_else(|| store.get("type").and_then(|v| v.as_str()))
             .unwrap_or("server");
 
-        let computer_type = match computer_type_raw {
-            "Client" | "client" => ComputerType::Client,
-            _ => ComputerType::Server,
-        };
+        let computer_type = ComputerType::from_store_str(computer_type_raw);
 
         let rclone_config = store
             .get("rclone_config")
@@ -174,10 +171,7 @@ impl SystemStore {
         // Estrutura canônica (documentação): id, name, type, rclone, cloud
         store["id"] = serde_json::json!(settings.computer_id);
         store["name"] = serde_json::json!(settings.computer_name.clone().unwrap_or_default());
-        store["type"] = serde_json::json!(match settings.computer_type {
-            ComputerType::Server => "server",
-            ComputerType::Client => "client",
-        });
+        store["type"] = serde_json::json!(settings.computer_type.as_store_str());
 
         if let Some(ref rclone_cfg) = settings.rclone_config {
             store["rclone"] = serde_json::json!({

@@ -10,6 +10,37 @@ use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
 use crate::services::indexer::{self, get_file_metadata};
 
+fn normalized_required_song_name(name: &str) -> Result<String, AppError> {
+    let normalized = name.trim();
+    if normalized.is_empty() {
+        return Err(AppError::Generic(
+            "Nome da música não pode estar vazio".into(),
+        ));
+    }
+    Ok(normalized.to_string())
+}
+
+fn normalized_optional_text(value: Option<String>) -> Option<String> {
+    value.map(|v| v.trim().to_string()).filter(|v| !v.is_empty())
+}
+
+fn ensure_unique_song_name(
+    songs: &[SongListItem],
+    song_name: &str,
+    except_song_id: Option<&str>,
+) -> Result<(), AppError> {
+    let has_conflict = songs.iter().any(|song| {
+        let different_song = except_song_id.map(|id| song.id != id).unwrap_or(true);
+        different_song && song.name.eq_ignore_ascii_case(song_name)
+    });
+
+    if has_conflict {
+        return Err(AppError::Generic("Uma música com esse nome já existe".into()));
+    }
+
+    Ok(())
+}
+
 fn run_song_query_with_logging<F>(operation: &str, query: F) -> Result<Vec<SongListItem>, AppError>
 where
     F: FnOnce() -> Result<Vec<SongListItem>, AppError>,
@@ -194,12 +225,7 @@ pub fn import_indexed_files(
     category_ids: Vec<String>,
 ) -> Result<Vec<SongListItem>, AppError> {
     let settings = store.get_app_settings()?;
-
-    // Bloquear clientes de importar arquivos
-    if settings.computer_type == ComputerType::Client {
-        warn!("Cliente tentou importar arquivos: operação não permitida");
-        return Err(AppError::ClientOperationNotAllowed);
-    }
+    settings.require_server_only()?;
 
     import_files_core(
         &db,
@@ -247,26 +273,12 @@ fn validate_server_create_song(
     name: &str,
 ) -> Result<String, AppError> {
     let settings = store.get_app_settings()?;
+    settings.require_server_only()?;
 
-    if settings.computer_type == ComputerType::Client {
-        warn!("Cliente tentou criar música: operação não permitida");
-        return Err(AppError::ClientOperationNotAllowed);
-    }
-
-    if name.trim().is_empty() {
-        warn!("Tentativa de criar música com nome vazio");
-        return Err(AppError::Generic(
-            "Nome da música não pode estar vazio".into(),
-        ));
-    }
+    let normalized_name = normalized_required_song_name(name)?;
 
     let all_songs = db.get_all_songs()?;
-    if all_songs.iter().any(|s| s.name.eq_ignore_ascii_case(name)) {
-        warn!("Tentativa de criar música que já existe: {}", name);
-        return Err(AppError::Generic(
-            "Uma música com esse nome já existe".into(),
-        ));
-    }
+    ensure_unique_song_name(&all_songs, &normalized_name, None)?;
 
     Ok(settings.computer_id)
 }
@@ -299,16 +311,17 @@ pub fn create_song_with_metadata(
     arranger: Option<String>,
     category_ids: Vec<String>,
 ) -> Result<SongListItem, AppError> {
+    let normalized_name = normalized_required_song_name(&name)?;
     let updated_by = validate_server_create_song(&db, &store, &name)?;
     let now = Local::now().naive_local();
     let song_id = uuid::Uuid::new_v4().to_string();
 
-    info!("Criando nova música: {}", name);
+    info!("Criando nova música: {}", normalized_name);
     let song = Song {
         id: song_id.clone(),
-        name: name.trim().to_string(),
-        composer,
-        arranger,
+        name: normalized_name,
+        composer: normalized_optional_text(composer),
+        arranger: normalized_optional_text(arranger),
         is_favorite: false,
         status: ScoreStatus::Main,
         updated_at: now,
@@ -329,44 +342,24 @@ pub fn update_song(
     arranger: Option<String>,
     category_ids: Vec<String>,
 ) -> Result<SongListItem, AppError> {
-    if name.trim().is_empty() {
-        warn!("Tentativa de atualizar música {} com nome vazio", song_id);
-        return Err(AppError::Generic(
-            "Nome da música não pode estar vazio".into(),
-        ));
-    }
+    let normalized_name = normalized_required_song_name(&name)?;
 
     let settings = store.get_app_settings()?;
     settings.require_server_only()?;
     let updated_by = settings.computer_id.clone();
 
     let all_songs = db.get_all_songs()?;
-    if all_songs
-        .iter()
-        .any(|s| s.id != song_id && s.name.eq_ignore_ascii_case(&name))
-    {
-        warn!(
-            "Tentativa de alterar música {} para nome que já existe: {}",
-            song_id, name
-        );
-        return Err(AppError::Generic(
-            "Uma música com esse nome já existe".into(),
-        ));
-    }
+    ensure_unique_song_name(&all_songs, &normalized_name, Some(&song_id))?;
 
-    info!("Atualizando música: {} -> {}", song_id, name);
+    info!("Atualizando música: {} -> {}", song_id, normalized_name);
     let original_song = db.get_song_by_id(&song_id)?;
     let now = Local::now().naive_local();
 
     let updated_song = Song {
         id: original_song.id.clone(),
-        name: name.trim().to_string(),
-        composer: composer
-            .map(|c| c.trim().to_string())
-            .filter(|c| !c.is_empty()),
-        arranger: arranger
-            .map(|a| a.trim().to_string())
-            .filter(|a| !a.is_empty()),
+        name: normalized_name,
+        composer: normalized_optional_text(composer),
+        arranger: normalized_optional_text(arranger),
         is_favorite: original_song.is_favorite,
         status: original_song.status,
         updated_at: now,

@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use serde::Serialize;
 
 use crate::domain::errors::AppError;
-use crate::domain::models::{ComputerType, OperationGuard};
+use crate::domain::models::OperationGuard;
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
 
@@ -81,10 +81,7 @@ pub fn generate_events_msgpack(
         })
         .collect::<Vec<_>>();
 
-    let origin = match settings.computer_type {
-        ComputerType::Server => "server".to_string(),
-        ComputerType::Client => "client".to_string(),
-    };
+    let origin = settings.computer_type.as_store_str().to_string();
 
     let payload = EventsMessagePack {
         computer_id: settings.computer_id,

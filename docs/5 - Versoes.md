@@ -126,6 +126,7 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [x] Adicionar o `backup.msgpack`.
 	- [x] Adicionar botão para exportar o `backup.msgpack` (configurações)
 	- [x] Adicionar botão para importar o `backup.msgpack` (configurações)
+- [x] Refatorar o front e back.
 
 ## v0.6
 - [ ] Limitar as funcionalidades do front
