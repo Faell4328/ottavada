@@ -60,6 +60,9 @@ function AppContent() {
 
           const hasChanges = await hasPendingChanges();
           if (!hasChanges) {
+            event.preventDefault();
+            isForceClosingRef.current = true;
+            await exitApplication();
             return;
           }
 

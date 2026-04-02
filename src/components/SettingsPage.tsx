@@ -118,6 +118,8 @@ export default function SettingsPage() {
         return;
       }
 
+      await api.markLocalChangesAsApplied();
+
       await loadSettings();
       toast.success(
         `Snapshot gerado e enviado com sucesso (${summary.songs_count} música(s), ${summary.scores_count} partitura(s))`

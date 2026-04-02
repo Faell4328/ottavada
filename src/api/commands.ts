@@ -201,6 +201,10 @@ export async function exitApplication(): Promise<void> {
   return invoke("exit_application");
 }
 
+export async function markLocalChangesAsApplied(): Promise<void> {
+  return invoke("mark_local_changes_as_applied");
+}
+
 // ── File Scanning ──
 
 export interface ScanResult {

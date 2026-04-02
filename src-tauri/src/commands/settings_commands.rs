@@ -118,11 +118,32 @@ pub fn toggle_computer_type(store: State<'_, SystemStore>) -> Result<String, App
 }
 
 #[tauri::command]
-pub fn has_pending_changes(db: State<'_, Database>) -> Result<bool, AppError> {
-    db.has_pending_changes()
+pub fn has_pending_changes(
+    db: State<'_, Database>,
+    store: State<'_, SystemStore>,
+) -> Result<bool, AppError> {
+    let latest_change = db.get_latest_changed_field_timestamp()?.unwrap_or(0);
+    if latest_change == 0 {
+        return Ok(false);
+    }
+
+    let settings = store.get_app_settings()?;
+    let last_applied = settings.last_change_timestamp.unwrap_or(0);
+    Ok(latest_change > last_applied)
 }
 
 #[tauri::command]
 pub fn exit_application(app: AppHandle) {
     app.exit(0);
+}
+
+#[tauri::command]
+pub fn mark_local_changes_as_applied(
+    db: State<'_, Database>,
+    store: State<'_, SystemStore>,
+) -> Result<(), AppError> {
+    let latest_change = db.get_latest_changed_field_timestamp()?.unwrap_or(0);
+    let mut settings = store.get_app_settings()?;
+    settings.last_change_timestamp = Some(latest_change);
+    store.save_app_settings(&settings)
 }

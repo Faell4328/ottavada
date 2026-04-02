@@ -147,6 +147,7 @@ pub fn run() {
             commands::settings_commands::toggle_computer_type,
             commands::settings_commands::has_pending_changes,
             commands::settings_commands::exit_application,
+            commands::settings_commands::mark_local_changes_as_applied,
             // Scan
             commands::scan_commands::scan_files_for_changes,
             commands::scan_commands::has_internet_connection,

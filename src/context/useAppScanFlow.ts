@@ -350,6 +350,9 @@ export function useAppScanFlow({
         });
       }
 
+      // Atualiza o marcador de "alterações aplicadas" somente ao concluir com sucesso.
+      await api.markLocalChangesAsApplied();
+
       completedSteps += 1;
       updateStepProgress(changedCount);
 

@@ -1472,6 +1472,15 @@ impl Database {
         let count: i64 = conn.query_row("SELECT COUNT(1) FROM changedField", [], |row| row.get(0))?;
         Ok(count > 0)
     }
+
+    /// Retorna o timestamp mais recente da tabela changedField.
+    pub fn get_latest_changed_field_timestamp(&self) -> Result<Option<i64>, AppError> {
+        let conn = self.conn.lock().unwrap();
+        let latest = conn.query_row("SELECT MAX(timestamp) FROM changedField", [], |row| {
+            row.get::<_, Option<i64>>(0)
+        })?;
+        Ok(latest)
+    }
 }
 
 fn parse_datetime(s: &str) -> chrono::NaiveDateTime {
