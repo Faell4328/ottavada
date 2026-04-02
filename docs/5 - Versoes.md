@@ -167,7 +167,7 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [x] Aumentar o tamanho do ícone do aplicativo (ocupando todo o espaço).
 - [x] Mudar a mensagem do botão de "verificar alteração" para "aplicar alterações", apenas no servidor. Mantendo como estava no cliente.
 - [x] Onde for um elemento clicável ou interativo, deve mudar o cursor.
-- [ ] Adicionar um pop-up avisado o usuário para "aplicar alterações" antes de fechar. Apenas se o usuário tiver criado um evento (adicionando, alterando ou deletando algo).
+- [x] Adicionar um caixa de confirmação avisado o usuário para "aplicar alterações" antes de fechar. Apenas se o usuário tiver criado um evento (adicionando, alterando ou deletando algo).
 - [ ] Padronizar os nomes
 	- [ ] Padronizar a formatação do nome da música (tudo em maiúsculo)
 	- [ ] Padroniza a formatação dos nomes das partituras/instrumentos (tudo minúsculo e sem números)

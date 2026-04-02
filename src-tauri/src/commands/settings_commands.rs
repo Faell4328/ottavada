@@ -1,10 +1,11 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use tauri::State;
+use tauri::{AppHandle, State};
 use tracing::{error, info};
 
 use crate::domain::errors::AppError;
 use crate::domain::models::{AppSettings, ComputerType, GoogleDriveMode, RcloneConfig};
+use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
 
 #[tauri::command]
@@ -114,4 +115,14 @@ pub fn toggle_computer_type(store: State<'_, SystemStore>) -> Result<String, App
 
     info!("Tipo de computador alterado com sucesso");
     Ok(new_type.as_str().to_string())
+}
+
+#[tauri::command]
+pub fn has_pending_changes(db: State<'_, Database>) -> Result<bool, AppError> {
+    db.has_pending_changes()
+}
+
+#[tauri::command]
+pub fn exit_application(app: AppHandle) {
+    app.exit(0);
 }

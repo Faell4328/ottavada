@@ -1,5 +1,8 @@
+import { useEffect, useRef } from "react";
 import { BrowserRouter, Routes, Route } from "react-router";
 import { Toaster } from "react-hot-toast";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { confirm } from "@tauri-apps/plugin-dialog";
 import {
   TopBar,
   Sidebar,
@@ -9,6 +12,7 @@ import {
   FirstRunPage,
 } from "./components";
 import { AppProvider, useAppState } from "./context/AppContext";
+import { exitApplication, hasPendingChanges } from "./api/commands";
 
 function LoadingScreen() {
   return (
@@ -35,6 +39,68 @@ function MainPage() {
 
 function AppContent() {
   const { state } = useAppState();
+  const isForceClosingRef = useRef(false);
+
+  useEffect(() => {
+    // Em testes/web puro nao existe janela Tauri para interceptar fechamento.
+    if (!("__TAURI_INTERNALS__" in window)) {
+      return;
+    }
+
+    let disposed = false;
+    let unlisten: (() => void) | undefined;
+
+    const setupCloseListener = async () => {
+      const appWindow = getCurrentWindow();
+      const off = await appWindow.onCloseRequested(async (event) => {
+        try {
+          if (isForceClosingRef.current) {
+            return;
+          }
+
+          const hasChanges = await hasPendingChanges();
+          if (!hasChanges) {
+            return;
+          }
+
+          event.preventDefault();
+          const shouldClose = await confirm(
+            "Existem alterações pendentes. Clique em 'Aplicar alterações' antes de fechar para enviar para a nuvem.",
+            {
+              title: "Alterações pendentes",
+              kind: "warning",
+              okLabel: "Fechar sem aplicar",
+              cancelLabel: "Continuar no app",
+            }
+          );
+
+          if (shouldClose) {
+            isForceClosingRef.current = true;
+            await exitApplication();
+          }
+        } catch (error) {
+          console.error("Erro ao validar alterações pendentes no fechamento:", error);
+        }
+      });
+
+      // Evita listener duplicado no StrictMode (mount/unmount duplo em dev).
+      if (disposed) {
+        off();
+        return;
+      }
+
+      unlisten = off;
+    };
+
+    void setupCloseListener();
+
+    return () => {
+      disposed = true;
+      if (unlisten) {
+        unlisten();
+      }
+    };
+  }, []);
 
   if (state.isLoading) {
     return <LoadingScreen />;

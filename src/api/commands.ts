@@ -193,6 +193,14 @@ export async function isInitialScanCompleted(): Promise<boolean> {
   return invoke("is_initial_scan_completed");
 }
 
+export async function hasPendingChanges(): Promise<boolean> {
+  return invoke("has_pending_changes");
+}
+
+export async function exitApplication(): Promise<void> {
+  return invoke("exit_application");
+}
+
 // ── File Scanning ──
 
 export interface ScanResult {

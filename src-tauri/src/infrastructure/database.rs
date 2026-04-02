@@ -1465,6 +1465,13 @@ impl Database {
         let deleted = conn.execute("DELETE FROM changedField", [])?;
         Ok(deleted)
     }
+
+    /// Retorna true quando existe ao menos um evento pendente em changedField.
+    pub fn has_pending_changes(&self) -> Result<bool, AppError> {
+        let conn = self.conn.lock().unwrap();
+        let count: i64 = conn.query_row("SELECT COUNT(1) FROM changedField", [], |row| row.get(0))?;
+        Ok(count > 0)
+    }
 }
 
 fn parse_datetime(s: &str) -> chrono::NaiveDateTime {
