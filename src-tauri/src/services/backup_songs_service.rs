@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::ffi::OsString;
 use std::fs::{self, File};
 use std::path::{Path, PathBuf};
@@ -56,20 +56,40 @@ struct ArchiveJob {
     entries: Vec<ScoreArchiveEntry>,
 }
 
-fn should_generate_archive(row: &SongBackupRow, songs_dir: &Path) -> bool {
+#[derive(Debug, Clone, Default)]
+pub struct DraftNotFoundMainVersionSummary {
+    pub with_previous_main: HashSet<String>,
+    pub without_previous_main: HashSet<String>,
+}
+
+impl DraftNotFoundMainVersionSummary {
+    pub fn has_previous_main(&self, score_id: &str) -> bool {
+        self.with_previous_main.contains(score_id)
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+struct PreparedDraftNotFoundMainVersions {
+    summary: DraftNotFoundMainVersionSummary,
+    preserved_files: HashMap<(String, String), PathBuf>,
+}
+
+fn should_generate_archive(
+    row: &SongBackupRow,
+    songs_dir: &Path,
+    preserved_scores_count: usize,
+) -> bool {
     let archive_exists = songs_dir.join(format!("{}.tar.zst", row.song_id)).is_file();
+
+    if !archive_exists {
+        return row.last_uploadable_score_modified_at.is_some() || preserved_scores_count > 0;
+    }
 
     // Se não existe partitura elegível para nuvem (main/pending),
     // nunca deve regerar o arquivo com conteúdo draft/not_found.
     let Some(last_uploadable_modified_at) = row.last_uploadable_score_modified_at else {
         return false;
     };
-
-    // Após importar backup.msgpack, o registro em backupSongs pode indicar "ok"
-    // mesmo quando o arquivo local ainda não existe. Nesse caso, deve gerar novamente.
-    if !archive_exists {
-        return true;
-    }
 
     row.last_backup_at
         .map(|last_backup| last_uploadable_modified_at > last_backup)
@@ -142,12 +162,13 @@ fn list_song_backup_rows(db: &Database) -> Result<Vec<SongBackupRow>, AppError> 
 fn list_scores_for_archive(
     db: &Database,
     song_id: &str,
+    prepared_versions: &PreparedDraftNotFoundMainVersions,
 ) -> Result<Vec<ScoreArchiveEntry>, AppError> {
     let conn = db.conn.lock().unwrap();
     let mut stmt = conn.prepare(
-        "SELECT id, file_path, file_name
+        "SELECT id, file_path, file_name, status
          FROM scores
-         WHERE song_id = ?1 AND status IN ('main', 'pending')
+         WHERE song_id = ?1
          ORDER BY name",
     )?;
 
@@ -155,6 +176,34 @@ fn list_scores_for_archive(
         let score_id: String = row.get(0)?;
         let dir_path: String = row.get(1)?;
         let file_name: String = row.get(2)?;
+        let status: String = row.get(3)?;
+
+        let normalized_status = status.to_ascii_lowercase();
+
+        if matches!(normalized_status.as_str(), "draft" | "not_found") {
+            let Some(preserved_source_path) = prepared_versions
+                .preserved_files
+                .get(&(song_id.to_string(), score_id.clone()))
+            else {
+                return Ok(None);
+            };
+
+            let tar_name = preserved_source_path
+                .file_name()
+                .and_then(|name| name.to_str())
+                .map(|name| name.to_string())
+                .unwrap_or_else(|| score_id.clone());
+
+            return Ok(Some(ScoreArchiveEntry {
+                score_id,
+                source_path: preserved_source_path.clone(),
+                tar_name,
+            }));
+        }
+
+        if !matches!(normalized_status.as_str(), "main" | "pending") {
+            return Ok(None);
+        }
 
         let source_path = PathBuf::from(&dir_path).join(&file_name);
 
@@ -168,15 +217,215 @@ fn list_scores_for_archive(
             _ => score_id.clone(),
         };
 
-        Ok(ScoreArchiveEntry {
+        Ok(Some(ScoreArchiveEntry {
             score_id,
             source_path,
             tar_name,
-        })
+        }))
     })?;
 
-    let rows: Result<Vec<_>, _> = rows.collect();
-    Ok(rows?)
+    let mut entries = Vec::new();
+    for row in rows {
+        if let Some(entry) = row? {
+            entries.push(entry);
+        }
+    }
+
+    Ok(entries)
+}
+
+fn list_draft_not_found_scores_by_song(
+    db: &Database,
+) -> Result<HashMap<String, Vec<String>>, AppError> {
+    let conn = db.conn.lock().unwrap();
+    let mut stmt = conn.prepare(
+        "SELECT song_id, id
+         FROM scores
+         WHERE status IN ('draft', 'not_found')
+         ORDER BY song_id, id",
+    )?;
+
+    let mut grouped = HashMap::<String, Vec<String>>::new();
+    let rows = stmt.query_map([], |row| {
+        let song_id: String = row.get(0)?;
+        let score_id: String = row.get(1)?;
+        Ok((song_id, score_id))
+    })?;
+
+    for row in rows {
+        let (song_id, score_id) = row?;
+        grouped.entry(song_id).or_default().push(score_id);
+    }
+
+    Ok(grouped)
+}
+
+fn find_score_file_in_dir(dir: &Path, score_id: &str) -> Option<PathBuf> {
+    let entries = fs::read_dir(dir).ok()?;
+    for entry in entries.filter_map(|entry| entry.ok()) {
+        let path = entry.path();
+        if !path.is_file() {
+            continue;
+        }
+
+        let stem_matches = path
+            .file_stem()
+            .and_then(|stem| stem.to_str())
+            .map(|stem| stem.eq_ignore_ascii_case(score_id))
+            .unwrap_or(false);
+
+        if stem_matches {
+            return Some(path);
+        }
+    }
+
+    None
+}
+
+fn extract_previous_main_versions_for_song(
+    archive_path: &Path,
+    target_score_ids: &HashSet<&str>,
+    output_dir: &Path,
+) -> Result<(), AppError> {
+    if !archive_path.is_file() {
+        return Ok(());
+    }
+
+    let archive_file = File::open(archive_path).map_err(|e| {
+        AppError::Generic(format!(
+            "Erro ao abrir arquivo de backup {}: {}",
+            archive_path.display(),
+            e
+        ))
+    })?;
+
+    let decoder = zstd::stream::read::Decoder::new(archive_file).map_err(|e| {
+        AppError::Generic(format!(
+            "Erro ao descompactar arquivo {}: {}",
+            archive_path.display(),
+            e
+        ))
+    })?;
+
+    let mut archive = tar::Archive::new(decoder);
+    let entries = archive.entries().map_err(|e| {
+        AppError::Generic(format!(
+            "Erro ao listar entradas do arquivo {}: {}",
+            archive_path.display(),
+            e
+        ))
+    })?;
+
+    fs::create_dir_all(output_dir)?;
+
+    for entry_result in entries {
+        let mut entry = entry_result.map_err(|e| {
+            AppError::Generic(format!(
+                "Erro ao ler entrada de {}: {}",
+                archive_path.display(),
+                e
+            ))
+        })?;
+
+        let maybe_file_name = match entry.path() {
+            Ok(path) => path
+                .file_name()
+                .and_then(|name| name.to_str())
+                .map(|name| name.to_string()),
+            Err(_) => None,
+        };
+
+        let Some(file_name) = maybe_file_name else {
+            continue;
+        };
+
+        let Some(stem) = Path::new(&file_name).file_stem().and_then(|s| s.to_str()) else {
+            continue;
+        };
+
+        if !target_score_ids.contains(stem) {
+            continue;
+        }
+
+        let output_file = output_dir.join(&file_name);
+        let mut output = File::create(&output_file).map_err(|e| {
+            AppError::Generic(format!(
+                "Erro ao criar arquivo temporário {}: {}",
+                output_file.display(),
+                e
+            ))
+        })?;
+
+        std::io::copy(&mut entry, &mut output).map_err(|e| {
+            AppError::Generic(format!(
+                "Erro ao extrair arquivo {} de {}: {}",
+                file_name,
+                archive_path.display(),
+                e
+            ))
+        })?;
+    }
+
+    Ok(())
+}
+
+fn prepare_draft_not_found_main_versions(
+    db: &Database,
+    app_data_dir: &Path,
+    cloud_root_dir: &Path,
+) -> Result<PreparedDraftNotFoundMainVersions, AppError> {
+    let draft_or_not_found = list_draft_not_found_scores_by_song(db)?;
+    if draft_or_not_found.is_empty() {
+        return Ok(PreparedDraftNotFoundMainVersions::default());
+    }
+
+    let temp_root = app_data_dir
+        .join(TMP_DIR_NAME)
+        .join("songs")
+        .join("preserved-main");
+    remove_dir_if_exists(&temp_root);
+    fs::create_dir_all(&temp_root)?;
+
+    let songs_dir = cloud_root_dir.join(SONGS_DIR_NAME);
+    let mut prepared = PreparedDraftNotFoundMainVersions::default();
+
+    for (song_id, score_ids) in draft_or_not_found {
+        let target_score_ids: HashSet<&str> = score_ids.iter().map(|id| id.as_str()).collect();
+        let song_temp_dir = temp_root.join(&song_id);
+        fs::create_dir_all(&song_temp_dir)?;
+
+        let archive_path = songs_dir.join(format!("{}.tar.zst", song_id));
+        if archive_path.is_file() {
+            extract_previous_main_versions_for_song(&archive_path, &target_score_ids, &song_temp_dir)?;
+        }
+
+        for score_id in score_ids {
+            if let Some(path) = find_score_file_in_dir(&song_temp_dir, &score_id) {
+                prepared
+                    .summary
+                    .with_previous_main
+                    .insert(score_id.clone());
+                prepared
+                    .preserved_files
+                    .insert((song_id.clone(), score_id.clone()), path);
+            } else {
+                prepared
+                    .summary
+                    .without_previous_main
+                    .insert(score_id.clone());
+            }
+        }
+    }
+
+    Ok(prepared)
+}
+
+pub fn list_draft_not_found_scores_with_previous_main(
+    db: &Database,
+    app_data_dir: &Path,
+    cloud_root_dir: &Path,
+) -> Result<DraftNotFoundMainVersionSummary, AppError> {
+    Ok(prepare_draft_not_found_main_versions(db, app_data_dir, cloud_root_dir)?.summary)
 }
 
 fn create_song_temp_dir(temp_root: &Path, song_id: &str) -> Result<PathBuf, AppError> {
@@ -481,10 +730,11 @@ fn run_archive_jobs_parallel(
         .collect::<Vec<(SongBackupRow, Result<(String, u64), AppError>)>>()
 }
 
-pub fn generate_song_archives(
+fn generate_song_archives_with_prepared_versions(
     db: &Database,
     app_data_dir: &Path,
     cloud_root_dir: &Path,
+    prepared_versions: &PreparedDraftNotFoundMainVersions,
 ) -> Result<SongArchiveSummary, AppError> {
     let songs_dir = cloud_root_dir.join(SONGS_DIR_NAME);
     let temp_root = app_data_dir.join(TMP_DIR_NAME).join(SONGS_DIR_NAME);
@@ -522,7 +772,13 @@ pub fn generate_song_archives(
             continue;
         }
 
-        let should_generate = should_generate_archive(&row, &songs_dir);
+        let preserved_scores_count = prepared_versions
+            .preserved_files
+            .keys()
+            .filter(|(song_id, _)| song_id == &row.song_id)
+            .count();
+
+        let should_generate = should_generate_archive(&row, &songs_dir, preserved_scores_count);
 
         if !should_generate {
             if let Err(err) = update_backup_status(db, &row.song_id, "ok", row.last_backup_at, None)
@@ -544,7 +800,7 @@ pub fn generate_song_archives(
             continue;
         }
 
-        let entries = match list_scores_for_archive(db, &row.song_id) {
+        let entries = match list_scores_for_archive(db, &row.song_id, prepared_versions) {
             Ok(entries) => entries,
             Err(err) => {
                 let error_text = err.to_string();
@@ -658,6 +914,33 @@ pub fn generate_song_archives(
     })
 }
 
+pub fn generate_song_archives(
+    db: &Database,
+    app_data_dir: &Path,
+    cloud_root_dir: &Path,
+) -> Result<SongArchiveSummary, AppError> {
+    let prepared_versions =
+        prepare_draft_not_found_main_versions(db, app_data_dir, cloud_root_dir)?;
+    generate_song_archives_with_prepared_versions(db, app_data_dir, cloud_root_dir, &prepared_versions)
+}
+
+pub fn regenerate_all_song_archives(
+    db: &Database,
+    app_data_dir: &Path,
+    cloud_root_dir: &Path,
+) -> Result<SongArchiveSummary, AppError> {
+    let prepared_versions =
+        prepare_draft_not_found_main_versions(db, app_data_dir, cloud_root_dir)?;
+
+    let songs_dir = cloud_root_dir.join(SONGS_DIR_NAME);
+    remove_dir_if_exists(&songs_dir);
+    fs::create_dir_all(&songs_dir)?;
+
+    db.mark_all_song_archives_for_regeneration()?;
+
+    generate_song_archives_with_prepared_versions(db, app_data_dir, cloud_root_dir, &prepared_versions)
+}
+
 #[cfg(test)]
 mod tests {
     use tempfile::tempdir;
@@ -677,7 +960,7 @@ mod tests {
             last_backup_at: Some(100),
         };
 
-        assert!(should_generate_archive(&row, &songs_dir));
+        assert!(should_generate_archive(&row, &songs_dir, 0));
     }
 
     #[test]
@@ -696,7 +979,7 @@ mod tests {
         let archive_path = songs_dir.join("song-2.tar.zst");
         std::fs::write(&archive_path, b"already generated").expect("create archive placeholder");
 
-        assert!(!should_generate_archive(&row, &songs_dir));
+        assert!(!should_generate_archive(&row, &songs_dir, 0));
     }
 
     #[test]
@@ -715,7 +998,7 @@ mod tests {
         let archive_path = songs_dir.join("song-3.tar.zst");
         std::fs::write(&archive_path, b"old archive").expect("create archive placeholder");
 
-        assert!(should_generate_archive(&row, &songs_dir));
+        assert!(should_generate_archive(&row, &songs_dir, 0));
     }
 
     #[test]
@@ -735,7 +1018,23 @@ mod tests {
         std::fs::write(&archive_path, b"existing main archive")
             .expect("create archive placeholder");
 
-        assert!(!should_generate_archive(&row, &songs_dir));
+        assert!(!should_generate_archive(&row, &songs_dir, 0));
+    }
+
+    #[test]
+    fn regenerates_when_archive_missing_but_has_preserved_scores() {
+        let temp = tempdir().expect("temp dir");
+        let songs_dir = temp.path().join("songs");
+        std::fs::create_dir_all(&songs_dir).expect("create songs dir");
+
+        let row = SongBackupRow {
+            song_id: "song-5".to_string(),
+            song_name: "Musica".to_string(),
+            last_uploadable_score_modified_at: None,
+            last_backup_at: Some(100),
+        };
+
+        assert!(should_generate_archive(&row, &songs_dir, 1));
     }
 
     #[test]

@@ -7,7 +7,9 @@ use crate::infrastructure::store::SystemStore;
 use crate::services::backup_msgpack_service::{
     export_backup_msgpack, import_backup_msgpack, BackupFileSummary, BackupImportSummary,
 };
-use crate::services::backup_songs_service::{generate_song_archives, SongArchiveSummary};
+use crate::services::backup_songs_service::{
+    generate_song_archives, regenerate_all_song_archives, SongArchiveSummary,
+};
 use crate::services::client_sync_service::{apply_server_changes_for_client, ClientSyncSummary};
 use crate::services::events_service::{generate_events_msgpack, EventsFileSummary};
 use crate::services::snapshot_service::{generate_snapshot_msgpack, SnapshotFileSummary};
@@ -96,14 +98,15 @@ pub async fn generate_snapshot_file(
         let settings = store.get_app_settings()?;
         settings.require_server_only()?;
 
-        let summary = generate_snapshot_msgpack(&db, &store)?;
-
-        // Manual force snapshot should invalidate and regenerate all cloud song archives.
-        // Automatic snapshot generation must keep existing archives intact.
         if force_regenerate_song_archives {
-            delete_existing_song_archives(&app_data_dir)?;
-            db.mark_all_song_archives_for_regeneration()?;
+            let cloud_root = app_data_dir.join("cloud");
+            std::fs::create_dir_all(&cloud_root).map_err(|e| {
+                AppError::Generic(format!("Erro ao preparar diretório cloud: {}", e))
+            })?;
+            regenerate_all_song_archives(&db, &app_data_dir, &cloud_root)?;
         }
+
+        let summary = generate_snapshot_msgpack(&db, &store)?;
 
         Ok(summary)
     })

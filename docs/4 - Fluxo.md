@@ -119,12 +119,12 @@
    
 ⚠️ As operações abaixo devem ser executada dentro de uma transação
 		  
-1. O sistema adiciona a partitura em "scores"
+2. O sistema adiciona a partitura em "scores"
 	- Em caso de problema:
 		- O fluxo deve ser encerrado (caso esse fluxo esteja em outro, o fluxo pai deve ser encerrado também)
 		- Avisa o usuário que ocorreu um erro (toast)
 		  
-2. O sistema verifica se existe a  música em "backupSongs"
+3. O sistema verifica se existe a  música em "backupSongs"
 	- Se existe, atualiza os campos:
 		- "lastBackupAt" = 0
 		- "status" = "processing"
@@ -133,9 +133,9 @@
 		- "status" = "processing"
 ! Na próxima vez que for gerado os arquivos para backup, será gerado desse
 
-3. Adiciona o evento na tabela "changedField"
+4. Adiciona o evento na tabela "changedField"
 
-4. Confirmar (commit) a transação
+5. Confirmar (commit) a transação
 	- Em caso de problema:
 		- O fluxo deve ser encerrado (caso esse fluxo esteja em outro, o fluxo pai deve ser encerrado também)
 		- Avisa o usuário que ocorreu um erro (toast)
@@ -151,17 +151,17 @@
    
 ⚠️ As operações abaixo devem ser executada dentro de uma transação
 
-1. O sistema adiciona a música em "songs"
+2. O sistema adiciona a música em "songs"
 	- Em caso de problema:
 		- O fluxo deve ser encerrado (caso esse fluxo esteja em outro, o fluxo pai deve ser encerrado também)
 		- Avisa o usuário que ocorreu um erro (toast)
 		  
-2. O sistema adiciona as partituras em "scores"
+3. O sistema adiciona as partituras em "scores"
 	- Em caso de problema:
 		- O fluxo deve ser encerrado (caso esse fluxo esteja em outro, o fluxo pai deve ser encerrado também)
 		- Avisa o usuário que ocorreu um erro (toast)
 		  
-3. O sistema adiciona a música em "backupSongs"
+4. O sistema adiciona a música em "backupSongs"
 	- Os campos:
 		- "lastBackupAt" = 0
 		- "status" = "processing"
@@ -188,7 +188,7 @@
    
 ⚠️ As operações abaixo devem ser executada dentro de uma transação
 
-1. O sistema verifica se existe a música no "songs"
+2. O sistema verifica se existe a música no "songs"
 	- Se existe:
 		- Atualiza em "songs"
 		- Adiciona o evento na tabela "changedField"
@@ -196,7 +196,7 @@
 		- O fluxo deve ser encerrado (caso esse fluxo esteja em outro, o fluxo pai deve ser encerrado também)
 		- Avisa o usuário que ocorreu um erro (toast)
 		  
-2. Confirmar (commit) a transação
+3. Confirmar (commit) a transação
 	- Em caso de problema:
 		- O fluxo deve ser encerrado (caso esse fluxo esteja em outro, o fluxo pai deve ser encerrado também)
 		- Avisa o usuário que ocorreu um erro (toast)
@@ -211,7 +211,7 @@
    
 ⚠️ As operações abaixo devem ser executada dentro de uma transação
 
-1. O sistema verifica se existe a partitura no "scores"
+2. O sistema verifica se existe a partitura no "scores"
 	- Se existe:
 		- Atualiza em "scores"
 		- Adiciona o evento na tabela "changedField"
@@ -219,7 +219,7 @@
 		- O fluxo deve ser encerrado (caso esse fluxo esteja em outro, o fluxo pai deve ser encerrado também)
 		- Avisa o usuário que ocorreu um erro (toast)
 		  
-2. Confirmar (commit) a transação
+3. Confirmar (commit) a transação
 	- Em caso de problema:
 		- O fluxo deve ser encerrado (caso esse fluxo esteja em outro, o fluxo pai deve ser encerrado também)
 		- Avisa o usuário que ocorreu um erro (toast)
@@ -329,7 +329,49 @@
 		- O fluxo deve ser encerrado (caso esse fluxo esteja em outro, o fluxo pai deve ser encerrado também)
 ```
 
+# Listar partituras `draft` e `not found` que possuem versão anterior `main`
+
+```markdown
+1. Lista todas músicas que possuem partituras com status "draft" ou "not found".
+	- Após listar:
+		- Descompacta de `/cloud/songs/{songId}.tar.zst em um diretório temporário, ex: `/tmp/songs/{songId}`.
+		- Deixa apenas as partituras com status "draft" ou "not found", o restante é deletado.
+		  
+2. Verifica quais partituras possuem arquivo no `/tmp/songs/{songId}/{scoreId}
+	- As partituras que possuem é adicionado a uma variável que possuem.
+	- As partituras que não possuem é adicionado a uma variável que não possuem.
+
+3. Retorna as duas variáveis para o fluxo que chamou.
+   
+- Em caso de problema em alguma das etapas
+	- O fluxo deve ser encerrado (caso esse fluxo esteja em outro, o fluxo pai deve ser encerrado também)
+	- Avisa o usuário que ocorreu um erro (toast)
+```
+
+# Regerar o `{songId}.tar.zst`
+
+**Apenas Servidor**
+
+```markdown
+1. Executa o fluxo "Listar partituras `draft` e `not found` que possuem versão anterior `main`"
+
+2. Deleta todos os arquivos de "/cloud/songs/"
+		  
+3. Gerar todos os `{songId}.tar.zst`
+	- As partitura que estão com status "main" devem ser pegas do diretório local onde elas estão.
+	- Já as partitura que estão com status "draft" ou "not found", deve ser pegas do diretório temporário, caso esteja lá.
+	- Caso as partitura que esteja com status "draft" ou "not found", não tenha arquivo no diretório temporário, deve pular ela (ficar sem mesmo).
+	  
+4. Retorna as duas variáveis para o fluxo que chamou.
+   
+- Em caso de problema em alguma das etapas
+	- O fluxo deve ser encerrado (caso esse fluxo esteja em outro, o fluxo pai deve ser encerrado também)
+	- Avisa o usuário que ocorreu um erro (toast)
+```
+
 # Gerar Snapshot
+
+## Gerar snapshot automaticamente (quando `events.msgpack.zst` tiver igual o maior que 2MB)
 
 **Apenas Servidor**
 
@@ -340,9 +382,13 @@
 
 2. Cria o arquivo `snapshot.msgpack`
    
-3. Adiciona todo o banco de dados no `snapshot.msgpack`
+3. Executa o fluxo "Listar partituras `draft` e `not found` que possuem versão anterior `main`"
+   
+4. Adiciona todo o banco de dados no `snapshot.msgpack`
+	- As partituras com status "draft" ou "not found" e estão na variável que possuem, deve ficar com status "main" no `snapshot.msgpack`.
+	- As partitura com status "draft" ou "not found" e estão na variável que não possuem, deve ficar com status "not found" no `snapshot.msgpack`.
 
-4. Compacta o arquivo `snapshot.msgpack`
+5. Compacta o arquivo `snapshot.msgpack`
 	- Caso de erro:
 		- Tentar compactar mais uma vez
 		- Se ocorrer erro novamente, deve ser emitido um toast avisando o usuário que não é possível compactar o arquivo de alteração.
@@ -351,20 +397,62 @@
 		- Deleta o arquivo `snapshot.msgpack` e deixa apenas o `snapshot.msgpack.zst`
 		- Vai para a próxima etapa
 
+6. Deleta os dados dentro da tabela "changedField"
 
-5. Deleta os dados dentro da tabela "changedField"
+7. Deleta o arquivo `events.msgpack.zst`
 
-6. Deleta o arquivo `events.msgpack.zst`
+8. Executa o fluxo "Ao clicar na botão de 'verificar alteração'
+	- Antes de iniciar a transferência, resetar estatísticas RC (`core/stats-reset`) para o progresso começar em 0
+	- Caso de erro:
+		- Tentar compactar mais uma vez
+		- Se ocorrer erro novamente, deve ser emitido um toast avisando o usuário que não é possível compactar o arquivo de alteração.
+		- O fluxo deve ser encerrado (caso esse fluxo esteja em outro, o fluxo pai deve ser encerrado também)
+		  
+- Em caso de problema em alguma das etapas
+	- O fluxo deve ser encerrado (caso esse fluxo esteja em outro, o fluxo pai deve ser encerrado também)
+	- Avisa o usuário que ocorreu um erro (toast)
+```
 
-6.1. Deleta todos os arquivos `{songId}.tar.zst` existentes em `/cloud/songs` para forçar a regeneração completa
+## Força a geração de snapshot
 
-7. Chama o rclone para sincronizar a pasta local com a "Nuvem"
+**Apenas Servidor**
+
+```markdown
+1. Verifica se existe o arquivo `snapshot.msgpack.zst`
+	- Se existe:
+		- Deleta o arquivo `snapshot.msgpack.zst`
+
+2. Cria o arquivo `snapshot.msgpack`
+
+3. Executa o fluxo "Regerar o `{songId}.tar.zst`"
+   
+4. Adiciona todo o banco de dados no `snapshot.msgpack`
+	- As partituras com status "draft" ou "not found" e estão na variável que possuem, deve ficar com status "main" no `snapshot.msgpack`.
+	- As partitura com status "draft" ou "not found" e estão na variável que não possuem, deve ficar com status "not found" no `snapshot.msgpack`.
+
+5. Compacta o arquivo `snapshot.msgpack`
+	- Caso de erro:
+		- Tentar compactar mais uma vez
+		- Se ocorrer erro novamente, deve ser emitido um toast avisando o usuário que não é possível compactar o arquivo de alteração.
+		- O fluxo deve ser encerrado (caso esse fluxo esteja em outro, o fluxo pai deve ser encerrado também)
+	- Caso de sucesso:
+		- Deleta o arquivo `snapshot.msgpack` e deixa apenas o `snapshot.msgpack.zst`
+		- Vai para a próxima etapa
+
+6. Deleta os dados dentro da tabela "changedField"
+
+7. Deleta o arquivo `events.msgpack.zst`
+
+8. Executa o fluxo "Ao clicar na botão de 'verificar alteração'
 	- Antes de iniciar a transferência, resetar estatísticas RC (`core/stats-reset`) para o progresso começar em 0
 	- Caso de erro:
 		- Tentar compactar mais uma vez
 		- Se ocorrer erro novamente, deve ser emitido um toast avisando o usuário que não é possível compactar o arquivo de alteração.
 		- O fluxo deve ser encerrado (caso esse fluxo esteja em outro, o fluxo pai deve ser encerrado também)
 
+- Em caso de problema em alguma das etapas
+	- O fluxo deve ser encerrado (caso esse fluxo esteja em outro, o fluxo pai deve ser encerrado também)
+	- Avisa o usuário que ocorreu um erro (toast)
 ```
 # Gerando arquivos das músicas com as partituras
 
@@ -487,7 +575,10 @@
 12. Após finalizar a etapa anterior, deve deletar o diretório temporário: "/temp/events/"
 ```
 
-# Ao clicar na botão de "verificar alteração"
+# Ao clicar na botão de "sincronizar com a nuvem"
+
+- No cliente é chamado "verificar alterações"
+- No servidor é chamado de "aplicar alterações"
 
 **Apenas Servidor**
 
@@ -695,10 +786,10 @@
 		- "status" = "processing"
 ! Na próxima vez que for gerado os arquivos para backup, será gerado desse
 
-4. Adiciona o evento na tabela "changedField"
+5. Adiciona o evento na tabela "changedField"
 ! Deve registrar de tudo, adicionando a música e as partituras (individual)
 
-5. Confirmar (commit) a transação
+6. Confirmar (commit) a transação
 	- Em caso de problema:
 		- O fluxo deve ser encerrado (caso esse fluxo esteja em outro, o fluxo pai deve ser encerrado também)
 		- Avisa o usuário que ocorreu um erro (toast)

@@ -1,11 +1,14 @@
 use std::fs;
 
 use serde::Serialize;
+use tracing::warn;
 
 use crate::domain::errors::AppError;
+use crate::domain::models::ScoreStatus;
 use crate::domain::models::OperationGuard;
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
+use crate::services::backup_songs_service::list_draft_not_found_scores_with_previous_main;
 use crate::services::msgpack_zstd::{
     compress_zstd_with_threads, serialize_msgpack_named, write_atomic, ZSTD_LEVEL_BALANCED,
 };
@@ -73,6 +76,13 @@ pub fn generate_snapshot_msgpack(
 
     let generated_at = chrono::Local::now().timestamp();
 
+    let cloud_dir = store.app_data_dir().join(CLOUD_DIR_NAME);
+    fs::create_dir_all(&cloud_dir)
+        .map_err(|e| AppError::Generic(format!("Erro ao criar diretório de nuvem: {}", e)))?;
+
+    let previous_main_versions =
+        list_draft_not_found_scores_with_previous_main(db, store.app_data_dir(), &cloud_dir)?;
+
     let all_songs = db.get_all_songs()?;
     let all_categories = db.get_all_categories()?;
 
@@ -88,10 +98,21 @@ pub fn generate_snapshot_msgpack(
                 .scores
                 .iter()
                 .map(|score| SnapshotScore {
+                    // Para draft/not_found, o snapshot reflete a versão efetivamente disponível
+                    // na nuvem (main anterior quando existir; not_found quando não existir).
+                    status: match score.status {
+                        ScoreStatus::Draft | ScoreStatus::NotFound => {
+                            if previous_main_versions.has_previous_main(&score.id) {
+                                "main".to_string()
+                            } else {
+                                "not_found".to_string()
+                            }
+                        }
+                        _ => score.status.as_str().to_string(),
+                    },
                     id: score.id.clone(),
                     name: score.name.clone(),
                     extension: score.file_extension.clone(),
-                    status: score.status.as_str().to_string(),
                     updated_at: score.updated_at.and_utc().timestamp(),
                 })
                 .collect(),
@@ -116,12 +137,7 @@ pub fn generate_snapshot_msgpack(
 
     let msgpack_bytes = serialize_msgpack_named(&payload, "snapshot.msgpack")?;
 
-    let compressed_bytes =
-        compress_zstd_with_threads(&msgpack_bytes, ZSTD_LEVEL_BALANCED, "snapshot.msgpack")?;
-
-    let cloud_dir = store.app_data_dir().join(CLOUD_DIR_NAME);
-    fs::create_dir_all(&cloud_dir)
-        .map_err(|e| AppError::Generic(format!("Erro ao criar diretório de nuvem: {}", e)))?;
+    let compressed_bytes = compress_snapshot_with_retry(&msgpack_bytes)?;
 
     let output_path = cloud_dir.join(SNAPSHOT_FILE_NAME);
     write_atomic(&output_path, &compressed_bytes, "snapshot.msgpack")?;
@@ -152,6 +168,31 @@ pub fn generate_snapshot_msgpack(
         categories_count: payload.categories.len(),
         cleared_changed_fields,
     })
+}
+
+fn compress_snapshot_with_retry(msgpack_bytes: &[u8]) -> Result<Vec<u8>, AppError> {
+    let mut last_error: Option<AppError> = None;
+
+    for attempt in 1..=2 {
+        match compress_zstd_with_threads(msgpack_bytes, ZSTD_LEVEL_BALANCED, "snapshot.msgpack") {
+            Ok(compressed) => return Ok(compressed),
+            Err(err) => {
+                warn!(
+                    "Falha ao compactar snapshot.msgpack (tentativa {}): {}",
+                    attempt,
+                    err
+                );
+                last_error = Some(err);
+            }
+        }
+    }
+
+    Err(AppError::Generic(format!(
+        "Nao foi possivel compactar o arquivo de alteracao snapshot.msgpack: {}",
+        last_error
+            .map(|e| e.to_string())
+            .unwrap_or_else(|| "erro desconhecido".to_string())
+    )))
 }
 
 fn clear_events_artifacts(cloud_dir: &std::path::Path) -> Result<(), AppError> {

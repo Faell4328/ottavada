@@ -379,7 +379,30 @@ export function useAppScanFlow({
 
         if (shouldUseFullSync) {
           // Full sync ainda e necessario quando existe chance de remocao de arquivo remoto.
-          await runSyncWithProgress("upload");
+          if (snapshotGenerated) {
+            let uploadError: unknown = null;
+
+            for (let attempt = 1; attempt <= 2; attempt += 1) {
+              try {
+                await runSyncWithProgress("upload");
+                uploadError = null;
+                break;
+              } catch (error) {
+                uploadError = error;
+                if (attempt === 1 && !isAutomatic) {
+                  toast("Falha no upload do snapshot. Tentando novamente...", {
+                    icon: "⚠️",
+                  });
+                }
+              }
+            }
+
+            if (uploadError) {
+              throw uploadError;
+            }
+          } else {
+            await runSyncWithProgress("upload");
+          }
         } else {
           const uploadPaths = new Set<string>();
 
