@@ -36,6 +36,8 @@ export interface State {
   operationStatus: {
     title: string;
     detail: string | null;
+    stepCurrent: number | null;
+    stepTotal: number | null;
   };
 }
 
@@ -67,6 +69,8 @@ export const initialState: State = {
   operationStatus: {
     title: "",
     detail: null,
+    stepCurrent: null,
+    stepTotal: null,
   },
 };
 
@@ -102,7 +106,15 @@ export type Action =
       };
     }
   | { type: "RESET_RCLONE_PROGRESS" }
-  | { type: "SET_OPERATION_STATUS"; payload: { title: string; detail?: string | null } }
+  | {
+      type: "SET_OPERATION_STATUS";
+      payload: {
+        title: string;
+        detail?: string | null;
+        stepCurrent?: number | null;
+        stepTotal?: number | null;
+      };
+    }
   | { type: "RESET_OPERATION_STATUS" };
 
 // ── Reducer ──
@@ -189,6 +201,8 @@ export function reducer(state: State, action: Action): State {
         operationStatus: {
           title: action.payload.title,
           detail: action.payload.detail ?? null,
+          stepCurrent: action.payload.stepCurrent ?? null,
+          stepTotal: action.payload.stepTotal ?? null,
         },
       };
     case "RESET_OPERATION_STATUS":
@@ -197,6 +211,8 @@ export function reducer(state: State, action: Action): State {
         operationStatus: {
           title: "",
           detail: null,
+          stepCurrent: null,
+          stepTotal: null,
         },
       };
     default:

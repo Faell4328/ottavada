@@ -54,6 +54,9 @@ export function useAppScanFlow({
 
   const runSyncWithProgress = useCallback(async (direction: "upload" | "download") => {
     let stopPolling = false;
+    let maxBytes = 0;
+    let maxTotalBytes: number | null = null;
+    let maxPercentage = 0;
 
     dispatch({
       type: "SET_RCLONE_PROGRESS",
@@ -75,14 +78,26 @@ export function useAppScanFlow({
         try {
           const stats = await api.getRcloneRcStats();
           if (stats) {
+            const nextBytes = Math.max(maxBytes, stats.bytes);
+            maxBytes = nextBytes;
+
+            const nextTotalBytes: number | null =
+              stats.total_bytes !== null
+                ? Math.max(maxTotalBytes ?? 0, stats.total_bytes)
+                : maxTotalBytes;
+            maxTotalBytes = nextTotalBytes;
+
+            const nextPercentage = Math.max(maxPercentage, Math.round(stats.percentage ?? 0));
+            maxPercentage = nextPercentage;
+
             dispatch({
               type: "SET_RCLONE_PROGRESS",
               payload: {
                 active: stats.active,
                 direction,
-                bytes: stats.bytes,
-                totalBytes: stats.total_bytes,
-                percentage: stats.percentage,
+                bytes: nextBytes,
+                totalBytes: nextTotalBytes,
+                percentage: nextPercentage,
                 speedBytesPerSec: stats.speed_bytes_per_sec,
                 etaSeconds: stats.eta_seconds,
               },
@@ -107,6 +122,9 @@ export function useAppScanFlow({
 
   const runSelectiveUploadWithProgress = useCallback(async (relativePaths: string[]) => {
     let stopPolling = false;
+    let maxBytes = 0;
+    let maxTotalBytes: number | null = null;
+    let maxPercentage = 0;
 
     dispatch({
       type: "SET_RCLONE_PROGRESS",
@@ -128,14 +146,26 @@ export function useAppScanFlow({
         try {
           const stats = await api.getRcloneRcStats();
           if (stats) {
+            const nextBytes = Math.max(maxBytes, stats.bytes);
+            maxBytes = nextBytes;
+
+            const nextTotalBytes: number | null =
+              stats.total_bytes !== null
+                ? Math.max(maxTotalBytes ?? 0, stats.total_bytes)
+                : maxTotalBytes;
+            maxTotalBytes = nextTotalBytes;
+
+            const nextPercentage = Math.max(maxPercentage, Math.round(stats.percentage ?? 0));
+            maxPercentage = nextPercentage;
+
             dispatch({
               type: "SET_RCLONE_PROGRESS",
               payload: {
                 active: stats.active,
                 direction: "upload",
-                bytes: stats.bytes,
-                totalBytes: stats.total_bytes,
-                percentage: stats.percentage,
+                bytes: nextBytes,
+                totalBytes: nextTotalBytes,
+                percentage: nextPercentage,
                 speedBytesPerSec: stats.speed_bytes_per_sec,
                 etaSeconds: stats.eta_seconds,
               },
@@ -177,8 +207,10 @@ export function useAppScanFlow({
       dispatch({
         type: "SET_OPERATION_STATUS",
         payload: {
-          title: "Iniciando verificação",
+          title: "Etapa 1 - Iniciando verificação",
           detail: "Preparando fluxo de sincronização",
+          stepCurrent: 1,
+          stepTotal: 1,
         },
       });
       dispatch({
@@ -189,30 +221,35 @@ export function useAppScanFlow({
       const isClient = computerType === "Client";
 
       if (isClient) {
+        const clientTotalSteps = 2;
         dispatch({
           type: "SET_SCAN_PROGRESS",
-          payload: { total: 2, completed: 0, changedFiles: 0 },
+          payload: { total: clientTotalSteps, completed: 0, changedFiles: 0 },
         });
 
         dispatch({
           type: "SET_OPERATION_STATUS",
           payload: {
-            title: "Sincronizando download",
+            title: "Etapa 1 - Download da nuvem",
             detail: "Baixando alterações da nuvem",
+            stepCurrent: 1,
+            stepTotal: clientTotalSteps,
           },
         });
         await runSyncWithProgress("download");
 
         dispatch({
           type: "SET_SCAN_PROGRESS",
-          payload: { total: 2, completed: 1, changedFiles: 0 },
+          payload: { total: clientTotalSteps, completed: 1, changedFiles: 0 },
         });
 
         dispatch({
           type: "SET_OPERATION_STATUS",
           payload: {
-            title: "Aplicando alterações",
+            title: "Etapa 2 - Aplicando alterações",
             detail: "Atualizando base local do cliente",
+            stepCurrent: 2,
+            stepTotal: clientTotalSteps,
           },
         });
         const syncSummary = await api.applyServerChangesOnClient();
@@ -222,8 +259,8 @@ export function useAppScanFlow({
         dispatch({
           type: "SET_SCAN_PROGRESS",
           payload: {
-            total: 2,
-            completed: 2,
+            total: clientTotalSteps,
+            completed: clientTotalSteps,
             changedFiles: syncSummary.events_applied,
           },
         });
@@ -241,11 +278,12 @@ export function useAppScanFlow({
 
       const totalSteps = 4;
       let completedSteps = 0;
+      let currentTotalSteps = totalSteps;
       const updateStepProgress = (changedFiles: number) => {
         dispatch({
           type: "SET_SCAN_PROGRESS",
           payload: {
-            total: totalSteps,
+            total: currentTotalSteps,
             completed: completedSteps,
             changedFiles,
           },
@@ -255,8 +293,10 @@ export function useAppScanFlow({
       dispatch({
         type: "SET_OPERATION_STATUS",
         payload: {
-          title: "Verificando alterações",
+          title: "Etapa 1 - Verificando alterações",
           detail: "Comparando arquivos locais (servidor)",
+          stepCurrent: 1,
+          stepTotal: currentTotalSteps,
         },
       });
       updateStepProgress(0);
@@ -266,8 +306,10 @@ export function useAppScanFlow({
       dispatch({
         type: "SET_OPERATION_STATUS",
         payload: {
-          title: "Comprimindo arquivos",
+          title: "Etapa 2 - Junção e compressão",
           detail: "Gerando .tar.zst das músicas",
+          stepCurrent: 2,
+          stepTotal: currentTotalSteps,
         },
       });
       const archiveSummary = await api.generateSongArchivesFiles();
@@ -276,8 +318,10 @@ export function useAppScanFlow({
       dispatch({
         type: "SET_OPERATION_STATUS",
         payload: {
-          title: "Gerando events",
+          title: "Etapa 3 - Gerando eventos",
           detail: "Atualizando events.msgpack.zst",
+          stepCurrent: 3,
+          stepTotal: currentTotalSteps,
         },
       });
       const eventsSummary = await api.generateEventsFile();
@@ -294,9 +338,16 @@ export function useAppScanFlow({
       let snapshotGenerated = false;
 
       if (eventsSummary.payload_size >= 2 * 1024 * 1024) {
+        currentTotalSteps = 5;
+        updateStepProgress(changedCount);
         dispatch({
           type: "SET_OPERATION_STATUS",
-          payload: { title: "Gerando snapshot", detail: "Events atingiu 2MB" },
+          payload: {
+            title: "Etapa 4 - Gerando snapshot",
+            detail: "Events atingiu 2MB",
+            stepCurrent: 4,
+            stepTotal: currentTotalSteps,
+          },
         });
         await api.generateSnapshotFile();
         snapshotGenerated = true;
@@ -315,8 +366,10 @@ export function useAppScanFlow({
         dispatch({
           type: "SET_OPERATION_STATUS",
           payload: {
-            title: "Sincronizando upload",
+            title: `Etapa ${snapshotGenerated ? 5 : 4} - Upload para nuvem`,
             detail: "Enviando arquivos alterados para a nuvem",
+            stepCurrent: snapshotGenerated ? 5 : 4,
+            stepTotal: currentTotalSteps,
           },
         });
 
@@ -344,8 +397,10 @@ export function useAppScanFlow({
         dispatch({
           type: "SET_OPERATION_STATUS",
           payload: {
-            title: "Upload ignorado",
+            title: `Etapa ${snapshotGenerated ? 5 : 4} - Upload para nuvem`,
             detail: "Nenhuma alteração nova para enviar",
+            stepCurrent: snapshotGenerated ? 5 : 4,
+            stepTotal: currentTotalSteps,
           },
         });
       }
@@ -400,7 +455,7 @@ export function useAppScanFlow({
         await loadSongs();
       }
 
-      const delay = changedCount > 0 || recoveredCount > 0 ? 3000 : 1500;
+      const delay = 1000;
       scheduleScanReset(delay);
     } catch (err) {
       console.error("Failed to scan files for changes:", err);

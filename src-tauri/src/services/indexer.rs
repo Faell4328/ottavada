@@ -41,7 +41,7 @@ pub fn scan_directory(dir_path: &Path) -> Vec<IndexedFile> {
 
         let name = song_name_from_parent_directory(path)
             .unwrap_or_else(|| normalize_song_name(&file_stem));
-        let instrument = parse_instrument_from_file_stem(&file_stem);
+        let instrument = parse_instrument_from_file_stem(&file_stem, &name);
 
         files.push(IndexedFile {
             path: path.to_string_lossy().to_string(),
@@ -68,15 +68,15 @@ fn song_name_from_parent_directory(path: &Path) -> Option<String> {
     }
 }
 
-/// Extrai somente o nome do instrumento do nome do arquivo.
-/// Padrão esperado: "nome da música - instrumento.ext".
-fn parse_instrument_from_file_stem(file_stem: &str) -> Option<String> {
+/// Extrai o nome do instrumento a partir do nome do arquivo.
+/// Suporta tanto "nome da música - instrumento.ext" quanto "instrumento.ext".
+fn parse_instrument_from_file_stem(file_stem: &str, song_name: &str) -> Option<String> {
     if let Some(idx) = file_stem.rfind(" - ") {
-        let instrument = normalize_optional_score_name(Some(&file_stem[idx + 3..]));
-        instrument
-    } else {
-        None
+        return normalize_optional_score_name(Some(&file_stem[idx + 3..]));
     }
+
+    let normalized_instrument = normalize_optional_score_name(Some(file_stem));
+    normalized_instrument.filter(|instrument| normalize_song_name(instrument) != song_name)
 }
 
 /// Separa um caminho completo de arquivo em (diretório, nome_do_arquivo)
@@ -149,25 +149,33 @@ mod tests {
 
     #[test]
     fn test_parse_instrument_with_suffix() {
-        let instrument = parse_instrument_from_file_stem("Canon in D - Violino 1");
+        let instrument = parse_instrument_from_file_stem("Canon in D - Violino 1", "CANON IN D");
         assert_eq!(instrument, Some("Violino 1".to_string()));
     }
 
     #[test]
     fn test_parse_instrument_without_suffix() {
-        let instrument = parse_instrument_from_file_stem("Moonlight Sonata");
-        assert_eq!(instrument, None);
+        let instrument =
+            parse_instrument_from_file_stem("Moonlight Sonata", "SONATA AO LUAR");
+        assert_eq!(instrument, Some("Moonlight Sonata".to_string()));
     }
 
     #[test]
     fn test_parse_instrument_with_multiple_dashes() {
-        let instrument = parse_instrument_from_file_stem("Ode to Joy - Arr. Sousa - Piano");
+        let instrument =
+            parse_instrument_from_file_stem("Ode to Joy - Arr. Sousa - Piano", "ODE TO JOY");
         assert_eq!(instrument, Some("Piano".to_string()));
     }
 
     #[test]
     fn test_parse_instrument_trailing_dash() {
-        let instrument = parse_instrument_from_file_stem("Some Song - ");
+        let instrument = parse_instrument_from_file_stem("Some Song - ", "SOME SONG");
+        assert_eq!(instrument, None);
+    }
+
+    #[test]
+    fn test_parse_instrument_ignores_file_name_equal_to_song_name() {
+        let instrument = parse_instrument_from_file_stem("Eis o nosso deus", "EIS O NOSSO DEUS");
         assert_eq!(instrument, None);
     }
 

@@ -303,6 +303,7 @@
 2. Verifica se o arquivo `events.msgpack.zst` tem 2MB
 	- Se for igual ou maior:
 		- Executa o fluxo de "Gerar Snapshot"
+		- StatusBar deve adicionar uma etapa extra: "Gerando snapshot" antes do upload final
 		- Encerra esse fluxo
 	- Se não tiver 2MB:
 		- Descompacta o arquivo no diretório: "/temp/events/"
@@ -321,6 +322,7 @@
 		- Vai para a próxima etapa
 		  
 4. Chama o rclone para sincronizar a pasta local com a "Nuvem"
+	- Antes de iniciar a transferência, resetar estatísticas RC (`core/stats-reset`) para o progresso começar em 0
 	- Caso de erro:
 		- Tentar compactar mais uma vez
 		- Se ocorrer erro novamente, deve ser emitido um toast avisando o usuário que não é possível compactar o arquivo de alteração.
@@ -357,6 +359,7 @@
 6.1. Deleta todos os arquivos `{songId}.tar.zst` existentes em `/cloud/songs` para forçar a regeneração completa
 
 7. Chama o rclone para sincronizar a pasta local com a "Nuvem"
+	- Antes de iniciar a transferência, resetar estatísticas RC (`core/stats-reset`) para o progresso começar em 0
 	- Caso de erro:
 		- Tentar compactar mais uma vez
 		- Se ocorrer erro novamente, deve ser emitido um toast avisando o usuário que não é possível compactar o arquivo de alteração.
@@ -425,6 +428,7 @@
 
 ```markdown
 1. Chama o rclone para sincronizar a pasta local "/nuvem" com a Nuvem
+	- Antes de iniciar a transferência, resetar estatísticas RC (`core/stats-reset`) para o progresso começar em 0
 	- Caso de erro:
 		- Tenta mais uma vez
 		- Se ocorrer erro novamente, deve ser emitido um toast avisando o usuário que não é possível consultar a nuvem.
@@ -510,6 +514,8 @@
 	- Caso ocorra algum erro, emite um toast avisando e interrompe o fluxo
 
 6. Faz o upload para a nuvem apenas se houver alteração nova (`.tar.zst`, `events.msgpack.zst` ou `snapshot.msgpack.zst`)
+	- Antes de iniciar a transferência, resetar estatísticas RC (`core/stats-reset`) para o progresso começar em 0
+	- Se o `events.msgpack.zst` atingiu o limite e gerou snapshot, o StatusBar deve mostrar a etapa extra "Gerando snapshot" antes desta etapa de upload
 	- Padrão: upload incremental apenas dos caminhos alterados
 	- Exceção: usa `rclone sync` completo quando precisar refletir remoções no remoto (ex: limpeza de `events.msgpack.zst`)
 	- Caso de erro:
@@ -825,6 +831,7 @@
 2. Verifica se o arquivo `events.msgpack.zst` tem 2MB
 	- Se for igual ou maior:
 		- Executa o fluxo de "Gerar Snapshot"
+		- StatusBar deve adicionar uma etapa extra: "Gerando snapshot" antes do upload final
 		- Encerra esse fluxo
 	- Se não tiver 2MB:
 		- Descompacta o arquivo no diretório: "/temp/events/"
@@ -843,6 +850,7 @@
 		- Vai para a próxima etapa
 		  
 4. Chama o rclone para sincronizar a pasta local com a "Nuvem"
+	- Antes de iniciar a transferência, resetar estatísticas RC (`core/stats-reset`) para o progresso começar em 0
 	- Caso de erro:
 		- Tentar compactar mais uma vez
 		- Se ocorrer erro novamente, deve ser emitido um toast avisando o usuário que não é possível compactar o arquivo de alteração.
@@ -877,6 +885,7 @@
 6. Deleta o arquivo `events.msgpack.zst`
 
 7. Chama o rclone para sincronizar a pasta local com a "Nuvem"
+	- Antes de iniciar a transferência, resetar estatísticas RC (`core/stats-reset`) para o progresso começar em 0
 	- Caso de erro:
 		- Tentar compactar mais uma vez
 		- Se ocorrer erro novamente, deve ser emitido um toast avisando o usuário que não é possível compactar o arquivo de alteração.
@@ -945,6 +954,7 @@
 
 ```markdown
 1. Chama o rclone para sincronizar a pasta local "/nuvem" com a Nuvem
+	- Antes de iniciar a transferência, resetar estatísticas RC (`core/stats-reset`) para o progresso começar em 0
 	- Caso de erro:
 		- Tenta mais uma vez
 		- Se ocorrer erro novamente, deve ser emitido um toast avisando o usuário que não é possível consultar a nuvem.
@@ -1031,6 +1041,8 @@
 	- Caso ocorra algum erro, emite um toast avisando e interrompe o fluxo
 
 6. Faz o upload para a nuvem apenas se houver alteração nova (`.tar.zst`, `events.msgpack.zst` ou `snapshot.msgpack.zst`)
+	- Antes de iniciar a transferência, resetar estatísticas RC (`core/stats-reset`) para o progresso começar em 0
+	- Se o `events.msgpack.zst` atingiu o limite e gerou snapshot, o StatusBar deve mostrar a etapa extra "Gerando snapshot" antes desta etapa de upload
 	- Padrão: upload incremental apenas dos caminhos alterados
 	- Exceção: usa `rclone sync` completo quando precisar refletir remoções no remoto (ex: limpeza de `events.msgpack.zst`)
 	- Caso de erro:

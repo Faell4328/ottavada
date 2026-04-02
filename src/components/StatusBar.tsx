@@ -26,10 +26,10 @@ export default function StatusBar() {
       ? Math.round(state.rcloneProgress.percentage)
       : null;
 
+  // Mantem o modo de transferencia ativo enquanto existir uma direcao,
+  // evitando piscar de volta para "Etapa X" quando o polling oscilar.
   const isRcloneActive =
-    state.isScanningFiles &&
-    state.rcloneProgress.direction !== null &&
-    state.rcloneProgress.active;
+    state.isScanningFiles && state.rcloneProgress.direction !== null;
 
   const formatEta = (seconds: number | null) => {
     if (seconds === null || seconds < 0) return null;
@@ -46,9 +46,29 @@ export default function StatusBar() {
 
   const title = state.operationStatus.title || "Verificando alteracoes";
   const detail = state.operationStatus.detail;
-  const activePercentage = isRcloneActive
-    ? (rclonePercentage ?? 0)
-    : progressPercentage;
+  const totalSteps = Math.max(
+    state.operationStatus.stepTotal ?? state.scanProgress.total,
+    1
+  );
+  const currentStage =
+    state.operationStatus.stepCurrent ??
+    (state.scanProgress.completed >= totalSteps
+      ? totalSteps
+      : Math.min(state.scanProgress.completed + 1, totalSteps));
+  const totalBytes = state.rcloneProgress.totalBytes;
+  const bytesTransferred = state.rcloneProgress.bytes;
+  const bytesRemaining =
+    totalBytes !== null ? Math.max(totalBytes - bytesTransferred, 0) : null;
+  const transferPercentage =
+    rclonePercentage ??
+    (totalBytes && totalBytes > 0
+      ? Math.round((Math.min(bytesTransferred, totalBytes) / totalBytes) * 100)
+      : 0);
+  const workflowPercentage = Math.round((state.scanProgress.completed / totalSteps) * 100);
+  const stagePercentage = isRcloneActive ? transferPercentage : null;
+  const barPercentage = isRcloneActive
+    ? transferPercentage
+    : Math.max(0, Math.min(100, progressPercentage));
 
   return (
     <footer className="fixed bottom-4 left-1/2 z-50 w-[min(680px,calc(100%-1.5rem))] -translate-x-1/2">
@@ -57,7 +77,7 @@ export default function StatusBar() {
           <div className="min-w-0">
             <div className="flex items-center gap-2 text-[12px] font-semibold text-[#21476c]">
               <Loader className="h-3.5 w-3.5 animate-spin text-blue-600" />
-              <span className="truncate">{title}</span>
+              <span className="truncate">Etapa {currentStage} de {totalSteps}</span>
               {isRcloneActive && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-[#eaf3ff] px-2 py-0.5 text-[11px] font-semibold text-[#23558b]">
                   <Cloud className="h-3 w-3" />
@@ -65,39 +85,37 @@ export default function StatusBar() {
                 </span>
               )}
             </div>
-            {detail && (
-              <p className="mt-1 truncate text-[11px] text-[#5e7390]">{detail}</p>
-            )}
+            <p className="mt-1 truncate text-[11px] text-[#5e7390]">{title}</p>
+            {detail && <p className="truncate text-[11px] text-[#5e7390]">{detail}</p>}
           </div>
-          <span className="shrink-0 text-[12px] font-bold text-[#2464a8]">{activePercentage}%</span>
+          <span className="shrink-0 text-[12px] font-bold text-[#2464a8]">{barPercentage}%</span>
         </div>
 
         <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-[#e8f0fa]">
           <div
             className="h-full rounded-full bg-gradient-to-r from-[#2f7fd1] to-[#40b0ff] transition-all duration-300"
-            style={{ width: `${activePercentage}%` }}
+            style={{ width: `${barPercentage}%` }}
           />
         </div>
 
         <div className="mt-2 flex items-center gap-3 text-[11px] text-[#4f6887]">
           {isRcloneActive ? (
             <>
+              <span>Progresso total: {workflowPercentage}%</span>
+              <span>Progresso da etapa: {stagePercentage ?? 0}%</span>
               <span>
-                {formatBytes(state.rcloneProgress.bytes)}
-                {state.rcloneProgress.totalBytes
-                  ? ` / ${formatBytes(state.rcloneProgress.totalBytes)}`
-                  : ""}
+                {formatBytes(bytesTransferred)}
+                {totalBytes !== null ? ` / ${formatBytes(totalBytes)}` : ""}
               </span>
               {state.rcloneProgress.speedBytesPerSec > 0 && (
                 <span>{formatBytes(state.rcloneProgress.speedBytesPerSec)}/s</span>
               )}
+              {bytesRemaining !== null && <span>Faltam {formatBytes(bytesRemaining)}</span>}
               {etaText && <span>ETA {etaText}</span>}
             </>
           ) : (
             <>
-              <span>
-                Etapa {Math.min(state.scanProgress.completed, state.scanProgress.total)} de {state.scanProgress.total}
-              </span>
+              <span>Progresso total: {workflowPercentage}%</span>
               {state.scanProgress.changedFiles > 0 && (
                 <span className="font-semibold text-green-700">
                   {state.scanProgress.changedFiles} alterado(s)

@@ -272,6 +272,41 @@ fn fetch_rclone_rc_stats() -> Result<Option<RcloneRcStats>, AppError> {
     }))
 }
 
+fn reset_rclone_rc_stats() -> Result<(), AppError> {
+    let mut stream = match TcpStream::connect("127.0.0.1:5572") {
+        Ok(stream) => stream,
+        Err(_) => return Ok(()),
+    };
+
+    stream
+        .set_read_timeout(Some(Duration::from_millis(900)))
+        .map_err(|e| AppError::Generic(format!("Erro ao configurar timeout de leitura RC: {}", e)))?;
+    stream
+        .set_write_timeout(Some(Duration::from_millis(900)))
+        .map_err(|e| AppError::Generic(format!("Erro ao configurar timeout de escrita RC: {}", e)))?;
+
+    let request = concat!(
+        "POST /core/stats-reset HTTP/1.1\r\n",
+        "Host: 127.0.0.1:5572\r\n",
+        "Content-Type: application/json\r\n",
+        "Content-Length: 2\r\n",
+        "Connection: close\r\n\r\n",
+        "{}"
+    );
+
+    stream
+        .write_all(request.as_bytes())
+        .map_err(|e| AppError::Generic(format!("Erro ao resetar RC do rclone: {}", e)))?;
+
+    // Consome resposta para fechar corretamente a conexao.
+    let mut response = Vec::new();
+    stream
+        .read_to_end(&mut response)
+        .map_err(|e| AppError::Generic(format!("Erro ao ler resposta do reset RC: {}", e)))?;
+
+    Ok(())
+}
+
 #[tauri::command]
 pub fn get_rclone_rc_stats() -> Result<Option<RcloneRcStats>, AppError> {
     fetch_rclone_rc_stats()
@@ -451,6 +486,8 @@ fn upload_cloud_paths_with_rclone_impl(
     store: &SystemStore,
     relative_paths: &[String],
 ) -> Result<RcloneSelectiveUploadSummary, AppError> {
+    let _ = reset_rclone_rc_stats();
+
     let settings = store.get_app_settings()?;
     let rclone_config = settings
         .rclone_config
@@ -541,6 +578,8 @@ fn sync_cloud_with_rclone_impl(
     store: &SystemStore,
     direction: &str,
 ) -> Result<RcloneSyncSummary, AppError> {
+    let _ = reset_rclone_rc_stats();
+
     let sync_direction = RcloneSyncDirection::from_str(direction.trim())?;
 
     let settings = store.get_app_settings()?;
