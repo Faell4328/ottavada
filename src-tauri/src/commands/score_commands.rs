@@ -170,6 +170,7 @@ fn configure_no_window_command(cmd: std::process::Command) -> std::process::Comm
 fn extract_score_file_from_archive(
     archive_path: &Path,
     score_id: &str,
+    output_file_stem: &str,
     destination_dir: &Path,
 ) -> Result<std::path::PathBuf, AppError> {
     if !archive_path.is_file() {
@@ -251,9 +252,9 @@ fn extract_score_file_from_archive(
             .unwrap_or("");
 
         let output_name = if extension.is_empty() {
-            score_id.to_string()
+            output_file_stem.to_string()
         } else {
-            format!("{}.{}", score_id, extension)
+            format!("{}.{}", output_file_stem, extension)
         };
 
         let output_path = destination_dir.join(output_name);
@@ -283,6 +284,32 @@ fn extract_score_file_from_archive(
         score_id,
         archive_path.display()
     )))
+}
+
+fn sanitize_file_name_component(value: &str) -> String {
+    let sanitized: String = value
+        .chars()
+        .map(|ch| {
+            if ch.is_control() || matches!(ch, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|') {
+                '_'
+            } else {
+                ch
+            }
+        })
+        .collect();
+
+    let trimmed = sanitized.trim().trim_matches('.').trim_matches(' ');
+    if trimmed.is_empty() {
+        "sem_nome".to_string()
+    } else {
+        trimmed.to_string()
+    }
+}
+
+fn build_client_extracted_score_name(song_name: &str, score_name: Option<&str>) -> String {
+    let song = sanitize_file_name_component(song_name);
+    let score = sanitize_file_name_component(score_name.unwrap_or("Sem instrumento"));
+    format!("{} - {}", song, score)
 }
 
 #[tauri::command]
@@ -405,6 +432,14 @@ pub async fn open_file(
 
     if settings.computer_type == ComputerType::Client {
         let song_id = db.get_song_id_for_score(&score_id)?;
+        let song = db.get_song_list_item_by_id(&song_id)?;
+        let score = song
+            .scores
+            .iter()
+            .find(|item| item.id == score_id)
+            .ok_or_else(|| AppError::ScoreNotFound(score_id.clone()))?;
+
+        let output_file_stem = build_client_extracted_score_name(&song.name, score.name.as_deref());
         let app_data_dir = store.app_data_dir().clone();
         let archive_path = app_data_dir
             .join("cloud")
@@ -412,7 +447,8 @@ pub async fn open_file(
             .join(format!("{}.tar.zst", song_id));
         let temp_dir = app_data_dir.join("tmp").join("scores");
 
-        let extracted_path = extract_score_file_from_archive(&archive_path, &score_id, &temp_dir)?;
+        let extracted_path =
+            extract_score_file_from_archive(&archive_path, &score_id, &output_file_stem, &temp_dir)?;
         let extracted_path_str = extracted_path.to_string_lossy().to_string();
         return open_path_on_system(&extracted_path_str);
     }
@@ -510,7 +546,10 @@ mod tests {
 
     use tempfile::tempdir;
 
-    use super::extract_score_file_from_archive;
+    use super::{
+        build_client_extracted_score_name, extract_score_file_from_archive,
+        sanitize_file_name_component,
+    };
 
     fn write_test_tar_zst(archive_path: &Path, files: &[(&str, &[u8])]) {
         let archive_file = fs::File::create(archive_path).expect("create archive file");
@@ -544,12 +583,17 @@ mod tests {
         );
 
         let output_dir = dir.path().join("out");
-        let extracted =
-            extract_score_file_from_archive(&archive_path, "score-b", &output_dir).expect("extract");
+        let extracted = extract_score_file_from_archive(
+            &archive_path,
+            "score-b",
+            "MUSICA TESTE - flute 1",
+            &output_dir,
+        )
+        .expect("extract");
 
         assert_eq!(
             extracted.file_name().and_then(|name| name.to_str()),
-            Some("score-b.pdf")
+            Some("MUSICA TESTE - flute 1.pdf")
         );
         assert_eq!(fs::read_to_string(extracted).expect("read file"), "B");
     }
@@ -561,8 +605,24 @@ mod tests {
         write_test_tar_zst(&archive_path, &[("score-a.musx", b"A")]);
 
         let output_dir = dir.path().join("out");
-        let result = extract_score_file_from_archive(&archive_path, "score-z", &output_dir);
+        let result =
+            extract_score_file_from_archive(&archive_path, "score-z", "MUSICA TESTE - flute", &output_dir);
 
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn sanitizes_file_name_component_for_cross_platform_open() {
+        assert_eq!(
+            sanitize_file_name_component(" HINO: NACIONAL/TESTE?* "),
+            "HINO_ NACIONAL_TESTE__"
+        );
+        assert_eq!(sanitize_file_name_component("..."), "sem_nome");
+    }
+
+    #[test]
+    fn builds_friendly_name_with_default_score_when_missing() {
+        let name = build_client_extracted_score_name("HINO NACIONAL", None);
+        assert_eq!(name, "HINO NACIONAL - Sem instrumento");
     }
 }
