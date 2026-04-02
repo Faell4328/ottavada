@@ -6,6 +6,12 @@ import * as api from "../api/commands";
 import { Modal, ModalFooterButtons, FormField, TextInput, ErrorMessage } from "./ui";
 import { CategoryCheckboxList } from "./ui/CategoryCheckboxList";
 import { getDirectoryPath, getFileName } from "../utils/paths";
+import {
+  normalizeScoreNameForSave,
+  normalizeScoreNameInput,
+  normalizeSongNameForSave,
+  normalizeSongNameInput,
+} from "../utils/nameFormat";
 
 interface AddFilesModalProps {
   isOpen: boolean;
@@ -32,7 +38,7 @@ export function AddFilesModal({
 
   useEffect(() => {
     if (isOpen && files.length > 0) {
-      setTitle(files[0].name || "");
+      setTitle(normalizeSongNameInput(files[0].name || ""));
       setComposer("");
       setArranger("");
       setSelectedCategories([]);
@@ -41,7 +47,7 @@ export function AddFilesModal({
       
       const names: Record<number, string> = {};
       files.forEach((file, idx) => {
-        names[idx] = file.instrument || "";
+        names[idx] = normalizeScoreNameInput(file.instrument || "");
       });
       setInstrumentNames(names);
     }
@@ -56,7 +62,10 @@ export function AddFilesModal({
   };
 
   const updateInstrumentName = (idx: number, name: string) => {
-    setInstrumentNames((prev) => ({ ...prev, [idx]: name }));
+    setInstrumentNames((prev) => ({
+      ...prev,
+      [idx]: normalizeScoreNameInput(name),
+    }));
   };
 
   const removeFile = (idx: number) => {
@@ -68,7 +77,9 @@ export function AddFilesModal({
   };
 
   const handleSave = async () => {
-    if (!title.trim()) {
+    const normalizedTitle = normalizeSongNameForSave(title);
+
+    if (!normalizedTitle) {
       setError("O título da música é obrigatório");
       return;
     }
@@ -88,8 +99,10 @@ export function AddFilesModal({
         const originalIdx = files.indexOf(f);
         return {
           path: f.path,
-          name: title.trim(),
-          instrument: instrumentNames[originalIdx] || f.instrument,
+          name: normalizedTitle,
+          instrument: normalizeScoreNameForSave(
+            instrumentNames[originalIdx] ?? f.instrument
+          ),
           extension: f.extension,
         };
       });
@@ -133,7 +146,7 @@ export function AddFilesModal({
       <FormField label="Nome da Música" required>
         <TextInput
           value={title}
-          onChange={setTitle}
+          onChange={(value) => setTitle(normalizeSongNameInput(value))}
           placeholder="Nome da música"
           autoFocus
         />

@@ -124,7 +124,7 @@ describe("EditMusicModal", () => {
     await waitFor(() => {
       expect(mockOnSave).toHaveBeenCalledWith({
         songId: "s1",
-        title: "Canon in D Major",
+        title: "CANON IN D MAJOR",
         composer: "Pachelbel",
         arranger: "Modern Arranged",
         categoryIds: ["c1"],

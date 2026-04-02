@@ -169,19 +169,19 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [x] Onde for um elemento clicável ou interativo, deve mudar o cursor.
 - [x] Adicionar uma modal de confirmação avisado o usuário para "aplicar alterações" antes de fechar. Apenas se o usuário tiver criado um evento (adicionando, alterando ou deletando algo).
 - [x] Corrigir o "força geração de snapshot". Após o fluxo normal, ele deve chamar o "aplicar alterações".
-- [ ] Padronizar os nomes
-	- [ ] Padronizar a formatação do nome da música (tudo em maiúsculo). Quando o usuário digitar, deve ser escrito em maiúsculo (mesmo com CAPS desligado).
-	- [ ] Padroniza a formatação dos nomes das partituras/instrumentos (tudo minúsculo e sem números). Quando o usuário digitar, deve ser escrito em minúsculo (mesmo com CAPS ligado).
+- [x] Padronizar os nomes
+	- [x] Padronizar a formatação do nome da música (tudo em maiúsculo). Quando o usuário digitar, deve ser escrito em maiúsculo (mesmo com CAPS desligado), na adição da música com partitura, edição do nome, na hora que extrai o nome do arquivo e etc..
+	- [x] Padroniza a formatação dos nomes das partituras/instrumentos (tudo minúsculo, permitido número apenas após o nome, ex: `flute 1` e não `0001 flute1`). Quando o usuário digitar, deve ser escrito em minúsculo (mesmo com CAPS ligado), na adição da música com partitura, edição do nome, na hora que extrai o nome do arquivo e etc.
+- [ ] O nome da música deve ser pego do diretório mãe do arquivo e não do arquivo.
+- [ ] Não adicionar partituras de subdiretórios (ex: cliquei para "adicionar diretório" e selecione a música "FIEL É DEUS", dentro dele tem outro diretório chamado "HINO 08). Não é para adicionar arquivos de subdiretórios ao diretórios escolhido.
 - [ ] As partituras/instrumentos devem seguir a seguinte ordem (tanto na listagem na música, como na revisão ao adicionar uma música):
 - [ ] Ao adicionar uma música com partitura, as partituras sem nome no arquivo devem ficar na acima dos que já possuem uma sugestão (mantendo a ordem os outros).
 - [ ] Resolver o problema: arquivo em rascunho e foi regerado o `{songId}.tar.zst`, resultado foi removido perdido o arquivo antigo em `main` ficando sem nada.
 - [ ] Na revisão ao adicionar uma música com partitura, adicionar um botão para abrir a partitura com o aplicativo padrão daquele arquivo.
-- [ ] Não adicionar partituras de subdiretórios (ex: cliquei para "adicionar diretório" e selecione a música "FIEL É DEUS", dentro dele tem outro diretório chamado "HINO 08). Não é para adicionar arquivos de subdiretórios ao diretórios escolhido.
 - [ ] Se a música já existe, deve avisar e mostrar quais partituras/instrumentos já tem.
 - [ ] Atualizar o StatusBar mostrar quantos "foram enviados"/"quantos faltam" e também, não fique alterando toda hora, voltando para o texto "etapa 3". Quando for a etapa de upload, mostre o texto de etapa 3 e depois fique mostrando o quanto já foi feito o upload ou download (no caso do cliente).
 - [ ] Gerar log para adicionar música, adicionar arquivo e adicionar partitura. Está dando erro em toast, com uma mensagem genérica, que nada ajuda.
 - [ ] Mudar a regra de 2MB para gerar o `snapshot.msgpack.zst` para apenas 100KB. Para que eu possa fazer testes e depois voltar o valor original
-- [ ] O nome da música deve ser pego do diretório mãe do arquivo e não do arquivo.
 - [ ] Quando o cliente abrir uma partitura pelo aplicativo, a partitura é descompactada e aberta em um diretório temporário, mas preciso que ela seja renomeada, para não ficar aparecendo um ID (estranho para usuário) no aplicativo de visualização de partitura. Preciso que antes de abrir, deve renomear para: `{nome da música} - {nome da partitura}`.
 
 ## Funcionalidades para v2 (apenas rascunho/ideias)

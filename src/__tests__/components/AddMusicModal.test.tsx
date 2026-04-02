@@ -105,7 +105,7 @@ describe("AddMusicModal", () => {
 
     await waitFor(() => {
       expect(mockOnSave).toHaveBeenCalledWith({
-        title: "Canon in D",
+        title: "CANON IN D",
         composer: "Pachelbel",
         arranger: null,
         categoryIds: [],
@@ -146,7 +146,7 @@ describe("AddMusicModal", () => {
 
     await waitFor(() => {
       expect(mockOnSave).toHaveBeenCalledWith({
-        title: "Test Song",
+        title: "TEST SONG",
         composer: null,
         arranger: null,
         categoryIds: [],
@@ -183,7 +183,7 @@ describe("AddMusicModal", () => {
 
     await waitFor(() => {
       expect(mockOnSave).toHaveBeenCalledWith(
-        expect.objectContaining({ title: "Enter Song" })
+        expect.objectContaining({ title: "ENTER SONG" })
       );
     });
   });

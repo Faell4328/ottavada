@@ -3,6 +3,10 @@ import { useAppState } from "../context/AppContext";
 import type { SongListItem } from "../types";
 import { Modal, ModalFooterButtons, FormField, TextInput, ErrorMessage } from "./ui";
 import { CategoryCheckboxList } from "./ui/CategoryCheckboxList";
+import {
+  normalizeSongNameForSave,
+  normalizeSongNameInput,
+} from "../utils/nameFormat";
 
 interface EditMusicModalProps {
   isOpen: boolean;
@@ -50,7 +54,9 @@ export function EditMusicModal({
   };
 
   const handleSave = async () => {
-    if (!score || !title.trim()) {
+    const normalizedTitle = normalizeSongNameForSave(title);
+
+    if (!score || !normalizedTitle) {
       setError("O título é obrigatório");
       return;
     }
@@ -61,7 +67,7 @@ export function EditMusicModal({
     try {
       await onSave({
         songId: score.id,
-        title: title.trim(),
+        title: normalizedTitle,
         composer: composer.trim() || null,
         arranger: arranger.trim() || null,
         categoryIds: selectedCategories,
@@ -93,7 +99,7 @@ export function EditMusicModal({
       <FormField label="Título" required>
         <TextInput
           value={title}
-          onChange={setTitle}
+          onChange={(value) => setTitle(normalizeSongNameInput(value))}
           placeholder="Nome da música"
           disabled={isSaving}
         />

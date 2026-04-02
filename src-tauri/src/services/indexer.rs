@@ -3,6 +3,7 @@ use std::path::Path;
 use walkdir::WalkDir;
 
 use crate::domain::models::IndexedFile;
+use crate::services::name_formatter::{normalize_optional_score_name, normalize_song_name};
 
 /// Extensões de arquivo suportadas
 const SUPPORTED_EXTENSIONS: &[&str] = &["pdf", "mus", "musx"];
@@ -55,15 +56,11 @@ pub fn scan_directory(dir_path: &Path) -> Vec<IndexedFile> {
 /// Se não houver " - ", o instrumento fica None e o nome é o nome completo.
 fn parse_filename(file_stem: &str) -> (String, Option<String>) {
     if let Some(idx) = file_stem.rfind(" - ") {
-        let name = file_stem[..idx].trim().to_string();
-        let instrument = file_stem[idx + 3..].trim().to_string();
-        if instrument.is_empty() {
-            (name, None)
-        } else {
-            (name, Some(instrument))
-        }
+        let name = normalize_song_name(&file_stem[..idx]);
+        let instrument = normalize_optional_score_name(Some(&file_stem[idx + 3..]));
+        (name, instrument)
     } else {
-        (file_stem.to_string(), None)
+        (normalize_song_name(file_stem), None)
     }
 }
 
@@ -138,28 +135,28 @@ mod tests {
     #[test]
     fn test_parse_filename_with_instrument() {
         let (name, instrument) = parse_filename("Canon in D - Violino 1");
-        assert_eq!(name, "Canon in D");
+        assert_eq!(name, "CANON IN D");
         assert_eq!(instrument, Some("Violino 1".to_string()));
     }
 
     #[test]
     fn test_parse_filename_without_instrument() {
         let (name, instrument) = parse_filename("Moonlight Sonata");
-        assert_eq!(name, "Moonlight Sonata");
+        assert_eq!(name, "MOONLIGHT SONATA");
         assert_eq!(instrument, None);
     }
 
     #[test]
     fn test_parse_filename_with_multiple_dashes() {
         let (name, instrument) = parse_filename("Ode to Joy - Arr. Sousa - Piano");
-        assert_eq!(name, "Ode to Joy - Arr. Sousa");
+        assert_eq!(name, "ODE TO JOY - ARR. SOUSA");
         assert_eq!(instrument, Some("Piano".to_string()));
     }
 
     #[test]
     fn test_parse_filename_trailing_dash() {
         let (name, instrument) = parse_filename("Some Song - ");
-        assert_eq!(name, "Some Song");
+        assert_eq!(name, "SOME SONG");
         assert_eq!(instrument, None);
     }
 
@@ -180,9 +177,9 @@ mod tests {
         assert_eq!(files.len(), 3);
 
         let names: Vec<&str> = files.iter().map(|f| f.name.as_str()).collect();
-        assert!(names.contains(&"Canon"));
-        assert!(names.contains(&"Moonlight"));
-        assert!(names.contains(&"Ode"));
+        assert!(names.contains(&"CANON"));
+        assert!(names.contains(&"MOONLIGHT"));
+        assert!(names.contains(&"ODE"));
     }
 
     #[test]
@@ -212,7 +209,7 @@ mod tests {
 
         let files = scan_directory(dir.path());
         assert_eq!(files.len(), 1);
-        assert_eq!(files[0].name, "Canon in D");
+        assert_eq!(files[0].name, "CANON IN D");
         assert_eq!(files[0].instrument, Some("Violino 1".to_string()));
         assert_eq!(files[0].extension, "pdf");
     }

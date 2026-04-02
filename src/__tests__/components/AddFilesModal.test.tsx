@@ -84,7 +84,7 @@ describe("AddFilesModal", () => {
 
     expect(screen.getByText("Adicionar Partitura(s)")).toBeInTheDocument();
     // Title should be pre-filled from first file
-    expect(screen.getByDisplayValue("Canon")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("CANON")).toBeInTheDocument();
     // Should show instrument count
     expect(screen.getByText("Instrumentos a adicionar (2)")).toBeInTheDocument();
   });
@@ -95,7 +95,7 @@ describe("AddFilesModal", () => {
     );
 
     // Clear the pre-filled title
-    fireEvent.change(screen.getByDisplayValue("Canon"), {
+    fireEvent.change(screen.getByDisplayValue("CANON"), {
       target: { value: "" },
     });
     fireEvent.click(screen.getByText("Salvar"));
@@ -138,7 +138,7 @@ describe("AddFilesModal", () => {
     const instrumentInputs = screen.getAllByPlaceholderText("Nome do instrumento");
     expect(instrumentInputs).toHaveLength(2);
 
-    fireEvent.change(instrumentInputs[0], { target: { value: "Flauta Transversal" } });
+    fireEvent.change(instrumentInputs[0], { target: { value: "Flauta 2 Transversal" } });
     expect(instrumentInputs[0]).toHaveValue("Flauta Transversal");
   });
 });

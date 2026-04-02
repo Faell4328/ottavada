@@ -9,15 +9,16 @@ use crate::domain::models::*;
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
 use crate::services::indexer::{self, get_file_metadata};
+use crate::services::name_formatter::{normalize_optional_score_name, normalize_song_name};
 
 fn normalized_required_song_name(name: &str) -> Result<String, AppError> {
-    let normalized = name.trim();
+    let normalized = normalize_song_name(name);
     if normalized.is_empty() {
         return Err(AppError::Generic(
             "Nome da música não pode estar vazio".into(),
         ));
     }
-    Ok(normalized.to_string())
+    Ok(normalized)
 }
 
 fn normalized_optional_text(value: Option<String>) -> Option<String> {
@@ -138,7 +139,12 @@ fn import_files_core(
     let mut groups: std::collections::HashMap<String, Vec<&IndexedFile>> =
         std::collections::HashMap::new();
     for file in files {
-        groups.entry(file.name.clone()).or_default().push(file);
+        let song_name = normalize_song_name(&file.name);
+        if song_name.is_empty() {
+            continue;
+        }
+
+        groups.entry(song_name).or_default().push(file);
     }
 
     let all_songs = db.get_all_songs()?;
@@ -176,8 +182,11 @@ fn import_files_core(
             let score_exists =
                 existing_scores
                     .iter()
-                    .any(|sc| match (&sc.name, &indexed_file.instrument) {
-                        (Some(existing), Some(indexed)) => existing.eq_ignore_ascii_case(indexed),
+                    .any(|sc| match (
+                        &sc.name,
+                        normalize_optional_score_name(indexed_file.instrument.as_deref()),
+                    ) {
+                        (Some(existing), Some(indexed)) => existing.eq_ignore_ascii_case(&indexed),
                         (None, None) => sc.file_path == indexed_file.path,
                         _ => false,
                     });
@@ -201,10 +210,15 @@ fn import_files_core(
             let (score_file_path, file_name) =
                 crate::services::indexer::split_file_path(&indexed_file.path);
 
+            let normalized_file = IndexedFile {
+                instrument: normalize_optional_score_name(indexed_file.instrument.as_deref()),
+                ..(*indexed_file).clone()
+            };
+
             let score = Score::new_from_file(
                 song_id.clone(),
                 host_id.to_string(),
-                &indexed_file,
+                &normalized_file,
                 score_file_path,
                 file_name,
                 (file_size, file_modified_at),

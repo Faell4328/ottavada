@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import type { ScoreListItem } from "../types";
 import { Modal, ModalFooterButtons, FormField, TextInput, ErrorMessage } from "./ui";
+import { normalizeScoreNameForSave, normalizeScoreNameInput } from "../utils/nameFormat";
 
 interface EditInstrumentModalProps {
   isOpen: boolean;
@@ -27,7 +28,7 @@ export function EditInstrumentModal({
 
   useEffect(() => {
     if (isOpen && instrument) {
-      setInstrumentName(instrument.name || "");
+      setInstrumentName(normalizeScoreNameInput(instrument.name || ""));
       setFilePath(instrument.file_path || "");
       setError("");
     }
@@ -72,7 +73,7 @@ export function EditInstrumentModal({
     try {
       await onSave(
         instrument.id,
-        instrumentName.trim() || null,
+        normalizeScoreNameForSave(instrumentName),
         pathToSave
       );
       onClose();
@@ -102,7 +103,7 @@ export function EditInstrumentModal({
       <FormField label="Nome do Instrumento">
         <TextInput
           value={instrumentName}
-          onChange={setInstrumentName}
+          onChange={(value) => setInstrumentName(normalizeScoreNameInput(value))}
           placeholder="Ex: Soprano, Alto Sax, Flauta..."
           disabled={isSaving}
         />

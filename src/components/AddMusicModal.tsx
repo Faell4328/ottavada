@@ -2,6 +2,10 @@ import { useState, useEffect } from "react";
 import { useAppState } from "../context/AppContext";
 import { Modal, ModalFooterButtons, FormField, TextInput, ErrorMessage } from "./ui";
 import { CategoryCheckboxList } from "./ui/CategoryCheckboxList";
+import {
+  normalizeSongNameForSave,
+  normalizeSongNameInput,
+} from "../utils/nameFormat";
 
 interface AddMusicModalProps {
   isOpen: boolean;
@@ -46,7 +50,9 @@ export function AddMusicModal({
   };
 
   const handleSave = async () => {
-    if (!title.trim()) {
+    const normalizedTitle = normalizeSongNameForSave(title);
+
+    if (!normalizedTitle) {
       setError("Digite o título da música");
       return;
     }
@@ -56,7 +62,7 @@ export function AddMusicModal({
 
     try {
       await onSave({
-        title: title.trim(),
+        title: normalizedTitle,
         composer: composer.trim() || null,
         arranger: arranger.trim() || null,
         categoryIds: selectedCategories,
@@ -89,7 +95,7 @@ export function AddMusicModal({
       <FormField label="Nome da Música" required>
         <TextInput
           value={title}
-          onChange={setTitle}
+          onChange={(value) => setTitle(normalizeSongNameInput(value))}
           placeholder="Nome da música"
           autoFocus
           onKeyDown={(e) => { if (e.key === "Enter") handleSave(); }}

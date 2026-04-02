@@ -10,6 +10,7 @@ use crate::domain::models::*;
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
 use crate::services::indexer::{get_file_metadata, split_file_path};
+use crate::services::name_formatter::normalize_optional_score_name;
 
 const VALID_SCORE_EXTENSIONS: [&str; 3] = ["pdf", "mus", "musx"];
 
@@ -18,9 +19,11 @@ fn score_exists_for_indexed_file(
     file: &IndexedFile,
     treat_empty_instrument_as_duplicate: bool,
 ) -> bool {
+    let normalized_instrument = normalize_optional_score_name(file.instrument.as_deref());
+
     scores
         .iter()
-        .any(|sc| match (&sc.name, &file.instrument) {
+        .any(|sc| match (&sc.name, &normalized_instrument) {
             (Some(existing), Some(indexed)) => existing.eq_ignore_ascii_case(indexed),
             (None, None) => {
                 treat_empty_instrument_as_duplicate || sc.file_path == file.path
@@ -34,13 +37,18 @@ fn build_score_from_indexed_file(
     host_id: &str,
     file: &IndexedFile,
 ) -> Result<Score, AppError> {
+    let normalized_file = IndexedFile {
+        instrument: normalize_optional_score_name(file.instrument.as_deref()),
+        ..file.clone()
+    };
+
     let (file_size, file_modified_at) = read_score_file_metadata(Path::new(&file.path))?;
     let (score_file_path, file_name) = split_file_path(&file.path);
 
     Ok(Score::new_from_file(
         song_id.to_string(),
         host_id.to_string(),
-        file,
+        &normalized_file,
         score_file_path,
         file_name,
         (file_size, file_modified_at),
@@ -244,9 +252,11 @@ pub fn update_score(
 
     let (score_file_path, file_name) = split_file_path(&file_path);
 
+    let normalized_instrument_name = normalize_optional_score_name(instrument_name.as_deref());
+
     db.update_score(
         &score_id,
-        instrument_name.clone(),
+        normalized_instrument_name,
         &score_file_path,
         &file_name,
         file_size,
@@ -279,9 +289,10 @@ pub fn add_score_to_song(
     let score_exists = score_exists_for_indexed_file(&song.scores, &file, true);
 
     if score_exists {
+        let normalized_instrument = normalize_optional_score_name(file.instrument.as_deref());
         return Err(AppError::Generic(format!(
             "Uma partitura com o instrumento '{}' já existe para essa música",
-            file.instrument.as_deref().unwrap_or("Sem instrumento")
+            normalized_instrument.as_deref().unwrap_or("Sem instrumento")
         )));
     }
 
