@@ -13,6 +13,7 @@ pub fn scan_directory(dir_path: &Path) -> Vec<IndexedFile> {
     let mut files = Vec::new();
 
     for entry in WalkDir::new(dir_path)
+        .max_depth(1)
         .follow_links(true)
         .into_iter()
         .filter_map(|e| e.ok())
@@ -38,7 +39,9 @@ pub fn scan_directory(dir_path: &Path) -> Vec<IndexedFile> {
             .unwrap_or("")
             .to_string();
 
-        let (name, instrument) = parse_filename(&file_stem);
+        let name = song_name_from_parent_directory(path)
+            .unwrap_or_else(|| normalize_song_name(&file_stem));
+        let instrument = parse_instrument_from_file_stem(&file_stem);
 
         files.push(IndexedFile {
             path: path.to_string_lossy().to_string(),
@@ -51,16 +54,28 @@ pub fn scan_directory(dir_path: &Path) -> Vec<IndexedFile> {
     files
 }
 
-/// Extrai nome e instrumento do nome do arquivo.
-/// Padrão esperado: "nome - instrumento.musx"
-/// Se não houver " - ", o instrumento fica None e o nome é o nome completo.
-fn parse_filename(file_stem: &str) -> (String, Option<String>) {
-    if let Some(idx) = file_stem.rfind(" - ") {
-        let name = normalize_song_name(&file_stem[..idx]);
-        let instrument = normalize_optional_score_name(Some(&file_stem[idx + 3..]));
-        (name, instrument)
+fn song_name_from_parent_directory(path: &Path) -> Option<String> {
+    let parent_name = path
+        .parent()
+        .and_then(|parent| parent.file_name())
+        .and_then(|name| name.to_str())?;
+
+    let normalized = normalize_song_name(parent_name);
+    if normalized.is_empty() {
+        None
     } else {
-        (normalize_song_name(file_stem), None)
+        Some(normalized)
+    }
+}
+
+/// Extrai somente o nome do instrumento do nome do arquivo.
+/// Padrão esperado: "nome da música - instrumento.ext".
+fn parse_instrument_from_file_stem(file_stem: &str) -> Option<String> {
+    if let Some(idx) = file_stem.rfind(" - ") {
+        let instrument = normalize_optional_score_name(Some(&file_stem[idx + 3..]));
+        instrument
+    } else {
+        None
     }
 }
 
@@ -133,31 +148,34 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_filename_with_instrument() {
-        let (name, instrument) = parse_filename("Canon in D - Violino 1");
-        assert_eq!(name, "CANON IN D");
+    fn test_parse_instrument_with_suffix() {
+        let instrument = parse_instrument_from_file_stem("Canon in D - Violino 1");
         assert_eq!(instrument, Some("Violino 1".to_string()));
     }
 
     #[test]
-    fn test_parse_filename_without_instrument() {
-        let (name, instrument) = parse_filename("Moonlight Sonata");
-        assert_eq!(name, "MOONLIGHT SONATA");
+    fn test_parse_instrument_without_suffix() {
+        let instrument = parse_instrument_from_file_stem("Moonlight Sonata");
         assert_eq!(instrument, None);
     }
 
     #[test]
-    fn test_parse_filename_with_multiple_dashes() {
-        let (name, instrument) = parse_filename("Ode to Joy - Arr. Sousa - Piano");
-        assert_eq!(name, "ODE TO JOY - ARR. SOUSA");
+    fn test_parse_instrument_with_multiple_dashes() {
+        let instrument = parse_instrument_from_file_stem("Ode to Joy - Arr. Sousa - Piano");
         assert_eq!(instrument, Some("Piano".to_string()));
     }
 
     #[test]
-    fn test_parse_filename_trailing_dash() {
-        let (name, instrument) = parse_filename("Some Song - ");
-        assert_eq!(name, "SOME SONG");
+    fn test_parse_instrument_trailing_dash() {
+        let instrument = parse_instrument_from_file_stem("Some Song - ");
         assert_eq!(instrument, None);
+    }
+
+    #[test]
+    fn test_song_name_from_parent_directory() {
+        let path = Path::new("/tmp/Eis o nosso deus/Eis o nosso deus - Flute.musx");
+        let song_name = song_name_from_parent_directory(path);
+        assert_eq!(song_name, Some("EIS O NOSSO DEUS".to_string()));
     }
 
     #[test]
@@ -176,14 +194,17 @@ mod tests {
         let files = scan_directory(dir.path());
         assert_eq!(files.len(), 3);
 
-        let names: Vec<&str> = files.iter().map(|f| f.name.as_str()).collect();
-        assert!(names.contains(&"CANON"));
-        assert!(names.contains(&"MOONLIGHT"));
-        assert!(names.contains(&"ODE"));
+        let expected_song_name = normalize_song_name(
+            dir.path()
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or(""),
+        );
+        assert!(files.iter().all(|f| f.name == expected_song_name));
     }
 
     #[test]
-    fn test_scan_directory_recursive() {
+    fn test_scan_directory_ignores_subdirectories() {
         let dir = tempfile::tempdir().unwrap();
         let sub = dir.path().join("subdir");
         std::fs::create_dir(&sub).unwrap();
@@ -192,7 +213,8 @@ mod tests {
         std::fs::write(sub.join("nested.pdf"), b"pdf").unwrap();
 
         let files = scan_directory(dir.path());
-        assert_eq!(files.len(), 2);
+        assert_eq!(files.len(), 1);
+        assert!(files[0].path.ends_with("top.pdf"));
     }
 
     #[test]
@@ -205,12 +227,14 @@ mod tests {
     #[test]
     fn test_scan_directory_extracts_instrument() {
         let dir = tempfile::tempdir().unwrap();
-        std::fs::write(dir.path().join("Canon in D - Violino 1.pdf"), b"data").unwrap();
+        let song_dir = dir.path().join("Eis o nosso deus");
+        std::fs::create_dir(&song_dir).unwrap();
+        std::fs::write(song_dir.join("Eis o nosso deus - Flute.pdf"), b"data").unwrap();
 
-        let files = scan_directory(dir.path());
+        let files = scan_directory(&song_dir);
         assert_eq!(files.len(), 1);
-        assert_eq!(files[0].name, "CANON IN D");
-        assert_eq!(files[0].instrument, Some("Violino 1".to_string()));
+        assert_eq!(files[0].name, "EIS O NOSSO DEUS");
+        assert_eq!(files[0].instrument, Some("Flute".to_string()));
         assert_eq!(files[0].extension, "pdf");
     }
 

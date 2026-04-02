@@ -172,9 +172,41 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [x] Padronizar os nomes
 	- [x] Padronizar a formatação do nome da música (tudo em maiúsculo). Quando o usuário digitar, deve ser escrito em maiúsculo (mesmo com CAPS desligado), na adição da música com partitura, edição do nome, na hora que extrai o nome do arquivo e etc..
 	- [x] Padroniza a formatação dos nomes das partituras/instrumentos (tudo minúsculo, permitido número apenas após o nome, ex: `flute 1` e não `0001 flute1`). Quando o usuário digitar, deve ser escrito em minúsculo (mesmo com CAPS ligado), na adição da música com partitura, edição do nome, na hora que extrai o nome do arquivo e etc.
-- [ ] O nome da música deve ser pego do diretório mãe do arquivo e não do arquivo.
-- [ ] Não adicionar partituras de subdiretórios (ex: cliquei para "adicionar diretório" e selecione a música "FIEL É DEUS", dentro dele tem outro diretório chamado "HINO 08). Não é para adicionar arquivos de subdiretórios ao diretórios escolhido.
+- [x] O nome da música deve ser pego do diretório mãe do arquivo e não do arquivo. Já o nome das partituras/instrumentos sim, ex: Eis o nosso deus - Flute, fica apenas "Flute".
+- [x] Não adicionar partituras de subdiretórios (ex: cliquei para "adicionar diretório" e selecione a música "FIEL É DEUS", dentro dele tem outro diretório chamado "HINO 08). Não é para adicionar arquivos de subdiretórios ao diretórios escolhido.
 - [ ] As partituras/instrumentos devem seguir a seguinte ordem (tanto na listagem na música, como na revisão ao adicionar uma música):
+	- Sem nome (normalmente a grade com todos os instrumentos)
+	- Flute
+	- Oboe
+	- Bassoon
+	- Clarinet Bb 1
+	- Clarinet Bb 2
+	- Clarinet Bb 3
+	- Bass Clarinet
+	- Alto Saxophone 1
+	- Alto Saxophone 2
+	- Tenor Saxophone
+	- Baritone Saxophone
+	- Trumpet Bb 1
+	- Trumpet Bb 2
+	- Trumpet Bb 3
+	- Horn F 1
+	- Horn F 2
+	- Horn F 3
+	- Trombone 1
+	- Trombone 2
+	- Trombone 3
+	- Baritone (T.C.)
+	- Tuba
+	- Violino 1
+	- Violino 2
+	- Viola
+	- Cello
+	- Contrabass
+	- Outros instrumentos (que não são convencionais, em ordem alfabética)
+! Alguns não vão ter partitura/instrumento e está tudo certo, vai apenas "pular" eles. Caso seja adicionando posteriormente, deve ter essa ordem.
+! Os nomes podem ser um pouco diferente, ex: Clarinet **in** Bb 1 e já outros serem como está acima.
+- [ ] Padronizar o nome das partituras/instrumentos, deixando em inglês.
 - [ ] Ao adicionar uma música com partitura, as partituras sem nome no arquivo devem ficar na acima dos que já possuem uma sugestão (mantendo a ordem os outros).
 - [ ] Resolver o problema: arquivo em rascunho e foi regerado o `{songId}.tar.zst`, resultado foi removido perdido o arquivo antigo em `main` ficando sem nada.
 - [ ] Na revisão ao adicionar uma música com partitura, adicionar um botão para abrir a partitura com o aplicativo padrão daquele arquivo.
@@ -184,6 +216,9 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [ ] Mudar a regra de 2MB para gerar o `snapshot.msgpack.zst` para apenas 100KB. Para que eu possa fazer testes e depois voltar o valor original
 - [ ] Quando o cliente abrir uma partitura pelo aplicativo, a partitura é descompactada e aberta em um diretório temporário, mas preciso que ela seja renomeada, para não ficar aparecendo um ID (estranho para usuário) no aplicativo de visualização de partitura. Preciso que antes de abrir, deve renomear para: `{nome da música} - {nome da partitura}`.
 
+## v0.9
+- [ ] Gerar `database.msgpack.zst` de tempos em tempos.
+
 ## Funcionalidades para v2 (apenas rascunho/ideias)
 
 - Tirar o cliente de `read-only`.
@@ -192,3 +227,4 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 	- No começo, ele será utilizado em uma orquestra local (onde sou o único com conhecimento em informática). Mas futuramente esse software pode abranger outras organizações.
 - Possível adição de um novo `type` de computador `semi-server`.
 - Embutir o `rclone` no projeto: `/src-tauri/bin/rclone.exe`.
+- Implementar hash de verificação de arquivos.
