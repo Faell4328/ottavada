@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getDirectoryPath } from "../../utils/paths";
+import { getDirectoryPath, getFileName } from "../../utils/paths";
 
 describe("getDirectoryPath", () => {
   it("should extract directory from Unix path", () => {
@@ -32,5 +32,23 @@ describe("getDirectoryPath", () => {
 
   it("should handle path with special characters", () => {
     expect(getDirectoryPath("/música/hinos/arquivo.mus")).toBe("/música/hinos");
+  });
+});
+
+describe("getFileName", () => {
+  it("should extract file name from Unix path", () => {
+    expect(getFileName("/home/user/music/score.pdf")).toBe("score.pdf");
+  });
+
+  it("should extract file name from Windows path", () => {
+    expect(getFileName("C:\\Users\\user\\music\\score.pdf")).toBe("score.pdf");
+  });
+
+  it("should return input when path has no directory", () => {
+    expect(getFileName("score.pdf")).toBe("score.pdf");
+  });
+
+  it("should handle mixed separators", () => {
+    expect(getFileName("C:\\Users/music\\score.pdf")).toBe("score.pdf");
   });
 });

@@ -104,6 +104,7 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - v0.5 - Implementando as funcionalidades
 - v0.6 - Foco no `client`
 - v0.7 - Lapidando
+- v0.8 - Ajustes Finais
 ## v0.4
 - [x] Atualizar bando de dados
 - [x] Atualizar `tauri-plugin-store`
@@ -161,6 +162,9 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [x] Mais refatoração
 - [x] Forçando a regerar os arquivos `{songId}.tar.zts` ao "importar database" e "força snaphost"
 - [x] Melhorando a sincronização do servidor com a nuvem
+
+## v0.8
+- [x] Arrumar bug no windows. Ao adicionar uma música com diretório, ele mostra do arquivo, ex: "VIVALDE TIME - Alto Sax 1.musx" e abaixo mostra o diretório, ex: "/home/rhafa/Documents/arranjo Lopes/PEÇAS CLASSÍCAS/VIVALDE TIME". No windows isso não está funcionando. Ambos estão com o mesmo texto.
 
 ## Funcionalidades para v2 (apenas rascunho/ideias)
 

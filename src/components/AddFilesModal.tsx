@@ -5,6 +5,7 @@ import type { IndexedFile } from "../types";
 import * as api from "../api/commands";
 import { Modal, ModalFooterButtons, FormField, TextInput, ErrorMessage } from "./ui";
 import { CategoryCheckboxList } from "./ui/CategoryCheckboxList";
+import { getDirectoryPath, getFileName } from "../utils/paths";
 
 interface AddFilesModalProps {
   isOpen: boolean;
@@ -170,9 +171,8 @@ export function AddFilesModal({
             {files.map((file, idx) => {
               if (removedFileIndices.has(idx)) return null;
 
-              const fileName = file.path.split('/').pop() ?? file.name;
-              const lastSlash = file.path.lastIndexOf('/');
-              const directoryPath = lastSlash >= 0 ? file.path.slice(0, lastSlash) : file.path;
+              const fileName = getFileName(file.path) || file.name;
+              const directoryPath = getDirectoryPath(file.path);
               
               return (
                 <div key={idx} className="space-y-1">
