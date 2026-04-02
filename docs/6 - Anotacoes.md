@@ -94,3 +94,12 @@ Simplificando o óbvio
 Mudando o nome (mais simplificação)
 - Irei alterar de `{computerId}.msgpack` para `events.msgpack` simplesmente, porque não faz sentido adicionar isso agora. É mais fácil e direito simplesmente colocar um nome padrão.
 - Mas isso não quer dizer que vou descartar a ideia, por isso estou documentando aqui. No futuro pretendo implementar ela.
+
+**01-04-2026**
+
+Adeus Google Drive, sem pegadinha de 1° de Abril
+- Encontrei um excelente substituto ao Google Drive. O que me chateava nele é a lerdeza devido as várias verificações e processamento sobre o arquivo.
+- Eu queria apenas algo simples, para fazer upload e download, e que não desse problema.
+- Estava cogitando o pCloud, mas devido a limitações da conta free e abortei ele. Encontrei um excelente substituto que chama Koofr, o único ponto negativo é que ele possui apenas 10GB de armazenamento no plano free, o que não é um problema. Fiz uma porrada de testes e realmente é muito bom, adicionando todas as músicas da orquestra onde toco, deve ficar com 2GB (arquivos comprimidos, óbvio).
+
+Hoje também, fiz um monte de teste e encontrei muitos problemas e muitas melhorias possíveis. Estou MUITO satisfeito com o resultado obtido com esse projeto. Acredito que ele vai agregar muito aos usuários.
