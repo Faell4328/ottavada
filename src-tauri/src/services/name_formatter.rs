@@ -14,30 +14,14 @@ pub fn normalize_score_name(value: &str) -> String {
         return String::new();
     }
 
-    let trailing_start = normalized
+    let start_idx = normalized
         .char_indices()
-        .rev()
-        .take_while(|(_, ch)| ch.is_ascii_digit())
-        .map(|(idx, _)| idx)
-        .last();
+        .find(|(_, ch)| !ch.is_ascii_digit() && !ch.is_whitespace())
+        .map(|(idx, _)| idx);
 
-    let (base_raw, trailing_digits) = if let Some(start_idx) = trailing_start {
-        (&normalized[..start_idx], &normalized[start_idx..])
-    } else {
-        (normalized.as_str(), "")
-    };
-
-    let base_without_numbers: String = base_raw.chars().filter(|ch| !ch.is_ascii_digit()).collect();
-    let base = collapse_whitespace(&base_without_numbers);
-
-    if base.is_empty() {
-        return String::new();
-    }
-
-    if trailing_digits.is_empty() {
-        base
-    } else {
-        format!("{} {}", base, trailing_digits)
+    match start_idx {
+        Some(idx) => collapse_whitespace(&normalized[idx..]),
+        None => String::new(),
     }
 }
 
@@ -55,15 +39,15 @@ mod tests {
     }
 
     #[test]
-    fn normalizes_score_name_without_middle_numbers() {
-        assert_eq!(normalize_score_name("  Violino 2 Principal  "), "Violino Principal");
+    fn removes_only_leading_numbers() {
+        assert_eq!(normalize_score_name(" 00001 Flauta 1 "), "Flauta 1");
     }
 
     #[test]
-    fn keeps_numbers_only_at_the_end() {
-        assert_eq!(normalize_score_name(" 00001 Flauta 1 "), "Flauta 1");
-        assert_eq!(normalize_score_name("Flauta 2 Principal 3"), "Flauta Principal 3");
-        assert_eq!(normalize_score_name("Sax10"), "Sax 10");
+    fn preserves_numbers_that_are_not_prefix() {
+        assert_eq!(normalize_score_name("Trumpet 3I"), "Trumpet 3I");
+        assert_eq!(normalize_score_name("Flauta 2 Principal 3"), "Flauta 2 Principal 3");
+        assert_eq!(normalize_score_name("Sax10"), "Sax10");
     }
 
     #[test]

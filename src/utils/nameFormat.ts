@@ -29,18 +29,5 @@ function normalizeScoreCore(value: string): string {
     return "";
   }
 
-  const match = normalized.match(/^(.*?)(\d+)?$/);
-  if (!match) {
-    return normalized.replace(/\d+/g, "");
-  }
-
-  const baseRaw = match[1] ?? "";
-  const trailingDigits = match[2] ?? "";
-  const base = collapseWhitespace(baseRaw.replace(/\d+/g, ""));
-
-  if (!base) {
-    return "";
-  }
-
-  return trailingDigits ? `${base} ${trailingDigits}` : base;
+  return normalized.replace(/^\d+\s*/, "");
 }
