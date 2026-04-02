@@ -206,10 +206,10 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 	- Outros instrumentos (que não são convencionais, em ordem alfabética)
 ! Alguns não vão ter partitura/instrumento e está tudo certo, vai apenas "pular" eles. Caso seja adicionando posteriormente, deve ter essa ordem.
 ! Os nomes podem ser um pouco diferente, ex: Clarinet **in** Bb 1 e já outros serem como está acima.
-- [ ] Padronizar o nome das partituras/instrumentos, deixando em inglês.
-- [ ] Ao adicionar uma música com partitura, as partituras sem nome no arquivo devem ficar na acima dos que já possuem uma sugestão (mantendo a ordem os outros).
+- [x] Quando digito em um campo vazio, ele muda de posição, está errado. E outro detalhe, não consigo colocar espaço no nome (no final, quando eu volto consigo). O usuário pode deixar espaço no começo e no final (front), mas o back deve corrigir isso.
+- [ ] Na revisão ao adicionar "um arquivo" ou "indexar um diretório", adicionar um botão para abrir a partitura com o aplicativo padrão daquele arquivo. Ter cuidado para não ficar próximo da lixeira, levando o usuário a clicar na lixeira sem querer.
+- [ ] Pode acontecer a música não ter esse padrão: `nome música - instrumento`, sendo `instrumento`, é necessário conseguir identificar esse cenário e arrumar.
 - [ ] Resolver o problema: arquivo em rascunho e foi regerado o `{songId}.tar.zst`, resultado foi removido perdido o arquivo antigo em `main` ficando sem nada.
-- [ ] Na revisão ao adicionar uma música com partitura, adicionar um botão para abrir a partitura com o aplicativo padrão daquele arquivo.
 - [ ] Se a música já existe, deve avisar e mostrar quais partituras/instrumentos já tem.
 - [ ] Atualizar o StatusBar mostrar quantos "foram enviados"/"quantos faltam" e também, não fique alterando toda hora, voltando para o texto "etapa 3". Quando for a etapa de upload, mostre o texto de etapa 3 e depois fique mostrando o quanto já foi feito o upload ou download (no caso do cliente).
 - [ ] Gerar log para adicionar música, adicionar arquivo e adicionar partitura. Está dando erro em toast, com uma mensagem genérica, que nada ajuda.

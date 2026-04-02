@@ -10,17 +10,60 @@ function normalizeText(value: string): string {
 }
 
 const ORDER_PATTERNS: Array<{ rank: number; patterns: RegExp[] }> = [
-  { rank: 1, patterns: [/^flute$/i, /^flauta$/i] },
-  { rank: 2, patterns: [/^oboe$/i, /^oboe 1$/i, /^oboe 2$/i] },
-  { rank: 3, patterns: [/^bassoon$/i, /^fagote$/i] },
+  {
+    rank: 0,
+    patterns: [
+      /^grade$/i,
+      /^score$/i,
+      /^full\s+score$/i,
+      /^conductor\s+score$/i,
+      /^partitura\s+completa$/i,
+      /^partitura\s+geral$/i,
+      /^regencia$/i,
+    ],
+  },
+  { rank: 1, patterns: [/^flute(?:\s+.*)?$/i, /^flauta(?:\s+.*)?$/i] },
+  { rank: 2, patterns: [/^oboe(?:\s+.*)?$/i] },
+  { rank: 3, patterns: [/^bassoon(?:\s+.*)?$/i, /^fagote(?:\s+.*)?$/i] },
   { rank: 4, patterns: [/^clarinet(?:\s+in)?\s+bb\s+1$/i, /^clarinet\s+sib\s+1$/i] },
   { rank: 5, patterns: [/^clarinet(?:\s+in)?\s+bb\s+2$/i, /^clarinet\s+sib\s+2$/i] },
   { rank: 6, patterns: [/^clarinet(?:\s+in)?\s+bb\s+3$/i, /^clarinet\s+sib\s+3$/i] },
-  { rank: 7, patterns: [/^bass\s+clarinet$/i, /^clarinete\s+baixo$/i] },
-  { rank: 8, patterns: [/^alto\s+sax(?:ophone)?\s+1$/i, /^sax(?:ophone)?\s+alto\s+1$/i] },
-  { rank: 9, patterns: [/^alto\s+sax(?:ophone)?\s+2$/i, /^sax(?:ophone)?\s+alto\s+2$/i] },
-  { rank: 10, patterns: [/^tenor\s+sax(?:ophone)?$/i, /^sax(?:ophone)?\s+tenor$/i] },
-  { rank: 11, patterns: [/^baritone\s+sax(?:ophone)?$/i, /^sax(?:ophone)?\s+baritone$/i] },
+  {
+    rank: 7,
+    patterns: [/^bass\s+clarinet(?:\s+.*)?$/i, /^clarinete\s+baixo(?:\s+.*)?$/i],
+  },
+  {
+    rank: 8,
+    patterns: [
+      /^alto\s+sax(?:ophone)?\s+1(?:\s+.*)?$/i,
+      /^sax(?:ophone)?\s+alto\s+1(?:\s+.*)?$/i,
+      /^saxofone\s+alto\s+1(?:\s+.*)?$/i,
+    ],
+  },
+  {
+    rank: 9,
+    patterns: [
+      /^alto\s+sax(?:ophone)?\s+2(?:\s+.*)?$/i,
+      /^sax(?:ophone)?\s+alto\s+2(?:\s+.*)?$/i,
+      /^saxofone\s+alto\s+2(?:\s+.*)?$/i,
+    ],
+  },
+  {
+    rank: 10,
+    patterns: [
+      /^tenor\s+sax(?:ophone)?(?:\s+.*)?$/i,
+      /^sax(?:ophone)?\s+tenor(?:\s+.*)?$/i,
+      /^saxofone\s+tenor(?:\s+.*)?$/i,
+    ],
+  },
+  {
+    rank: 11,
+    patterns: [
+      /^baritone\s+sax(?:ophone)?(?:\s+.*)?$/i,
+      /^sax(?:ophone)?\s+baritone(?:\s+.*)?$/i,
+      /^saxofone\s+baritono(?:\s+.*)?$/i,
+    ],
+  },
   { rank: 12, patterns: [/^trumpet(?:\s+in)?\s+bb\s+1$/i, /^trompete\s+sib\s+1$/i] },
   { rank: 13, patterns: [/^trumpet(?:\s+in)?\s+bb\s+2$/i, /^trompete\s+sib\s+2$/i] },
   { rank: 14, patterns: [/^trumpet(?:\s+in)?\s+bb\s+3$/i, /^trompete\s+sib\s+3$/i] },
@@ -39,12 +82,18 @@ const ORDER_PATTERNS: Array<{ rank: number; patterns: RegExp[] }> = [
       /^baritono\s+t\s*c$/i,
     ],
   },
-  { rank: 22, patterns: [/^tuba$/i] },
-  { rank: 23, patterns: [/^violino\s+1$/i, /^violin\s+1$/i] },
-  { rank: 24, patterns: [/^violino\s+2$/i, /^violin\s+2$/i] },
-  { rank: 25, patterns: [/^viola$/i] },
-  { rank: 26, patterns: [/^cello$/i, /^violoncello$/i, /^violoncelo$/i] },
-  { rank: 27, patterns: [/^contrabass$/i, /^double\s+bass$/i, /^contrabaixo$/i] },
+  { rank: 22, patterns: [/^tuba(?:\s+.*)?$/i] },
+  { rank: 23, patterns: [/^violino\s+1(?:\s+.*)?$/i, /^violin\s+1(?:\s+.*)?$/i] },
+  { rank: 24, patterns: [/^violino\s+2(?:\s+.*)?$/i, /^violin\s+2(?:\s+.*)?$/i] },
+  { rank: 25, patterns: [/^viola(?:\s+.*)?$/i] },
+  {
+    rank: 26,
+    patterns: [/^cello(?:\s+.*)?$/i, /^violoncello(?:\s+.*)?$/i, /^violoncelo(?:\s+.*)?$/i],
+  },
+  {
+    rank: 27,
+    patterns: [/^contrabass(?:\s+.*)?$/i, /^double\s+bass(?:\s+.*)?$/i, /^contrabaixo(?:\s+.*)?$/i],
+  },
 ];
 
 function getInstrumentRank(name: string | null | undefined): number {

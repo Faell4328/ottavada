@@ -11,7 +11,9 @@ export function normalizeSongNameForSave(value: string): string {
 }
 
 export function normalizeScoreNameInput(value: string): string {
-  return normalizeScoreCore(value);
+  // Keep raw typing behavior (including leading/trailing spaces) to avoid
+  // cursor jumps and unexpected input changes while the user is editing.
+  return value;
 }
 
 export function normalizeScoreNameForSave(value: string | null | undefined): string | null {

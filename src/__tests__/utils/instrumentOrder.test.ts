@@ -12,6 +12,15 @@ describe("compareInstrumentNames", () => {
     expect(sorted[3]).toBe("oboe");
   });
 
+  it("keeps score/grade names at the top with unnamed", () => {
+    const names = ["violin 1", "grade", "score", "flute", "", "full score"];
+    const sorted = [...names].sort((a, b) => compareInstrumentNames(a, b));
+
+    expect(sorted.slice(0, 4)).toEqual(["", "full score", "grade", "score"]);
+    expect(sorted[4]).toBe("flute");
+    expect(sorted[5]).toBe("violin 1");
+  });
+
   it("respects orchestral custom order for known instruments", () => {
     const names = [
       "trombone 2",
@@ -34,6 +43,20 @@ describe("compareInstrumentNames", () => {
       "tuba",
       "violino 1",
     ]);
+  });
+
+  it("matches by first instrument name (e.g., Flute 1)", () => {
+    const names = ["violin 1", "flute 1", "oboe", "trombone 2"];
+    const sorted = [...names].sort((a, b) => compareInstrumentNames(a, b));
+
+    expect(sorted).toEqual(["flute 1", "oboe", "trombone 2", "violin 1"]);
+  });
+
+  it("accepts Portuguese variants preserving the same order", () => {
+    const names = ["fagote", "flauta 1", "saxofone tenor", "violino 1"];
+    const sorted = [...names].sort((a, b) => compareInstrumentNames(a, b));
+
+    expect(sorted).toEqual(["flauta 1", "fagote", "saxofone tenor", "violino 1"]);
   });
 
   it("accepts naming variations like 'in Bb'", () => {

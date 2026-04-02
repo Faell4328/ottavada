@@ -23,6 +23,8 @@ interface TextInputProps {
   disabled?: boolean;
   autoFocus?: boolean;
   onKeyDown?: (e: React.KeyboardEvent) => void;
+  onFocus?: () => void;
+  onBlur?: () => void;
 }
 
 export function TextInput({
@@ -32,6 +34,8 @@ export function TextInput({
   disabled,
   autoFocus,
   onKeyDown,
+  onFocus,
+  onBlur,
 }: TextInputProps) {
   return (
     <input
@@ -43,6 +47,8 @@ export function TextInput({
       disabled={disabled}
       autoFocus={autoFocus}
       onKeyDown={onKeyDown}
+      onFocus={onFocus}
+      onBlur={onBlur}
     />
   );
 }

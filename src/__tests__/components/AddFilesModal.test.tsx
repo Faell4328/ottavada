@@ -139,6 +139,6 @@ describe("AddFilesModal", () => {
     expect(instrumentInputs).toHaveLength(2);
 
     fireEvent.change(instrumentInputs[0], { target: { value: "Flauta 2 Transversal" } });
-    expect(instrumentInputs[0]).toHaveValue("Flauta Transversal");
+    expect(instrumentInputs[0]).toHaveValue("Flauta 2 Transversal");
   });
 });

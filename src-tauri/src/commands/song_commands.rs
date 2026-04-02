@@ -25,6 +25,10 @@ fn normalized_optional_text(value: Option<String>) -> Option<String> {
     value.map(|v| v.trim().to_string()).filter(|v| !v.is_empty())
 }
 
+fn normalized_optional_text_ref(value: Option<&str>) -> Option<String> {
+    value.map(|v| v.trim().to_string()).filter(|v| !v.is_empty())
+}
+
 fn ensure_unique_song_name(
     songs: &[SongListItem],
     song_name: &str,
@@ -161,8 +165,8 @@ fn import_files_core(
             let song = Song {
                 id: new_song_id.clone(),
                 name: song_name.clone(),
-                composer: composer.map(|s| s.to_string()),
-                arranger: arranger.map(|s| s.to_string()),
+                composer: normalized_optional_text_ref(composer),
+                arranger: normalized_optional_text_ref(arranger),
                 is_favorite: false,
                 status: ScoreStatus::Main,
                 updated_at: now,

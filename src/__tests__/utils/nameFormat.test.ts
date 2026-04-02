@@ -18,8 +18,8 @@ describe("nameFormat", () => {
   });
 
   describe("score name", () => {
-    it("removes only leading digits", () => {
-      expect(normalizeScoreNameInput("0001 flute 1")).toBe("flute 1");
+    it("does not normalize while typing", () => {
+      expect(normalizeScoreNameInput(" 0001 flute 1  ")).toBe(" 0001 flute 1  ");
     });
 
     it("preserves digits that are not at the start", () => {

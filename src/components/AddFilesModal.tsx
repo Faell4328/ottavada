@@ -36,6 +36,7 @@ export function AddFilesModal({
   const [error, setError] = useState("");
   const [instrumentNames, setInstrumentNames] = useState<Record<number, string>>({});
   const [removedFileIndices, setRemovedFileIndices] = useState<Set<number>>(new Set());
+  const [editingInstrumentIndex, setEditingInstrumentIndex] = useState<number | null>(null);
 
   useEffect(() => {
     if (isOpen && files.length > 0) {
@@ -45,6 +46,7 @@ export function AddFilesModal({
       setSelectedCategories([]);
       setError("");
       setRemovedFileIndices(new Set());
+      setEditingInstrumentIndex(null);
       
       const names: Record<number, string> = {};
       files.forEach((file, idx) => {
@@ -133,8 +135,15 @@ export function AddFilesModal({
     .map((file, idx) => ({ file, idx }))
     .filter(({ idx }) => !removedFileIndices.has(idx))
     .sort((a, b) => {
-      const aName = instrumentNames[a.idx] ?? a.file.instrument;
-      const bName = instrumentNames[b.idx] ?? b.file.instrument;
+      // Keep list stable while the user is actively typing in an input.
+      // After blur, reorder based on edited instrument names.
+      const useEditedNames = editingInstrumentIndex === null;
+      const aName = useEditedNames
+        ? instrumentNames[a.idx] ?? a.file.instrument
+        : a.file.instrument;
+      const bName = useEditedNames
+        ? instrumentNames[b.idx] ?? b.file.instrument
+        : b.file.instrument;
       return compareInstrumentNames(aName, bName);
     });
 
@@ -217,6 +226,8 @@ export function AddFilesModal({
                   <TextInput
                     value={instrumentNames[idx] || ""}
                     onChange={(val) => updateInstrumentName(idx, val)}
+                    onFocus={() => setEditingInstrumentIndex(idx)}
+                    onBlur={() => setEditingInstrumentIndex(null)}
                     placeholder="Nome do instrumento"
                   />
                 </div>

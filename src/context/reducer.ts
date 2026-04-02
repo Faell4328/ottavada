@@ -110,7 +110,18 @@ export type Action =
 export function reducer(state: State, action: Action): State {
   switch (action.type) {
     case "SET_SONGS":
-      return { ...state, songs: action.payload };
+      return {
+        ...state,
+        songs: action.payload,
+        selectedSong: state.selectedSong
+          ? action.payload.find((song) => song.id === state.selectedSong?.id) ?? null
+          : null,
+        selectedScore: state.selectedScore
+          ? action.payload
+              .flatMap((song) => song.scores)
+              .find((score) => score.id === state.selectedScore?.id) ?? null
+          : null,
+      };
     case "SET_CATEGORIES":
       return { ...state, categories: action.payload };
     case "SET_SETTINGS":
