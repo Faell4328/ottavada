@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { AddFilesModal } from "../../components/AddFilesModal";
 import { AppProvider } from "../../context/AppContext";
 import type { IndexedFile } from "../../types";
+import * as api from "../../api/commands";
 
 // Mock Tauri APIs
 vi.mock("@tauri-apps/api/core", () => ({
@@ -140,5 +141,37 @@ describe("AddFilesModal", () => {
 
     fireEvent.change(instrumentInputs[0], { target: { value: "Flauta 2 Transversal" } });
     expect(instrumentInputs[0]).toHaveValue("Flauta 2 Transversal");
+  });
+
+  it("should open selected file with default app", async () => {
+    const openFilePathSpy = vi.spyOn(api, "openFilePath").mockResolvedValue(undefined);
+
+    renderWithProvider(
+      <AddFilesModal isOpen={true} files={sampleFiles} onClose={mockOnClose} onSuccess={mockOnSuccess} />
+    );
+
+    const openButtons = screen.getAllByTitle("Abrir partitura");
+    fireEvent.click(openButtons[0]);
+
+    await waitFor(() => {
+      expect(openFilePathSpy).toHaveBeenCalledWith(sampleFiles[0].path);
+    });
+  });
+
+  it("should open selected file location in file explorer", async () => {
+    const openFileLocationSpy = vi
+      .spyOn(api, "openFileLocation")
+      .mockResolvedValue(undefined);
+
+    renderWithProvider(
+      <AddFilesModal isOpen={true} files={sampleFiles} onClose={mockOnClose} onSuccess={mockOnSuccess} />
+    );
+
+    const openLocalButtons = screen.getAllByTitle("Abrir local");
+    fireEvent.click(openLocalButtons[0]);
+
+    await waitFor(() => {
+      expect(openFileLocationSpy).toHaveBeenCalledWith(sampleFiles[0].path);
+    });
   });
 });

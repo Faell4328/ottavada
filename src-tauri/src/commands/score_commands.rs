@@ -4,6 +4,9 @@ use std::path::Path;
 use tauri::State;
 use tracing::{error, info, warn};
 
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
+
 use crate::domain::errors::AppError;
 use crate::domain::models::{ComputerType, OperationGuard};
 use crate::domain::models::*;
@@ -85,8 +88,8 @@ fn read_score_file_metadata(path: &Path) -> Result<(u64, chrono::NaiveDateTime),
 fn open_path_on_system(file_path: &str) -> Result<(), AppError> {
     #[cfg(target_os = "windows")]
     {
-        std::process::Command::new("cmd")
-            .args(&["/C", "start", "", file_path])
+        let mut cmd = configure_no_window_command(std::process::Command::new("explorer"));
+        cmd.arg(file_path)
             .spawn()
             .map_err(|e| AppError::Generic(format!("Erro ao abrir arquivo: {}", e)))?;
     }
@@ -108,6 +111,60 @@ fn open_path_on_system(file_path: &str) -> Result<(), AppError> {
     }
 
     Ok(())
+}
+
+fn open_file_location_on_system(file_path: &str) -> Result<(), AppError> {
+    let path = Path::new(file_path);
+
+    if !path.exists() {
+        return Err(AppError::Generic("Arquivo não encontrado".into()));
+    }
+
+    let parent = path.parent().ok_or_else(|| {
+        AppError::Generic("Não foi possível identificar o diretório do arquivo".into())
+    })?;
+
+    #[cfg(target_os = "windows")]
+    {
+        let mut cmd = configure_no_window_command(std::process::Command::new("explorer"));
+        cmd.arg(parent)
+            .spawn()
+            .map_err(|e| AppError::Generic(format!("Erro ao abrir local do arquivo: {}", e)))?;
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(parent)
+            .spawn()
+            .map_err(|e| AppError::Generic(format!("Erro ao abrir local do arquivo: {}", e)))?;
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(parent)
+            .spawn()
+            .map_err(|e| AppError::Generic(format!("Erro ao abrir local do arquivo: {}", e)))?;
+    }
+
+    Ok(())
+}
+
+#[allow(dead_code)]
+fn configure_no_window_command(cmd: std::process::Command) -> std::process::Command {
+    #[cfg(target_os = "windows")]
+    {
+        let mut cmd = cmd;
+        // CREATE_NO_WINDOW = 0x08000000
+        cmd.creation_flags(0x08000000);
+        return cmd;
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        cmd
+    }
 }
 
 fn extract_score_file_from_archive(
@@ -362,6 +419,20 @@ pub async fn open_file(
 
     let file_path = db.get_score_file_path(&score_id)?;
     open_path_on_system(&file_path)
+}
+
+#[tauri::command]
+pub fn open_file_path(file_path: String) -> Result<(), AppError> {
+    let path = Path::new(&file_path);
+    ensure_supported_score_file(path)?;
+    open_path_on_system(&file_path)
+}
+
+#[tauri::command]
+pub fn open_file_location(file_path: String) -> Result<(), AppError> {
+    let path = Path::new(&file_path);
+    ensure_supported_score_file(path)?;
+    open_file_location_on_system(&file_path)
 }
 
 #[tauri::command]

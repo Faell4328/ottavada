@@ -143,6 +143,14 @@ export async function openFile(scoreId: string): Promise<void> {
   return invoke("open_file", { scoreId });
 }
 
+export async function openFilePath(filePath: string): Promise<void> {
+  return invoke("open_file_path", { filePath });
+}
+
+export async function openFileLocation(filePath: string): Promise<void> {
+  return invoke("open_file_location", { filePath });
+}
+
 // ── Categories ──
 
 export async function getCategories(): Promise<Category[]> {

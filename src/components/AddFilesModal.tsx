@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Trash2 } from "lucide-react";
+import { ExternalLink, FolderOpen, Loader2, Trash2 } from "lucide-react";
 import { useAppState } from "../context/AppContext";
 import type { IndexedFile } from "../types";
 import * as api from "../api/commands";
@@ -37,6 +37,8 @@ export function AddFilesModal({
   const [instrumentNames, setInstrumentNames] = useState<Record<number, string>>({});
   const [removedFileIndices, setRemovedFileIndices] = useState<Set<number>>(new Set());
   const [editingInstrumentIndex, setEditingInstrumentIndex] = useState<number | null>(null);
+  const [openingScorePath, setOpeningScorePath] = useState<string | null>(null);
+  const [openingLocationPath, setOpeningLocationPath] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen && files.length > 0) {
@@ -47,6 +49,8 @@ export function AddFilesModal({
       setError("");
       setRemovedFileIndices(new Set());
       setEditingInstrumentIndex(null);
+      setOpeningScorePath(null);
+      setOpeningLocationPath(null);
       
       const names: Record<number, string> = {};
       files.forEach((file, idx) => {
@@ -77,6 +81,32 @@ export function AddFilesModal({
       newSet.add(idx);
       return newSet;
     });
+  };
+
+  const handleOpenScore = async (path: string) => {
+    setOpeningScorePath(path);
+    setError("");
+
+    try {
+      await api.openFilePath(path);
+    } catch {
+      setError("Não foi possível abrir a partitura selecionada");
+    } finally {
+      setOpeningScorePath(null);
+    }
+  };
+
+  const handleOpenLocal = async (path: string) => {
+    setOpeningLocationPath(path);
+    setError("");
+
+    try {
+      await api.openFileLocation(path);
+    } catch {
+      setError("Não foi possível abrir o local da partitura selecionada");
+    } finally {
+      setOpeningLocationPath(null);
+    }
   };
 
   const handleSave = async () => {
@@ -221,6 +251,37 @@ export function AddFilesModal({
                       title="Remover arquivo"
                     >
                       <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenScore(file.path)}
+                      disabled={openingScorePath === file.path || openingLocationPath === file.path}
+                      className="inline-flex items-center gap-1 rounded border border-[#d8e0ea] px-2 py-1 text-[11px] text-[#5d738b] hover:bg-[#eef3f8] disabled:cursor-not-allowed disabled:opacity-60"
+                      title="Abrir partitura"
+                    >
+                      {openingScorePath === file.path ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      )}
+                      Abrir partitura
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleOpenLocal(file.path)}
+                      disabled={openingScorePath === file.path || openingLocationPath === file.path}
+                      className="inline-flex items-center gap-1 rounded border border-[#d8e0ea] px-2 py-1 text-[11px] text-[#5d738b] hover:bg-[#eef3f8] disabled:cursor-not-allowed disabled:opacity-60"
+                      title="Abrir local"
+                    >
+                      {openingLocationPath === file.path ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <FolderOpen className="h-3.5 w-3.5" />
+                      )}
+                      Abrir local
                     </button>
                   </div>
                   <TextInput

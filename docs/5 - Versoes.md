@@ -207,7 +207,8 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 ! Alguns não vão ter partitura/instrumento e está tudo certo, vai apenas "pular" eles. Caso seja adicionando posteriormente, deve ter essa ordem.
 ! Os nomes podem ser um pouco diferente, ex: Clarinet **in** Bb 1 e já outros serem como está acima.
 - [x] Quando digito em um campo vazio, ele muda de posição, está errado. E outro detalhe, não consigo colocar espaço no nome (no final, quando eu volto consigo). O usuário pode deixar espaço no começo e no final (front), mas o back deve corrigir isso.
-- [ ] Na revisão ao adicionar "um arquivo" ou "indexar um diretório", adicionar um botão para abrir a partitura com o aplicativo padrão daquele arquivo. Ter cuidado para não ficar próximo da lixeira, levando o usuário a clicar na lixeira sem querer.
+- [ ] Na revisão ao adicionar "um arquivo" ou "indexar um diretório", adicionar um botão para abrir a partitura com o aplicativo padrão daquele arquivo e também adicionar um botão para "abrir local". Ter cuidado para não ficar próximo da lixeira, levando o usuário a clicar na lixeira sem querer.
+- [ ] Mudar o método que é chamado o aplicativo padrão do `.mus`, `.musx` e etc, para ficar igual a como é chamado o `rclone`, objetivo é não aparece a merda de um cmd preto na tela.
 - [ ] Pode acontecer a música não ter esse padrão: `nome música - instrumento`, sendo `instrumento`, é necessário conseguir identificar esse cenário e arrumar.
 - [ ] Resolver o problema: arquivo em rascunho e foi regerado o `{songId}.tar.zst`, resultado foi removido perdido o arquivo antigo em `main` ficando sem nada.
 - [ ] Se a música já existe, deve avisar e mostrar quais partituras/instrumentos já tem.

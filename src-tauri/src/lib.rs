@@ -131,6 +131,8 @@ pub fn run() {
             commands::score_commands::add_score_to_song,
             commands::score_commands::add_scores_to_song,
             commands::score_commands::open_file,
+            commands::score_commands::open_file_path,
+            commands::score_commands::open_file_location,
             commands::score_commands::update_score_status,
             commands::score_commands::delete_score,
             // Categories
