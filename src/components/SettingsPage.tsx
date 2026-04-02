@@ -11,7 +11,14 @@ import { ChangeComputerTypeModal } from "./ChangeComputerTypeModal";
 import type { AppSettings } from "../types";
 
 export default function SettingsPage() {
-  const { state, saveSettings, loadSettings, loadSongs, loadCategories } = useAppState();
+  const {
+    state,
+    saveSettings,
+    loadSettings,
+    loadSongs,
+    loadCategories,
+    scanFilesForChanges,
+  } = useAppState();
   const navigate = useNavigate();
   const [settings, setSettings] = useState<AppSettings>(
     state.settings ?? {
@@ -108,22 +115,13 @@ export default function SettingsPage() {
     setIsGeneratingSnapshot(true);
     try {
       const summary = await api.generateSnapshotFile();
-
-      try {
-        await api.syncCloudWithRclone("upload");
-      } catch (uploadError) {
-        toast.error(
-          `Snapshot gerado, mas falhou no upload: ${getErrorMessage(uploadError)}`
-        );
-        return;
-      }
-
-      await api.markLocalChangesAsApplied();
-
       await loadSettings();
+
       toast.success(
-        `Snapshot gerado e enviado com sucesso (${summary.songs_count} música(s), ${summary.scores_count} partitura(s))`
+        `Snapshot gerado (${summary.songs_count} música(s), ${summary.scores_count} partitura(s)). Aplicando alterações...`
       );
+
+      await scanFilesForChanges();
     } catch (error) {
       toast.error(`Erro ao gerar snapshot: ${getErrorMessage(error)}`);
     } finally {
@@ -296,7 +294,11 @@ export default function SettingsPage() {
             <button
               type="button"
               onClick={handleForceSnapshot}
-              disabled={isGeneratingSnapshot || settings.computer_type !== "Server"}
+              disabled={
+                isGeneratingSnapshot ||
+                state.isScanningFiles ||
+                settings.computer_type !== "Server"
+              }
               className="h-9 px-4 rounded border border-[#c5cfdb] bg-white hover:bg-[#f2f5fa] text-sm font-medium text-[#344b61] disabled:opacity-50 transition-colors cursor-pointer"
             >
               {isGeneratingSnapshot ? "Gerando..." : "Forçar geração de snapshot"}
