@@ -22,6 +22,23 @@ body {
   margin: 0;
 }
 
+button,
+a,
+summary,
+label[for],
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+input[type="checkbox"],
+input[type="radio"],
+select {
+  cursor: pointer;
+}
+
+:disabled {
+  cursor: not-allowed;
+}
+
 #root {
   min-height: 100vh;
 }

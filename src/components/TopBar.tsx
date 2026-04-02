@@ -160,7 +160,7 @@ export default function TopBar({
           />
           <ActionButton
             icon={<RefreshCw className={`h-4 w-4 ${state.isScanningFiles ? 'animate-spin' : ''}`} />}
-            title="Verificar alterações"
+            title={isClient ? "Verificar alterações" : "Aplicar alterações"}
             onClick={() => {
               void scanFilesForChanges();
             }}

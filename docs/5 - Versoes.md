@@ -90,7 +90,6 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [ ] Ao clicar deve listar de forma organizar e por música, todas as alterações feitas e por quem.
 - [ ] A opções "rascunhos ativos", "partituras não encontras" e "pendente revisão" deve aparecer apenas para o computador com `type` de servidor e não cliente.
 - [ ] Tratamento de falhas
-- [ ] Testes
 
 # Documentação Nova - Apenas anotação
 
@@ -166,7 +165,8 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 ## v0.8
 - [x] Arrumar bug no windows. Ao adicionar uma música com diretório, ele mostra do arquivo, ex: "VIVALDE TIME - Alto Sax 1.musx" e abaixo mostra o diretório, ex: "/home/rhafa/Documents/arranjo Lopes/PEÇAS CLASSÍCAS/VIVALDE TIME". No windows isso não está funcionando. Ambos estão com o mesmo texto.
 - [x] Aumentar o tamanho do ícone do aplicativo (ocupando todo o espaço).
-- [ ] Mudar a mensagem do botão de "verificar alteração" para "aplicar alterações", apenas no servidor. Mantendo como estava no cliente.
+- [x] Mudar a mensagem do botão de "verificar alteração" para "aplicar alterações", apenas no servidor. Mantendo como estava no cliente.
+- [x] Onde for um elemento clicável ou interativo, deve mudar o cursor.
 - [ ] Adicionar um pop-up avisado o usuário para "aplicar alterações" antes de fechar. Apenas se o usuário tiver criado um evento (adicionando, alterando ou deletando algo).
 - [ ] Padronizar os nomes
 	- [ ] Padronizar a formatação do nome da música (tudo em maiúsculo)
@@ -178,7 +178,6 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [ ] Não adicionar partituras de subdiretórios (ex: cliquei para "adicionar diretório" e selecione a música "FIEL É DEUS", dentro dele tem outro diretório chamado "HINO 08). Não é para adicionar arquivos de subdiretórios ao diretórios escolhido.
 - [ ] Se a música já existe, deve avisar e mostrar quais partituras/instrumentos já tem.
 - [ ] Atualizar o StatusBar mostrar quantos "foram enviados"/"quantos faltam" e também, não fique alterando toda hora, voltando para o texto "etapa 3". Quando for a etapa de upload, mostre o texto de etapa 3 e depois fique mostrando o quanto já foi feito o upload ou download (no caso do cliente).
-- [ ] Onde for um elemento clicável ou interativo, deve mudar o cursor.
 - [ ] Gerar log para adicionar música, adicionar arquivo e adicionar partitura. Está dando erro em toast, com uma mensagem genérica, que nada ajuda.
 - [ ] Mudar a regra de 2MB para gerar o `snapshot.msgpack.zst` para apenas 100KB. Para que eu possa fazer testes e depois voltar o valor original
 - [ ] O nome da música deve ser pego do diretório mãe do arquivo e não do arquivo.
