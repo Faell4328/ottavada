@@ -174,7 +174,7 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 	- [x] Padroniza a formatação dos nomes das partituras/instrumentos (tudo minúsculo, permitido número apenas após o nome, ex: `flute 1` e não `0001 flute1`). Quando o usuário digitar, deve ser escrito em minúsculo (mesmo com CAPS ligado), na adição da música com partitura, edição do nome, na hora que extrai o nome do arquivo e etc.
 - [x] O nome da música deve ser pego do diretório mãe do arquivo e não do arquivo. Já o nome das partituras/instrumentos sim, ex: Eis o nosso deus - Flute, fica apenas "Flute".
 - [x] Não adicionar partituras de subdiretórios (ex: cliquei para "adicionar diretório" e selecione a música "FIEL É DEUS", dentro dele tem outro diretório chamado "HINO 08). Não é para adicionar arquivos de subdiretórios ao diretórios escolhido.
-- [ ] As partituras/instrumentos devem seguir a seguinte ordem (tanto na listagem na música, como na revisão ao adicionar uma música):
+- [x] As partituras/instrumentos devem seguir a seguinte ordem (tanto na listagem na música, como na revisão ao adicionar uma música):
 	- Sem nome (normalmente a grade com todos os instrumentos)
 	- Flute
 	- Oboe

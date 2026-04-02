@@ -12,6 +12,7 @@ import {
   normalizeSongNameForSave,
   normalizeSongNameInput,
 } from "../utils/nameFormat";
+import { compareInstrumentNames } from "../utils/instrumentOrder";
 
 interface AddFilesModalProps {
   isOpen: boolean;
@@ -128,6 +129,14 @@ export function AddFilesModal({
 
   const activeFiles = files.filter((_, idx) => !removedFileIndices.has(idx));
   const instrumentCount = activeFiles.length;
+  const visibleFiles = files
+    .map((file, idx) => ({ file, idx }))
+    .filter(({ idx }) => !removedFileIndices.has(idx))
+    .sort((a, b) => {
+      const aName = instrumentNames[a.idx] ?? a.file.instrument;
+      const bName = instrumentNames[b.idx] ?? b.file.instrument;
+      return compareInstrumentNames(aName, bName);
+    });
 
   return (
     <Modal
@@ -181,9 +190,7 @@ export function AddFilesModal({
       {instrumentCount > 0 && (
         <FormField label={`Instrumentos a adicionar (${instrumentCount})`}>
           <div className="rounded border border-[#c5cfdb] bg-white p-3 space-y-4 max-h-75 overflow-y-auto">
-            {files.map((file, idx) => {
-              if (removedFileIndices.has(idx)) return null;
-
+            {visibleFiles.map(({ file, idx }) => {
               const fileName = getFileName(file.path) || file.name;
               const directoryPath = getDirectoryPath(file.path);
               

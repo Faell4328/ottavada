@@ -8,6 +8,7 @@ import { MemoizedSongRow } from "./SongRow";
 import { MemoizedScoreRow } from "./ScoreRow";
 import { getDirectoryPath } from "../utils/paths";
 import { useSearch } from "../hooks/useSearch";
+import { compareInstrumentNames } from "../utils/instrumentOrder";
 import * as api from "../api/commands";
 import toast from "react-hot-toast";
 import type { SongListItem, ScoreListItem } from "../types";
@@ -170,7 +171,9 @@ export default function SongsList() {
                       computerType={state.settings?.computer_type}
                     />
                     {state.selectedSong?.id === song.id &&
-                      song.scores.map((score) => (
+                      [...song.scores]
+                        .sort((a, b) => compareInstrumentNames(a.name, b.name))
+                        .map((score) => (
                         <MemoizedScoreRow
                           key={score.id}
                           score={score}
