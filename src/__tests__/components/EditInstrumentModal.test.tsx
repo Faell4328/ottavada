@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { EditInstrumentModal } from "../../components/EditInstrumentModal";
 import type { ScoreListItem } from "../../types";
+import * as api from "../../api/commands";
 
 vi.mock("@tauri-apps/plugin-dialog", () => ({
   open: vi.fn(),
@@ -178,5 +179,45 @@ describe("EditInstrumentModal", () => {
       ).toBeInTheDocument();
     });
     expect(mockOnSave).not.toHaveBeenCalled();
+  });
+
+  it("should open selected file with default app", async () => {
+    const openFilePathSpy = vi.spyOn(api, "openFilePath").mockResolvedValue(undefined);
+
+    render(
+      <EditInstrumentModal
+        isOpen={true}
+        instrument={sampleInstrument}
+        onClose={mockOnClose}
+        onSave={mockOnSave}
+      />
+    );
+
+    fireEvent.click(screen.getByTitle("Abrir partitura"));
+
+    await waitFor(() => {
+      expect(openFilePathSpy).toHaveBeenCalledWith(sampleInstrument.file_path);
+    });
+  });
+
+  it("should open selected file location in file explorer", async () => {
+    const openFileLocationSpy = vi
+      .spyOn(api, "openFileLocation")
+      .mockResolvedValue(undefined);
+
+    render(
+      <EditInstrumentModal
+        isOpen={true}
+        instrument={sampleInstrument}
+        onClose={mockOnClose}
+        onSave={mockOnSave}
+      />
+    );
+
+    fireEvent.click(screen.getByTitle("Abrir local"));
+
+    await waitFor(() => {
+      expect(openFileLocationSpy).toHaveBeenCalledWith(sampleInstrument.file_path);
+    });
   });
 });
