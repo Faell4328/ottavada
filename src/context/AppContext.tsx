@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from "react";
 import * as api from "../api/commands";
+import { getErrorMessage as extractErrorMessage } from "../utils/errors";
 import { initialState, reducer } from "./reducer";
 import type { AppContextValue } from "./types";
 import { useAppBootstrap } from "./useAppBootstrap";
@@ -27,7 +28,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
 
   const getErrorMessage = useCallback((err: unknown, fallback: string) => {
-    return err instanceof Error ? err.message : fallback;
+    const message = extractErrorMessage(err);
+    return message === "Erro desconhecido" ? fallback : message;
   }, []);
 
   const loadSongs = useCallback(async () => {

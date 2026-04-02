@@ -12,6 +12,8 @@ interface UseAppScanFlowParams {
   getErrorMessage: (err: unknown, fallback: string) => string;
 }
 
+const SNAPSHOT_AUTO_THRESHOLD_BYTES = 2 * 1024 * 1024;
+
 export function useAppScanFlow({
   dispatch,
   computerType,
@@ -337,7 +339,7 @@ export function useAppScanFlow({
 
       let snapshotGenerated = false;
 
-      if (eventsSummary.payload_size >= 2 * 1024 * 1024) {
+      if (eventsSummary.payload_size >= SNAPSHOT_AUTO_THRESHOLD_BYTES) {
         currentTotalSteps = 5;
         updateStepProgress(changedCount);
         dispatch({

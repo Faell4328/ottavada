@@ -213,8 +213,8 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [x] Pode acontecer a música não ter esse padrão: `nome música - instrumento`, sendo `instrumento`, é necessário conseguir identificar esse cenário e arrumar.
 - [x] Atualizar o StatusBar mostrar quantos "foram enviados"/"quantos faltam" e também, não fique alterando toda hora, voltando para o texto "etapa 3". Quando for a etapa de upload, mostre o texto de etapa 3 e depois fique mostrando o quanto já foi feito o upload ou download (no caso do cliente).
 - [x] Quando o cliente abrir uma partitura pelo aplicativo, a partitura é descompactada e aberta em um diretório temporário, mas preciso que ela seja renomeada, para não ficar aparecendo um ID (estranho para usuário) no aplicativo de visualização de partitura. Preciso que antes de abrir, deve renomear para: `{nome da música} - {nome da partitura}`.
-- [ ] Gerar log para adicionar música, adicionar arquivo e adicionar partitura. Está dando erro em toast, com uma mensagem genérica, que nada ajuda.
-- [ ] Mudar a regra de 2MB para gerar automaticamente o `snapshot.msgpack.zst` para apenas 100KB.
+- [x] Gerar log para adicionar música, adicionar arquivo e adicionar partitura. Está dando erro em toast, com uma mensagem genérica, que nada ajuda.
+- [x] Corrigir bug que limpada o diretório `songs` ao gerar snapshot automáticamente. Apenas o "força geração de snapshot" que limpa e recria os `songs`, o snapshot automático não deve fazer isso.
 - [ ] Resolver o problema: arquivo em rascunho e foi regerado o `{songId}.tar.zst`, resultado foi removido perdido o arquivo antigo em `main` ficando sem nada.
 - [ ] Se a música já existe, deve avisar e mostrar quais partituras/instrumentos já tem.
 

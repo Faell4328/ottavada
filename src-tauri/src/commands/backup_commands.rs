@@ -85,9 +85,11 @@ pub async fn generate_events_file(
 pub async fn generate_snapshot_file(
     db: State<'_, Database>,
     store: State<'_, SystemStore>,
+    force_regenerate_song_archives: Option<bool>,
 ) -> Result<SnapshotFileSummary, AppError> {
     let db = db.inner().clone();
     let app_data_dir = store.app_data_dir().clone();
+    let force_regenerate_song_archives = force_regenerate_song_archives.unwrap_or(false);
 
     tauri::async_runtime::spawn_blocking(move || {
         let store = SystemStore::new(app_data_dir.clone());
@@ -95,8 +97,14 @@ pub async fn generate_snapshot_file(
         settings.require_server_only()?;
 
         let summary = generate_snapshot_msgpack(&db, &store)?;
-        delete_existing_song_archives(&app_data_dir)?;
-        db.mark_all_song_archives_for_regeneration()?;
+
+        // Manual force snapshot should invalidate and regenerate all cloud song archives.
+        // Automatic snapshot generation must keep existing archives intact.
+        if force_regenerate_song_archives {
+            delete_existing_song_archives(&app_data_dir)?;
+            db.mark_all_song_archives_for_regeneration()?;
+        }
+
         Ok(summary)
     })
     .await

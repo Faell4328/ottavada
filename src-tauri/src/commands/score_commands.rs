@@ -367,6 +367,11 @@ pub fn add_score_to_song(
     let settings = store.get_app_settings()?;
     settings.require_server_only()?;
 
+    info!(
+        "Adicionando partitura em música existente: song_id={}, file_path={}",
+        song_id, file.path
+    );
+
     let song = db.get_song_list_item_by_id(&song_id)?;
 
     // Verificar se o instrumento já existe (case-insensitive)
@@ -374,6 +379,13 @@ pub fn add_score_to_song(
 
     if score_exists {
         let normalized_instrument = normalize_optional_score_name(file.instrument.as_deref());
+        warn!(
+            "Partitura duplicada ignorada para song_id={}: instrumento={}",
+            song_id,
+            normalized_instrument
+                .as_deref()
+                .unwrap_or("Sem instrumento")
+        );
         return Err(AppError::Generic(format!(
             "Uma partitura com o instrumento '{}' já existe para essa música",
             normalized_instrument.as_deref().unwrap_or("Sem instrumento")
@@ -382,8 +394,21 @@ pub fn add_score_to_song(
 
     let score = build_score_from_indexed_file(&song_id, &settings.computer_id, &file)?;
 
-    db.insert_score(&score)?;
-    db.get_song_list_item_by_id(&song_id)
+    db.insert_score(&score).map_err(|e| {
+        error!(
+            "Erro ao inserir partitura em song_id={} (score_id={}): {:?}",
+            song_id, score.id, e
+        );
+        e
+    })?;
+
+    db.get_song_list_item_by_id(&song_id).map(|updated_song| {
+        info!(
+            "Partitura adicionada com sucesso: song_id={}, score_id={}",
+            song_id, score.id
+        );
+        updated_song
+    })
 }
 
 #[tauri::command]

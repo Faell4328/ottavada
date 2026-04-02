@@ -338,8 +338,10 @@ export interface SnapshotFileSummary {
   cleared_changed_fields: number;
 }
 
-export async function generateSnapshotFile(): Promise<SnapshotFileSummary> {
-  return invoke("generate_snapshot_file");
+export async function generateSnapshotFile(
+  forceRegenerateSongArchives = false
+): Promise<SnapshotFileSummary> {
+  return invoke("generate_snapshot_file", { forceRegenerateSongArchives });
 }
 
 export interface ClientSyncSummary {

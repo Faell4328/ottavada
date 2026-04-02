@@ -12,6 +12,7 @@ import { compareInstrumentNames } from "../utils/instrumentOrder";
 import * as api from "../api/commands";
 import toast from "react-hot-toast";
 import type { SongListItem, ScoreListItem } from "../types";
+import { getErrorMessage } from "../utils/errors";
 
 function getViewLabel(sidebarView: ReturnType<typeof useAppState>["state"]["sidebarView"]): string {
   if (sidebarView === "all") return "Todas as Músicas";
@@ -79,7 +80,7 @@ export default function SongsList() {
       }
     } catch (err) {
       console.error("Failed to add file to song:", err);
-      toast.error("Erro ao adicionar arquivo");
+      toast.error(`Erro ao adicionar partitura: ${getErrorMessage(err)}`);
     }
   }
 

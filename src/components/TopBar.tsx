@@ -6,6 +6,7 @@ import { useAppState } from "../context/AppContext";
 import * as api from "../api/commands";
 import toast from "react-hot-toast";
 import type { IndexedFile } from "../types";
+import { getErrorMessage } from "../utils/errors";
 import { getDirectoryPath } from "../utils/paths";
 import { AddFilesModal } from "./AddFilesModal";
 import { AddMusicModal } from "./AddMusicModal";
@@ -75,7 +76,7 @@ export default function TopBar({
       setShowAddFilesModal(true);
     } catch (err) {
       console.error("Failed to add file:", err);
-      toast.error("Erro ao selecionar arquivo");
+      toast.error(`Erro ao adicionar arquivo: ${getErrorMessage(err)}`);
     }
   }
 
@@ -93,7 +94,7 @@ export default function TopBar({
       }
     } catch (err) {
       console.error("Failed to scan directory:", err);
-      toast.error("Erro ao escanear diretório");
+      toast.error(`Erro ao escanear diretório: ${getErrorMessage(err)}`);
     }
   }
 
@@ -107,14 +108,20 @@ export default function TopBar({
     arranger: string | null;
     categoryIds: string[];
   }) {
-    await api.createSongWithMetadata(
-      data.title,
-      data.composer,
-      data.arranger,
-      data.categoryIds
-    );
-    await loadSongs();
-    toast.success("Música criada com sucesso!");
+    try {
+      await api.createSongWithMetadata(
+        data.title,
+        data.composer,
+        data.arranger,
+        data.categoryIds
+      );
+      await loadSongs();
+      toast.success("Música criada com sucesso!");
+    } catch (err) {
+      console.error("Failed to create music:", err);
+      toast.error(`Erro ao adicionar música: ${getErrorMessage(err)}`);
+      throw err;
+    }
   }
 
   function handleCloseAddFilesModal() {

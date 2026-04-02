@@ -266,6 +266,14 @@ pub fn import_indexed_files_with_metadata(
 ) -> Result<Vec<SongListItem>, AppError> {
     let settings = store.get_app_settings()?;
     settings.require_server_only()?;
+    info!(
+        "Importando arquivos indexados com metadados: files={}, categories={}, composer_set={}, arranger_set={}",
+        files.len(),
+        category_ids.len(),
+        composer.as_ref().map(|v| !v.trim().is_empty()).unwrap_or(false),
+        arranger.as_ref().map(|v| !v.trim().is_empty()).unwrap_or(false)
+    );
+
     import_files_core(
         &db,
         &settings.computer_id,
@@ -274,6 +282,17 @@ pub fn import_indexed_files_with_metadata(
         composer.as_deref(),
         arranger.as_deref(),
     )
+    .map(|songs| {
+        info!(
+            "Importação de arquivos concluída com sucesso: músicas retornadas={}",
+            songs.len()
+        );
+        songs
+    })
+    .map_err(|e| {
+        error!("Erro ao importar arquivos indexados: {:?}", e);
+        e
+    })
 }
 
 #[tauri::command]
@@ -346,8 +365,19 @@ pub fn create_song_with_metadata(
         updated_by,
     };
 
-    db.insert_song(&song, &category_ids)?;
-    db.get_song_list_item_by_id(&song_id)
+    db.insert_song(&song, &category_ids)
+        .map_err(|e| {
+            error!(
+                "Erro ao criar música '{}' (id={}): {:?}",
+                song.name, song_id, e
+            );
+            e
+        })?;
+
+    db.get_song_list_item_by_id(&song_id).map(|created| {
+        info!("Música criada com sucesso: {} ({})", created.name, created.id);
+        created
+    })
 }
 
 #[tauri::command]

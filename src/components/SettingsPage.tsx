@@ -114,7 +114,7 @@ export default function SettingsPage() {
 
     setIsGeneratingSnapshot(true);
     try {
-      const summary = await api.generateSnapshotFile();
+      const summary = await api.generateSnapshotFile(true);
       await loadSettings();
 
       toast.success(
