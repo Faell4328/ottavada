@@ -8,7 +8,7 @@ use crate::domain::errors::AppError;
 use crate::domain::models::*;
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
-use crate::services::indexer::{self, get_file_metadata};
+use crate::services::indexer::{self, get_file_metadata, paths_match};
 use crate::services::name_formatter::{normalize_optional_score_name, normalize_song_name};
 
 fn normalized_required_song_name(name: &str) -> Result<String, AppError> {
@@ -181,18 +181,28 @@ fn import_files_core(
             .map(|s| s.scores.clone())
             .unwrap_or_default();
 
+        let mut known_named_instruments: Vec<String> = existing_scores
+            .iter()
+            .filter_map(|score| score.name.as_ref().map(|name| name.to_lowercase()))
+            .collect();
+        let mut known_unnamed_paths: Vec<String> = existing_scores
+            .iter()
+            .filter(|score| score.name.is_none())
+            .map(|score| score.file_path.clone())
+            .collect();
+
         for indexed_file in group_files {
-            let score_exists =
-                existing_scores
+            let normalized_instrument =
+                normalize_optional_score_name(indexed_file.instrument.as_deref());
+
+            let score_exists = match &normalized_instrument {
+                Some(instrument) => known_named_instruments
                     .iter()
-                    .any(|sc| match (
-                        &sc.name,
-                        normalize_optional_score_name(indexed_file.instrument.as_deref()),
-                    ) {
-                        (Some(existing), Some(indexed)) => existing.eq_ignore_ascii_case(&indexed),
-                        (None, None) => sc.file_path == indexed_file.path,
-                        _ => false,
-                    });
+                    .any(|existing| existing.eq_ignore_ascii_case(instrument)),
+                None => known_unnamed_paths
+                    .iter()
+                    .any(|existing_path| paths_match(existing_path, &indexed_file.path)),
+            };
 
             if score_exists {
                 continue;
@@ -214,7 +224,7 @@ fn import_files_core(
                 crate::services::indexer::split_file_path(&indexed_file.path);
 
             let normalized_file = IndexedFile {
-                instrument: normalize_optional_score_name(indexed_file.instrument.as_deref()),
+                instrument: normalized_instrument.clone(),
                 ..(*indexed_file).clone()
             };
 
@@ -227,7 +237,13 @@ fn import_files_core(
                 (file_size, file_modified_at),
             );
 
-            db.insert_score(&score)?
+            db.insert_score(&score)?;
+
+            if let Some(instrument) = normalized_instrument {
+                known_named_instruments.push(instrument);
+            } else {
+                known_unnamed_paths.push(indexed_file.path.clone());
+            }
         }
     }
 

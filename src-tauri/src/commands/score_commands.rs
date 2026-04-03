@@ -12,7 +12,7 @@ use crate::domain::models::ComputerType;
 use crate::domain::models::*;
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
-use crate::services::indexer::{get_file_metadata, split_file_path};
+use crate::services::indexer::{get_file_metadata, paths_match, split_file_path};
 use crate::services::name_formatter::normalize_optional_score_name;
 
 const VALID_SCORE_EXTENSIONS: [&str; 3] = ["pdf", "mus", "musx"];
@@ -29,7 +29,7 @@ fn score_exists_for_indexed_file(
         .any(|sc| match (&sc.name, &normalized_instrument) {
             (Some(existing), Some(indexed)) => existing.eq_ignore_ascii_case(indexed),
             (None, None) => {
-                treat_empty_instrument_as_duplicate || sc.file_path == file.path
+                treat_empty_instrument_as_duplicate || paths_match(&sc.file_path, &file.path)
             }
             _ => false,
         })
@@ -39,7 +39,9 @@ fn find_existing_score_by_file_path<'a>(
     scores: &'a [ScoreListItem],
     indexed_file: &IndexedFile,
 ) -> Option<&'a ScoreListItem> {
-    scores.iter().find(|score| score.file_path == indexed_file.path)
+    scores
+        .iter()
+        .find(|score| paths_match(&score.file_path, &indexed_file.path))
 }
 
 fn build_score_from_indexed_file(

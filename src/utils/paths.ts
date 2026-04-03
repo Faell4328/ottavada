@@ -23,3 +23,19 @@ export function getFileName(path: string): string {
   }
   return normalized.slice(lastSlash + 1);
 }
+
+/**
+ * Compares two paths across platforms.
+ * On Windows-style paths (drive letter), comparison is case-insensitive.
+ */
+export function isSamePath(pathA: string, pathB: string): boolean {
+  const normalizedA = pathA.replace(/\\/g, "/");
+  const normalizedB = pathB.replace(/\\/g, "/");
+
+  const isWindowsPath = /^[a-zA-Z]:\//;
+  if (isWindowsPath.test(normalizedA) || isWindowsPath.test(normalizedB)) {
+    return normalizedA.toLowerCase() === normalizedB.toLowerCase();
+  }
+
+  return normalizedA === normalizedB;
+}

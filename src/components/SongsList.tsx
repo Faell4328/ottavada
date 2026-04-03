@@ -6,7 +6,7 @@ import { EditMusicModal } from "./EditMusicModal";
 import { EditScoreModal } from "./EditScoreModal";
 import { MemoizedSongRow } from "./SongRow";
 import { MemoizedScoreRow } from "./ScoreRow";
-import { getDirectoryPath } from "../utils/paths";
+import { getDirectoryPath, isSamePath } from "../utils/paths";
 import { useSearch } from "../hooks/useSearch";
 import { compareInstrumentNames } from "../utils/instrumentOrder";
 import * as api from "../api/commands";
@@ -85,15 +85,18 @@ export default function SongsList() {
       const selectedPath = Array.isArray(selected) ? selected[0] : selected;
       const directory = getDirectoryPath(selectedPath);
       const scannedFiles = await api.scanDirectory(directory);
-      const indexed = scannedFiles.filter((file) => file.path === selectedPath);
+      const indexedFile = scannedFiles.find((file) => isSamePath(file.path, selectedPath));
 
-      if (indexed.length > 0) {
-        const updatedSong = await api.addScoreToSong(songId, indexed[0]);
-        search.clearSearch();
-        await loadSongs();
-        selectSong(updatedSong);
-        toast.success("Arquivo adicionado com sucesso");
+      if (!indexedFile) {
+        toast.error("Não foi possível identificar o arquivo selecionado. Tente novamente.");
+        return;
       }
+
+      const updatedSong = await api.addScoreToSong(songId, indexedFile);
+      search.clearSearch();
+      await loadSongs();
+      selectSong(updatedSong);
+      toast.success("Arquivo adicionado com sucesso");
     } catch (err) {
       console.error("Failed to add file to song:", err);
       toast.error(`Erro ao adicionar partitura: ${getErrorMessage(err)}`);

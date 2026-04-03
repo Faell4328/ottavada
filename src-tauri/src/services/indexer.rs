@@ -162,6 +162,27 @@ pub fn split_file_path(file_path: &str) -> (String, String) {
     }
 }
 
+/// Compara caminhos de arquivo de forma resiliente entre plataformas.
+/// - Normaliza separadores para '/'
+/// - Em paths estilo Windows (com letra de drive), comparação é case-insensitive
+pub fn paths_match(path_a: &str, path_b: &str) -> bool {
+    let normalized_a = path_a.replace('\\', "/");
+    let normalized_b = path_b.replace('\\', "/");
+
+    let is_windows_path = |value: &str| {
+        value.len() >= 3
+            && value.as_bytes()[1] == b':'
+            && value.as_bytes()[2] == b'/'
+            && value.as_bytes()[0].is_ascii_alphabetic()
+    };
+
+    if is_windows_path(&normalized_a) || is_windows_path(&normalized_b) {
+        normalized_a.eq_ignore_ascii_case(&normalized_b)
+    } else {
+        normalized_a == normalized_b
+    }
+}
+
 /// Obtém os metadados do arquivo (size e modified_at)
 pub fn get_file_metadata(file_path: &Path) -> Result<(u64, NaiveDateTime), std::io::Error> {
     let metadata = std::fs::metadata(file_path)?;
@@ -355,5 +376,37 @@ mod tests {
         let (dir, name) = split_file_path("/Canon.musx");
         assert_eq!(dir, ".");
         assert_eq!(name, "Canon.musx");
+    }
+
+    #[test]
+    fn test_paths_match_unix_equal() {
+        assert!(paths_match(
+            "/home/user/music/Canon.musx",
+            "/home/user/music/Canon.musx"
+        ));
+    }
+
+    #[test]
+    fn test_paths_match_windows_separator_difference() {
+        assert!(paths_match(
+            "C:\\Users\\user\\music\\Canon.musx",
+            "C:/Users/user/music/Canon.musx"
+        ));
+    }
+
+    #[test]
+    fn test_paths_match_windows_drive_case_difference() {
+        assert!(paths_match(
+            "C:\\Users\\user\\music\\Canon.musx",
+            "c:/Users/user/music/Canon.musx"
+        ));
+    }
+
+    #[test]
+    fn test_paths_match_different_paths() {
+        assert!(!paths_match(
+            "C:\\Users\\user\\music\\Canon.musx",
+            "C:/Users/user/music/Other.musx"
+        ));
     }
 }
