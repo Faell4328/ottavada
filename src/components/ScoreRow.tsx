@@ -6,6 +6,12 @@ import type { ScoreListItem } from "../types";
 import { ContextMenu, ContextMenuItem } from "./ui/ContextMenu";
 import { ConfirmationModal } from "./ui/ConfirmationModal";
 import { useConfirmation } from "../hooks/useConfirmation";
+import { isClientComputer } from "../utils/computer";
+import {
+  getScoreStatusBadgeClass,
+  getScoreStatusLabel,
+  normalizeScoreStatus,
+} from "../utils/scoreStatus";
 
 interface ScoreRowProps {
   score: ScoreListItem;
@@ -19,20 +25,6 @@ interface ScoreRowProps {
   onDelete: (scoreId: string) => Promise<void>;
   computerType?: string;
 }
-
-const STATUS_STYLES: Record<string, string> = {
-  draft: "bg-orange-100 p-2 rounded-full",
-  pending: "bg-yellow-100 p-2 rounded-full",
-  main: "bg-green-100 p-2 rounded-full",
-  not_found: "bg-red-100 p-2 rounded-full",
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  draft: "Rascunho",
-  pending: "Pendente",
-  main: "Principal",
-  not_found: "Não Encontrado",
-};
 
 function ScoreRow({
   score,
@@ -48,17 +40,10 @@ function ScoreRow({
 }: ScoreRowProps) {
   const [isOpening, setIsOpening] = useState(false);
   const confirmation = useConfirmation();
-  const isClient = computerType === "Client";
-  const rawStatus = String(score.status ?? "");
-  const statusKey = rawStatus
-    // Convert camelCase / PascalCase to snake_case (e.g. NotFound -> not_found)
-    .replace(/([a-z])([A-Z])/g, "$1_$2")
-    // Replace spaces or dashes with underscore
-    .replace(/[\s-]+/g, "_")
-    .toLowerCase();
+  const isClient = isClientComputer(computerType);
+  const statusKey = normalizeScoreStatus(score.status);
 
-  const handleDoubleClick = async (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const openScoreFile = async () => {
     if (statusKey === "not_found") {
       toast.error("Arquivo não encontrado");
       return;
@@ -72,6 +57,11 @@ function ScoreRow({
     } finally {
       setIsOpening(false);
     }
+  };
+
+  const handleDoubleClick = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    await openScoreFile();
   };
 
   const handleSetAsMain = () => {
@@ -132,8 +122,8 @@ function ScoreRow({
         <td className="px-3.5 py-1.5 text-xs text-[#8b9db2]">.{score.file_extension}</td>
         <td className="px-2 py-1.5 text-xs font-medium">
           <div className="flex items-center justify-between">
-            <span className={`inline-block text-[#4a6278] ${STATUS_STYLES[statusKey] ?? ""}`}>
-              {STATUS_LABELS[statusKey] ?? score.status}
+            <span className={`inline-block text-[#4a6278] ${getScoreStatusBadgeClass(statusKey)}`}>
+              {getScoreStatusLabel(score.status)}
             </span>
 
             <div className="flex items-center justify-end px-3">
@@ -148,7 +138,7 @@ function ScoreRow({
                   label="Abrir"
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleDoubleClick(e);
+                    void openScoreFile();
                     onMenuClose();
                   }}
                   disabled={statusKey === "not_found"}
@@ -191,16 +181,11 @@ function ScoreRow({
 }
 
 export const MemoizedScoreRow = React.memo(ScoreRow, (prev, next) => {
-  const norm = (s: any) =>
-    String(s ?? "")
-      .replace(/([a-z])([A-Z])/g, "$1_$2")
-      .replace(/[\s-]+/g, "_")
-      .toLowerCase();
-
   return (
     prev.score.id === next.score.id &&
     prev.score.name === next.score.name &&
-    norm(prev.score.status) === norm(next.score.status) &&
+    normalizeScoreStatus(prev.score.status) ===
+      normalizeScoreStatus(next.score.status) &&
     prev.isMenuOpen === next.isMenuOpen
   );
 });

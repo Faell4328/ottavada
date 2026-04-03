@@ -34,23 +34,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const loadSongs = useCallback(async () => {
     try {
-      let songs;
-      if (state.searchQuery.trim()) {
-        songs = await api.searchSongs(state.searchQuery);
-      } else if (state.sidebarView === "favorites") {
-        songs = await api.getFavoritedSongs();
-      } else if (state.sidebarView === "drafts") {
-        songs = await api.getSongsWithDrafts();
-      } else if (state.sidebarView === "not_found") {
-        songs = await api.getSongsWithNotFound();
-      } else if (
-        typeof state.sidebarView === "object" &&
-        state.sidebarView.type === "category"
-      ) {
-        songs = await api.getSongsByCategory(state.sidebarView.id);
-      } else {
-        songs = await api.getAllSongs();
-      }
+      const query = state.searchQuery.trim();
+
+      const songs = query
+        ? await api.searchSongs(query)
+        : await (async () => {
+            if (state.sidebarView === "favorites") return api.getFavoritedSongs();
+            if (state.sidebarView === "drafts") return api.getSongsWithDrafts();
+            if (state.sidebarView === "not_found") return api.getSongsWithNotFound();
+
+            if (
+              typeof state.sidebarView === "object" &&
+              state.sidebarView.type === "category"
+            ) {
+              return api.getSongsByCategory(state.sidebarView.id);
+            }
+
+            return api.getAllSongs();
+          })();
+
       dispatch({ type: "SET_SONGS", payload: songs });
     } catch (err) {
       console.error("Failed to load songs:", err);

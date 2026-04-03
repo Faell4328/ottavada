@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import {
   Library,
   Heart,
@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 import { useAppState } from "../context/AppContext";
 import type { SidebarView } from "../types";
+import { isClientComputer } from "../utils/computer";
+import { isSidebarViewActive } from "../utils/sidebarView";
 
 export default function Sidebar() {
   const { state, setSidebarView, createCategory, deleteCategory } =
@@ -19,17 +21,29 @@ export default function Sidebar() {
   const [isCreatingCategory, setIsCreatingCategory] = useState(false);
 
   const currentView = state.sidebarView;
-  const isClient = state.settings?.computer_type === "Client";
-
-  function isActive(view: SidebarView): boolean {
-    if (typeof view === "string" && typeof currentView === "string") {
-      return view === currentView;
-    }
-    if (typeof view === "object" && typeof currentView === "object") {
-      return view.id === currentView.id;
-    }
-    return false;
-  }
+  const isClient = isClientComputer(state.settings?.computer_type);
+  const libraryViews: Array<{ view: SidebarView; label: string; icon: ReactNode }> = [
+    {
+      view: "all",
+      label: "Todas as Músicas",
+      icon: <FolderOpen className="h-3.5 w-3.5" />,
+    },
+    {
+      view: "favorites",
+      label: "Favoritos",
+      icon: <Heart className="h-3.5 w-3.5" />,
+    },
+    {
+      view: "drafts",
+      label: "Rascunhos Ativos",
+      icon: <FileEdit className="h-3.5 w-3.5" />,
+    },
+    {
+      view: "not_found",
+      label: "Partituras não encontradas",
+      icon: <AlertCircle className="h-3.5 w-3.5" />,
+    },
+  ];
 
   async function handleCreateCategory() {
     const name = newCategoryName.trim();
@@ -76,34 +90,17 @@ export default function Sidebar() {
           Biblioteca
         </div>
         <nav className="flex flex-col">
-          <SidebarItem
-            icon={<FolderOpen className="h-3.5 w-3.5" />}
-            label="Todas as Músicas"
-            active={isActive("all")}
-            onClick={() => setSidebarView("all")}
-          />
-          <SidebarItem
-            icon={<Heart className="h-3.5 w-3.5" />}
-            label="Favoritos"
-            active={isActive("favorites")}
-            onClick={() => setSidebarView("favorites")}
-          />
-          {!isClient && (
-            <SidebarItem
-              icon={<FileEdit className="h-3.5 w-3.5" />}
-              label="Rascunhos Ativos"
-              active={isActive("drafts")}
-              onClick={() => setSidebarView("drafts")}
-            />
-          )}
-          {!isClient && (
-            <SidebarItem
-              icon={<AlertCircle className="h-3.5 w-3.5" />}
-              label="Partituras não encontradas"
-              active={isActive("not_found")}
-              onClick={() => setSidebarView("not_found")}
-            />
-          )}
+          {libraryViews
+            .filter(({ view }) => !isClient || (view !== "drafts" && view !== "not_found"))
+            .map(({ view, label, icon }) => (
+              <SidebarItem
+                key={typeof view === "string" ? view : view.id}
+                icon={icon}
+                label={label}
+                active={isSidebarViewActive(currentView, view)}
+                onClick={() => setSidebarView(view)}
+              />
+            ))}
         </nav>
       </div>
 
@@ -141,7 +138,11 @@ export default function Sidebar() {
             <div key={cat.id} className="group flex items-center">
               <SidebarItem
                 label={cat.name}
-                active={isActive({ type: "category", id: cat.id, name: cat.name })}
+                active={isSidebarViewActive(currentView, {
+                  type: "category",
+                  id: cat.id,
+                  name: cat.name,
+                })}
                 onClick={() =>
                   setSidebarView({
                     type: "category",

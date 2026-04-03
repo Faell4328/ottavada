@@ -5,6 +5,7 @@ import type { SongListItem } from "../types";
 import { ContextMenu, ContextMenuItem } from "./ui/ContextMenu";
 import { ConfirmationModal } from "./ui/ConfirmationModal";
 import { useConfirmation } from "../hooks/useConfirmation";
+import { isClientComputer } from "../utils/computer";
 
 interface SongRowProps {
   song: SongListItem;
@@ -37,7 +38,7 @@ function SongRow({
 }: SongRowProps) {
   const confirmation = useConfirmation();
   const author = [song.composer, song.arranger].filter(Boolean).join(" / ");
-  const isClient = computerType === "Client";
+  const isClient = isClientComputer(computerType);
 
   const handleMenuAction = (e: React.MouseEvent, action: () => void) => {
     e.stopPropagation();
@@ -95,12 +96,10 @@ function SongRow({
                   label={song.is_favorite ? "Remover de favoritos" : "Adicionar aos favoritos"}
                   onClick={(e) => handleMenuAction(e, onToggleFavorite)}
                 />
-                <>
-                  <ContextMenuItem
-                    label="Adicionar arquivo"
-                    onClick={(e) => handleMenuAction(e, onAddFile)}
-                  />
-                </>
+                <ContextMenuItem
+                  label="Adicionar arquivo"
+                  onClick={(e) => handleMenuAction(e, onAddFile)}
+                />
                 <ContextMenuItem
                   label="Editar"
                   onClick={(e) => handleMenuAction(e, onEdit)}

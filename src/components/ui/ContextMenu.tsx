@@ -41,13 +41,17 @@ export function ContextMenuItem({
   isLast,
   disabled,
 }: ContextMenuItemProps) {
+  const borderClass = isLast ? "" : "border-b border-[#e8ecf0]";
+  const stateClass = disabled
+    ? "opacity-50 cursor-not-allowed"
+    : "hover:bg-[#f2f5fa] cursor-pointer";
+
   return (
     <button
+      type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`w-full text-left px-3 py-2 hover:bg-[#f2f5fa] text-sm text-[#344b61] transition-colors ${
-        isLast ? "" : "border-b border-[#e8ecf0]"
-      } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+      className={`w-full px-3 py-2 text-left text-sm text-[#344b61] transition-colors ${borderClass} ${stateClass}`}
     >
       {label}
     </button>

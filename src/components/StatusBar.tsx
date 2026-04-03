@@ -1,20 +1,9 @@
 import { Cloud, Loader } from "lucide-react";
 import { useAppState } from "../context/AppContext";
+import { formatBytes, formatEta } from "../utils/formatters";
 
 export default function StatusBar() {
   const { state } = useAppState();
-
-  const formatBytes = (value: number) => {
-    if (!Number.isFinite(value) || value <= 0) return "0 B";
-    const units = ["B", "KB", "MB", "GB", "TB"];
-    let index = 0;
-    let current = value;
-    while (current >= 1024 && index < units.length - 1) {
-      current /= 1024;
-      index += 1;
-    }
-    return `${current.toFixed(current >= 10 ? 0 : 1)} ${units[index]}`;
-  };
 
   const progressPercentage =
     state.scanProgress.total > 0
@@ -30,13 +19,6 @@ export default function StatusBar() {
   // evitando piscar de volta para "Etapa X" quando o polling oscilar.
   const isRcloneActive =
     state.isScanningFiles && state.rcloneProgress.direction !== null;
-
-  const formatEta = (seconds: number | null) => {
-    if (seconds === null || seconds < 0) return null;
-    const minutes = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${minutes}:${secs.toString().padStart(2, "0")}`;
-  };
 
   const etaText = formatEta(state.rcloneProgress.etaSeconds);
 

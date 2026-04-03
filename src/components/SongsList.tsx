@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Search, FileMusic } from "lucide-react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useAppState } from "../context/AppContext";
@@ -13,19 +13,22 @@ import * as api from "../api/commands";
 import toast from "react-hot-toast";
 import type { SongListItem, ScoreListItem } from "../types";
 import { getErrorMessage } from "../utils/errors";
-
-function getViewLabel(sidebarView: ReturnType<typeof useAppState>["state"]["sidebarView"]): string {
-  if (sidebarView === "all") return "Todas as Músicas";
-  if (sidebarView === "favorites") return "Favoritos";
-  if (sidebarView === "drafts") return "Rascunhos Ativos";
-  if (sidebarView === "not_found") return "Partituras não encontradas";
-  if (typeof sidebarView === "object") return sidebarView.name;
-  return "";
-}
+import { getSidebarViewLabel } from "../utils/sidebarView";
 
 export default function SongsList() {
-  const { state, setSearchQuery, selectSong, selectScore, toggleFavorite, loadSongs, updateSong, updateScore, updateScoreStatus, deleteScore, deleteSong } =
-    useAppState();
+  const {
+    state,
+    setSearchQuery,
+    selectSong,
+    selectScore,
+    toggleFavorite,
+    loadSongs,
+    updateSong,
+    updateScore,
+    updateScoreStatus,
+    deleteScore,
+    deleteSong,
+  } = useAppState();
   const search = useSearch(setSearchQuery);
   const [editingSong, setEditingSong] = useState<SongListItem | null>(null);
   const [isEditMusicModalOpen, setIsEditMusicModalOpen] = useState(false);
@@ -54,7 +57,20 @@ export default function SongsList() {
     await updateScore(data.scoreFileId, data.instrumentName, data.filePath);
   };
 
-  const viewLabel = getViewLabel(state.sidebarView);
+  const viewLabel = getSidebarViewLabel(state.sidebarView);
+
+  const sortedScoresBySongId = useMemo(() => {
+    const map = new Map<string, ScoreListItem[]>();
+
+    for (const song of state.songs) {
+      map.set(
+        song.id,
+        [...song.scores].sort((a, b) => compareInstrumentNames(a.name, b.name))
+      );
+    }
+
+    return map;
+  }, [state.songs]);
 
   async function handleAddFileToSong(songId: string) {
     try {
@@ -172,9 +188,7 @@ export default function SongsList() {
                       computerType={state.settings?.computer_type}
                     />
                     {state.selectedSong?.id === song.id &&
-                      [...song.scores]
-                        .sort((a, b) => compareInstrumentNames(a.name, b.name))
-                        .map((score) => (
+                      (sortedScoresBySongId.get(song.id) ?? []).map((score) => (
                         <MemoizedScoreRow
                           key={score.id}
                           score={score}

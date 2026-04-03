@@ -7,6 +7,7 @@ import * as api from "../api/commands";
 import toast from "react-hot-toast";
 import type { IndexedFile } from "../types";
 import { getErrorMessage } from "../utils/errors";
+import { isClientComputer } from "../utils/computer";
 import { AddFilesModal } from "./AddFilesModal";
 import { AddMusicModal } from "./AddMusicModal";
 
@@ -19,7 +20,7 @@ export default function TopBar({
 }: TopBarProps) {
   const { loadSongs, loadCategories, state, scanFilesForChanges } = useAppState();
   const navigate = useNavigate();
-  const isClient = state.settings?.computer_type === "Client";
+  const isClient = isClientComputer(state.settings?.computer_type);
   const clientBlockedTitle = "Operação não permitida para cliente";
   const [showAddMusicModal, setShowAddMusicModal] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<IndexedFile[]>([]);
@@ -53,7 +54,7 @@ export default function TopBar({
     }
   }
 
-  async function handleAddMusic() {
+  function handleAddMusic() {
     setShowAddMusicModal(true);
   }
 
