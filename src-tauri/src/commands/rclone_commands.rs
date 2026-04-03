@@ -1,3 +1,4 @@
+use crate::commands::common::{configure_no_window_command, run_blocking_with_store};
 use crate::domain::errors::AppError;
 use crate::infrastructure::store::SystemStore;
 use serde_json::Value;
@@ -11,9 +12,6 @@ use std::time::Instant;
 use tauri::State;
 use tracing::{error, info};
 
-#[cfg(target_os = "windows")]
-use std::os::windows::process::CommandExt;
-
 /// Retorna o comandо correto para executar rclone baseado no sistema operacional
 ///
 /// - Windows: C:\rclone\rclone.exe
@@ -23,26 +21,6 @@ fn get_rclone_command() -> String {
         "C:\\rclone\\rclone.exe".to_string()
     } else {
         "rclone".to_string()
-    }
-}
-
-/// Configura um Command para executar sem mostrar a janela de console no Windows
-///
-/// No Windows, usa a flag CREATE_NO_WINDOW (0x08000000) para ocultar a janela
-/// Em outros SOs, não faz nada
-#[allow(dead_code)]
-fn configure_no_window_command(cmd: Command) -> Command {
-    #[cfg(target_os = "windows")]
-    {
-        let mut cmd = cmd;
-        // CREATE_NO_WINDOW = 0x08000000
-        cmd.creation_flags(0x08000000);
-        return cmd;
-    }
-
-    #[cfg(not(target_os = "windows"))]
-    {
-        cmd
     }
 }
 
@@ -454,12 +432,12 @@ pub async fn sync_cloud_with_rclone(
 ) -> Result<RcloneSyncSummary, AppError> {
     let app_data_dir = store.app_data_dir().clone();
 
-    tauri::async_runtime::spawn_blocking(move || {
-        let store = SystemStore::new(app_data_dir);
-        sync_cloud_with_rclone_impl(&store, &direction)
-    })
+    run_blocking_with_store(
+        app_data_dir,
+        "Falha interna ao sincronizar com rclone",
+        move |store| sync_cloud_with_rclone_impl(&store, &direction),
+    )
     .await
-    .map_err(|e| AppError::Generic(format!("Falha interna ao sincronizar com rclone: {}", e)))?
 }
 
 #[tauri::command]
@@ -469,17 +447,12 @@ pub async fn upload_cloud_paths_with_rclone(
 ) -> Result<RcloneSelectiveUploadSummary, AppError> {
     let app_data_dir = store.app_data_dir().clone();
 
-    tauri::async_runtime::spawn_blocking(move || {
-        let store = SystemStore::new(app_data_dir);
-        upload_cloud_paths_with_rclone_impl(&store, &relative_paths)
-    })
+    run_blocking_with_store(
+        app_data_dir,
+        "Falha interna ao enviar caminhos selecionados com rclone",
+        move |store| upload_cloud_paths_with_rclone_impl(&store, &relative_paths),
+    )
     .await
-    .map_err(|e| {
-        AppError::Generic(format!(
-            "Falha interna ao enviar caminhos selecionados com rclone: {}",
-            e
-        ))
-    })?
 }
 
 fn upload_cloud_paths_with_rclone_impl(
@@ -666,12 +639,12 @@ pub async fn test_rclone_upload(
 ) -> Result<(), AppError> {
     let app_data_dir = store.app_data_dir().clone();
 
-    tauri::async_runtime::spawn_blocking(move || {
-        let store = SystemStore::new(app_data_dir);
-        test_rclone_upload_impl(&store, &remote, &path)
-    })
+    run_blocking_with_store(
+        app_data_dir,
+        "Falha interna ao testar upload do rclone",
+        move |store| test_rclone_upload_impl(&store, &remote, &path),
+    )
     .await
-    .map_err(|e| AppError::Generic(format!("Falha interna ao testar upload do rclone: {}", e)))?
 }
 
 fn test_rclone_upload_impl(store: &SystemStore, remote: &str, path: &str) -> Result<(), AppError> {

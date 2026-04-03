@@ -223,8 +223,8 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 	- [x] Ao clicar para adicionar arquivo na música, caso já exista uma música com mesmo diretório e nome, deve aparecer um toast de erro, avisando que já existe uma música com esse arquivo indexado "{nome da partitura/instrumento}" e não um erro genérico.
 	- [x] Ajuste a função: "Pode acontecer a música não ter esse padrão: `nome música - instrumento`, sendo `instrumento`, é necessário conseguir identificar esse cenário e arrumar". Caso não seja um instrumento, deve ficar vazio, ex: `flauta 1 & 2` é possível identificar que é flauta, agora `EIS O NOSSO DEUS` não fala nada. Ou seja, essa regra só se aplicar se for possível identificar o instrumento, caso não seja, deve ficar vazio.
 - [x] Na listagem de instrumentos, o violino não está segundo a ordem anteriormente especificada. Ele também deve suportar, português e inglês (nome).
-- [ ] Refatoração do front
-- [ ] Refatoração do back
+- [x] Refatoração do front
+- [x] Refatoração do back
 
 ## v0.9
 - [ ] Gerar `database.msgpack.zst` de tempos em tempos. O objetivo é garantir em caso de perda total por algum motivo, o usuário não tenha que colocar TUDO novamente.

@@ -3,6 +3,7 @@ use std::time::Duration;
 use tauri::State;
 use tracing::{info, warn};
 
+use crate::commands::common::run_blocking_with_store;
 use crate::domain::errors::AppError;
 use crate::domain::models::{OperationGuard, ScoreStatus};
 use crate::infrastructure::database::Database;
@@ -21,12 +22,12 @@ pub async fn scan_files_for_changes(
     let db = db.inner().clone();
     let app_data_dir = store.app_data_dir().clone();
 
-    tauri::async_runtime::spawn_blocking(move || {
-        let store = SystemStore::new(app_data_dir);
-        scan_files_for_changes_impl(&db, &store)
-    })
+    run_blocking_with_store(
+        app_data_dir,
+        "Falha interna ao verificar alterações",
+        move |store| scan_files_for_changes_impl(&db, &store),
+    )
     .await
-    .map_err(|e| AppError::Generic(format!("Falha interna ao verificar alterações: {}", e)))?
 }
 
 fn scan_files_for_changes_impl(db: &Database, store: &SystemStore) -> Result<ScanResult, AppError> {

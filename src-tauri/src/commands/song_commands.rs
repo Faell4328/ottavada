@@ -3,8 +3,8 @@ use std::path::Path;
 use tauri::State;
 use tracing::{error, info, warn};
 
+use crate::commands::common::require_server_settings;
 use crate::domain::errors::AppError;
-use crate::domain::models::OperationGuard;
 use crate::domain::models::*;
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
@@ -102,8 +102,7 @@ pub fn toggle_favorite(
     store: State<'_, SystemStore>,
     song_id: String,
 ) -> Result<bool, AppError> {
-    let settings = store.get_app_settings()?;
-    settings.require_server_only()?;
+    require_server_settings(&store)?;
 
     info!("Alternando favorito para música: {}", song_id);
     match db.toggle_favorite(&song_id) {
@@ -242,8 +241,7 @@ pub fn import_indexed_files(
     files: Vec<IndexedFile>,
     category_ids: Vec<String>,
 ) -> Result<Vec<SongListItem>, AppError> {
-    let settings = store.get_app_settings()?;
-    settings.require_server_only()?;
+    let settings = require_server_settings(&store)?;
 
     import_files_core(
         &db,
@@ -264,8 +262,7 @@ pub fn import_indexed_files_with_metadata(
     composer: Option<String>,
     arranger: Option<String>,
 ) -> Result<Vec<SongListItem>, AppError> {
-    let settings = store.get_app_settings()?;
-    settings.require_server_only()?;
+    let settings = require_server_settings(&store)?;
     info!(
         "Importando arquivos indexados com metadados: files={}, categories={}, composer_set={}, arranger_set={}",
         files.len(),
@@ -309,8 +306,7 @@ fn validate_server_create_song(
     store: &SystemStore,
     name: &str,
 ) -> Result<String, AppError> {
-    let settings = store.get_app_settings()?;
-    settings.require_server_only()?;
+    let settings = require_server_settings(store)?;
 
     let normalized_name = normalized_required_song_name(name)?;
 
@@ -349,7 +345,7 @@ pub fn create_song_with_metadata(
     category_ids: Vec<String>,
 ) -> Result<SongListItem, AppError> {
     let normalized_name = normalized_required_song_name(&name)?;
-    let updated_by = validate_server_create_song(&db, &store, &name)?;
+    let updated_by = validate_server_create_song(&db, &store, &normalized_name)?;
     let now = Local::now().naive_local();
     let song_id = uuid::Uuid::new_v4().to_string();
 
@@ -392,8 +388,7 @@ pub fn update_song(
 ) -> Result<SongListItem, AppError> {
     let normalized_name = normalized_required_song_name(&name)?;
 
-    let settings = store.get_app_settings()?;
-    settings.require_server_only()?;
+    let settings = require_server_settings(&store)?;
     let updated_by = settings.computer_id.clone();
 
     let all_songs = db.get_all_songs()?;
@@ -440,8 +435,7 @@ pub fn delete_song(
     store: State<'_, SystemStore>,
     song_id: String,
 ) -> Result<(), AppError> {
-    let settings = store.get_app_settings()?;
-    settings.require_server_only()?;
+    require_server_settings(&store)?;
 
     info!("Deletando música: {}", song_id);
 

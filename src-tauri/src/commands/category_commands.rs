@@ -2,8 +2,9 @@ use chrono::Local;
 use tauri::State;
 use tracing::{error, info};
 
+use crate::commands::common::require_server_settings;
 use crate::domain::errors::AppError;
-use crate::domain::models::{Category, OperationGuard};
+use crate::domain::models::Category;
 use crate::infrastructure::{database::Database, store::SystemStore};
 
 #[tauri::command]
@@ -28,8 +29,7 @@ pub fn create_category(
 ) -> Result<Category, AppError> {
     info!("Criando nova categoria: {}", name);
 
-    let settings = store.get_app_settings()?;
-    settings.require_server_only()?;
+    let settings = require_server_settings(&store)?;
 
     if name.trim().is_empty() {
         return Err(AppError::Generic(
@@ -62,8 +62,7 @@ pub fn delete_category(
     store: State<'_, SystemStore>,
     category_id: String,
 ) -> Result<(), AppError> {
-    let settings = store.get_app_settings()?;
-    settings.require_server_only()?;
+    require_server_settings(&store)?;
 
     info!("Deletando categoria: {}", category_id);
     db.delete_category(&category_id)

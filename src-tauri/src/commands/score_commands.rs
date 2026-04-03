@@ -5,10 +5,10 @@ use tauri::State;
 use tracing::{error, info, warn};
 
 #[cfg(target_os = "windows")]
-use std::os::windows::process::CommandExt;
-
+use crate::commands::common::configure_no_window_command;
+use crate::commands::common::require_server_settings;
 use crate::domain::errors::AppError;
-use crate::domain::models::{ComputerType, OperationGuard};
+use crate::domain::models::ComputerType;
 use crate::domain::models::*;
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
@@ -156,22 +156,6 @@ fn open_file_location_on_system(file_path: &str) -> Result<(), AppError> {
     }
 
     Ok(())
-}
-
-#[allow(dead_code)]
-fn configure_no_window_command(cmd: std::process::Command) -> std::process::Command {
-    #[cfg(target_os = "windows")]
-    {
-        let mut cmd = cmd;
-        // CREATE_NO_WINDOW = 0x08000000
-        cmd.creation_flags(0x08000000);
-        return cmd;
-    }
-
-    #[cfg(not(target_os = "windows"))]
-    {
-        cmd
-    }
 }
 
 fn extract_score_file_from_archive(
@@ -332,8 +316,7 @@ pub fn update_score(
         score_id, file_path
     );
 
-    let settings = store.get_app_settings()?;
-    settings.require_server_only()?;
+    let settings = require_server_settings(&store)?;
     let path = Path::new(&file_path);
     ensure_supported_score_file(path)?;
 
@@ -371,8 +354,7 @@ pub fn add_score_to_song(
     song_id: String,
     file: IndexedFile,
 ) -> Result<SongListItem, AppError> {
-    let settings = store.get_app_settings()?;
-    settings.require_server_only()?;
+    let settings = require_server_settings(&store)?;
 
     info!(
         "Adicionando partitura em música existente: song_id={}, file_path={}",
@@ -442,8 +424,7 @@ pub fn add_scores_to_song(
     song_id: String,
     files: Vec<IndexedFile>,
 ) -> Result<SongListItem, AppError> {
-    let settings = store.get_app_settings()?;
-    settings.require_server_only()?;
+    let settings = require_server_settings(&store)?;
 
     let song = db.get_song_list_item_by_id(&song_id)?;
     let existing_scores = song.scores.clone();
@@ -527,8 +508,7 @@ pub fn update_score_status(
     score_id: String,
     status: String,
 ) -> Result<SongListItem, AppError> {
-    let settings = store.get_app_settings()?;
-    settings.require_server_only()?;
+    let settings = require_server_settings(&store)?;
 
     info!(
         "Atualizando status da partitura: {} para: {}",
@@ -574,8 +554,7 @@ pub fn delete_score(
     store: State<'_, SystemStore>,
     score_id: String,
 ) -> Result<(), AppError> {
-    let settings = store.get_app_settings()?;
-    settings.require_server_only()?;
+    require_server_settings(&store)?;
 
     info!("Deletando partitura: {}", score_id);
     db.delete_score(&score_id)

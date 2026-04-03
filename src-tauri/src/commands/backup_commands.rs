@@ -1,7 +1,7 @@
 use tauri::State;
 
+use crate::commands::common::{require_server_settings, run_blocking_with_store};
 use crate::domain::errors::AppError;
-use crate::domain::models::OperationGuard;
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
 use crate::services::backup_msgpack_service::{
@@ -49,19 +49,21 @@ pub async fn generate_song_archives_files(
     let db = db.inner().clone();
     let app_data_dir = store.app_data_dir().clone();
 
-    tauri::async_runtime::spawn_blocking(move || {
-        let store = SystemStore::new(app_data_dir.clone());
-        let settings = store.get_app_settings()?;
-        settings.require_server_only()?;
+    run_blocking_with_store(
+        app_data_dir,
+        "Falha interna ao gerar arquivos das músicas",
+        move |store| {
+            require_server_settings(&store)?;
 
-        let cloud_root = app_data_dir.join("cloud");
-        std::fs::create_dir_all(&cloud_root)
-            .map_err(|e| AppError::Generic(format!("Erro ao preparar diretório cloud: {}", e)))?;
+            let cloud_root = store.app_data_dir().join("cloud");
+            std::fs::create_dir_all(&cloud_root).map_err(|e| {
+                AppError::Generic(format!("Erro ao preparar diretório cloud: {}", e))
+            })?;
 
-        generate_song_archives(&db, &app_data_dir, &cloud_root)
-    })
+            generate_song_archives(&db, store.app_data_dir(), &cloud_root)
+        },
+    )
     .await
-    .map_err(|e| AppError::Generic(format!("Falha interna ao gerar arquivos das músicas: {}", e)))?
 }
 
 #[tauri::command]
@@ -72,15 +74,16 @@ pub async fn generate_events_file(
     let db = db.inner().clone();
     let app_data_dir = store.app_data_dir().clone();
 
-    tauri::async_runtime::spawn_blocking(move || {
-        let store = SystemStore::new(app_data_dir);
-        let settings = store.get_app_settings()?;
-        settings.require_server_only()?;
+    run_blocking_with_store(
+        app_data_dir,
+        "Falha interna ao gerar events.msgpack",
+        move |store| {
+            require_server_settings(&store)?;
 
-        generate_events_msgpack(&db, &store)
-    })
+            generate_events_msgpack(&db, &store)
+        },
+    )
     .await
-    .map_err(|e| AppError::Generic(format!("Falha interna ao gerar events.msgpack: {}", e)))?
 }
 
 #[tauri::command]
@@ -93,25 +96,26 @@ pub async fn generate_snapshot_file(
     let app_data_dir = store.app_data_dir().clone();
     let force_regenerate_song_archives = force_regenerate_song_archives.unwrap_or(false);
 
-    tauri::async_runtime::spawn_blocking(move || {
-        let store = SystemStore::new(app_data_dir.clone());
-        let settings = store.get_app_settings()?;
-        settings.require_server_only()?;
+    run_blocking_with_store(
+        app_data_dir,
+        "Falha interna ao gerar snapshot.msgpack",
+        move |store| {
+            require_server_settings(&store)?;
 
-        if force_regenerate_song_archives {
-            let cloud_root = app_data_dir.join("cloud");
-            std::fs::create_dir_all(&cloud_root).map_err(|e| {
-                AppError::Generic(format!("Erro ao preparar diretório cloud: {}", e))
-            })?;
-            regenerate_all_song_archives(&db, &app_data_dir, &cloud_root)?;
-        }
+            if force_regenerate_song_archives {
+                let cloud_root = store.app_data_dir().join("cloud");
+                std::fs::create_dir_all(&cloud_root).map_err(|e| {
+                    AppError::Generic(format!("Erro ao preparar diretório cloud: {}", e))
+                })?;
+                regenerate_all_song_archives(&db, store.app_data_dir(), &cloud_root)?;
+            }
 
-        let summary = generate_snapshot_msgpack(&db, &store)?;
+            let summary = generate_snapshot_msgpack(&db, &store)?;
 
-        Ok(summary)
-    })
+            Ok(summary)
+        },
+    )
     .await
-    .map_err(|e| AppError::Generic(format!("Falha interna ao gerar snapshot.msgpack: {}", e)))?
 }
 
 #[tauri::command]
@@ -120,8 +124,7 @@ pub fn export_backup_file(
     store: State<'_, SystemStore>,
     output_path: Option<String>,
 ) -> Result<BackupFileSummary, AppError> {
-    let settings = store.get_app_settings()?;
-    settings.require_server_only()?;
+    require_server_settings(&store)?;
 
     export_backup_msgpack(&db, &store, output_path)
 }
@@ -132,8 +135,7 @@ pub fn import_backup_file(
     store: State<'_, SystemStore>,
     backup_path: String,
 ) -> Result<BackupImportSummary, AppError> {
-    let settings = store.get_app_settings()?;
-    settings.require_server_only()?;
+    require_server_settings(&store)?;
 
     let summary = import_backup_msgpack(&db, &store, backup_path)?;
     delete_existing_song_archives(store.app_data_dir())?;
@@ -149,15 +151,10 @@ pub async fn apply_server_changes_on_client(
     let db = db.inner().clone();
     let app_data_dir = store.app_data_dir().clone();
 
-    tauri::async_runtime::spawn_blocking(move || {
-        let store = SystemStore::new(app_data_dir);
-        apply_server_changes_for_client(&db, &store)
-    })
+    run_blocking_with_store(
+        app_data_dir,
+        "Falha interna ao aplicar alterações do servidor no cliente",
+        move |store| apply_server_changes_for_client(&db, &store),
+    )
     .await
-    .map_err(|e| {
-        AppError::Generic(format!(
-            "Falha interna ao aplicar alterações do servidor no cliente: {}",
-            e
-        ))
-    })?
 }

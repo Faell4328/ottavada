@@ -1,5 +1,6 @@
 pub mod backup_commands;
 pub mod category_commands;
+pub mod common;
 pub mod rclone_commands;
 pub mod scan_commands;
 pub mod score_commands;
