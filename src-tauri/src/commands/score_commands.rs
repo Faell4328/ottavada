@@ -35,6 +35,13 @@ fn score_exists_for_indexed_file(
         })
 }
 
+fn find_existing_score_by_file_path<'a>(
+    scores: &'a [ScoreListItem],
+    indexed_file: &IndexedFile,
+) -> Option<&'a ScoreListItem> {
+    scores.iter().find(|score| score.file_path == indexed_file.path)
+}
+
 fn build_score_from_indexed_file(
     song_id: &str,
     host_id: &str,
@@ -373,6 +380,23 @@ pub fn add_score_to_song(
     );
 
     let song = db.get_song_list_item_by_id(&song_id)?;
+
+    if let Some(existing_score) = find_existing_score_by_file_path(&song.scores, &file) {
+        let existing_name = existing_score
+            .name
+            .clone()
+            .unwrap_or_else(|| "Sem instrumento".to_string());
+
+        warn!(
+            "Arquivo já indexado para song_id={}: file_path={}, instrumento={}",
+            song_id, file.path, existing_name
+        );
+
+        return Err(AppError::Generic(format!(
+            "Este arquivo já está indexado nesta música como '{}'",
+            existing_name
+        )));
+    }
 
     // Verificar se o instrumento já existe (case-insensitive)
     let score_exists = score_exists_for_indexed_file(&song.scores, &file, true);

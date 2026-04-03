@@ -103,7 +103,9 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - v0.5 - Implementando as funcionalidades
 - v0.6 - Foco no `client`
 - v0.7 - Lapidando
-- v0.8 - Ajustes Finais
+- v0.8 - Melhorias na usabilidade
+- v0.9 - Melhoria na confiança
+- v1.0 - Protótipo pronto
 ## v0.4
 - [x] Atualizar bando de dados
 - [x] Atualizar `tauri-plugin-store`
@@ -215,8 +217,12 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [x] Quando o cliente abrir uma partitura pelo aplicativo, a partitura é descompactada e aberta em um diretório temporário, mas preciso que ela seja renomeada, para não ficar aparecendo um ID (estranho para usuário) no aplicativo de visualização de partitura. Preciso que antes de abrir, deve renomear para: `{nome da música} - {nome da partitura}`.
 - [x] Gerar log para adicionar música, adicionar arquivo e adicionar partitura. Está dando erro em toast, com uma mensagem genérica, que nada ajuda.
 - [x] Corrigir bug que limpada o diretório `songs` ao gerar snapshot automáticamente. Apenas o "força geração de snapshot" que limpa e recria os `songs`, o snapshot automático não deve fazer isso.
-- [ ] Resolver o problema: arquivo em rascunho e foi regerado o `{songId}.tar.zst`, resultado foi removido perdido o arquivo antigo em `main` ficando sem nada.
-- [ ] Se a música já existe, deve avisar e mostrar quais partituras/instrumentos já tem.
+- [x] Resolver o problema: arquivo em rascunho e foi regerado o `{songId}.tar.zst`, resultado foi removido perdido o arquivo antigo em `main` ficando sem nada.
+- [x] Ajuste na adição, revisão e música já existente.
+	- [x] Remover a opção "adicionar arquivo" do header da página inicial.
+	- [x] Ao clicar para adicionar arquivo na música, caso já exista uma música com mesmo diretório e nome, deve aparecer um toast de erro, avisando que já existe uma música com esse arquivo indexado "{nome da partitura/instrumento}" e não um erro genérico.
+	- [x] Ajuste a função: "Pode acontecer a música não ter esse padrão: `nome música - instrumento`, sendo `instrumento`, é necessário conseguir identificar esse cenário e arrumar". Caso não seja um instrumento, deve ficar vazio, ex: `flauta 1 & 2` é possível identificar que é flauta, agora `EIS O NOSSO DEUS` não fala nada. Ou seja, essa regra só se aplicar se for possível identificar o instrumento, caso não seja, deve ficar vazio.
+- [x] Na listagem de instrumentos, o violino não está segundo a ordem anteriormente especificada. Ele também deve suportar, português e inglês (nome).
 
 ## v0.9
 - [ ] Gerar `database.msgpack.zst` de tempos em tempos. O objetivo é garantir em caso de perda total por algum motivo, o usuário não tenha que colocar TUDO novamente.

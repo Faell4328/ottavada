@@ -68,15 +68,81 @@ fn song_name_from_parent_directory(path: &Path) -> Option<String> {
     }
 }
 
+fn normalize_instrument_probe(value: &str) -> String {
+    value
+        .chars()
+        .flat_map(char::to_lowercase)
+        .map(|ch| if ch.is_ascii_alphanumeric() || ch.is_ascii_whitespace() { ch } else { ' ' })
+        .collect::<String>()
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+fn looks_like_known_instrument(value: &str) -> bool {
+    let normalized = normalize_instrument_probe(value);
+    if normalized.is_empty() {
+        return false;
+    }
+
+    const PREFIXES: &[&str] = &[
+        "grade",
+        "score",
+        "full score",
+        "conductor score",
+        "partitura completa",
+        "partitura geral",
+        "regencia",
+        "flute",
+        "flauta",
+        "oboe",
+        "bassoon",
+        "fagote",
+        "clarinet",
+        "clarinete",
+        "bass clarinet",
+        "alto sax",
+        "sax alto",
+        "saxofone alto",
+        "tenor sax",
+        "sax tenor",
+        "saxofone tenor",
+        "baritone sax",
+        "sax baritone",
+        "saxofone baritono",
+        "trumpet",
+        "trompete",
+        "horn",
+        "trompa",
+        "trombone",
+        "baritone",
+        "tuba",
+        "violin",
+        "violino",
+        "viola",
+        "cello",
+        "violoncello",
+        "violoncelo",
+        "contrabass",
+        "double bass",
+        "contrabaixo",
+    ];
+
+    PREFIXES.iter().any(|prefix| normalized.starts_with(prefix))
+}
+
 /// Extrai o nome do instrumento a partir do nome do arquivo.
 /// Suporta tanto "nome da música - instrumento.ext" quanto "instrumento.ext".
 fn parse_instrument_from_file_stem(file_stem: &str, song_name: &str) -> Option<String> {
     if let Some(idx) = file_stem.rfind(" - ") {
-        return normalize_optional_score_name(Some(&file_stem[idx + 3..]));
+        let normalized = normalize_optional_score_name(Some(&file_stem[idx + 3..]));
+        return normalized.filter(|candidate| looks_like_known_instrument(candidate));
     }
 
     let normalized_instrument = normalize_optional_score_name(Some(file_stem));
-    normalized_instrument.filter(|instrument| normalize_song_name(instrument) != song_name)
+    normalized_instrument.filter(|instrument| {
+        normalize_song_name(instrument) != song_name && looks_like_known_instrument(instrument)
+    })
 }
 
 /// Separa um caminho completo de arquivo em (diretório, nome_do_arquivo)
@@ -157,7 +223,22 @@ mod tests {
     fn test_parse_instrument_without_suffix() {
         let instrument =
             parse_instrument_from_file_stem("Moonlight Sonata", "SONATA AO LUAR");
-        assert_eq!(instrument, Some("Moonlight Sonata".to_string()));
+        assert_eq!(instrument, None);
+    }
+
+    #[test]
+    fn test_parse_instrument_without_suffix_when_known_instrument() {
+        let instrument = parse_instrument_from_file_stem("flauta 1 & 2", "EIS O NOSSO DEUS");
+        assert_eq!(instrument, Some("flauta 1 & 2".to_string()));
+    }
+
+    #[test]
+    fn test_parse_instrument_suffix_not_detected_as_instrument() {
+        let instrument = parse_instrument_from_file_stem(
+            "Eis o nosso deus - Parte Principal",
+            "EIS O NOSSO DEUS",
+        );
+        assert_eq!(instrument, None);
     }
 
     #[test]

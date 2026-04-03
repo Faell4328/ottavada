@@ -1,4 +1,4 @@
-import { Music, FolderSearch, Plus, Settings, RefreshCw } from "lucide-react";
+import { Music, FolderSearch, Settings, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -7,7 +7,6 @@ import * as api from "../api/commands";
 import toast from "react-hot-toast";
 import type { IndexedFile } from "../types";
 import { getErrorMessage } from "../utils/errors";
-import { getDirectoryPath } from "../utils/paths";
 import { AddFilesModal } from "./AddFilesModal";
 import { AddMusicModal } from "./AddMusicModal";
 
@@ -35,50 +34,6 @@ export default function TopBar({
       loadCategories()
     ]);
   };
-
-  async function handleAddFile() {
-    try {
-      const selected = await open({
-        directory: false,
-        multiple: true,
-        filters: [
-          {
-            name: "Partituras",
-            extensions: ["pdf", "PDF", "mus", "MUS", "musx", "MUSX"],
-          },
-        ],
-      });
-
-      if (!selected) {
-        return;
-      }
-
-      const selectedPaths = Array.isArray(selected) ? selected : [selected];
-      const selectedSet = new Set(selectedPaths);
-      const directories = Array.from(
-        new Set(selectedPaths.map((filePath) => getDirectoryPath(filePath)))
-      );
-
-      const scans = await Promise.all(
-        directories.map((directory) => api.scanDirectory(directory))
-      );
-
-      const indexed = scans
-        .flat()
-        .filter((file) => selectedSet.has(file.path));
-
-      if (indexed.length === 0) {
-        toast.error("Nenhuma música encontrada");
-        return;
-      }
-
-      setPendingFiles(indexed);
-      setShowAddFilesModal(true);
-    } catch (err) {
-      console.error("Failed to add file:", err);
-      toast.error(`Erro ao adicionar arquivo: ${getErrorMessage(err)}`);
-    }
-  }
 
   async function handleScanDirectory() {
     try {
@@ -151,12 +106,6 @@ export default function TopBar({
             icon={<Music className="h-4 w-4" />}
             title={isClient ? clientBlockedTitle : "Adicionar música"}
             onClick={handleAddMusic}
-            disabled={isClient}
-          />
-          <ActionButton
-            icon={<Plus className="h-4 w-4" />}
-            title={isClient ? clientBlockedTitle : "Adicionar arquivo"}
-            onClick={handleAddFile}
             disabled={isClient}
           />
           <ActionButton

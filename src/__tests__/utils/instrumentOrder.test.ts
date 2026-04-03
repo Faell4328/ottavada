@@ -66,6 +66,41 @@ describe("compareInstrumentNames", () => {
     expect(sorted).toEqual(["clarinet in Bb 1", "clarinet Bb 2", "clarinet Bb 3"]);
   });
 
+  it("supports violin with arabic and roman numerals", () => {
+    const names = ["Violin II", "Violin I", "viola", "cello"];
+    const sorted = [...names].sort((a, b) => compareInstrumentNames(a, b));
+
+    expect(sorted).toEqual(["Violin I", "Violin II", "viola", "cello"]);
+  });
+
+  it("keeps orchestra order with flexible/non-exact names", () => {
+    const names = [
+      "Horn in F II",
+      "Trombone III",
+      "Clarinet Sib 3",
+      "Clarinet in Bb I",
+      "Alto Saxophone 2",
+      "Trumpet Bb 1",
+      "Violino I",
+      "Violin II",
+      "Contrabass",
+    ];
+
+    const sorted = [...names].sort((a, b) => compareInstrumentNames(a, b));
+
+    expect(sorted).toEqual([
+      "Clarinet in Bb I",
+      "Clarinet Sib 3",
+      "Alto Saxophone 2",
+      "Trumpet Bb 1",
+      "Horn in F II",
+      "Trombone III",
+      "Violino I",
+      "Violin II",
+      "Contrabass",
+    ]);
+  });
+
   it("sorts unknown instruments alphabetically after known ones", () => {
     const names = ["zither", "oboe", "accordion", "xylophone"];
     const sorted = [...names].sort((a, b) => compareInstrumentNames(a, b));

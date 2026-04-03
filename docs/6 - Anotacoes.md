@@ -103,3 +103,19 @@ Adeus Google Drive, sem pegadinha de 1° de Abril
 - Estava cogitando o pCloud, mas devido a limitações da conta free e abortei ele. Encontrei um excelente substituto que chama Koofr, o único ponto negativo é que ele possui apenas 10GB de armazenamento no plano free, o que não é um problema. Fiz uma porrada de testes e realmente é muito bom, adicionando todas as músicas da orquestra onde toco, deve ficar com 2GB (arquivos comprimidos, óbvio).
 
 Hoje também, fiz um monte de teste e encontrei muitos problemas e muitas melhorias possíveis. Estou MUITO satisfeito com o resultado obtido com esse projeto. Acredito que ele vai agregar muito aos usuários.
+
+**02-04-2026**
+
+`database.msgpack.zst` automáticos
+- Estou com receio de algum problema no aplicativo, levando a travamento perda dos dados etc. Por questão de segurança, irei implementar copias periódicas do banco de dados.
+- Com isso, caso aconteça algum problema, o usuário não vai precisar ter que colocar tudo na mão novamente.
+
+**03-04-2026**
+
+MicroScore
+- Irei implementar **telemetria** e **licença** ao software, como é um software bem completinho e acredito eu, que vai ajudar bastante, nada justo que cobrar um valor.
+- **Telemetria**: minha ideia é coletar informações simples: tempo de uso (por dia), quantidade de música e partitura adicionada (por dia), quantas vezes foram aberto partitura por ele, e quantidade de uplaod/download feitas. A ideia é saber se o aplicativo está sendo bem usado, tanto pelo servidor, quanto o cliente. Tendo uma noção, o que é mais utilizado, cliente ou servidor?
+- **Licença**: minha é criar licença por organização, ex: orquestra xxx, licença de 1 ano para 8 computadores por 300 reais. Com isso a pessoa terá total suporte meu.
+	- A licença deve ficar tanto no servidor, quanto localmente. Exigindo na instalação acesso a internet.
+	- Com isso evita a pessoa enviar o instalador para outra pessoa e pronto.
+! Estou anotando aqui apenas para colocar em meu "radar" esse assunto. Não sei ao certo como será feito.
