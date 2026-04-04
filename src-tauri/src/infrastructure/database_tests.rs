@@ -533,6 +533,62 @@ mod tests {
         assert!(result.is_err());
     }
 
+    #[test]
+    fn test_get_score_file_path_accepts_legacy_full_path_storage() {
+        let db = make_db();
+        db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
+
+        let legacy_full_path = "/music/scores/Canon - Violino.musx".to_string();
+        let score = Score {
+            id: "sc1".to_string(),
+            song_id: "s1".to_string(),
+            name: Some("Violino".to_string()),
+            host_id: "test-computer".to_string(),
+            file_path: legacy_full_path.clone(),
+            file_name: "Canon - Violino.musx".to_string(),
+            file_size: 1024,
+            file_modified_at: now(),
+            updated_at: now(),
+            status: ScoreStatus::Main,
+            updated_by: "test-computer".to_string(),
+        };
+        db.insert_score(&score).unwrap();
+
+        let resolved = db.get_score_file_path("sc1").unwrap();
+        assert_eq!(resolved, legacy_full_path);
+    }
+
+    #[test]
+    fn test_song_listing_uses_legacy_full_path_without_duplication() {
+        let db = make_db();
+        db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
+
+        let legacy_full_path = "/music/scores/Canon - Violino.musx";
+        let conn = db.conn.lock().unwrap();
+        conn.execute(
+            "INSERT INTO scores (id, song_id, name, host_id, file_path, file_name, file_size, file_modified_at, status)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+            rusqlite::params![
+                "sc1",
+                "s1",
+                "Violino",
+                "test-computer",
+                legacy_full_path,
+                "Canon - Violino.musx",
+                1024u64,
+                datetime_utils::format_datetime(now()),
+                "main"
+            ],
+        )
+        .unwrap();
+        drop(conn);
+
+        let songs = db.get_all_songs().unwrap();
+        assert_eq!(songs.len(), 1);
+        assert_eq!(songs[0].scores.len(), 1);
+        assert_eq!(songs[0].scores[0].file_path, legacy_full_path);
+    }
+
     // ── Score Status ──
 
     #[test]

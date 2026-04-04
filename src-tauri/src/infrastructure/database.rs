@@ -27,6 +27,31 @@ pub struct Database {
 }
 
 impl Database {
+    fn build_score_full_path(file_path: &str, file_name: &str) -> String {
+        let trimmed_dir = file_path.trim();
+        let trimmed_name = file_name.trim();
+
+        if trimmed_name.is_empty() {
+            return trimmed_dir.to_string();
+        }
+
+        let dir_as_path = Path::new(trimmed_dir);
+        let is_legacy_full_path = dir_as_path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .map(|name| name.eq_ignore_ascii_case(trimmed_name))
+            .unwrap_or(false);
+
+        if is_legacy_full_path {
+            return trimmed_dir.to_string();
+        }
+
+        std::path::PathBuf::from(trimmed_dir)
+            .join(trimmed_name)
+            .to_string_lossy()
+            .to_string()
+    }
+
     fn extract_file_extension(file_name: &str) -> Option<String> {
         std::path::Path::new(file_name)
             .extension()
@@ -495,11 +520,8 @@ impl Database {
         let rows = stmt.query_map(rusqlite::params_from_iter(params), |row| {
             let dir_path: String = row.get(3)?;
             let file_name: String = row.get(4)?;
-            let file_path = std::path::PathBuf::from(&dir_path)
-                .join(&file_name)
-                .to_string_lossy()
-                .to_string();
-            let file_extension = file_name.rsplit('.').next().unwrap_or("").to_lowercase();
+            let file_path = Self::build_score_full_path(&dir_path, &file_name);
+            let file_extension = Self::extract_file_extension(&file_path).unwrap_or_default();
 
             Ok((
                 row.get::<_, String>(0)?,
@@ -892,10 +914,7 @@ impl Database {
             |row| {
                 let dir_path: String = row.get(0)?;
                 let file_name: String = row.get(1)?;
-                Ok(std::path::PathBuf::from(&dir_path)
-                    .join(&file_name)
-                    .to_string_lossy()
-                    .to_string())
+                Ok(Self::build_score_full_path(&dir_path, &file_name))
             },
         )
         .map_err(|e| match e {
@@ -916,10 +935,7 @@ impl Database {
             .query_map(rusqlite::params_from_iter(params), |row| {
                 let dir_path: String = row.get(1)?;
                 let file_name: String = row.get(2)?;
-                let file_path = std::path::PathBuf::from(&dir_path)
-                    .join(&file_name)
-                    .to_string_lossy()
-                    .to_string();
+                let file_path = Self::build_score_full_path(&dir_path, &file_name);
                 Ok((
                     row.get::<_, String>(0)?,
                     file_path,
