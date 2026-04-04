@@ -1057,10 +1057,7 @@ impl Database {
             )?;
         }
 
-        if old_status != status.as_str()
-            && status != ScoreStatus::NotFound
-            && status != ScoreStatus::Draft
-        {
+        if old_status != status.as_str() {
             Self::insert_changed_field(
                 &conn,
                 "update",

@@ -227,6 +227,7 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [x] Refatoração do back
 - [x] Arrumar bug: no windows, ao criar uma música e clicar para "adicionar arquivo", depois selecionar o arquivo, não é feito absolutamente nada.
 - [x] Procurar outros possíveis bugs do mesmo padrão e corrigir.
+- [x] Arrumar bug: quando rodar o fluxo "Listar partituras `draft` e `not found` que possuem versão anterior `main`". As partituras que forem `draft` e `not found` e não tiverem uma `main`anterior, deve ficar com `not found` no cliente (seja `event` ou `snapshot`).
 
 ## v0.9
 - [ ] Gerar `database.msgpack.zst` de tempos em tempos. O objetivo é garantir em caso de perda total por algum motivo, o usuário não tenha que colocar TUDO novamente.

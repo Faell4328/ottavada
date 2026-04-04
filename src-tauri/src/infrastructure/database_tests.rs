@@ -580,7 +580,7 @@ mod tests {
     }
 
         #[test]
-        fn test_update_score_status_not_found_does_not_create_changed_field_event() {
+        fn test_update_score_status_not_found_creates_changed_field_event() {
             let db = make_db();
             db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
             db.insert_score(&make_score(&db, "sc1", "s1", Some("Violino")))
@@ -599,11 +599,11 @@ mod tests {
                 )
                 .unwrap();
 
-            assert_eq!(not_found_events, 0);
+            assert_eq!(not_found_events, 1);
         }
 
     #[test]
-    fn test_update_score_status_draft_does_not_create_changed_field_event() {
+    fn test_update_score_status_draft_creates_changed_field_event() {
         let db = make_db();
         db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
         db.insert_score(&make_score(&db, "sc1", "s1", Some("Violino")))
@@ -622,7 +622,7 @@ mod tests {
             )
             .unwrap();
 
-        assert_eq!(draft_events, 0);
+        assert_eq!(draft_events, 1);
     }
 
     // ── Score Metadata for Scanning ──
