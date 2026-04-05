@@ -278,9 +278,9 @@ export function useAppScanFlow({
         return;
       }
 
-      const totalSteps = 4;
+      const baseSteps = 1;
       let completedSteps = 0;
-      let currentTotalSteps = totalSteps;
+      let currentTotalSteps = baseSteps;
       const updateStepProgress = (changedFiles: number) => {
         dispatch({
           type: "SET_SCAN_PROGRESS",
@@ -305,6 +305,31 @@ export function useAppScanFlow({
       const result = await api.scanFilesForChanges();
       completedSteps += 1;
 
+      const changedCount = result.changed_files.length;
+      const failedCount = result.failed_files.length;
+      const recoveredCount = result.recovered_files?.length ?? 0;
+      const notFoundCount = result.not_found_files?.length ?? 0;
+
+      const hasPendingChanges = await api.hasPendingChanges();
+      const hasDetectedFileChanges =
+        changedCount > 0 || recoveredCount > 0 || notFoundCount > 0;
+
+      if (!hasPendingChanges && !hasDetectedFileChanges) {
+        updateStepProgress(changedCount);
+
+        if (!isAutomatic) {
+          toast.success("Verificação concluída sem alterações");
+        }
+
+        scheduleScanReset(1000);
+        return;
+      }
+
+      // Fluxo com alterações: 4 etapas base (verificar, compactar, eventos, upload).
+      // Pode virar 5 quando for necessário gerar snapshot automático.
+      currentTotalSteps = 4;
+      updateStepProgress(changedCount);
+
       dispatch({
         type: "SET_OPERATION_STATUS",
         payload: {
@@ -328,11 +353,6 @@ export function useAppScanFlow({
       });
       const eventsSummary = await api.generateEventsFile();
       completedSteps += 1;
-
-      const changedCount = result.changed_files.length;
-      const failedCount = result.failed_files.length;
-      const recoveredCount = result.recovered_files?.length ?? 0;
-      const notFoundCount = result.not_found_files?.length ?? 0;
       const generatedArchives = archiveSummary.generated ?? 0;
       const failedArchives = archiveSummary.failed ?? 0;
       updateStepProgress(changedCount);
@@ -353,6 +373,8 @@ export function useAppScanFlow({
         });
         await api.generateSnapshotFile();
         snapshotGenerated = true;
+        completedSteps += 1;
+        updateStepProgress(changedCount);
 
         if (!isAutomatic) {
           toast("Snapshot forçado: events.msgpack atingiu 2MB", {
@@ -365,12 +387,14 @@ export function useAppScanFlow({
         generatedArchives > 0 || eventsSummary.events_count > 0 || snapshotGenerated;
 
       if (hasCloudChanges) {
+        const uploadStep = snapshotGenerated ? 5 : 4;
+
         dispatch({
           type: "SET_OPERATION_STATUS",
           payload: {
-            title: `Etapa ${snapshotGenerated ? 5 : 4} - Upload para nuvem`,
+            title: `Etapa ${uploadStep} - Upload para nuvem`,
             detail: "Enviando arquivos alterados para a nuvem",
-            stepCurrent: snapshotGenerated ? 5 : 4,
+            stepCurrent: uploadStep,
             stepTotal: currentTotalSteps,
           },
         });
@@ -418,22 +442,13 @@ export function useAppScanFlow({
 
           await runSelectiveUploadWithProgress(Array.from(uploadPaths));
         }
-      } else {
-        dispatch({
-          type: "SET_OPERATION_STATUS",
-          payload: {
-            title: `Etapa ${snapshotGenerated ? 5 : 4} - Upload para nuvem`,
-            detail: "Nenhuma alteração nova para enviar",
-            stepCurrent: snapshotGenerated ? 5 : 4,
-            stepTotal: currentTotalSteps,
-          },
-        });
+
+        completedSteps += 1;
+        updateStepProgress(changedCount);
       }
 
       // Atualiza o marcador de "alterações aplicadas" somente ao concluir com sucesso.
       await api.markLocalChangesAsApplied();
-
-      completedSteps += 1;
       updateStepProgress(changedCount);
 
       if (notFoundCount > 0 && !isAutomatic) {

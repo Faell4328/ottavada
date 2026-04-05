@@ -1,9 +1,11 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useReducer,
   useCallback,
   useMemo,
+  useRef,
   type ReactNode,
 } from "react";
 import * as api from "../api/commands";
@@ -26,6 +28,7 @@ export function useAppState() {
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
+  const startupCloudSyncTriggeredRef = useRef(false);
 
   const getErrorMessage = useCallback((err: unknown, fallback: string) => {
     const message = extractErrorMessage(err);
@@ -116,6 +119,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
     loadCategories,
     getErrorMessage,
   });
+
+  useEffect(() => {
+    if (startupCloudSyncTriggeredRef.current) {
+      return;
+    }
+
+    if (state.isLoading || state.isFirstRun || !state.settings) {
+      return;
+    }
+
+    if (state.settings.computer_type !== "Client") {
+      return;
+    }
+
+    startupCloudSyncTriggeredRef.current = true;
+    void scanFilesForChanges(true);
+  }, [state.isLoading, state.isFirstRun, state.settings, scanFilesForChanges]);
 
   const value: AppContextValue = useMemo(
     () => ({

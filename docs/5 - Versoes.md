@@ -232,10 +232,11 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 ! Copiar como está no revisar (ao indexar um diretório).
 - [x] Arrumar bug: Ao clicar em editar uma partitura e clicar para abrir local do arquivo, está abrindo um diretório nada aver. Isso ocorre apenas no servidor.
 ! Copiar como está no revisar (ao indexar um diretório).
+- [x] Se não teve alteração, não é necessário executar nenhuma etapa do upload ao clicar "aplicar alterações".
+- [x] Ao iniciar o aplicativo, deve fazer consultar a nuvem (apenas cliente).
 
 ## v0.9
 - [ ] Gerar `database.msgpack.zst` de tempos em tempos. O objetivo é garantir em caso de perda total por algum motivo, o usuário não tenha que colocar TUDO novamente.
-- [ ] Ao iniciar o aplicativo, deve fazer consultar a nuvem (apenas cliente).
 
 ## v1.0
 - [ ] Montar um manual para o usuário, explicando cada detalhe do software para que ele consiga utilizar com o máximo de tranquilidade.
