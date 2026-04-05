@@ -59,7 +59,17 @@ Será documentando em JSON, mas na aplicação real é utilizando `MessagePack`.
 }
 ```
 
-# Arquivo `events.msgpack`
+# `backup.msgpack`
+
+## Automático
+! Esse arquivo é o backup que é gerado automaticamente a cada 3 dias. Caso o usuário não tenha alterado nada em três dias, não é gerado um backup. Seguindo a mesma estrutura e definição do `backup.msgpack`.
+! Ele é salvo em `/cloud/backup/`.
+
+## Manual
+! Esse arquivo é o backup manualmente pelo usuário. Ele deve possuir todas as informações do banco de dados, não sendo necessário configurações do `tauri-plugin-store`.
+! Ele é salvo aonde o usuário escolher.
+
+# `events.msgpack`
 
 Será documentando em JSON, mas na aplicação real é utilizando `MessagePack`.
 
@@ -317,7 +327,9 @@ Será documentando em JSON, mas na aplicação real é utilizando `MessagePack`.
 		// Timestamp do último snapshot implementado
 		"lastSnapshotTimestamp": 14821049124,
 		// Timestamp do último evento de alteração implementado
-		"lastChangeTimestamp": 12903812039
+		"lastChangeTimestamp": 12903812039,
+		// Timestamp do último backup automático gerado.
+		"lastBackupTimestamp": 12903812903,
 	}
 }
 ```

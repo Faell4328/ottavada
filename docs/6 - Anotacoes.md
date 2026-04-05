@@ -119,3 +119,11 @@ MicroScore
 	- A licença deve ficar tanto no servidor, quanto localmente. Exigindo na instalação acesso a internet.
 	- Com isso evita a pessoa enviar o instalador para outra pessoa e pronto.
 ! Estou anotando aqui apenas para colocar em meu "radar" esse assunto. Não sei ao certo como será feito.
+
+**05-04-2026**
+
+`rclone` dentro do projeto, antes da v1
+- Acredito que seja melhor adicionar o `rclone` ao projeto e criar uma página de configurações.
+- A configuração do `rclone` será feito pela aplicação. Acredito que isso irá facilitar de mais para o usuário final, não tendo que: instalar o `rclone`, configurar ele (tendo risco) e eventualmente realizar atualizações.
+- Com isso também, irei assumir a responsabilidade por manter o `rclone` atualizado, sendo mais fácil, apenas atualizando o aplicativo com a nova versão. Não precisando orientar o usuário, acessar a máquina remotamente ou ter que ir no local do computador.
+- Obviamente tem outras coisas que terei que implementar devido a licença `MIT`, mas faz parte. Mas no caso onde esse software irá começar a ser usado, onde a pessoal que irá utilizar é leiga (e no geral, na área de música), é a melhor opção.

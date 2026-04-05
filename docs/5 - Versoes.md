@@ -104,8 +104,8 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - v0.6 - Foco no `client`
 - v0.7 - Lapidando
 - v0.8 - Melhorias na usabilidade
-- v0.9 - Melhoria na confiança
-- v1.0 - Protótipo pronto
+- v0.9 - Melhorias na usabilidade e confiança
+- v1.0 - Adição de licença e telemetria.
 ## v0.4
 - [x] Atualizar bando de dados
 - [x] Atualizar `tauri-plugin-store`
@@ -236,16 +236,42 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [x] Ao iniciar o aplicativo, deve fazer consultar a nuvem (apenas cliente).
 
 ## v0.9
-- [ ] Gerar `database.msgpack.zst` de tempos em tempos. O objetivo é garantir em caso de perda total por algum motivo, o usuário não tenha que colocar TUDO novamente.
+- [ ]  Ao adicionar um arquivo na música, deve aparecer um modal (igual ao indexar diretório), mas com o diferencial: o nome da música não pode ser alterado (fica no input text, mas apenas `onlyread`), permitindo o usuário alterar nome da partitura/instrumento, abrir partitura e abrir local.
+
+- [ ] Remover as bibliotecas que não são utilizadas no projeto.
+- [ ] Atualizar o `tauri-plugin-store` com o novo campo.
+
+- [ ] Alterar o "exportar database.msgpack" para "exportar backup local".
+- [ ] Alterar o "importar dabase.msgpack" para "importar backup local".
+	- [ ] Ao importar, deve aparecer um toast avisando que foi importando com sucesso e o backup é da data de xxx. O toast deve ficar uns 5 segundos.
+- [ ] Gerar `backup.msgpack` (automático) a cada três dias e fazer o upload para o cloud. O objetivo é garantir em caso de perda total por algum motivo, o usuário não tenha que colocar TUDO novamente.
+	! A verificação é feita quando o aplicativo é iniciado e é feito a sincronização, para o cloud, apenas do diretório `cloud/backup`. Para não sincronizar os outros diretórios e ser mais rápido.
+	! Seguir praticamente o mesmo fluxo do "exportar database.msgpack" nas configurações.
+- [ ] Adicionar nas configurações um botão para "importar backup cloud"
+	- [ ] Ao importar, deve aparecer um toast avisando que foi importando com sucesso e o backup é da data de xxx. O toast deve ficar uns 5 segundos.
+	! Seguir praticamente o mesmo fluxo do "importar database.msgpack" nas configurações.
+- [ ] Adicionar validação de integridade em ambos os métodos de exportação (local e cloud). Para garantir que na hora que o usuário precisar não vai ter arquivo corrompido.
+
+- [ ] Implementar o `rclone` ao projeto, `/src-tauri/bin/rclone.exe`.
+	! Apenas a versão `x64`.
+- [ ] Adicionar o `copyright` e a licença MIT ao projeto. Adicionar uma página nas configurações, chamada **sobre**.
+- [ ] Adicionar a configuração do rclone no primeiro acesso.
+	! Apenas se a pessoa tiver o computador `x64`.
+- [ ] Adicionar a configuração do rclone na página de configurações.
+	! Apenas se a pessoa tiver o computador `x64`.
 
 ## v1.0
 - [ ] Montar um manual para o usuário, explicando cada detalhe do software para que ele consiga utilizar com o máximo de tranquilidade.
-- [ ] Criar licença e telemetria (quantas músicas, partituras, tempo de uso e etc).
+- [ ] Criar licença (por organização/computadores)
+- [ ] Criar telemetria (quantas músicas, partituras, tempo de uso e etc).
 
 ## Funcionalidades para v2 (apenas rascunho/ideias)
 
 - Tirar o cliente de `read-only`.
 - Backup utilizando pendrive ou outro meio local.
+- Baixar backup da nuvem.
+	! A ideia dessa funcionalidade é o seguinte. Por algum motivo, o usuário deletou os arquivos ou está em um novo computador, ele pode baixar todos os arquivos na nuvem para sua máquina.
+	! Evidentemente que partituras com `draft` ou que não possuem partitura sem versão `main`, não são possíveis de baixar.
 - Adicionar uma camada de cibersegurança.
 	- No começo, ele será utilizado em uma orquestra local (onde sou o único com conhecimento em informática). Mas futuramente esse software pode abranger outras organizações.
 - Possível adição de um novo `type` de computador `semi-server`.

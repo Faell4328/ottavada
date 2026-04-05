@@ -5,10 +5,11 @@
 - Sistema deve sempre verificar antes de agir.
 - Sistema deve ser transparente com que está fazendo.
 - Mais importante, sistema deve ser simples e confiável. Não é para adicionar firula, que não agregue ao objetivo principal.
+- Sistema de realizar backups periodicamente, para em caso de crash ou perda total, o usuário não precisa colocar todas as músicas manualmente novamente.
 
 ## Gerenciamento de Músicas e Partituras
 
-- **Adicionar:** música manualmente, arquivo individual, ou diretório inteiro
+- **Adicionar:** música manualmente e diretório inteiro
 - **Editar:** nome, compositor, arranjador, categorias, arquivo e status.
 - **Favoritar:** marcar/desmarcar como favoritos
 - **Pesquisar:** com sugestões automáticas por escopo (todas, favoritas, categoria)
@@ -27,6 +28,10 @@
 
 ---
 # Requisitos Não Funcionais
+
+## Usabilidade
+- O usuário deve poder escolher entre o `rclone` da máquina ou o `rclone` do projeto (sendo recomendando o do projeto e já vindo marcada como default).
+	! Apenas para computadores x64, pois x32 está praticamente morto e seria raro alguém ter um. Caso a pessoa tenha, deve fazer a instalação manualmente. Não ficando disponível a opção de utilizar o `rclone` do próprio aplicativo ou mudar para o `rclone` do aplicativo.
 
 ## Armazenamento Local
 
