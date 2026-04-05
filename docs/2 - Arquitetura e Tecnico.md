@@ -97,17 +97,26 @@ Diretório com os eventos:
 
 - Tauri (Rust)
 - Google Drive API (backup)
-- `xz` crate - Reduz tamanho para backup na nuvem
-- `rusqlite` crate - SQLite com suporte a FTS5
-- `serde` + `rmp-serde` - Leitura do arquivo `MessagePack`.
-- `fs2` - Espaço em disco
-- `thiserror` - Erros tipados
-- `tauri-plugin-dialog` - Diálogos nativos (seleção de arquivos/pastas)
-- `tauri-plugin-fs` - Acesso ao sistema de arquivos
-- `tauri-plugin-store` - Persistência de configurações
-- `tauri-plugin-notification` - Notificações ao usuário
-- `tracing` + `tracing-subscriber` - Para criar e processar logs
-- `tracing-appender` - Para salvar os logs
+ - `zstd` crate - Reduz tamanho para backup na nuvem
+ - `rusqlite` crate - SQLite com suporte a FTS5
+ - `serde` + `rmp-serde` - Leitura do arquivo `MessagePack`.
+ - `fs2` - Espaço em disco
+ - `thiserror` - Erros tipados
+ - `tauri-plugin-dialog` - Diálogos nativos (seleção de arquivos/pastas)
+ - `tauri-plugin-fs` - Acesso ao sistema de arquivos
+ - `tauri-plugin-store` - Persistência de configurações
+ - `tauri-plugin-notification` - Notificações ao usuário
+ - `tracing` + `tracing-subscriber` - Para criar e processar logs
+ - `tracing-appender` - Para salvar os logs
+
+---
+
+**Observações sobre dependências**
+
+- Front-end: `@tanstack/react-virtual` não está em `package.json` e não é importado no código — não é usado.
+- Front-end: o projeto usa `@tauri-apps/api` para chamadas IPC entre frontend e backend (ver `src/api/commands.ts` e `src/App.tsx`).
+- Back-end: o `Cargo.toml` usa `zstd` para compressão (substituindo `xz`).
+- Back-end: plugins carregados em runtime: `tauri-plugin-opener`, `tauri-plugin-dialog`, `tauri-plugin-shell`, `tauri-plugin-fs`, `tauri-plugin-store` e `tauri-plugin-notification` (ver `src-tauri/Cargo.toml` e `src-tauri/src/lib.rs`).
 
 ---
 # Interface
