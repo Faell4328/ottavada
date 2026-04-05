@@ -21,6 +21,7 @@ interface TextInputProps {
   onChange: (value: string) => void;
   placeholder?: string;
   disabled?: boolean;
+  readOnly?: boolean;
   autoFocus?: boolean;
   onKeyDown?: (e: React.KeyboardEvent) => void;
   onFocus?: () => void;
@@ -32,6 +33,7 @@ export function TextInput({
   onChange,
   placeholder,
   disabled,
+  readOnly,
   autoFocus,
   onKeyDown,
   onFocus,
@@ -42,9 +44,12 @@ export function TextInput({
       type="text"
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full rounded border border-[#c5cfdb] bg-white px-3 py-2 text-sm text-[#344b61] placeholder-[#a3b5c7] outline-none focus:border-[#7ba0d4] focus:ring-1 focus:ring-[#7ba0d4]/30"
+      className={`w-full rounded border border-[#c5cfdb] px-3 py-2 text-sm text-[#344b61] placeholder-[#a3b5c7] outline-none focus:border-[#7ba0d4] focus:ring-1 focus:ring-[#7ba0d4]/30 ${
+        readOnly ? "bg-[#f2f5fa] text-[#5d738b]" : "bg-white"
+      }`}
       placeholder={placeholder}
       disabled={disabled}
+      readOnly={readOnly}
       autoFocus={autoFocus}
       onKeyDown={onKeyDown}
       onFocus={onFocus}

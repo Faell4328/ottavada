@@ -4,6 +4,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { useAppState } from "../context/AppContext";
 import { EditMusicModal } from "./EditMusicModal";
 import { EditScoreModal } from "./EditScoreModal";
+import { AddScoreToSongModal } from "./AddScoreToSongModal";
 import { MemoizedSongRow } from "./SongRow";
 import { MemoizedScoreRow } from "./ScoreRow";
 import { getDirectoryPath, isSamePath } from "../utils/paths";
@@ -11,7 +12,7 @@ import { useSearch } from "../hooks/useSearch";
 import { compareInstrumentNames } from "../utils/instrumentOrder";
 import * as api from "../api/commands";
 import toast from "react-hot-toast";
-import type { SongListItem, ScoreListItem } from "../types";
+import type { SongListItem, ScoreListItem, IndexedFile } from "../types";
 import { getErrorMessage } from "../utils/errors";
 import { getSidebarViewLabel } from "../utils/sidebarView";
 
@@ -35,6 +36,9 @@ export default function SongsList() {
   const [editingScore, setEditingScore] = useState<ScoreListItem | null>(null);
   const [isEditScoreModalOpen, setIsEditScoreModalOpen] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [songForAddFile, setSongForAddFile] = useState<SongListItem | null>(null);
+  const [pendingFileToAdd, setPendingFileToAdd] = useState<IndexedFile | null>(null);
+  const [isAddFileModalOpen, setIsAddFileModalOpen] = useState(false);
 
   const closeAllMenus = () => setOpenMenuId(null);
 
@@ -72,7 +76,30 @@ export default function SongsList() {
     return map;
   }, [state.songs]);
 
-  async function handleAddFileToSong(songId: string) {
+  const closeAddFileModal = () => {
+    setIsAddFileModalOpen(false);
+    setSongForAddFile(null);
+    setPendingFileToAdd(null);
+  };
+
+  async function handleSaveFileToSong(file: IndexedFile) {
+    if (!songForAddFile) {
+      throw new Error("Música inválida para adicionar arquivo");
+    }
+
+    try {
+      const updatedSong = await api.addScoreToSong(songForAddFile.id, file);
+      search.clearSearch();
+      await loadSongs();
+      selectSong(updatedSong);
+      toast.success("Arquivo adicionado com sucesso");
+    } catch (err) {
+      console.error("Failed to add file to song:", err);
+      throw new Error(getErrorMessage(err));
+    }
+  }
+
+  async function handleAddFileToSong(song: SongListItem) {
     try {
       const selected = await open({
         directory: false,
@@ -92,11 +119,12 @@ export default function SongsList() {
         return;
       }
 
-      const updatedSong = await api.addScoreToSong(songId, indexedFile);
-      search.clearSearch();
-      await loadSongs();
-      selectSong(updatedSong);
-      toast.success("Arquivo adicionado com sucesso");
+      setSongForAddFile(song);
+      setPendingFileToAdd({
+        ...indexedFile,
+        name: song.name,
+      });
+      setIsAddFileModalOpen(true);
     } catch (err) {
       console.error("Failed to add file to song:", err);
       toast.error(`Erro ao adicionar partitura: ${getErrorMessage(err)}`);
@@ -178,7 +206,7 @@ export default function SongsList() {
                         closeAllMenus();
                       }}
                       onToggleFavorite={() => toggleFavorite(song.id)}
-                      onAddFile={() => handleAddFileToSong(song.id)}
+                      onAddFile={() => handleAddFileToSong(song)}
                       onEdit={() => {
                         setEditingSong(song);
                         setIsEditMusicModalOpen(true);
@@ -233,6 +261,13 @@ export default function SongsList() {
         instrument={editingScore}
         onClose={() => { setIsEditScoreModalOpen(false); setEditingScore(null); }}
         onSave={handleSaveScore}
+      />
+      <AddScoreToSongModal
+        isOpen={isAddFileModalOpen}
+        songName={songForAddFile?.name ?? ""}
+        file={pendingFileToAdd}
+        onClose={closeAddFileModal}
+        onSave={handleSaveFileToSong}
       />
     </section>
   );
