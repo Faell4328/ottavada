@@ -37,10 +37,6 @@ vi.mock("@tauri-apps/plugin-dialog", () => ({
   open: vi.fn(),
 }));
 
-vi.mock("@tauri-apps/plugin-store", () => ({
-  load: vi.fn(),
-}));
-
 vi.mock("react-hot-toast", () => ({
   default: {
     success: vi.fn(),

@@ -238,9 +238,9 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 ## v0.9
 - [x]  Ao adicionar um arquivo na música, deve aparecer um modal (igual ao indexar diretório), mas com o diferencial: o nome da música não pode ser alterado (fica no input text, mas apenas `onlyread`), permitindo o usuário alterar nome da partitura/instrumento, abrir partitura e abrir local.
 
-- [ ] Adicionar função para o cliente favoritar uma música vai menu overflow.
-- [ ] Remover as bibliotecas que não são utilizadas no projeto.
-- [ ] Atualizar o `tauri-plugin-store` com o novo campo.
+- [x] Adicionar função para o cliente favoritar uma música via menu overflow da música.
+- [x] Remover as bibliotecas que não são utilizadas no projeto.
+- [x] Atualizar o `tauri-plugin-store` com o novo campo.
 
 - [ ] Alterar o "exportar database.msgpack" para "exportar backup local".
 - [ ] Alterar o "importar dabase.msgpack" para "importar backup local".

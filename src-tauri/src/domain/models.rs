@@ -111,6 +111,7 @@ pub struct AppSettings {
     pub backup_songs_step: Option<Vec<SongBackupStatus>>,
     pub last_snapshot_timestamp: Option<i64>,
     pub last_change_timestamp: Option<i64>,
+    pub last_backup_timestamp: Option<i64>,
 }
 
 impl Default for AppSettings {
@@ -128,6 +129,7 @@ impl Default for AppSettings {
             backup_songs_step: None,
             last_snapshot_timestamp: None,
             last_change_timestamp: None,
+            last_backup_timestamp: None,
         }
     }
 }

@@ -84,33 +84,40 @@ function SongRow({
         <td className="px-3.5 py-2">
           <div className="flex items-center justify-between">
             <span className="text-[#5c7089]">—</span>
-            {!isClient && (
-              <ContextMenu
-                isOpen={isMenuOpen}
-                onToggle={(e) => {
-                  e.stopPropagation();
-                  isMenuOpen ? onMenuClose() : onMenuOpen(menuId);
-                }}
-              >
-                <ContextMenuItem
-                  label={song.is_favorite ? "Remover de favoritos" : "Adicionar aos favoritos"}
-                  onClick={(e) => handleMenuAction(e, onToggleFavorite)}
-                />
-                <ContextMenuItem
-                  label="Adicionar arquivo"
-                  onClick={(e) => handleMenuAction(e, onAddFile)}
-                />
-                <ContextMenuItem
-                  label="Editar"
-                  onClick={(e) => handleMenuAction(e, onEdit)}
-                />
-                <ContextMenuItem
-                  label="Deletar"
-                  onClick={(e) => { e.stopPropagation(); handleDelete(); }}
-                  isLast
-                />
-              </ContextMenu>
-            )}
+            <ContextMenu
+              isOpen={isMenuOpen}
+              onToggle={(e) => {
+                e.stopPropagation();
+                isMenuOpen ? onMenuClose() : onMenuOpen(menuId);
+              }}
+            >
+              <ContextMenuItem
+                label={song.is_favorite ? "Remover de favoritos" : "Adicionar aos favoritos"}
+                onClick={(e) => handleMenuAction(e, onToggleFavorite)}
+                isLast={isClient}
+              />
+
+              {!isClient && (
+                <>
+                  <ContextMenuItem
+                    label="Adicionar arquivo"
+                    onClick={(e) => handleMenuAction(e, onAddFile)}
+                  />
+                  <ContextMenuItem
+                    label="Editar"
+                    onClick={(e) => handleMenuAction(e, onEdit)}
+                  />
+                  <ContextMenuItem
+                    label="Deletar"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete();
+                    }}
+                    isLast
+                  />
+                </>
+              )}
+            </ContextMenu>
           </div>
         </td>
       </tr>

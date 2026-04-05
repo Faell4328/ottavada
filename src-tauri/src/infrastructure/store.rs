@@ -97,6 +97,9 @@ impl SystemStore {
         let last_change_timestamp = cloud
             .and_then(|v| v.get("lastChangeTimestamp"))
             .and_then(|v| v.as_i64());
+        let last_backup_timestamp = cloud
+            .and_then(|v| v.get("lastBackupTimestamp"))
+            .and_then(|v| v.as_i64());
 
         // Parse backup database step
         let backup_database_step = store.get("backup_database_step").and_then(|v| {
@@ -159,6 +162,7 @@ impl SystemStore {
             backup_songs_step,
             last_snapshot_timestamp,
             last_change_timestamp,
+            last_backup_timestamp,
         };
 
         Ok(settings)
@@ -185,6 +189,7 @@ impl SystemStore {
         store["cloud"] = serde_json::json!({
             "lastSnapshotTimestamp": settings.last_snapshot_timestamp.unwrap_or(0),
             "lastChangeTimestamp": settings.last_change_timestamp.unwrap_or(0),
+            "lastBackupTimestamp": settings.last_backup_timestamp.unwrap_or(0),
         });
 
         // Chaves legadas mantidas por compatibilidade enquanto o frontend migra completamente.
@@ -276,6 +281,10 @@ impl SystemStore {
 
         if let Some(last_change_timestamp) = settings.last_change_timestamp {
             store["cloud"]["lastChangeTimestamp"] = serde_json::json!(last_change_timestamp);
+        }
+
+        if let Some(last_backup_timestamp) = settings.last_backup_timestamp {
+            store["cloud"]["lastBackupTimestamp"] = serde_json::json!(last_backup_timestamp);
         }
 
         self.save_store(&store)?;

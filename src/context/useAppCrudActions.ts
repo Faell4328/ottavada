@@ -40,11 +40,6 @@ export function useAppCrudActions({
   }, [dispatch]);
 
   const toggleFavorite = useCallback(async (songId: string) => {
-    if (state.settings?.computer_type === "Client") {
-      toast.error("Operação não permitida para cliente");
-      return;
-    }
-
     try {
       const isFavorite = await api.toggleFavorite(songId);
       dispatch({
@@ -54,7 +49,7 @@ export function useAppCrudActions({
     } catch (err) {
       console.error("Failed to toggle favorite:", err);
     }
-  }, [dispatch, state.settings?.computer_type]);
+  }, [dispatch]);
 
   const createCategory = useCallback(async (name: string) => {
     try {
