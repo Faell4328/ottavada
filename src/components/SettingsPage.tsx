@@ -8,6 +8,7 @@ import * as api from "../api/commands";
 import { getErrorMessage } from "../utils/errors";
 import { useRcloneTest } from "../hooks/useRcloneTest";
 import { ChangeComputerTypeModal } from "./ChangeComputerTypeModal";
+import { RcloneLicenseModal } from "./RcloneLicenseModal";
 import { formatBackupTimestamp } from "../utils/formatters";
 import type { AppSettings } from "../types";
 
@@ -41,6 +42,7 @@ export default function SettingsPage() {
   const [isGeneratingBackupCloud, setIsGeneratingBackupCloud] = useState(false);
   const [rcloneRemote, setRcloneRemote] = useState("");
   const [rclonePath, setRclonePath] = useState("ScoreMaestro");
+  const [isRcloneLicenseModalOpen, setIsRcloneLicenseModalOpen] = useState(false);
 
   const { isTestingRclone, testRclone } = useRcloneTest({
     remote: rcloneRemote,
@@ -463,6 +465,18 @@ export default function SettingsPage() {
           </p>
         </Section>
 
+        {/* Sobre */}
+        <Section title="Sobre">
+          <button
+            type="button"
+            onClick={() => setIsRcloneLicenseModalOpen(true)}
+            title="abrir licença"
+            className="inline-flex items-center gap-1 text-sm font-medium text-[#4f84d7] underline decoration-[#7ba0d4] underline-offset-2 transition-colors hover:text-[#3d6fb8] hover:decoration-[#3d6fb8] cursor-pointer"
+          >
+            <span>Este software utiliza rclone (licença MIT)</span>
+          </button>
+        </Section>
+
         {/* Save */}
         <div className="mt-6 flex justify-end">
           <button
@@ -494,6 +508,11 @@ export default function SettingsPage() {
         currentType={settings.computer_type as "Server" | "Client"}
         onClose={() => setIsChangeComputerTypeModalOpen(false)}
         onConfirm={handleConfirmComputerTypeChange}
+      />
+
+      <RcloneLicenseModal
+        isOpen={isRcloneLicenseModalOpen}
+        onClose={() => setIsRcloneLicenseModalOpen(false)}
       />
     </div>
   );

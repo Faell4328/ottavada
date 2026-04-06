@@ -262,18 +262,20 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 	! Ele deve atualizar no `tauri-plugin-store` o campo responsável pelo timestamp do último backup na nuvem.
 - [x] Adicionar validação de integridade em ambos os métodos de exportação (local e cloud). Para garantir que na hora que o usuário precisar não vai ter arquivo corrompido.
 
+**rclone**
 - [x] Implementar o `rclone` ao projeto, `/src-tauri/bin/rclone.exe`.
-- [ ] Adicionar nas configurações um campo chamado "Sobre".
-	- [ ] Adicionar nesse campo o texto: "Este software utiliza rclone (licença MIT)". Ao clicar deve abrir a licença completa. Caso o usuário parar o mouse sobre ele, irá aparecer "abrir licença". Deve ter um estilização de link (bonito).
-	- [ ] A licença deve abrir em um modal com o texto da licença.
+- [x] Adicionar nas configurações um campo chamado "Sobre".
+	- [x] Adicionar nesse campo o texto: "Este software utiliza rclone (licença MIT)". Ao clicar deve abrir a licença completa. Caso o usuário parar o mouse sobre ele, irá aparecer "abrir licença". Deve ter um estilização de link (bonito).
+	- [x] A licença deve abrir em um modal com o texto da licença.
 
 - [ ] Ajustando página de primeiro acesso, etapa de "Configure o Rclone".
+	- [ ] Atualize o texto do primeiro acesso, não é necessário mais baixar o rclone.
 	- [ ] Antes do usuário testar o rclone, o usuário deve escolher o campo "provedor de nuvem". Sendo "koofr" e "google drive", sendo o "koofr" marcado por padrão. Deve ter um texto descrevendo, avisando que o koofr e o google drive, tendo um texto em cima do "koofr": "recomendado".
 	- Na parte de baixo deve ter as configurações, refletindo a opção escolhida:
 	- [ ] Koofr - O usuário precisa adicionar as credências do "koofr" (`https://app.koofr.net/`), solicitando a senha do aplicativo criada no site (`rclone obscure "SUA_SENHA"` e depois `rclone --config ./rclone.conf config create meuKoofr koofr user=email password=senha_obscure`, precisa ajustar o caminho do config igual na documentação)
 	- [ ] Google Drive - O usuário precisar autenticar via navegador web (`rclone --config ./rclone.conf authorize "drive"` e depois `rclone --config ./rclone.conf config create meuDrive drive token='JSON_AQUI'`, precisa ajustar o caminho do config igual na documentação).
 	! Depois disso, deve ir para etapa de teste (igual o fluxo normal)
-- [ ] Migrar do "rclone do sistema operacional" para o "rclone do projeto". O binário está em: `src-tauri/bin/rclone.exe`. Para chamar é necessário: `rclone --config /caminho/do/seu/rclone.conf ...`, precisa ajustar o caminho do config igual na documentação
+- [ ] Migrar do "rclone do sistema operacional" para o "rclone do projeto". O binário está em: `src-tauri/bin/rclone.exe`. Para chamar é necessário: `rclone --config /caminho/do/seu/rclone.conf ...`, precisa ajustar o caminho do config igual na documentação.
 
 ## v1.0
 - [ ] Montar um plano para atualizar o software.
