@@ -1,288 +1,129 @@
-Para a organização (orquestra) que estou em mente que estou desenvolvendo o software, possui o seguinte cenário: 
-- 1 computador na Igreja (utilizando no ensaio), utilizando para consultar e tirar copia, e raramente faz alterações diretamente nele.
-- 1 computador na Casa do Maestro, utilizado para fazer alteração nas partituras e as vezes tirar copia.
+# Observações
 
-! Irei resolver esse caso especifico até a versão v1, depois, posso tentar expandir.
+- Os arquivos com as partituras em `.tar.zst` possuem em média 1MB e compressão e descompressão é quase instantânea.
 
-# Documentação velha - Apenas anotação
-## Funcionalidades para v0.1 - base sólida
-- [x] Corrigir inconsistências da interface
-	- [x] Remover o `VersionPanel`.
-	- [x] Alterar de `Modificado` para `Categorias` (listar as categorias que faz parte, ex: "Harpa", "Clássica")
-	- [x] Remover os ícones de "favoritar", "adicionar partitura", "adicionar diretório" e "editar", passar tudo para um "overflow menu" com essas opções (com ícone de "...")
-	- [x] Adicionar "overflow menu" na partitura/instrumento, no momento deixar apenas a opção "teste", ao clicar vai ter um `toast` com a mensagem "testado".
-	- [x] Remover o efeito de seleção ao clicar em alguma partitura/instrumento dentro da música.
-- [x] Atualizar estrutura do banco
-- [x] Revisar adicionar música/partitura
-- [x] Revisar atualizar música
-- [x] Revisar favoritos
-- [x] Verificar dependências do projeto (se tem alguma não utilizada e se tem todas instaladas)
-- [x] Adicionar sistema de log
-	- [x] Garantir que está salvando o `C:\Users\<seu-usuario>\AppData\Roaming\<nome-do-app>\`
-- [x] Deletar música e partitura  (apenas no programa).
-	- [x] O programa deve abrir um modal de confirmação (igual para alterar o status da partitura).
+! Eu preciso tomar cuidado em como vou fazer a atualização do software em produção. É preciso ter um plano para não quebrar o software já funcionando ou pelo menos uma forma de quebrar e recuperar ele rapidamente.
 
-## Funcionalidades para v0.2 - funcionamento local completo
-- [x] Mudar as informações do sistema do banco de dados para o `tauri-plugin-store`
-- [x] Implementar a função para detectar alteração no arquivo
-	- [x] Implementar no Rust
-	- [x] Implementar no Front
-	- [x] Testar
-- [x] Implementar fluxo `draft` → `main`
-	- [x] No overflow menu das partituras, deve ter a opção (Definir como `main` - aparecer e funcionar apenas se tiver `draft`). Ao clicar deve abrir um modal de confirmação, "você realmente deseja mudar o arquivo para `main`?"
-	- [x] Também no overflow menu das partituras deve ter a opção (Definir como `draft` - aparecer e funcionar apenas se tiver como `main`). Ao clicar deve abrir um modal de confirmação, "você realmente deseja mudar o arquivo para `draft`?"
-- [x] Adicionar função para listar todos os rascunhos ativos
-- [x] Refatoração e adicionar testes
-	- [x] Refatorar e adicionar teste no front
-	- [x] Refatorar e adicionar teste no back
-- [x] Atualizar o banco de dados (back e front), adicionando a tabela de `directory`
-- [x] Adicionar o status e funcionalidade do `not found`
-- [x] Adicione "Partituras não encontradas" na Sidebar.
-- [x] Atualizar banco de dados, para ficar igual o documento. Também atualize o `tauri-plugin-store`.
-- [x] Adicione um bloquei para que o usuário não fique clicando várias vezes em "verificar alterações".
-- [x] Adicionar suporte Cliente/Servidor
-	- [x] Atualizar o `tauri-plugin-store` adicionando o `type`. 
-	- [x] Atualizar página de primeiro acesso (é preciso adicionar a opção para o usuário escolher entre "Cliente" e "Servidor"). Coloque um textinho orientando o que cada um faz.
-	- [x] Adicione nas configurações a opção para alterar (quando for marcada deve pedi confirmação, tipo para deletar uma partitura).
-	- [x] Implementar restrições (toda restrição deve ser implementada no front e back).
-		- [x] Não permitir que o cliente adicione música diretamente (adicionar nova música, adicionar arquivo e indexar diretório).
-		- [x] Não permitir que o cliente delete uma partitura.
-		- [x] Não permitir que o cliente muda o status da partitura.
-		- [x] Alterar o status para `pending`.
-			- [x] Caso o Cliente altere informações da música, a música deve ficar com status de `pending`.
-			- [x] Caso o Cliente altere informação da partitura, a música deve ficar com status de `pending`.
-			- [x] Caso o Cliente adicione uma categoria não é necessário atualizar, mas caso ele mude a categoria ou adicione uma nova categoria a uma música, a música deve ficar com status `pending`.
-		- [x] Adicionar alterações nas tabelas de alterações.
-		- Um detalhe importante, quando for arquivo, não vai ter `oldValue` e `newValue`, vai ter apenas `field` com o valor `file`.
-	- [x] O botão de "verificar alterações" no Cliente, deve ter o comportamento diferente. No Servidor ele busca nos diretórios e depois vai buscar no Drive (não implementado), no Cliente é apenas no Drive (não implementando).
-- [x] Adicionar modal para confirmar alteração de tipo do computador.
-- Em hipótese alguma deve alterar antes do usuário confirmar no modal.
-- Deve ser um modal e não um confirm genérico.
-- Para a pessoa mudar, ela precisa esperar 5 segundos (botão desativado com contagem de tempo).
-- O modal deve transmitir o impactado da mudança, tendo uma grande exclamação no topo.
-- [x] Refatoração
-	- [x] Refatorar front
-	- [x] Refatorar back
+---
 
-## Funcionalidades para v0.3 - cloud
-- [x] Criar MessagePack com base nas informações do banco de dados.
-- [x] Atualizar na página de primeiro acesso.
-	- [x] Remover a solicitação do arquivo json do Accout Service.
-	- [x] Adicionar no lugar a pagina de configuração do rclone.
-	- [x] Deve ter um botão de "fazer teste", onde será gerado um arquivo no diretório do `tauri-plugin-store`, dentro de (`/{tauri-plugin-store}/nuvem`): `nuvem/`. Esse arquivo é um .txt que vai ter o conteúdo "Upload feito com sucesso". Ao clicar no botão será executado a criação e o upload do arquivo.
-- [x] Atualizar a página de configurações.
-	- [x] Adicione um botão de "testar rclone", com objetivo de testar se o rclone está funcionando. O teste deve ser o mesmo que no primeiro acesso.
-- [x] Atualizar para os arquivos `msgpack.zst` será gerado dentro do diretório `/nuvem`
-- [x] Atualizar estrutura do `tauri-plugin-store`.
-- [x] Salvar as informações digitadas na página de primeiro acesso. No path o default deve ser "ScoreMaestro", a pessoa pode alterar o valor do input se quiser, mas será preenchido com isso.
-- [x] Atualizar as configurações para buscar as informações do `tauri-plugin-store`.
-- [x] Implementar o rclone para fazer upload ao Google Drive.
-- [x] Atualize a estrutura do `database.msgpack` gerado.
-- [x] Verificar se os campos de data estão sendo devidamente atualizado.
-- [x] Atualizar o banco de dados para implementar uma tabela nova.
-- [ ] Remover o `main` para `draft` do overflow menu.
-- [ ] Atualizar o banco de dados e verificar se está correto o tauri-plugin-store.
-- [ ] Atualizar o "verificar alterações".
-! Deve mostrar no `statusBar` todo o progresso e etapas que está sendo feito.
-- [ ] Implementar função para leitura e comparação do que mudou do MessagePack que outro enviou.
-- [ ] Atualizar o "Siderbar":
-- [ ] Adicionar o campo de "pendente revisão".
-- [ ] Ao clicar deve listar de forma organizar e por música, todas as alterações feitas e por quem.
-- [ ] A opções "rascunhos ativos", "partituras não encontras" e "pendente revisão" deve aparecer apenas para o computador com `type` de servidor e não cliente.
-- [ ] Tratamento de falhas
+**19-03-2026** - Estava cogitando utilizando o `notify`, mas, ele vai dar mais problema que benefício. Então estou buscando uma alternativa melhor e mais robusta.
+Solução:
+- Será criado outra tabela chamado "diretório", ao invés de salvar o caminho completo do arquivo, será salvo apenas o nome e a extensão do arquivo, e o caminho será salvo nessa tabela.
+- Esse problema não vai trazer otimizações significativas, mas vai trazer mais clareza e organização. Usando uma paginação por diretórios e ficando mais claro até para o usuário, ex: `analizando diretório: /musica/joel amarim`, também é bom para logs e debug.
+- Com isso a verificação será feita "manualmente", comparando o "size + timestamp" dos arquivos no diretório para ver se teve alteração ou não.
+- Caso seja encontrado um arquivo no diretório que não está no banco de dados, ele deve ser ignorado (pula).
 
-# Documentação Nova - Apenas anotação
+**20-03-2026** - Estou com dúvida em como integrar o Cliente e Servidor na aplicação. Não sei como vai ser o fluxo, o banco de dados e etc.
+- A ideia é simples: o cliente altera, o sistema deve marcar que foi alterado. Vou partir do principio de confiança, já que é um software local e que pessoas leigas iram utilizar.
+- Solução:
+	- Criar um tabela para as alterações. Nessa tabela deve ter as informações antigas e novas.
+	- Com base nisso, vai ter um modal ou página, que vai listar todas as alterações pendentes (para servidor) que foi feita pelo cliente, ele vai aprovar ou recusar.
+	- Os que foram aprovados são aplicados na tabela definitiva, os que são recusados vão ser descartados.
+	- Caso seja um arquivo, deve ter a opção para o usuário clicar para ver o original e o alterado.
+- ! Atenção: Quando a alteração (`field`) for  `file`, preciso tomar cuidado e elaborar um bom plano para que não dê conflito ou fique desorganizado. 
 
-! Para agilizar o desenvolvimento, essa funcionalidades abaixo só serão implementadas na v1:
-- O cliente pode fazer proposta de alteração.
-	- O cliente até a v1, será 100% consumidor, não podendo alterar NADA.
-	- O objetivo é agilizar o desenvolvimento até a v1. O fluxo de aprovação e implementação de alteração no servidor é complicado e chato.
+**20-03-2026** - Problemas futuros que preciso ter resolvido ou pensando em uma solução para resolver.
+- Alterações grandes no banco dados.
+- Alterações grande no shema (MessagePack).
+- Melhor resolução de conflitos (vários computadores atualizando ao mesmo tempo)
 
-## Etapas
-- v0.4 - Casa limpa
-- v0.5 - Implementando as funcionalidades
-- v0.6 - Foco no `client`
-- v0.7 - Lapidando
-- v0.8 - Melhorias na usabilidade
-- v0.9 - Melhorias na usabilidade e confiança
-- v1.0 - Adição de licença e telemetria.
-## v0.4
-- [x] Atualizar bando de dados
-- [x] Atualizar `tauri-plugin-store`
-- [x] Corrigir o código que utiliza o banco de dados e `tauri-plugin-store`
-- [x] Corrigir os fluxos existentes
-- [x] Refatorar o código e valide os teste
-- [x] Atualiza o front, altere: "Todas as Partituras" para "Todas as Músicas", quantidade de partituras para quantidade de música e "Nenhuma partitura encontrada" para "Nenhuma música encontrada"
+**21-03-2026** - Problema com Google Drive.
+- Quebrei a cabeça ontem e hoje tentando fazer um simples update.
+- Então cheguei a três possibilidades:
+	1. Utilizar python de fundo com SKD.
+	- Tem os seguintes problemas:
+		1. Teria que ter python instalado no computador.
+		2. Teria que dar manutenção (atualização e ajuste no código).
+	1. Utilizar outro provedor de nuvem, pCloud.
+	- Tem os seguinte problemas:
+		1. Não é tão robusto e confiável como o Google Drive (padrão do mercado).
+		2. Nunca utilize e não faço ideia como funciona. Aparenta ser mais simples.
+	1. Utilizar rclone para tomar conta.
+	- Tem o seguinte problema:
+		1. Precisa ter o rclone instalado e manter atualizado.
+! Minha escolha foi utilizar o rclone, devido a ter que fazer menos manutenção no código, é só simplesmente atualizar ele e pronto.
+! Mas, caso eu veja que vai dar muita dor de cabeça, posso utilizar o rclone com pCloud (ou via API direto no código). Agora, minha decisão é o Google Drive, mas estarei estudando e testando o pCloud em paralelo.
 
-## v0.5
-- [x] Adicionar a geração dos arquivos `{songId}.tar.zst`.
-- [x] Adicionar a função de `changedField` em todos os fluxos necessário (ex: adicionar música, partitura, editar, deletar, mudar status e etc e etc)
-- [x] Adicionar a geração de `events.msgpack`.
-- [x] Adicionar a geração de  `snapshot.msgpack`.
-	- [x] Adicionar botão para forçar a geração do `snapthost.msgpack` (configurações).
-! Ao força a geração do `snapshot.msgpack` ele deve só ignorar a regra do 2MB (forçando a geração).
-- [x] Adicionar o `backup.msgpack`.
-	- [x] Adicionar botão para exportar o `backup.msgpack` (configurações)
-	- [x] Adicionar botão para importar o `backup.msgpack` (configurações)
-- [x] Refatorar o front e back.
+**23-03-2026** - Mudanças e melhorias
+- 1° Alteração no banco de dados, removendo tabelas inúteis e padronizando o nome.
+	- Existiam muitas tabelas e campos que faziam sentidos no começo e em minha cabeça, mas agora não fazem mais.
+- 2° Alteração de `.xz` para `.zst` (zstd - Zstandard).
+	- Devido ao melhor equilibro, a melhor escolha é o `Zstandard`.
+- 3° Adição de fluxos detalhados.
 
-## v0.6
-- [x] Sincronização do rclone na Nuvem
-- [x] Consultar e implementar as alterações do servidor no cliente
-- [x] Corrigir cliente
-	- [x] Não é para aparecer os opções no overflow menu e tirar essa merda de texto: "não permitido para cliente"
-	- [x] Adicionar fluxo para abrir a partitura localmente, como especificado
-- [x] Limpar o diretório `/tmp` ao iniciar o aplicativo
-- [x] Corrigir o problema e estar enviado partitura "not found" para a nuvem
-	- [x] Removendo o registro do evento "not found" no "changedField"
-- [x] Corrigindo o problema de estar enviando partitura "draft" para a nuvem
+**24-03-20226** 
 
-## v0.7
-- [x] Quando clicar em "verificar alterações" e não tiver internet, deve emitir um toast avisando.
-- [x] Corrigir problema de não deletar o arquivo de partitura ao deletar a música/partituras no aplicativo.
-- [x] Corrigir problema de não gerar o `{songId}.tar.zst` ao deletar uma partitura da música.
-- [x] Ajustes
-	- [x] Remover a opção "adicionar diretório" no overflow menu de uma música.
-	- [x] Regerar o `{songId}.tar.zst` quando uma nova partitura for adicionada a música.
-	- [x] Atualizar a lista da música quando uma nova partitura for adicionada a música.
-- [x] Reduza a quantidade de toast do "verificar alterações". Principalmente no servidor que fala quantos eventos foram adicionados. Deixe apenas os toast importantes
-- [x] Arrumar o testar rclone na página de primeiro acesso e configurações, para que seja assíncrono.
-- [x] Atualizar o banco de dados, eventos e extensão do cliente.
-	- [x] Adicionar extensão no cliente, está como default `.score` (o que está horrível). Mostrar a extensão real.
-- [x] Tirar a opção offline na página de primeiro acesso e no back.
-- [x] Arrumar o diretório temporário não é `/cloud/tmp` é `/tmp`, igual na documentação.
-! Se não for dessa forma vai arquivo temporário para o cliente.
-- [x] Arrumar a geração de snapshot (não está gerado)
-	- [x] Verificar se está forçando o cliente a implementar o snapshot, igual a documentação
-- [x] Ordenar tanto o servidor e cliente em ordem alfabetica (música e partitura)
-- [x] Refatorar o front e back
-	- [x] Mostrando o progresso de upload e download
-	- [x] Melhorando o rclone e a compressão (`tar.zst`) e outras melhorias
-	- [x] Corrigindo problema de nome truncado ao adicionar música com partitura
-	- [x] Melhorando o `StatusBar`.
-- [x] Mais refatoração
-- [x] Forçando a regerar os arquivos `{songId}.tar.zst` ao "importar database" e "força snaphost"
-- [x] Melhorando a sincronização do servidor com a nuvem
+Mudando estrategia de upload para Nuvem
+- Estava pensando em só fazer upload para a Nuvem quanto todas as partituras da música fossem `main`. Mas isso pode frustar o usuário.
+- Cenário: Foi feito alteração na partitura da Flauta e Tuba, a flauta foi finalizada e já pode ser utilizada dos ensaios, já a Tuba precisa de mais alterações.
+- A escolha de fazer upload Nuvem apenas quando a música toda estiver como `main` é mais simples. A alternativa de ser individual por partitura é mais complexa, mas vai agregar para o usuário.
 
-## v0.8
-- [x] Arrumar bug no windows. Ao adicionar uma música com diretório, ele mostra do arquivo, ex: "VIVALDE TIME - Alto Sax 1.musx" e abaixo mostra o diretório, ex: "/home/rhafa/Documents/arranjo Lopes/PEÇAS CLASSÍCAS/VIVALDE TIME". No windows isso não está funcionando. Ambos estão com o mesmo texto.
-- [x] Aumentar o tamanho do ícone do aplicativo (ocupando todo o espaço).
-- [x] Mudar a mensagem do botão de "verificar alteração" para "aplicar alterações", apenas no servidor. Mantendo como estava no cliente.
-- [x] Onde for um elemento clicável ou interativo, deve mudar o cursor.
-- [x] Adicionar uma modal de confirmação avisado o usuário para "aplicar alterações" antes de fechar. Apenas se o usuário tiver criado um evento (adicionando, alterando ou deletando algo).
-- [x] Corrigir o "força geração de snapshot". Após o fluxo normal, ele deve chamar o "aplicar alterações".
-- [x] Padronizar os nomes
-	- [x] Padronizar a formatação do nome da música (tudo em maiúsculo). Quando o usuário digitar, deve ser escrito em maiúsculo (mesmo com CAPS desligado), na adição da música com partitura, edição do nome, na hora que extrai o nome do arquivo e etc..
-	- [x] Padroniza a formatação dos nomes das partituras/instrumentos (permitido número apenas após o nome, ex: `flute 1` e não `0001 flute1`). Quando o usuário digitar, deve ser escrito em minúsculo (mesmo com CAPS ligado), na adição da música com partitura, edição do nome, na hora que extrai o nome do arquivo e etc.
-- [x] O nome da música deve ser pego do diretório mãe do arquivo e não do arquivo. Já o nome das partituras/instrumentos sim, ex: Eis o nosso deus - Flute, fica apenas "Flute".
-- [x] Não adicionar partituras de subdiretórios (ex: cliquei para "adicionar diretório" e selecione a música "FIEL É DEUS", dentro dele tem outro diretório chamado "HINO 08). Não é para adicionar arquivos de subdiretórios ao diretórios escolhido.
-- [x] As partituras/instrumentos devem seguir a seguinte ordem (tanto na listagem na música, como na revisão ao adicionar uma música):
-	- Sem nome (normalmente a grade com todos os instrumentos)
-	- Flute
-	- Oboe
-	- Bassoon
-	- Clarinet Bb 1
-	- Clarinet Bb 2
-	- Clarinet Bb 3
-	- Bass Clarinet
-	- Alto Saxophone 1
-	- Alto Saxophone 2
-	- Tenor Saxophone
-	- Baritone Saxophone
-	- Trumpet Bb 1
-	- Trumpet Bb 2
-	- Trumpet Bb 3
-	- Horn F 1
-	- Horn F 2
-	- Horn F 3
-	- Trombone 1
-	- Trombone 2
-	- Trombone 3
-	- Baritone (T.C.)
-	- Tuba
-	- Violino 1
-	- Violino 2
-	- Viola
-	- Cello
-	- Contrabass
-	- Outros instrumentos (que não são convencionais, em ordem alfabética)
-! Alguns não vão ter partitura/instrumento e está tudo certo, vai apenas "pular" eles. Caso seja adicionando posteriormente, deve ter essa ordem.
-! Os nomes podem ser um pouco diferente, ex: Clarinet **in** Bb 1 e já outros serem como está acima.
-- [x] Quando digito em um campo vazio, ele muda de posição, está errado. E outro detalhe, não consigo colocar espaço no nome (no final, quando eu volto consigo). O usuário pode deixar espaço no começo e no final (front), mas o back deve corrigir isso.
-- [x] Na revisão ao adicionar "um arquivo" ou "indexar um diretório", adicionar um botão para abrir a partitura com o aplicativo padrão daquele arquivo e também adicionar um botão para "abrir local". Ter cuidado para não ficar próximo da lixeira, levando o usuário a clicar na lixeira sem querer.
-- [x] Adicionar essas opções na hora de editar partitura/instrumento.
-- [x] Mudar o método que é chamado o aplicativo padrão do `.mus`, `.musx` e etc, para ficar igual a como é chamado o `rclone`, objetivo é não aparece a merda de um cmd preto na tela.
-- [x] Pode acontecer a música não ter esse padrão: `nome música - instrumento`, sendo `instrumento`, é necessário conseguir identificar esse cenário e arrumar.
-- [x] Atualizar o StatusBar mostrar quantos "foram enviados"/"quantos faltam" e também, não fique alterando toda hora, voltando para o texto "etapa 3". Quando for a etapa de upload, mostre o texto de etapa 3 e depois fique mostrando o quanto já foi feito o upload ou download (no caso do cliente).
-- [x] Quando o cliente abrir uma partitura pelo aplicativo, a partitura é descompactada e aberta em um diretório temporário, mas preciso que ela seja renomeada, para não ficar aparecendo um ID (estranho para usuário) no aplicativo de visualização de partitura. Preciso que antes de abrir, deve renomear para: `{nome da música} - {nome da partitura}`.
-- [x] Gerar log para adicionar música, adicionar arquivo e adicionar partitura. Está dando erro em toast, com uma mensagem genérica, que nada ajuda.
-- [x] Corrigir bug que limpada o diretório `songs` ao gerar snapshot automáticamente. Apenas o "força geração de snapshot" que limpa e recria os `songs`, o snapshot automático não deve fazer isso.
-- [x] Resolver o problema: arquivo em rascunho e foi regerado o `{songId}.tar.zst`, resultado foi removido perdido o arquivo antigo em `main` ficando sem nada.
-- [x] Ajuste na adição, revisão e música já existente.
-	- [x] Remover a opção "adicionar arquivo" do header da página inicial.
-	- [x] Ao clicar para adicionar arquivo na música, caso já exista uma música com mesmo diretório e nome, deve aparecer um toast de erro, avisando que já existe uma música com esse arquivo indexado "{nome da partitura/instrumento}" e não um erro genérico.
-	- [x] Ajuste a função: "Pode acontecer a música não ter esse padrão: `nome música - instrumento`, sendo `instrumento`, é necessário conseguir identificar esse cenário e arrumar". Caso não seja um instrumento, deve ficar vazio, ex: `flauta 1 & 2` é possível identificar que é flauta, agora `EIS O NOSSO DEUS` não fala nada. Ou seja, essa regra só se aplicar se for possível identificar o instrumento, caso não seja, deve ficar vazio.
-- [x] Na listagem de instrumentos, o violino não está segundo a ordem anteriormente especificada. Ele também deve suportar, português e inglês (nome).
-- [x] Refatoração do front
-- [x] Refatoração do back
-- [x] Arrumar bug: no windows, ao criar uma música e clicar para "adicionar arquivo", depois selecionar o arquivo, não é feito absolutamente nada.
-- [x] Procurar outros possíveis bugs do mesmo padrão e corrigir.
-- [x] Arrumar bug: quando rodar o fluxo "Listar partituras `draft` e `not found` que possuem versão anterior `main`". As partituras que forem `draft` e `not found` e não tiverem uma `main`anterior, deve ficar com `not found` no cliente (seja `event` ou `snapshot`).
-- [x] Arrumar bug: Ao dar duplo clique, clicar no overflow menu para abrir uma partitura ou abrir pelo editar partitura, está abrindo um diretório nada aver. Isso ocorre apenas no servidor.
-! Copiar como está no revisar (ao indexar um diretório).
-- [x] Arrumar bug: Ao clicar em editar uma partitura e clicar para abrir local do arquivo, está abrindo um diretório nada aver. Isso ocorre apenas no servidor.
-! Copiar como está no revisar (ao indexar um diretório).
-- [x] Se não teve alteração, não é necessário executar nenhuma etapa do upload ao clicar "aplicar alterações".
-- [x] Ao iniciar o aplicativo, deve fazer consultar a nuvem (apenas cliente).
+Mudando estratégia: de banco de dados completo para incrementação/alteração/remoção
+- Ao invés de criar um único arquivo `database.msgpack`, que tem:
+	- Risco de ser sobrescrito.
+	- Demora para identificar e implementar alterações.
+	- Maior complexidade para sincronização.
+- Será utilizado `{computerId}.msgpack`, que fará:
+	- O que foi implementado.
+	- O que foi alterado.
+	- O que foi deletado.
 
-## v0.9
-- [x]  Ao adicionar um arquivo na música, deve aparecer um modal (igual ao indexar diretório), mas com o diferencial: o nome da música não pode ser alterado (fica no input text, mas apenas `onlyread`), permitindo o usuário alterar nome da partitura/instrumento, abrir partitura e abrir local.
+**26-03-2026**
 
-- [x] Adicionar função para o cliente favoritar uma música via menu overflow da música.
-- [x] Remover as bibliotecas que não são utilizadas no projeto.
-- [x] Atualizar o `tauri-plugin-store` com o novo campo.
+Problemas e problemas
+- Pensei em um possível problema: "E se o `{computerId}.msgpack` virar um monstrinho de 10MB ou mais".
+- Pensei em separar o `{computerId}.msgpack` em pedaços: `{computerId}_{sequence}.msgpack`, criando sempre um novo arquivo assim que ele chegar a 1MB. Mas isso com tempo iria poluir muito o diretório.
+- E em ambos os casos tem o mesmo problema: Se for adicionado um novo computador, ele teria que ler todos os arquivos, aplicar evento por evento até chegar no estado igual dos outros computadores. Seria um inferno de lento e complexidade.
+- Solução: `{computerId}.msgpack` e `snapshot` do banco de dados. Quando os arquivos  `{computerId}.msgpack` chegarem a um determinado tamanho, o servidor vai gerar uma `snapshot` do banco de dados atual.
 
+**27-03-2026**
 
-- [x] Corrigindo o StatusBar, não está mostrando progresso real (internet lenta).
-- [x] Quando o aplicativo estiver fazendo alguma procura na nuvem, quando o aplicativo for fechado o rclone deve parar a execução.
-	! O rclone continua a execução, com isso se a pessoa fechar e abri o aplicativo, não irá conseguir utilizar o rclone no aplicativo.
-- [x] Corrigindo o `snapshot` gerado automaticamente para não apagar o `cloud/songs/`.
+Eu me precipitei
+- Deveria ter elaborado melhor meus planos. Muita das coisas que eu pensei/implementei estavam errada ou seriam feitas erradas.
+- Então, irei abandonar a versão 0.3 devido a bagunça que ela se tornou.
+- Agora com a visão macro e micro do sistema, será mais fácil organizar as versões.
+- A ideia agora é implementar uma funcionalidade e ir testando ela massivamente.
 
-- [ ] Alterar o "exportar database.msgpack" para "exportar backup local".
-- [ ] Alterar o "importar dabase.msgpack" para "importar backup local".
-	- [ ] Ao importar, deve aparecer um toast avisando que "foi importando com sucesso e o backup é da data de xxx e hora yyy, alterações posteriores a isso não são inclusas" (melhorar essa mensagem, mas será esse padrão). O toast deve ficar uns 8 segundos.
-	- [ ] Ao finalizar a importação ele deve "força a geração de um snapshot".
-- [ ] Gerar `backup.msgpack` (automático) a cada três dias e fazer o upload para o cloud. O objetivo é garantir em caso de perda total por algum motivo, o usuário não tenha que colocar TUDO novamente.
-	! A verificação é feita quando o aplicativo é iniciado e é feito a sincronização, para o cloud, apenas do diretório `cloud/backup`. Para não sincronizar os outros diretórios e ser mais rápido.
-	! Seguir praticamente o mesmo fluxo do "exportar database.msgpack" nas configurações.
-- [ ] Adicionar nas configurações um botão para "importar backup cloud"
-	- [ ] Ao importar, deve aparecer um toast avisando que foi importando com sucesso e o backup é da data de xxx. O toast deve ficar uns 5 segundos.
-	! Seguir praticamente o mesmo fluxo do "importar database.msgpack" nas configurações.
-- [ ] Adicionar validação de integridade em ambos os métodos de exportação (local e cloud). Para garantir que na hora que o usuário precisar não vai ter arquivo corrompido.
+**30-03-2026**
 
-- [ ] Implementar o `rclone` ao projeto, `/src-tauri/bin/rclone.exe`.
-	! Apenas a versão `x64`.
-- [ ] Adicionar o `copyright` e a licença MIT ao projeto. Adicionar uma página nas configurações, chamada **sobre**.
-- [ ] Adicionar a configuração do rclone no primeiro acesso.
-	! Apenas se a pessoa tiver o computador `x64`.
-- [ ] Adicionar a configuração do rclone na página de configurações.
-	! Apenas se a pessoa tiver o computador `x64`.
+Simplificando o óbvio
+- O aplicativo até a versão estável `v1` será apenas `client read-only`.
+- Isso vai reduzir MUITO a complexidade e acelerar MUITO o desenvolvimento.
+- Como já tenho uma estrutura base, isso vai ajudar na visão ao longo prazo, se existir futuro nesse aplicativo (só Deus sabe e espero que sim).
 
-## v1.0
-- [ ] Montar um plano para atualizar o software.
-- [ ] Montar um manual para o usuário, explicando cada detalhe do software para que ele consiga utilizar com o máximo de tranquilidade.
-- [ ] Criar licença (por organização/computadores)
-- [ ] Criar telemetria (quantas músicas, partituras, tempo de uso, versão atual e etc).
+Mudando o nome (mais simplificação)
+- Irei alterar de `{computerId}.msgpack` para `events.msgpack` simplesmente, porque não faz sentido adicionar isso agora. É mais fácil e direito simplesmente colocar um nome padrão.
+- Mas isso não quer dizer que vou descartar a ideia, por isso estou documentando aqui. No futuro pretendo implementar ela.
 
-## Funcionalidades para v2 (apenas rascunho/ideias)
+**01-04-2026**
 
-- Tirar o cliente de `read-only`.
-- Backup utilizando pendrive ou outro meio local.
-- Baixar backup da nuvem.
-	! A ideia dessa funcionalidade é o seguinte. Por algum motivo, o usuário deletou os arquivos ou está em um novo computador, ele pode baixar todos os arquivos na nuvem para sua máquina.
-	! Evidentemente que partituras com `draft` ou que não possuem partitura sem versão `main`, não são possíveis de baixar.
-- Adicionar uma camada de cibersegurança.
-	- No começo, ele será utilizado em uma orquestra local (onde sou o único com conhecimento em informática). Mas futuramente esse software pode abranger outras organizações.
-- Possível adição de um novo `type` de computador `semi-server`.
-- Embutir o `rclone` no projeto: `/src-tauri/bin/rclone.exe`.
-- Implementar hash de verificação de arquivos.
+Adeus Google Drive, sem pegadinha de 1° de Abril
+- Encontrei um excelente substituto ao Google Drive. O que me chateava nele é a lerdeza devido as várias verificações e processamento sobre o arquivo.
+- Eu queria apenas algo simples, para fazer upload e download, e que não desse problema.
+- Estava cogitando o pCloud, mas devido a limitações da conta free e abortei ele. Encontrei um excelente substituto que chama Koofr, o único ponto negativo é que ele possui apenas 10GB de armazenamento no plano free, o que não é um problema. Fiz uma porrada de testes e realmente é muito bom, adicionando todas as músicas da orquestra onde toco, deve ficar com 2GB (arquivos comprimidos, óbvio).
+
+Hoje também, fiz um monte de teste e encontrei muitos problemas e muitas melhorias possíveis. Estou MUITO satisfeito com o resultado obtido com esse projeto. Acredito que ele vai agregar muito aos usuários.
+
+**02-04-2026**
+
+`database.msgpack.zst` automáticos
+- Estou com receio de algum problema no aplicativo, levando a travamento perda dos dados etc. Por questão de segurança, irei implementar copias periódicas do banco de dados.
+- Com isso, caso aconteça algum problema, o usuário não vai precisar ter que colocar tudo na mão novamente.
+
+**03-04-2026**
+
+MicroScore
+- Irei implementar **telemetria** e **licença** ao software, como é um software bem completinho e acredito eu, que vai ajudar bastante, nada justo que cobrar um valor.
+- **Telemetria**: minha ideia é coletar informações simples: tempo de uso (por dia), quantidade de música e partitura adicionada (por dia), quantas vezes foram aberto partitura por ele, e quantidade de uplaod/download feitas. A ideia é saber se o aplicativo está sendo bem usado, tanto pelo servidor, quanto o cliente. Tendo uma noção, o que é mais utilizado, cliente ou servidor?
+- **Licença**: minha é criar licença por organização, ex: orquestra xxx, licença de 1 ano para 8 computadores por 300 reais. Com isso a pessoa terá total suporte meu.
+	- A licença deve ficar tanto no servidor, quanto localmente. Exigindo na instalação acesso a internet.
+	- Com isso evita a pessoa enviar o instalador para outra pessoa e pronto.
+! Estou anotando aqui apenas para colocar em meu "radar" esse assunto. Não sei ao certo como será feito.
+
+**05-04-2026**
+
+`rclone` dentro do projeto, antes da v1
+- Acredito que seja melhor adicionar o `rclone` ao projeto e criar uma página de configurações.
+- A configuração do `rclone` será feito pela aplicação. Acredito que isso irá facilitar de mais para o usuário final, não tendo que: instalar o `rclone`, configurar ele (tendo risco) e eventualmente realizar atualizações.
+- Com isso também, irei assumir a responsabilidade por manter o `rclone` atualizado, sendo mais fácil, apenas atualizando o aplicativo com a nova versão. Não precisando orientar o usuário, acessar a máquina remotamente ou ter que ir no local do computador.
+- Obviamente tem outras coisas que terei que implementar devido a licença `MIT`, mas faz parte. Mas no caso onde esse software irá começar a ser usado, onde a pessoal que irá utilizar é leiga (e no geral, na área de música), é a melhor opção.

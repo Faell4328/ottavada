@@ -379,3 +379,15 @@ export async function exportBackupFile(outputPath?: string | null): Promise<Back
 export async function importBackupFile(backupPath: string): Promise<BackupImportSummary> {
   return invoke("import_backup_file", { backupPath });
 }
+
+export async function generateAutomaticBackupFile(): Promise<BackupFileSummary | null> {
+  return invoke("generate_automatic_backup_file");
+}
+
+export async function forceGenerateBackupCloudFile(): Promise<BackupFileSummary> {
+  return invoke("force_generate_backup_cloud_file");
+}
+
+export async function importBackupCloudFile(): Promise<BackupImportSummary> {
+  return invoke("import_backup_cloud_file");
+}

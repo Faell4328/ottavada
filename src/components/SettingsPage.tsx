@@ -8,18 +8,8 @@ import * as api from "../api/commands";
 import { getErrorMessage } from "../utils/errors";
 import { useRcloneTest } from "../hooks/useRcloneTest";
 import { ChangeComputerTypeModal } from "./ChangeComputerTypeModal";
+import { formatBackupTimestamp } from "../utils/formatters";
 import type { AppSettings } from "../types";
-
-function formatBackupTimestamp(timestamp: number) {
-  const date = new Date(timestamp * 1000);
-  const formattedDate = date.toLocaleDateString("pt-BR");
-  const formattedTime = date.toLocaleTimeString("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-
-  return `${formattedDate} às ${formattedTime}`;
-}
 
 export default function SettingsPage() {
   const {
@@ -47,6 +37,8 @@ export default function SettingsPage() {
   const [isGeneratingSnapshot, setIsGeneratingSnapshot] = useState(false);
   const [isExportingBackup, setIsExportingBackup] = useState(false);
   const [isImportingBackup, setIsImportingBackup] = useState(false);
+  const [isImportingBackupCloud, setIsImportingBackupCloud] = useState(false);
+  const [isGeneratingBackupCloud, setIsGeneratingBackupCloud] = useState(false);
   const [rcloneRemote, setRcloneRemote] = useState("");
   const [rclonePath, setRclonePath] = useState("ScoreMaestro");
 
@@ -210,8 +202,74 @@ export default function SettingsPage() {
     }
   }
 
+  async function handleImportBackupCloud() {
+    if (settings.computer_type !== "Server") {
+      toast.error("A importacao de backup da nuvem e permitida apenas no servidor");
+      return;
+    }
+
+    if (!settings.rclone_config) {
+      toast.error("Configure o rclone antes de importar o backup da nuvem");
+      return;
+    }
+
+    setIsImportingBackupCloud(true);
+    let shouldRunForcedSnapshot = false;
+    try {
+      const summary = await api.importBackupCloudFile();
+      await Promise.all([loadSettings(), loadSongs(), loadCategories()]);
+      toast.success(
+        `Backup da nuvem importado com sucesso. O backup é de ${formatBackupTimestamp(summary.generated_at)}; alterações posteriores não estão incluídas.`,
+        {
+          duration: 5000,
+        }
+      );
+      shouldRunForcedSnapshot = true;
+    } catch (error) {
+      toast.error(`Erro ao importar backup da nuvem: ${getErrorMessage(error)}`);
+    } finally {
+      setIsImportingBackupCloud(false);
+    }
+
+    if (shouldRunForcedSnapshot) {
+      void handleForceSnapshot();
+    }
+  }
+
+  async function handleGenerateBackupCloud() {
+    if (settings.computer_type !== "Server") {
+      toast.error("A geração de backup na nuvem é permitida apenas no servidor");
+      return;
+    }
+
+    if (!settings.rclone_config) {
+      toast.error("Configure o rclone antes de gerar o backup na nuvem");
+      return;
+    }
+
+    setIsGeneratingBackupCloud(true);
+    try {
+      const summary = await api.forceGenerateBackupCloudFile();
+      await loadSettings();
+      toast.success(
+        `Backup na nuvem gerado com sucesso em ${formatBackupTimestamp(summary.generated_at)}.`,
+        {
+          duration: 8000,
+        }
+      );
+    } catch (error) {
+      toast.error(`Erro ao gerar backup na nuvem: ${getErrorMessage(error)}`);
+    } finally {
+      setIsGeneratingBackupCloud(false);
+    }
+  }
+
   const lastSnapshotLabel = settings.last_snapshot_timestamp
     ? new Date(settings.last_snapshot_timestamp * 1000).toLocaleString("pt-BR")
+    : "Nunca gerado";
+
+  const lastBackupLabel = settings.last_backup_timestamp
+    ? formatBackupTimestamp(settings.last_backup_timestamp)
     : "Nunca gerado";
 
   return (
@@ -333,7 +391,7 @@ export default function SettingsPage() {
           </div>
         </Section>
 
-        {/* Backup */}
+        {/* Backup local */}
         <Section title="Backup local">
           <div className="flex flex-wrap gap-2">
             <button
@@ -357,6 +415,51 @@ export default function SettingsPage() {
 
           <p className="text-xs text-[#8b9db2] mt-1">
             Exporta e importa um backup local completo do banco de dados e das configurações.
+          </p>
+        </Section>
+
+        {/* Backup cloud */}
+        <Section title="Backup na nuvem">
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={handleGenerateBackupCloud}
+              disabled={
+                isGeneratingBackupCloud ||
+                settings.computer_type !== "Server" ||
+                !settings.rclone_config
+              }
+              className="h-9 px-4 rounded border border-[#c5cfdb] bg-white hover:bg-[#f2f5fa] text-sm font-medium text-[#344b61] disabled:opacity-50 transition-colors cursor-pointer"
+            >
+              {isGeneratingBackupCloud ? "Gerando..." : "Fazer backup agora"}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleImportBackupCloud}
+              disabled={
+                isImportingBackupCloud ||
+                settings.computer_type !== "Server" ||
+                !settings.rclone_config
+              }
+              className="h-9 px-4 rounded border border-[#c5cfdb] bg-white hover:bg-[#f2f5fa] text-sm font-medium text-[#344b61] disabled:opacity-50 transition-colors cursor-pointer"
+            >
+              {isImportingBackupCloud ? "Importando..." : "Importar backup cloud"}
+            </button>
+          </div>
+
+          <p className="text-xs text-[#8b9db2] mt-1">
+            Gera e envia o backup para a nuvem imediatamente, ou baixa o backup da nuvem para o computador.
+          </p>
+        </Section>
+
+        {/* Backup automático */}
+        <Section title="Backup automático">
+          <p className="text-xs text-[#8b9db2] mt-1">
+            O servidor verifica automaticamente ao iniciar se já passaram 3 dias desde o último backup na nuvem.
+          </p>
+          <p className="text-xs text-[#8b9db2] mt-1">
+            Último backup automático: {lastBackupLabel}
           </p>
         </Section>
 

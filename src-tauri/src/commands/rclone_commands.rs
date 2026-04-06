@@ -258,6 +258,62 @@ fn append_common_sync_flags(args: &mut Vec<&str>) {
     ]);
 }
 
+fn resolve_sync_targets(
+    store: &SystemStore,
+    relative_path: Option<&str>,
+) -> Result<(String, String), AppError> {
+    let settings = store.get_app_settings()?;
+    let rclone_config = settings
+        .rclone_config
+        .ok_or_else(|| AppError::Generic("Configuração do rclone não encontrada".to_string()))?;
+
+    let clean_remote_path = rclone_config
+        .path
+        .trim()
+        .trim_start_matches('/')
+        .trim_end_matches('/');
+
+    let clean_relative_path = relative_path
+        .map(|value| value.trim().trim_start_matches('/').trim_end_matches('/'))
+        .filter(|value| !value.is_empty());
+
+    let mut remote_path = String::new();
+    if !clean_remote_path.is_empty() {
+        remote_path.push_str(clean_remote_path);
+    }
+
+    if let Some(relative_path) = clean_relative_path {
+        if !remote_path.is_empty() {
+            remote_path.push('/');
+        }
+        remote_path.push_str(relative_path);
+    }
+
+    let remote_target = if remote_path.is_empty() {
+        format!("{}:", rclone_config.remote)
+    } else {
+        format!("{}:{}", rclone_config.remote, remote_path)
+    };
+
+    let cloud_local_dir = ensure_cloud_dir(store.app_data_dir())?;
+    let local_target = if let Some(relative_path) = clean_relative_path {
+        cloud_local_dir.join(relative_path)
+    } else {
+        cloud_local_dir.clone()
+    };
+
+    if clean_relative_path.is_none() {
+        std::fs::create_dir_all(&local_target).map_err(|e| {
+            AppError::Generic(format!(
+                "Erro ao preparar diretório local para sync do rclone: {}",
+                e
+            ))
+        })?;
+    }
+
+    Ok((local_target.to_string_lossy().to_string(), remote_target))
+}
+
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum RcloneSyncDirection {
@@ -613,7 +669,7 @@ pub async fn sync_cloud_with_rclone(
     run_blocking_with_store(
         app_data_dir,
         "Falha interna ao sincronizar com rclone",
-        move |store| sync_cloud_with_rclone_impl(&store, &direction),
+        move |store| sync_cloud_directory_with_rclone_impl(&store, &direction, None),
     )
     .await
 }
@@ -814,34 +870,16 @@ fn upload_cloud_paths_with_rclone_impl(
     })
 }
 
-fn sync_cloud_with_rclone_impl(
+pub fn sync_cloud_directory_with_rclone_impl(
     store: &SystemStore,
     direction: &str,
+    relative_path: Option<&str>,
 ) -> Result<RcloneSyncSummary, AppError> {
     let _ = reset_rclone_rc_stats();
 
     let sync_direction = RcloneSyncDirection::from_str(direction.trim())?;
 
-    let settings = store.get_app_settings()?;
-    let rclone_config = settings
-        .rclone_config
-        .ok_or_else(|| AppError::Generic("Configuração do rclone não encontrada".to_string()))?;
-
-    let clean_remote_path = rclone_config
-        .path
-        .trim()
-        .trim_start_matches('/')
-        .trim_end_matches('/');
-
-    let remote_target = if clean_remote_path.is_empty() {
-        format!("{}:", rclone_config.remote)
-    } else {
-        format!("{}:{}", rclone_config.remote, clean_remote_path)
-    };
-
-    let cloud_local_dir = ensure_cloud_dir(store.app_data_dir())?;
-
-    let local_target = cloud_local_dir.to_string_lossy().to_string();
+    let (local_target, remote_target) = resolve_sync_targets(store, relative_path)?;
 
     let (source, destination, direction_label) = match sync_direction {
         RcloneSyncDirection::Upload => {

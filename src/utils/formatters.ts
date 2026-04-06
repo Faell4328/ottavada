@@ -21,3 +21,14 @@ export function formatEta(seconds: number | null): string | null {
 
   return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
 }
+
+export function formatBackupTimestamp(timestamp: number): string {
+  const date = new Date(timestamp * 1000);
+  const formattedDate = date.toLocaleDateString("pt-BR");
+  const formattedTime = date.toLocaleTimeString("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  return `${formattedDate} às ${formattedTime}`;
+}

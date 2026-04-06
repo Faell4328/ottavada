@@ -1,9 +1,10 @@
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use rusqlite::params;
 use serde::{Deserialize, Serialize};
 
+use crate::commands::rclone_commands::sync_cloud_directory_with_rclone_impl;
 use crate::domain::errors::AppError;
 use crate::domain::models::{AppSettings, OperationGuard};
 use crate::infrastructure::database::Database;
@@ -12,6 +13,7 @@ use crate::services::msgpack_zstd::{serialize_msgpack_named, write_atomic};
 
 const BACKUP_FILE_NAME: &str = "backup.msgpack";
 const BACKUP_SCHEMA_VERSION: u32 = 1;
+const AUTO_BACKUP_INTERVAL_SECONDS: i64 = 3 * 24 * 60 * 60;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BackupFileSummary {
@@ -134,6 +136,11 @@ pub fn export_backup_msgpack(
 
     write_atomic(&output_path, &bytes, "backup.msgpack")?;
 
+    validate_backup_file_integrity(&output_path, &payload).map_err(|e| {
+        let _ = fs::remove_file(&output_path);
+        e
+    })?;
+
     let file_size = fs::metadata(&output_path)
         .map_err(|e| {
             AppError::Generic(format!("Erro ao obter metadados de backup.msgpack: {}", e))
@@ -189,11 +196,85 @@ pub fn import_backup_msgpack(
     })
 }
 
+pub fn generate_automatic_backup_msgpack(
+    db: &Database,
+    store: &SystemStore,
+) -> Result<Option<BackupFileSummary>, AppError> {
+    generate_backup_msgpack_in_cloud(db, store, false)
+}
+
+pub fn force_generate_backup_msgpack_in_cloud(
+    db: &Database,
+    store: &SystemStore,
+) -> Result<BackupFileSummary, AppError> {
+    generate_backup_msgpack_in_cloud(db, store, true)?.ok_or_else(|| {
+        AppError::Generic("Falha ao gerar backup da nuvem".to_string())
+    })
+}
+
+fn generate_backup_msgpack_in_cloud(
+    db: &Database,
+    store: &SystemStore,
+    force: bool,
+) -> Result<Option<BackupFileSummary>, AppError> {
+    let settings = store.get_app_settings()?;
+    settings.require_server_only()?;
+
+    let now = chrono::Local::now().timestamp();
+    if !force && !should_generate_automatic_backup_from_timestamps(settings.last_backup_timestamp, now) {
+        return Ok(None);
+    }
+
+    let backup_path = store
+        .app_data_dir()
+        .join("cloud")
+        .join("backup")
+        .join(BACKUP_FILE_NAME);
+
+    let summary = export_backup_msgpack(db, store, Some(backup_path.to_string_lossy().to_string()))?;
+
+    sync_cloud_directory_with_rclone_impl(store, "upload", Some("backup"))?;
+
+    let mut updated_settings = store.get_app_settings()?;
+    updated_settings.last_backup_timestamp = Some(summary.generated_at);
+    store.save_app_settings(&updated_settings)?;
+
+    Ok(Some(summary))
+}
+
+pub fn import_backup_msgpack_from_cloud(
+    db: &Database,
+    store: &SystemStore,
+) -> Result<BackupImportSummary, AppError> {
+    let settings = store.get_app_settings()?;
+    settings.require_server_only()?;
+
+    sync_cloud_directory_with_rclone_impl(store, "download", Some("backup"))?;
+
+    let backup_path = store
+        .app_data_dir()
+        .join("cloud")
+        .join("backup")
+        .join(BACKUP_FILE_NAME);
+
+    if !backup_path.exists() {
+        return Err(AppError::Generic(
+            "Arquivo backup.msgpack nao encontrado na nuvem".to_string(),
+        ));
+    }
+
+    import_backup_msgpack(db, store, backup_path.to_string_lossy().to_string())
+}
+
 fn collect_backup_payload(
     db: &Database,
     settings: AppSettings,
 ) -> Result<BackupMessagePack, AppError> {
     let conn = db.conn.lock().unwrap();
+    let generated_at = chrono::Local::now().timestamp();
+
+    let mut settings = settings;
+    settings.last_backup_timestamp = Some(generated_at);
 
     let categories = {
         let mut stmt = conn.prepare("SELECT id, name FROM categories ORDER BY name ASC")?;
@@ -305,7 +386,7 @@ fn collect_backup_payload(
 
     Ok(BackupMessagePack {
         schema_version: BACKUP_SCHEMA_VERSION,
-        generated_at: chrono::Local::now().timestamp(),
+        generated_at,
         settings,
         categories,
         songs,
@@ -314,6 +395,68 @@ fn collect_backup_payload(
         changed_field,
         backup_songs,
     })
+}
+
+fn should_generate_automatic_backup_from_timestamps(
+    last_backup_timestamp: Option<i64>,
+    now_timestamp: i64,
+) -> bool {
+    match last_backup_timestamp {
+        None => true,
+        Some(last_backup_timestamp) => {
+            now_timestamp.saturating_sub(last_backup_timestamp) >= AUTO_BACKUP_INTERVAL_SECONDS
+        }
+    }
+}
+
+fn validate_backup_file_integrity(
+    output_path: &Path,
+    expected_payload: &BackupMessagePack,
+) -> Result<(), AppError> {
+    let bytes = fs::read(output_path).map_err(|e| {
+        AppError::Generic(format!(
+            "Erro ao validar backup.msgpack em {}: {}",
+            output_path.display(),
+            e
+        ))
+    })?;
+
+    let verified_payload: BackupMessagePack = rmp_serde::from_slice(&bytes).map_err(|e| {
+        AppError::Generic(format!(
+            "Erro ao desserializar backup.msgpack validado em {}: {}",
+            output_path.display(),
+            e
+        ))
+    })?;
+
+    let is_valid = verified_payload.schema_version == expected_payload.schema_version
+        && verified_payload.generated_at == expected_payload.generated_at
+        && verified_payload.settings.computer_id == expected_payload.settings.computer_id
+        && verified_payload.settings.computer_name == expected_payload.settings.computer_name
+        && verified_payload.settings.computer_type == expected_payload.settings.computer_type
+        && verified_payload.settings.google_drive_mode == expected_payload.settings.google_drive_mode
+        && verified_payload.settings.first_run_completed == expected_payload.settings.first_run_completed
+        && verified_payload.settings.database_local == expected_payload.settings.database_local
+        && verified_payload.settings.rclone_config.as_ref().map(|config| {
+            (config.remote.as_str(), config.path.as_str())
+        }) == expected_payload.settings.rclone_config.as_ref().map(|config| {
+            (config.remote.as_str(), config.path.as_str())
+        })
+        && verified_payload.settings.last_backup_timestamp == expected_payload.settings.last_backup_timestamp
+        && verified_payload.categories.len() == expected_payload.categories.len()
+        && verified_payload.songs.len() == expected_payload.songs.len()
+        && verified_payload.scores.len() == expected_payload.scores.len()
+        && verified_payload.categories_songs.len() == expected_payload.categories_songs.len()
+        && verified_payload.changed_field.len() == expected_payload.changed_field.len()
+        && verified_payload.backup_songs.len() == expected_payload.backup_songs.len();
+
+    if !is_valid {
+        return Err(AppError::Generic(
+            "Falha na validacao de integridade de backup.msgpack".to_string(),
+        ));
+    }
+
+    Ok(())
 }
 
 fn restore_backup_payload(db: &Database, payload: &BackupMessagePack) -> Result<(), AppError> {
@@ -441,6 +584,8 @@ mod tests {
     use crate::infrastructure::store::SystemStore;
 
     use super::{export_backup_msgpack, import_backup_msgpack};
+    use super::AUTO_BACKUP_INTERVAL_SECONDS;
+    use super::should_generate_automatic_backup_from_timestamps;
 
     #[test]
     fn exports_and_imports_backup_msgpack() {
@@ -556,5 +701,24 @@ mod tests {
             imported_settings.computer_name.as_deref(),
             Some("Servidor A")
         );
+        assert_eq!(
+            imported_settings.last_backup_timestamp,
+            Some(export_summary.generated_at)
+        );
+    }
+
+    #[test]
+    fn automatic_backup_threshold_respects_timestamps() {
+        let now = 1_000_000_i64;
+
+        assert!(should_generate_automatic_backup_from_timestamps(None, now));
+        assert!(!should_generate_automatic_backup_from_timestamps(
+            Some(now - (AUTO_BACKUP_INTERVAL_SECONDS - 10)),
+            now
+        ));
+        assert!(should_generate_automatic_backup_from_timestamps(
+            Some(now - (AUTO_BACKUP_INTERVAL_SECONDS + 10)),
+            now
+        ));
     }
 }

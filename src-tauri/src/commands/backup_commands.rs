@@ -5,7 +5,9 @@ use crate::domain::errors::AppError;
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
 use crate::services::backup_msgpack_service::{
-    export_backup_msgpack, import_backup_msgpack, BackupFileSummary, BackupImportSummary,
+    export_backup_msgpack, force_generate_backup_msgpack_in_cloud,
+    generate_automatic_backup_msgpack, import_backup_msgpack, import_backup_msgpack_from_cloud,
+    BackupFileSummary, BackupImportSummary,
 };
 use crate::services::backup_songs_service::{
     generate_song_archives, regenerate_all_song_archives, SongArchiveSummary,
@@ -39,6 +41,15 @@ fn delete_existing_song_archives(app_data_dir: &std::path::Path) -> Result<usize
     })?;
 
     Ok(deleted_count)
+}
+
+fn refresh_song_archives_after_backup_import(
+    db: &Database,
+    store: &SystemStore,
+) -> Result<(), AppError> {
+    delete_existing_song_archives(store.app_data_dir())?;
+    db.mark_all_song_archives_for_regeneration()?;
+    Ok(())
 }
 
 #[tauri::command]
@@ -138,9 +149,70 @@ pub fn import_backup_file(
     require_server_settings(&store)?;
 
     let summary = import_backup_msgpack(&db, &store, backup_path)?;
-    delete_existing_song_archives(store.app_data_dir())?;
-    db.mark_all_song_archives_for_regeneration()?;
+    refresh_song_archives_after_backup_import(&db, &store)?;
     Ok(summary)
+}
+
+#[tauri::command]
+pub async fn generate_automatic_backup_file(
+    db: State<'_, Database>,
+    store: State<'_, SystemStore>,
+) -> Result<Option<BackupFileSummary>, AppError> {
+    let db = db.inner().clone();
+    let app_data_dir = store.app_data_dir().clone();
+
+    run_blocking_with_store(
+        app_data_dir,
+        "Falha interna ao gerar backup automático",
+        move |store| {
+            require_server_settings(&store)?;
+
+            generate_automatic_backup_msgpack(&db, &store)
+        },
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn force_generate_backup_cloud_file(
+    db: State<'_, Database>,
+    store: State<'_, SystemStore>,
+) -> Result<BackupFileSummary, AppError> {
+    let db = db.inner().clone();
+    let app_data_dir = store.app_data_dir().clone();
+
+    run_blocking_with_store(
+        app_data_dir,
+        "Falha interna ao gerar backup da nuvem",
+        move |store| {
+            require_server_settings(&store)?;
+
+            force_generate_backup_msgpack_in_cloud(&db, &store)
+        },
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn import_backup_cloud_file(
+    db: State<'_, Database>,
+    store: State<'_, SystemStore>,
+) -> Result<BackupImportSummary, AppError> {
+    let db = db.inner().clone();
+    let app_data_dir = store.app_data_dir().clone();
+
+    run_blocking_with_store(
+        app_data_dir,
+        "Falha interna ao importar backup da nuvem",
+        move |store| {
+            require_server_settings(&store)?;
+
+            let summary = import_backup_msgpack_from_cloud(&db, &store)?;
+            refresh_song_archives_after_backup_import(&db, &store)?;
+            Ok(summary)
+        },
+    )
+    .await
 }
 
 #[tauri::command]

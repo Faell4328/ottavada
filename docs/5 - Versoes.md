@@ -248,21 +248,19 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 	! O rclone continua a execução, com isso se a pessoa fechar e abri o aplicativo, não irá conseguir utilizar o rclone no aplicativo.
 - [x] Corrigindo o `snapshot` gerado automaticamente para não apagar o `cloud/songs/`.
 
-- [ ] Alterar o "exportar database.msgpack" para "exportar backup local".
-- [ ] Alterar o "importar dabase.msgpack" para "importar backup local".
-	- [ ] Ao importar, deve aparecer um toast avisando que "foi importando com sucesso e o backup é da data de xxx e hora yyy, alterações posteriores a isso não são inclusas" (melhorar essa mensagem, mas será esse padrão). O toast deve ficar uns 8 segundos.
-- [ ] Corrigir o "exporta backup local" e "importar backup local"
-	- [ ] Ao exportar deve ir o id de tudo.
-	- [ ] Ao importar deve utilizar o id do backup.
-	- [ ] Ao importar, deve limpar todo banco de dados e todo diretório `/cloud`.
-	- [ ] Após fazer a limpaza, aplicar o arquivo de backup no banco de dados, deve gerar os arquivos `{songId}.tar.zst`.
-- [ ] Gerar `backup.msgpack` (automático) a cada três dias e fazer o upload para o cloud. O objetivo é garantir em caso de perda total por algum motivo, o usuário não tenha que colocar TUDO novamente.
+- [x] Alterar o "exportar database.msgpack" para "exportar backup local".
+- [x] Alterar o "importar dabase.msgpack" para "importar backup local".
+	- [x] Ao importar, deve aparecer um toast avisando que "foi importando com sucesso e o backup é da data de xxx e hora yyy, alterações posteriores a isso não são inclusas" (melhorar essa mensagem, mas será esse padrão). O toast deve ficar uns 8 segundos.
+	- [x] Ao finalizar a importação ele deve "força a geração de um snapshot".
+- [x] Gerar `backup.msgpack` (automático) a cada três dias e fazer o upload para o cloud. O objetivo é garantir em caso de perda total por algum motivo, o usuário não tenha que colocar TUDO novamente.
 	! A verificação é feita quando o aplicativo é iniciado e é feito a sincronização, para o cloud, apenas do diretório `cloud/backup`. Para não sincronizar os outros diretórios e ser mais rápido.
 	! Seguir praticamente o mesmo fluxo do "exportar database.msgpack" nas configurações.
-- [ ] Adicionar nas configurações um botão para "importar backup cloud"
-	- [ ] Ao importar, deve aparecer um toast avisando que foi importando com sucesso e o backup é da data de xxx. O toast deve ficar uns 5 segundos.
+- [x] Adicionar nas configurações um botão para "importar backup cloud"
+	- [x] Ao importar, deve aparecer um toast avisando que foi importando com sucesso e o backup é da data de xxx. O toast deve ficar uns 8 segundos.
 	! Seguir praticamente o mesmo fluxo do "importar database.msgpack" nas configurações.
-- [ ] Adicionar validação de integridade em ambos os métodos de exportação (local e cloud). Para garantir que na hora que o usuário precisar não vai ter arquivo corrompido.
+- [x] Adicionar nas configurações um botão para "exportar backup cloud"
+	! Ele deve atualizar no `tauri-plugin-store` o campo responsável pelo timestamp do último backup na nuvem.
+- [x] Adicionar validação de integridade em ambos os métodos de exportação (local e cloud). Para garantir que na hora que o usuário precisar não vai ter arquivo corrompido.
 
 - [ ] Implementar o `rclone` ao projeto, `/src-tauri/bin/rclone.exe`.
 	! Apenas a versão `x64`.
@@ -273,9 +271,10 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 	! Apenas se a pessoa tiver o computador `x64`.
 
 ## v1.0
+- [ ] Montar um plano para atualizar o software.
 - [ ] Montar um manual para o usuário, explicando cada detalhe do software para que ele consiga utilizar com o máximo de tranquilidade.
 - [ ] Criar licença (por organização/computadores)
-- [ ] Criar telemetria (quantas músicas, partituras, tempo de uso e etc).
+- [ ] Criar telemetria (quantas músicas, partituras, tempo de uso, versão atual e etc).
 
 ## Funcionalidades para v2 (apenas rascunho/ideias)
 
