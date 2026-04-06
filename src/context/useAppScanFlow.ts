@@ -12,6 +12,13 @@ interface UseAppScanFlowParams {
   getErrorMessage: (err: unknown, fallback: string) => string;
 }
 
+type ScanFilesForChangesOptions =
+  | boolean
+  | {
+      isAutomatic?: boolean;
+      forceCloudSync?: boolean;
+    };
+
 const SNAPSHOT_AUTO_THRESHOLD_BYTES = 2 * 1024 * 1024;
 
 export function useAppScanFlow({
@@ -56,9 +63,6 @@ export function useAppScanFlow({
 
   const runSyncWithProgress = useCallback(async (direction: "upload" | "download") => {
     let stopPolling = false;
-    let maxBytes = 0;
-    let maxTotalBytes: number | null = null;
-    let maxPercentage = 0;
 
     dispatch({
       type: "SET_RCLONE_PROGRESS",
@@ -67,7 +71,7 @@ export function useAppScanFlow({
         direction,
         bytes: 0,
         totalBytes: null,
-        percentage: 0,
+        percentage: null,
         speedBytesPerSec: 0,
         etaSeconds: null,
       },
@@ -80,33 +84,21 @@ export function useAppScanFlow({
         try {
           const stats = await api.getRcloneRcStats();
           if (stats) {
-            const nextBytes = Math.max(maxBytes, stats.bytes);
-            maxBytes = nextBytes;
-
-            const nextTotalBytes: number | null =
-              stats.total_bytes !== null
-                ? Math.max(maxTotalBytes ?? 0, stats.total_bytes)
-                : maxTotalBytes;
-            maxTotalBytes = nextTotalBytes;
-
-            const nextPercentage = Math.max(maxPercentage, Math.round(stats.percentage ?? 0));
-            maxPercentage = nextPercentage;
-
             dispatch({
               type: "SET_RCLONE_PROGRESS",
               payload: {
                 active: stats.active,
                 direction,
-                bytes: nextBytes,
-                totalBytes: nextTotalBytes,
-                percentage: nextPercentage,
+                bytes: Math.max(stats.bytes, 0),
+                totalBytes: stats.total_bytes,
+                percentage: stats.percentage !== null ? Math.round(stats.percentage) : null,
                 speedBytesPerSec: stats.speed_bytes_per_sec,
                 etaSeconds: stats.eta_seconds,
               },
             });
           }
         } catch {
-          // Ignora erro de polling para não interromper o sync principal.
+          // Ignore transient RC polling errors.
         }
 
         await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -124,9 +116,6 @@ export function useAppScanFlow({
 
   const runSelectiveUploadWithProgress = useCallback(async (relativePaths: string[]) => {
     let stopPolling = false;
-    let maxBytes = 0;
-    let maxTotalBytes: number | null = null;
-    let maxPercentage = 0;
 
     dispatch({
       type: "SET_RCLONE_PROGRESS",
@@ -135,7 +124,7 @@ export function useAppScanFlow({
         direction: "upload",
         bytes: 0,
         totalBytes: null,
-        percentage: 0,
+        percentage: null,
         speedBytesPerSec: 0,
         etaSeconds: null,
       },
@@ -148,33 +137,21 @@ export function useAppScanFlow({
         try {
           const stats = await api.getRcloneRcStats();
           if (stats) {
-            const nextBytes = Math.max(maxBytes, stats.bytes);
-            maxBytes = nextBytes;
-
-            const nextTotalBytes: number | null =
-              stats.total_bytes !== null
-                ? Math.max(maxTotalBytes ?? 0, stats.total_bytes)
-                : maxTotalBytes;
-            maxTotalBytes = nextTotalBytes;
-
-            const nextPercentage = Math.max(maxPercentage, Math.round(stats.percentage ?? 0));
-            maxPercentage = nextPercentage;
-
             dispatch({
               type: "SET_RCLONE_PROGRESS",
               payload: {
                 active: stats.active,
                 direction: "upload",
-                bytes: nextBytes,
-                totalBytes: nextTotalBytes,
-                percentage: nextPercentage,
+                bytes: Math.max(stats.bytes, 0),
+                totalBytes: stats.total_bytes,
+                percentage: stats.percentage !== null ? Math.round(stats.percentage) : null,
                 speedBytesPerSec: stats.speed_bytes_per_sec,
                 etaSeconds: stats.eta_seconds,
               },
             });
           }
         } catch {
-          // Ignora erro de polling para não interromper o upload principal.
+          // Ignore transient RC polling errors.
         }
 
         await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -190,9 +167,11 @@ export function useAppScanFlow({
     }
   }, [dispatch]);
 
-  const scanFilesForChanges = useCallback(async (isAutomaticOrEvent: unknown = false) => {
+  const scanFilesForChanges = useCallback(async (options: ScanFilesForChangesOptions = false) => {
     const isAutomatic =
-      typeof isAutomaticOrEvent === "boolean" ? isAutomaticOrEvent : false;
+      typeof options === "boolean" ? options : (options.isAutomatic ?? false);
+    const forceCloudSync =
+      typeof options === "boolean" ? false : (options.forceCloudSync ?? false);
 
     try {
       clearScanTimer();
@@ -314,7 +293,7 @@ export function useAppScanFlow({
       const hasDetectedFileChanges =
         changedCount > 0 || recoveredCount > 0 || notFoundCount > 0;
 
-      if (!hasPendingChanges && !hasDetectedFileChanges) {
+      if (!hasPendingChanges && !hasDetectedFileChanges && !forceCloudSync) {
         updateStepProgress(changedCount);
 
         if (!isAutomatic) {
@@ -384,7 +363,10 @@ export function useAppScanFlow({
       }
 
       const hasCloudChanges =
-        generatedArchives > 0 || eventsSummary.events_count > 0 || snapshotGenerated;
+        generatedArchives > 0 ||
+        eventsSummary.events_count > 0 ||
+        snapshotGenerated ||
+        forceCloudSync;
 
       if (hasCloudChanges) {
         const uploadStep = snapshotGenerated ? 5 : 4;

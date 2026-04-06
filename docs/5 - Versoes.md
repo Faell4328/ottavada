@@ -242,6 +242,14 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [x] Remover as bibliotecas que não são utilizadas no projeto.
 - [x] Atualizar o `tauri-plugin-store` com o novo campo.
 
+
+- [x] Adicionar um aviso que a internet está ruim no StatusBar (uma mensagem vermelha na etapa de upload e downlaod)
+- [x] Corrigindo o StatusBar para internet lenta.
+	! Progresso está ruim, quando a internet é lenta, fica travado em 0% e depois de um tempo vai para 100% du nada.
+	! E as vezes fica em 100% e demora um tempo para concluir.
+- [ ] Quando o aplicativo estiver fazendo alguma procura na nuvem, quando o aplicativo for fechado o rclone deve parar a execução.
+	! O rclone continua a execução, com isso se a pessoa fechar e abri o aplicativo, não irá conseguir utilizar o rclone no aplicativo.
+
 - [ ] Alterar o "exportar database.msgpack" para "exportar backup local".
 - [ ] Alterar o "importar dabase.msgpack" para "importar backup local".
 	- [ ] Ao importar, deve aparecer um toast avisando que foi importando com sucesso e o backup é da data de xxx. O toast deve ficar uns 5 segundos.

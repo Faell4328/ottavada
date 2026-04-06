@@ -49,12 +49,12 @@ fn ensure_cloud_dir(app_data_dir: &Path) -> Result<PathBuf, AppError> {
     Ok(cloud_dir)
 }
 
-const RCLONE_TRANSFERS: &str = "10";
-const RCLONE_CHECKERS: &str = "10";
+const RCLONE_TRANSFERS: &str = "1";
 const RCLONE_RETRIES: &str = "2";
 const RCLONE_LOW_LEVEL_RETRIES: &str = "10";
 const RCLONE_CONNECT_TIMEOUT: &str = "10s";
-const RCLONE_IO_TIMEOUT: &str = "60s";
+const RCLONE_IO_TIMEOUT: &str = "180s";
+const RCLONE_RC_TIMEOUT_MS: u64 = 3000;
 
 fn run_rclone_with_retry(args: &[&str], operation_label: &str) -> Result<std::process::Output, AppError> {
     let execute = || -> Result<std::process::Output, AppError> {
@@ -89,8 +89,7 @@ fn append_common_copy_flags(args: &mut Vec<&str>) {
     args.extend([
         "--transfers",
         RCLONE_TRANSFERS,
-        "--checkers",
-        RCLONE_CHECKERS,
+        "--check-first",
         "--retries",
         RCLONE_RETRIES,
         "--low-level-retries",
@@ -109,8 +108,7 @@ fn append_common_sync_flags(args: &mut Vec<&str>) {
         "--rc-addr=127.0.0.1:5572",
         "--transfers",
         RCLONE_TRANSFERS,
-        "--checkers",
-        RCLONE_CHECKERS,
+        "--check-first",
         "--retries",
         RCLONE_RETRIES,
         "--low-level-retries",
@@ -180,10 +178,10 @@ fn fetch_rclone_rc_stats() -> Result<Option<RcloneRcStats>, AppError> {
     };
 
     stream
-        .set_read_timeout(Some(Duration::from_millis(900)))
+        .set_read_timeout(Some(Duration::from_millis(RCLONE_RC_TIMEOUT_MS)))
         .map_err(|e| AppError::Generic(format!("Erro ao configurar timeout de leitura RC: {}", e)))?;
     stream
-        .set_write_timeout(Some(Duration::from_millis(900)))
+        .set_write_timeout(Some(Duration::from_millis(RCLONE_RC_TIMEOUT_MS)))
         .map_err(|e| AppError::Generic(format!("Erro ao configurar timeout de escrita RC: {}", e)))?;
 
     let request = concat!(
@@ -236,9 +234,57 @@ fn fetch_rclone_rc_stats() -> Result<Option<RcloneRcStats>, AppError> {
 
     let active = transferring_count > 0 || checking_count > 0 || speed_bytes_per_sec > 0.0;
 
-    let percentage = total_bytes
-        .filter(|total| *total > 0)
-        .map(|total| ((bytes as f64 / total as f64) * 100.0).clamp(0.0, 100.0));
+    let transferring_progress_fraction = parsed
+        .get("transferring")
+        .and_then(Value::as_array)
+        .and_then(|items| {
+            let mut sum_bytes = 0_u64;
+            let mut sum_sizes = 0_u64;
+            let mut sum_percentage_fraction = 0.0_f64;
+            let mut percentage_items = 0_u64;
+
+            for item in items {
+                let item_bytes = item.get("bytes").and_then(Value::as_u64).unwrap_or(0);
+                let item_size = item.get("size").and_then(Value::as_u64).unwrap_or(0);
+
+                if item_size > 0 {
+                    sum_bytes = sum_bytes.saturating_add(item_bytes.min(item_size));
+                    sum_sizes = sum_sizes.saturating_add(item_size);
+                    continue;
+                }
+
+                if let Some(item_percentage) = item.get("percentage").and_then(Value::as_f64) {
+                    sum_percentage_fraction += (item_percentage / 100.0).clamp(0.0, 1.0);
+                    percentage_items = percentage_items.saturating_add(1);
+                }
+            }
+
+            if sum_sizes > 0 {
+                Some((sum_bytes as f64 / sum_sizes as f64).clamp(0.0, 1.0))
+            } else if percentage_items > 0 {
+                Some((sum_percentage_fraction / percentage_items as f64).clamp(0.0, 1.0))
+            } else {
+                None
+            }
+        });
+
+    let transfers_done = parsed.get("transfers").and_then(Value::as_u64).unwrap_or(0);
+    let total_transfers = parsed
+        .get("totalTransfers")
+        .and_then(Value::as_u64)
+        .filter(|total| *total > 0);
+
+    let percentage = if let Some(total) = total_bytes.filter(|total| *total > 0) {
+        Some(((bytes as f64 / total as f64) * 100.0).clamp(0.0, 100.0))
+    } else if let Some(total) = total_transfers {
+        let completed = transfers_done.min(total);
+        let remaining = total.saturating_sub(completed);
+        let inflight = (transferring_count as u64).min(remaining);
+        let inflight_progress = transferring_progress_fraction.unwrap_or(0.0) * inflight as f64;
+        Some((((completed as f64 + inflight_progress) / total as f64) * 100.0).clamp(0.0, 100.0))
+    } else {
+        transferring_progress_fraction.map(|fraction| (fraction * 100.0).clamp(0.0, 100.0))
+    };
 
     Ok(Some(RcloneRcStats {
         active,
@@ -257,10 +303,10 @@ fn reset_rclone_rc_stats() -> Result<(), AppError> {
     };
 
     stream
-        .set_read_timeout(Some(Duration::from_millis(900)))
+        .set_read_timeout(Some(Duration::from_millis(RCLONE_RC_TIMEOUT_MS)))
         .map_err(|e| AppError::Generic(format!("Erro ao configurar timeout de leitura RC: {}", e)))?;
     stream
-        .set_write_timeout(Some(Duration::from_millis(900)))
+        .set_write_timeout(Some(Duration::from_millis(RCLONE_RC_TIMEOUT_MS)))
         .map_err(|e| AppError::Generic(format!("Erro ao configurar timeout de escrita RC: {}", e)))?;
 
     let request = concat!(
@@ -479,9 +525,16 @@ fn upload_cloud_paths_with_rclone_impl(
     };
 
     let cloud_local_dir = ensure_cloud_dir(store.app_data_dir())?;
+    let cloud_local_dir_str = cloud_local_dir.to_str().ok_or_else(|| {
+        AppError::Generic(format!(
+            "Caminho local da pasta cloud inválido para upload incremental: {}",
+            cloud_local_dir.display()
+        ))
+    })?;
+
     let started_at = Instant::now();
-    let mut uploaded_count: usize = 0;
     let mut skipped_count: usize = 0;
+    let mut files_to_upload: Vec<String> = Vec::new();
 
     for relative_path in relative_paths {
         let normalized_relative = relative_path
@@ -504,44 +557,126 @@ fn upload_cloud_paths_with_rclone_impl(
             continue;
         }
 
-        let local_path_str = local_path.to_str().ok_or_else(|| {
-            AppError::Generic(format!(
-                "Caminho local inválido para upload incremental: {}",
-                local_path.display()
-            ))
-        })?;
-
-        let remote_path = format!("{}/{}", remote_target, normalized_relative);
-
-        let mut args = if local_path.is_dir() {
-            vec!["copy", local_path_str, remote_path.as_str()]
-        } else {
-            vec!["copyto", local_path_str, remote_path.as_str(), "--no-traverse"]
-        };
-
-        args.extend(["--rc", "--rc-addr=127.0.0.1:5572"]);
-
-        append_common_copy_flags(&mut args);
-        let operation_label = format!("upload-selective:{}", normalized_relative);
-        let output = run_rclone_with_retry(&args, &operation_label)?;
-
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            error!(
-                "Falha no upload incremental [{}]: {}",
-                normalized_relative, stderr
-            );
-            return Err(AppError::Generic(format!(
-                "Falha no upload incremental de '{}': {}",
-                normalized_relative, stderr
-            )));
+        if local_path.is_file() {
+            files_to_upload.push(normalized_relative);
+            continue;
         }
 
-        uploaded_count += 1;
+        if local_path.is_dir() {
+            let mut stack = vec![local_path.clone()];
+
+            while let Some(current_dir) = stack.pop() {
+                let entries = std::fs::read_dir(&current_dir).map_err(|e| {
+                    AppError::Generic(format!(
+                        "Erro ao listar diretório incremental '{}': {}",
+                        current_dir.display(),
+                        e
+                    ))
+                })?;
+
+                for entry_result in entries {
+                    let entry = entry_result.map_err(|e| {
+                        AppError::Generic(format!(
+                            "Erro ao ler entrada de diretório incremental '{}': {}",
+                            current_dir.display(),
+                            e
+                        ))
+                    })?;
+
+                    let entry_path = entry.path();
+                    if entry_path.is_dir() {
+                        stack.push(entry_path);
+                        continue;
+                    }
+
+                    if !entry_path.is_file() {
+                        continue;
+                    }
+
+                    let relative_entry = entry_path.strip_prefix(&cloud_local_dir).map_err(|e| {
+                        AppError::Generic(format!(
+                            "Erro ao calcular caminho relativo '{}' para upload incremental: {}",
+                            entry_path.display(),
+                            e
+                        ))
+                    })?;
+
+                    let normalized_entry = relative_entry.to_string_lossy().replace('\\', "/");
+                    if !normalized_entry.is_empty() {
+                        files_to_upload.push(normalized_entry);
+                    }
+                }
+            }
+
+            continue;
+        }
+
+        skipped_count += 1;
+    }
+
+    files_to_upload.sort();
+    files_to_upload.dedup();
+
+    if files_to_upload.is_empty() {
+        return Ok(RcloneSelectiveUploadSummary {
+            uploaded_count: 0,
+            skipped_count,
+            duration_ms: started_at.elapsed().as_millis(),
+        });
+    }
+
+    let files_from_name = {
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|duration| duration.as_millis())
+            .unwrap_or(0);
+        format!(".rclone-files-from-{}.txt", stamp)
+    };
+    let files_from_path = store.app_data_dir().join(files_from_name);
+    let files_from_content = format!("{}\n", files_to_upload.join("\n"));
+
+    std::fs::write(&files_from_path, files_from_content).map_err(|e| {
+        AppError::Generic(format!(
+            "Erro ao gerar lista de upload incremental '{}': {}",
+            files_from_path.display(),
+            e
+        ))
+    })?;
+
+    let files_from_str = files_from_path.to_str().ok_or_else(|| {
+        AppError::Generic(format!(
+            "Caminho da lista de upload incremental inválido: {}",
+            files_from_path.display()
+        ))
+    })?;
+
+    let mut args = vec![
+        "copy",
+        cloud_local_dir_str,
+        remote_target.as_str(),
+        "--files-from",
+        files_from_str,
+        "--no-traverse",
+        "--rc",
+        "--rc-addr=127.0.0.1:5572",
+    ];
+
+    append_common_copy_flags(&mut args);
+    let output = run_rclone_with_retry(&args, "upload-selective:batch");
+    let _ = std::fs::remove_file(&files_from_path);
+
+    let output = output?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        error!("Falha no upload incremental em lote: {}", stderr);
+        return Err(AppError::Generic(format!(
+            "Falha no upload incremental em lote: {}",
+            stderr
+        )));
     }
 
     Ok(RcloneSelectiveUploadSummary {
-        uploaded_count,
+        uploaded_count: files_to_upload.len(),
         skipped_count,
         duration_ms: started_at.elapsed().as_millis(),
     })

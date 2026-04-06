@@ -5,18 +5,11 @@ import { formatBytes, formatEta } from "../utils/formatters";
 export default function StatusBar() {
   const { state } = useAppState();
 
-  const progressPercentage =
-    state.scanProgress.total > 0
-      ? Math.round((state.scanProgress.completed / state.scanProgress.total) * 100)
-      : 0;
-
   const rclonePercentage =
     state.rcloneProgress.percentage !== null
       ? Math.round(state.rcloneProgress.percentage)
       : null;
 
-  // Mantem o modo de transferencia ativo enquanto existir uma direcao,
-  // evitando piscar de volta para "Etapa X" quando o polling oscilar.
   const isRcloneActive =
     state.isScanningFiles && state.rcloneProgress.direction !== null;
 
@@ -37,6 +30,10 @@ export default function StatusBar() {
     (state.scanProgress.completed >= totalSteps
       ? totalSteps
       : Math.min(state.scanProgress.completed + 1, totalSteps));
+  const workflowPercentage =
+    totalSteps > 0
+      ? Math.round((state.scanProgress.completed / totalSteps) * 100)
+      : 0;
   const totalBytes = state.rcloneProgress.totalBytes;
   const bytesTransferred = state.rcloneProgress.bytes;
   const bytesRemaining =
@@ -45,12 +42,11 @@ export default function StatusBar() {
     rclonePercentage ??
     (totalBytes && totalBytes > 0
       ? Math.round((Math.min(bytesTransferred, totalBytes) / totalBytes) * 100)
-      : 0);
-  const workflowPercentage = Math.round((state.scanProgress.completed / totalSteps) * 100);
-  const stagePercentage = isRcloneActive ? transferPercentage : null;
+      : null);
+  const hasTransferPercentage = transferPercentage !== null;
   const barPercentage = isRcloneActive
-    ? transferPercentage
-    : Math.max(0, Math.min(100, progressPercentage));
+    ? Math.max(0, Math.min(100, transferPercentage ?? 0))
+    : Math.max(0, Math.min(100, workflowPercentage));
 
   return (
     <footer className="fixed bottom-4 left-1/2 z-50 w-[min(680px,calc(100%-1.5rem))] -translate-x-1/2">
@@ -70,25 +66,31 @@ export default function StatusBar() {
             <p className="mt-1 truncate text-[11px] text-[#5e7390]">{title}</p>
             {detail && <p className="truncate text-[11px] text-[#5e7390]">{detail}</p>}
           </div>
-          <span className="shrink-0 text-[12px] font-bold text-[#2464a8]">{barPercentage}%</span>
+          <span className="shrink-0 text-[12px] font-bold text-[#2464a8]">
+            {isRcloneActive && !hasTransferPercentage ? "..." : `${barPercentage}%`}
+          </span>
         </div>
 
         <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-[#e8f0fa]">
-          <div
-            className="h-full rounded-full bg-gradient-to-r from-[#2f7fd1] to-[#40b0ff] transition-all duration-300"
-            style={{ width: `${barPercentage}%` }}
-          />
+          {isRcloneActive && !hasTransferPercentage ? (
+            <div className="h-full w-full animate-pulse rounded-full bg-gradient-to-r from-[#2f7fd1] to-[#40b0ff]" />
+          ) : (
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-[#2f7fd1] to-[#40b0ff] transition-all duration-300"
+              style={{ width: `${barPercentage}%` }}
+            />
+          )}
         </div>
 
         <div className="mt-2 flex items-center gap-3 text-[11px] text-[#4f6887]">
           {isRcloneActive ? (
             <>
-              <span>Progresso total: {workflowPercentage}%</span>
-              <span>Progresso da etapa: {stagePercentage ?? 0}%</span>
-              <span>
-                {formatBytes(bytesTransferred)}
-                {totalBytes !== null ? ` / ${formatBytes(totalBytes)}` : ""}
-              </span>
+              {(bytesTransferred > 0 || totalBytes !== null) && (
+                <span>
+                  {formatBytes(bytesTransferred)}
+                  {totalBytes !== null ? ` / ${formatBytes(totalBytes)}` : ""}
+                </span>
+              )}
               {state.rcloneProgress.speedBytesPerSec > 0 && (
                 <span>{formatBytes(state.rcloneProgress.speedBytesPerSec)}/s</span>
               )}
@@ -97,7 +99,6 @@ export default function StatusBar() {
             </>
           ) : (
             <>
-              <span>Progresso total: {workflowPercentage}%</span>
               {state.scanProgress.changedFiles > 0 && (
                 <span className="font-semibold text-green-700">
                   {state.scanProgress.changedFiles} alterado(s)

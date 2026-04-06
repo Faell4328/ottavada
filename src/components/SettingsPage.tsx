@@ -17,6 +17,7 @@ export default function SettingsPage() {
     loadSettings,
     loadSongs,
     loadCategories,
+    scanFilesForChanges,
   } = useAppState();
   const navigate = useNavigate();
   const [settings, setSettings] = useState<AppSettings>(
@@ -117,31 +118,13 @@ export default function SettingsPage() {
       await loadSettings();
 
       toast.success(
-        `Snapshot gerado (${summary.songs_count} música(s), ${summary.scores_count} partitura(s)). Enviando para a nuvem...`
+        `Snapshot gerado (${summary.songs_count} música(s), ${summary.scores_count} partitura(s)). Aplicando alterações...`
       );
 
-      let syncError: unknown = null;
-      for (let attempt = 1; attempt <= 2; attempt += 1) {
-        try {
-          await api.syncCloudWithRclone("upload");
-          syncError = null;
-          break;
-        } catch (error) {
-          syncError = error;
-          if (attempt === 1) {
-            toast("Falha no upload do snapshot. Tentando novamente...", { icon: "⚠️" });
-          }
-        }
-      }
-
-      if (syncError) {
-        throw syncError;
-      }
-
+      await scanFilesForChanges({ forceCloudSync: true });
       await Promise.all([loadSongs(), loadCategories()]);
-      toast.success("Snapshot gerado e sincronizado com a nuvem");
     } catch (error) {
-      toast.error(`Erro ao gerar snapshot: ${getErrorMessage(error)}`);
+      toast.error(`Erro ao gerar snapshot/aplicar alterações: ${getErrorMessage(error)}`);
     } finally {
       setIsGeneratingSnapshot(false);
     }

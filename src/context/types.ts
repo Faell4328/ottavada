@@ -35,5 +35,7 @@ export interface AppContextValue {
     computerType: string,
     rcloneConfigJson: string
   ) => Promise<void>;
-  scanFilesForChanges: () => Promise<void>;
+  scanFilesForChanges: (
+    options?: boolean | { isAutomatic?: boolean; forceCloudSync?: boolean }
+  ) => Promise<void>;
 }
