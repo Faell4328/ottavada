@@ -1248,7 +1248,7 @@ impl Database {
 // ── REMOVIDO: Métodos de exportação para MessagePack (database completo) ──
 //
 // Conforme atualização da documentação v0.3, a estratégia mudou de:
-// - ❌ Exportar todo o banco de dados como database.msgpack
+// - ❌ Exportar todo o banco de dados como backup local
 // Para:
 // - ✅ Exportar apenas mudanças como {computerId}.msgpack
 //

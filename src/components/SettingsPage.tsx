@@ -10,6 +10,17 @@ import { useRcloneTest } from "../hooks/useRcloneTest";
 import { ChangeComputerTypeModal } from "./ChangeComputerTypeModal";
 import type { AppSettings } from "../types";
 
+function formatBackupTimestamp(timestamp: number) {
+  const date = new Date(timestamp * 1000);
+  const formattedDate = date.toLocaleDateString("pt-BR");
+  const formattedTime = date.toLocaleTimeString("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  return `${formattedDate} às ${formattedTime}`;
+}
+
 export default function SettingsPage() {
   const {
     state,
@@ -137,9 +148,9 @@ export default function SettingsPage() {
     }
 
     const selectedPath = await save({
-      title: "Salvar backup.msgpack",
+      title: "Salvar backup local",
       defaultPath: "backup.msgpack",
-      filters: [{ name: "MessagePack", extensions: ["msgpack"] }],
+      filters: [{ name: "Backup local", extensions: ["msgpack"] }],
     });
 
     if (!selectedPath) {
@@ -150,10 +161,10 @@ export default function SettingsPage() {
     try {
       const summary = await api.exportBackupFile(String(selectedPath));
       toast.success(
-        `Backup exportado (${summary.songs_count} musica(s), ${summary.scores_count} partitura(s))`
+        `Backup local exportado (${summary.songs_count} musica(s), ${summary.scores_count} partitura(s))`
       );
     } catch (error) {
-      toast.error(`Erro ao exportar backup: ${getErrorMessage(error)}`);
+      toast.error(`Erro ao exportar backup local: ${getErrorMessage(error)}`);
     } finally {
       setIsExportingBackup(false);
     }
@@ -166,10 +177,10 @@ export default function SettingsPage() {
     }
 
     const selectedPath = await open({
-      title: "Selecionar backup.msgpack",
+      title: "Selecionar backup local",
       directory: false,
       multiple: false,
-      filters: [{ name: "MessagePack", extensions: ["msgpack"] }],
+      filters: [{ name: "Backup local", extensions: ["msgpack"] }],
     });
 
     if (!selectedPath || Array.isArray(selectedPath)) {
@@ -177,16 +188,25 @@ export default function SettingsPage() {
     }
 
     setIsImportingBackup(true);
+    let shouldRunForcedSnapshot = false;
     try {
       const summary = await api.importBackupFile(selectedPath);
       await Promise.all([loadSettings(), loadSongs(), loadCategories()]);
       toast.success(
-        `Backup importado (${summary.songs_count} musica(s), ${summary.scores_count} partitura(s))`
+        `Backup local importado com sucesso. O backup é de ${formatBackupTimestamp(summary.generated_at)}; alterações posteriores não estão incluídas.`,
+        {
+          duration: 8000,
+        }
       );
+      shouldRunForcedSnapshot = true;
     } catch (error) {
-      toast.error(`Erro ao importar backup: ${getErrorMessage(error)}`);
+      toast.error(`Erro ao importar backup local ou gerar snapshot: ${getErrorMessage(error)}`);
     } finally {
       setIsImportingBackup(false);
+    }
+
+    if (shouldRunForcedSnapshot) {
+      void handleForceSnapshot();
     }
   }
 
@@ -314,7 +334,7 @@ export default function SettingsPage() {
         </Section>
 
         {/* Backup */}
-        <Section title="Backup">
+        <Section title="Backup local">
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
@@ -322,7 +342,7 @@ export default function SettingsPage() {
               disabled={isExportingBackup || settings.computer_type !== "Server"}
               className="h-9 px-4 rounded border border-[#c5cfdb] bg-white hover:bg-[#f2f5fa] text-sm font-medium text-[#344b61] disabled:opacity-50 transition-colors cursor-pointer"
             >
-              {isExportingBackup ? "Exportando..." : "Exportar backup.msgpack"}
+              {isExportingBackup ? "Exportando..." : "Exportar backup local"}
             </button>
 
             <button
@@ -331,12 +351,12 @@ export default function SettingsPage() {
               disabled={isImportingBackup || settings.computer_type !== "Server"}
               className="h-9 px-4 rounded border border-[#c5cfdb] bg-white hover:bg-[#f2f5fa] text-sm font-medium text-[#344b61] disabled:opacity-50 transition-colors cursor-pointer"
             >
-              {isImportingBackup ? "Importando..." : "Importar backup.msgpack"}
+              {isImportingBackup ? "Importando..." : "Importar backup local"}
             </button>
           </div>
 
           <p className="text-xs text-[#8b9db2] mt-1">
-            Exporta e importa o estado completo do banco de dados e do app-store.
+            Exporta e importa um backup local completo do banco de dados e das configurações.
           </p>
         </Section>
 

@@ -250,7 +250,12 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 
 - [ ] Alterar o "exportar database.msgpack" para "exportar backup local".
 - [ ] Alterar o "importar dabase.msgpack" para "importar backup local".
-	- [ ] Ao importar, deve aparecer um toast avisando que foi importando com sucesso e o backup é da data de xxx. O toast deve ficar uns 5 segundos.
+	- [ ] Ao importar, deve aparecer um toast avisando que "foi importando com sucesso e o backup é da data de xxx e hora yyy, alterações posteriores a isso não são inclusas" (melhorar essa mensagem, mas será esse padrão). O toast deve ficar uns 8 segundos.
+- [ ] Corrigir o "exporta backup local" e "importar backup local"
+	- [ ] Ao exportar deve ir o id de tudo.
+	- [ ] Ao importar deve utilizar o id do backup.
+	- [ ] Ao importar, deve limpar todo banco de dados e todo diretório `/cloud`.
+	- [ ] Após fazer a limpaza, aplicar o arquivo de backup no banco de dados, deve gerar os arquivos `{songId}.tar.zst`.
 - [ ] Gerar `backup.msgpack` (automático) a cada três dias e fazer o upload para o cloud. O objetivo é garantir em caso de perda total por algum motivo, o usuário não tenha que colocar TUDO novamente.
 	! A verificação é feita quando o aplicativo é iniciado e é feito a sincronização, para o cloud, apenas do diretório `cloud/backup`. Para não sincronizar os outros diretórios e ser mais rápido.
 	! Seguir praticamente o mesmo fluxo do "exportar database.msgpack" nas configurações.
