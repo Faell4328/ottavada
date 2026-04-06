@@ -4,6 +4,8 @@
 
 ! Eu preciso tomar cuidado em como vou fazer a atualização do software em produção. É preciso ter um plano para não quebrar o software já funcionando ou pelo menos uma forma de quebrar e recuperar ele rapidamente.
 
+! Eu preciso tomar cuidado em relação ao backup, preciso decidir como irei controlar ele. Por que, caso a pessoa tenha mudado de computador possivelmente o diretório das partituras mudou.
+
 ---
 
 **19-03-2026** - Estava cogitando utilizando o `notify`, mas, ele vai dar mais problema que benefício. Então estou buscando uma alternativa melhor e mais robusta.
@@ -127,3 +129,10 @@ MicroScore
 - A configuração do `rclone` será feito pela aplicação. Acredito que isso irá facilitar de mais para o usuário final, não tendo que: instalar o `rclone`, configurar ele (tendo risco) e eventualmente realizar atualizações.
 - Com isso também, irei assumir a responsabilidade por manter o `rclone` atualizado, sendo mais fácil, apenas atualizando o aplicativo com a nova versão. Não precisando orientar o usuário, acessar a máquina remotamente ou ter que ir no local do computador.
 - Obviamente tem outras coisas que terei que implementar devido a licença `MIT`, mas faz parte. Mas no caso onde esse software irá começar a ser usado, onde a pessoal que irá utilizar é leiga (e no geral, na área de música), é a melhor opção.
+
+**06-04-2026**
+
+`score-maestro-x64` e `score-maestro-x32`
+- Estava insatisfeito com o usuário tendo que escolher entre "rclone do aplicativo" ou "rclone do sistema", tudo isso para "diplar" sistemas x32.
+- Estava muito bagunçado e difícil, agora o aplicativo terá a versão `x32` e `x64`, cada uma com o rclone correto.
+- Também, só será utilizado o "rclone do aplicativo", é mais fácil para o usuário e não é necessário sobrecarregar ele com: instalação e configuração.

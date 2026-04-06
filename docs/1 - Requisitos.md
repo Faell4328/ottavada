@@ -5,7 +5,7 @@
 - Sistema deve sempre verificar antes de agir.
 - Sistema deve ser transparente com que está fazendo.
 - Mais importante, sistema deve ser simples e confiável. Não é para adicionar firula, que não agregue ao objetivo principal.
-- Sistema de realizar backups periodicamente, para em caso de crash ou perda total, o usuário não precisa colocar todas as músicas manualmente novamente.
+- O aplicativo deve ter versão `x32` e `x64`.
 
 ## Gerenciamento de Músicas e Partituras
 
@@ -29,10 +29,6 @@
 ---
 # Requisitos Não Funcionais
 
-## Usabilidade
-- O usuário deve poder escolher entre o `rclone` da máquina ou o `rclone` do projeto (sendo recomendando o do projeto e já vindo marcada como default).
-	! Apenas para computadores x64, pois x32 está praticamente morto e seria raro alguém ter um. Caso a pessoa tenha, deve fazer a instalação manualmente. Não ficando disponível a opção de utilizar o `rclone` do próprio aplicativo ou mudar para o `rclone` do aplicativo.
-
 ## Armazenamento Local
 
 - Ao baixar os arquivos da Nuvem (Cliente), eles viram compactados, ao dar duplo clique em uma partitura de alguma música (no aplicativo), ela deve ser descompactada (no diretório temporário do projeto) e aberto com o software padrão do sistema.
@@ -51,7 +47,7 @@
 - Todos os arquivos na nuvem devem ser compactados com `.zst`. Para ocupar menos espaço na Nuvem, maior velocidade de upload e download.
 - Tanto a varredura, quanto o update e download, deve ser feito em thread separada. Para não interferir no funcionamento dos outros componentes.
 - Os logs devem ser deletados depois de 30 dias, para não ficar poluindo o computador do usuário.
-- O rclone deve sempre usar: `--transfers=10`.
+- O rclone não deve usar `checkers`.
 - Uma `snapshot` deve ser gerada sempre quando o `events.msgpack` passar de 2MB.
 - O `zstd` deve ser usado com essas configurações: `-10` (compressão equilibrada) e `-T0` (utilizar todos os núcleos)
 - `VACUUM;` rodar a cada 30 dias para limpar o lixo do DB.

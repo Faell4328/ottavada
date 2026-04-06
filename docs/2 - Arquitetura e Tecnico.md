@@ -30,6 +30,10 @@ Diretório com os eventos:
 - `/home/<user>/.local/share/com.rhafa.score-maestro/cloud/events` (Linux).
 ! Esse é o diretório onde é salvo os arquivos `events.msgpack.zst`.
 
+Diretório das configurações do `rclone`:
+- `C:\Users\<user>\AppData\Roaming\ScoreMaestro\rclone` (Windows).
+- `/home/<user>/.local/share/com.rhafa.score-maestro/rclone` (Linux).
+
 ! É o mesmo diretório do `tauri-plugin-store`.
 
 ## Nuvem
@@ -88,7 +92,6 @@ Diretório com os eventos:
 - TypeScript
 - Vite
 - Tailwind CSS
-- `@tanstack/react-virtual` - Virtualização de listas longas
 - `react-router` - Navegação entre telas
 - `lucide-react` - Ícones
 - `react-hot-toast` - Notificações em tempo real
@@ -96,8 +99,7 @@ Diretório com os eventos:
 ## Back-end
 
 - Tauri (Rust)
-- Google Drive API (backup)
-- `xz` crate - Reduz tamanho para backup na nuvem
+- `zst` crate - Reduz tamanho para backup na nuvem
 - `rusqlite` crate - SQLite com suporte a FTS5
 - `serde` + `rmp-serde` - Leitura do arquivo `MessagePack`.
 - `fs2` - Espaço em disco
@@ -105,40 +107,8 @@ Diretório com os eventos:
 - `tauri-plugin-dialog` - Diálogos nativos (seleção de arquivos/pastas)
 - `tauri-plugin-fs` - Acesso ao sistema de arquivos
 - `tauri-plugin-store` - Persistência de configurações
-- `tauri-plugin-notification` - Notificações ao usuário
 - `tracing` + `tracing-subscriber` - Para criar e processar logs
 - `tracing-appender` - Para salvar os logs
-
----
-
-**Status de uso (mantida a ordem original):**
-
-Front-end:
-
-- React — Usado
-- TypeScript — Usado
-- Vite — Usado
-- Tailwind CSS — Usado
-- `@tanstack/react-virtual` — Não usado
-- `react-router` — Usado
-- `lucide-react` — Usado
-- `react-hot-toast` — Usado
-
-Back-end:
-
-- Tauri (Rust) — Usado
-- Google Drive API (backup) — Usado (integração via rclone/serviços de backup)
-- `xz` crate — Não usado (o projeto usa `zstd` no `Cargo.toml`)
-- `rusqlite` crate — Usado
-- `serde` + `rmp-serde` — Usado
-- `fs2` — Usado
-- `thiserror` — Usado
-- `tauri-plugin-dialog` — Usado
-- `tauri-plugin-fs` — Usado
-- `tauri-plugin-store` — Usado
-- `tauri-plugin-notification` — Usado
-- `tracing` + `tracing-subscriber` — Usado
-- `tracing-appender` — Usado
 
 ---
 # Interface

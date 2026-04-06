@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+
+rclone.exe
+rclone64.exe
+rclone32.exe
