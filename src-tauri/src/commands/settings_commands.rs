@@ -134,6 +134,7 @@ pub fn has_pending_changes(
 
 #[tauri::command]
 pub fn exit_application(app: AppHandle) {
+    crate::commands::rclone_commands::terminate_running_rclone_processes();
     app.exit(0);
 }
 

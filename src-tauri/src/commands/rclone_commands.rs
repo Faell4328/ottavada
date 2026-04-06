@@ -2,15 +2,17 @@ use crate::commands::common::{configure_no_window_command, run_blocking_with_sto
 use crate::domain::errors::AppError;
 use crate::infrastructure::store::SystemStore;
 use serde_json::Value;
+use std::collections::HashSet;
 use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::{Mutex, OnceLock};
 use std::thread;
 use std::time::Duration;
 use std::time::Instant;
 use tauri::State;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 /// Retorna o comandо correto para executar rclone baseado no sistema operacional
 ///
@@ -56,16 +58,146 @@ const RCLONE_CONNECT_TIMEOUT: &str = "10s";
 const RCLONE_IO_TIMEOUT: &str = "180s";
 const RCLONE_RC_TIMEOUT_MS: u64 = 3000;
 
-fn run_rclone_with_retry(args: &[&str], operation_label: &str) -> Result<std::process::Output, AppError> {
-    let execute = || -> Result<std::process::Output, AppError> {
-        let mut cmd = configure_no_window_command(Command::new(get_rclone_command()));
-        cmd.args(args).output().map_err(|e| {
-            error!("Erro ao executar rclone [{}]: {:?}", operation_label, e);
-            AppError::Generic(format!("Erro ao executar rclone ({}): {}", operation_label, e))
-        })
-    };
+fn active_rclone_pids() -> &'static Mutex<HashSet<u32>> {
+    static ACTIVE_RCLONE_PIDS: OnceLock<Mutex<HashSet<u32>>> = OnceLock::new();
+    ACTIVE_RCLONE_PIDS.get_or_init(|| Mutex::new(HashSet::new()))
+}
 
-    let mut output = execute()?;
+fn register_rclone_pid(pid: u32) {
+    if let Ok(mut guard) = active_rclone_pids().lock() {
+        guard.insert(pid);
+    }
+}
+
+fn unregister_rclone_pid(pid: u32) {
+    if let Ok(mut guard) = active_rclone_pids().lock() {
+        guard.remove(&pid);
+    }
+}
+
+fn list_active_rclone_pids() -> Vec<u32> {
+    if let Ok(guard) = active_rclone_pids().lock() {
+        guard.iter().copied().collect()
+    } else {
+        Vec::new()
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn terminate_process_pid(pid: u32) -> Result<(), AppError> {
+    let pid_str = pid.to_string();
+    let output = configure_no_window_command(Command::new("taskkill"))
+        .args(["/PID", pid_str.as_str(), "/T", "/F"])
+        .output()
+        .map_err(|e| AppError::Generic(format!("Erro ao encerrar processo rclone {}: {}", pid, e)))?;
+
+    if output.status.success() {
+        return Ok(());
+    }
+
+    let stderr = String::from_utf8_lossy(&output.stderr).to_lowercase();
+    if stderr.contains("not found")
+        || stderr.contains("nao foi encontrado")
+        || stderr.contains("não foi encontrado")
+    {
+        return Ok(());
+    }
+
+    Err(AppError::Generic(format!(
+        "Falha ao encerrar processo rclone {}: {}",
+        pid,
+        String::from_utf8_lossy(&output.stderr)
+    )))
+}
+
+#[cfg(not(target_os = "windows"))]
+fn terminate_process_pid(pid: u32) -> Result<(), AppError> {
+    let pid_str = pid.to_string();
+
+    let term_output = Command::new("kill")
+        .args(["-TERM", pid_str.as_str()])
+        .output()
+        .map_err(|e| AppError::Generic(format!("Erro ao encerrar processo rclone {}: {}", pid, e)))?;
+
+    if term_output.status.success() {
+        return Ok(());
+    }
+
+    let term_stderr = String::from_utf8_lossy(&term_output.stderr).to_lowercase();
+    if term_stderr.contains("no such process") {
+        return Ok(());
+    }
+
+    let kill_output = Command::new("kill")
+        .args(["-KILL", pid_str.as_str()])
+        .output()
+        .map_err(|e| {
+            AppError::Generic(format!(
+                "Erro ao forçar encerramento do processo rclone {}: {}",
+                pid, e
+            ))
+        })?;
+
+    if kill_output.status.success() {
+        return Ok(());
+    }
+
+    let kill_stderr = String::from_utf8_lossy(&kill_output.stderr).to_lowercase();
+    if kill_stderr.contains("no such process") {
+        return Ok(());
+    }
+
+    Err(AppError::Generic(format!(
+        "Falha ao encerrar processo rclone {}: {}",
+        pid,
+        String::from_utf8_lossy(&kill_output.stderr)
+    )))
+}
+
+fn run_rclone_once(args: &[&str], operation_label: &str) -> Result<std::process::Output, AppError> {
+    let mut cmd = configure_no_window_command(Command::new(get_rclone_command()));
+    cmd.args(args);
+
+    let child = cmd.spawn().map_err(|e| {
+        error!("Erro ao executar rclone [{}]: {:?}", operation_label, e);
+        AppError::Generic(format!("Erro ao executar rclone ({}): {}", operation_label, e))
+    })?;
+
+    let pid = child.id();
+    register_rclone_pid(pid);
+
+    let output = child.wait_with_output().map_err(|e| {
+        AppError::Generic(format!(
+            "Erro ao aguardar execução do rclone ({}): {}",
+            operation_label, e
+        ))
+    });
+
+    unregister_rclone_pid(pid);
+    output
+}
+
+pub fn terminate_running_rclone_processes() {
+    let pids = list_active_rclone_pids();
+    if pids.is_empty() {
+        return;
+    }
+
+    info!(
+        "Encerrando {} processo(s) rclone ativos durante finalização do app",
+        pids.len()
+    );
+
+    for pid in pids {
+        if let Err(err) = terminate_process_pid(pid) {
+            warn!("Falha ao encerrar processo rclone {}: {}", pid, err);
+        }
+        unregister_rclone_pid(pid);
+    }
+}
+
+fn run_rclone_with_retry(args: &[&str], operation_label: &str) -> Result<std::process::Output, AppError> {
+    let mut output = run_rclone_once(args, operation_label)?;
     if output.status.success() {
         return Ok(output);
     }
@@ -81,7 +213,7 @@ fn run_rclone_with_retry(args: &[&str], operation_label: &str) -> Result<std::pr
     );
 
     thread::sleep(Duration::from_millis(350));
-    output = execute()?;
+    output = run_rclone_once(args, operation_label)?;
     Ok(output)
 }
 

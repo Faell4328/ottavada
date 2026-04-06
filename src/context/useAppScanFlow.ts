@@ -350,7 +350,7 @@ export function useAppScanFlow({
             stepTotal: currentTotalSteps,
           },
         });
-        await api.generateSnapshotFile();
+        await api.generateSnapshotFile(false);
         snapshotGenerated = true;
         completedSteps += 1;
         updateStepProgress(changedCount);

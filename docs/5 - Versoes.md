@@ -243,12 +243,10 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [x] Atualizar o `tauri-plugin-store` com o novo campo.
 
 
-- [x] Adicionar um aviso que a internet está ruim no StatusBar (uma mensagem vermelha na etapa de upload e downlaod)
-- [x] Corrigindo o StatusBar para internet lenta.
-	! Progresso está ruim, quando a internet é lenta, fica travado em 0% e depois de um tempo vai para 100% du nada.
-	! E as vezes fica em 100% e demora um tempo para concluir.
-- [ ] Quando o aplicativo estiver fazendo alguma procura na nuvem, quando o aplicativo for fechado o rclone deve parar a execução.
+- [x] Corrigindo o StatusBar, não está mostrando progresso real (internet lenta).
+- [x] Quando o aplicativo estiver fazendo alguma procura na nuvem, quando o aplicativo for fechado o rclone deve parar a execução.
 	! O rclone continua a execução, com isso se a pessoa fechar e abri o aplicativo, não irá conseguir utilizar o rclone no aplicativo.
+- [x] Corrigindo o `snapshot` gerado automaticamente para não apagar o `cloud/songs/`.
 
 - [ ] Alterar o "exportar database.msgpack" para "exportar backup local".
 - [ ] Alterar o "importar dabase.msgpack" para "importar backup local".
