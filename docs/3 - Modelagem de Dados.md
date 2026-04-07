@@ -320,8 +320,7 @@ Será documentando em JSON, mas na aplicação real é utilizando `MessagePack`.
 	"name": "Faell",
 	"type": "client",
 	"rclone": {
-		"name": "Nome salvo no rclone",
-		"path": "Diretório no Google Drive",
+		"provider": "drive" || "koofr"
 	},
 	"cloud": {
 		// Timestamp do último snapshot implementado

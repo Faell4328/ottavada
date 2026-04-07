@@ -9,6 +9,7 @@ use infrastructure::store::SystemStore;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use tauri::path::BaseDirectory;
 use tauri::Manager;
 use tracing::{info, warn};
 
@@ -64,6 +65,36 @@ pub fn run() {
 
             info!("Aplicação iniciada");
             info!("Diretório de dados: {:?}", app_data_dir);
+
+            let rclone_config_dir = app_data_dir.join("rclone");
+            std::fs::create_dir_all(&rclone_config_dir)
+                .expect("Não foi possível criar diretório de configuração do rclone");
+
+            let rclone_config_path = rclone_config_dir.join("rclone.conf");
+
+            let rclone_executable_path = if cfg!(target_os = "windows") {
+                match app
+                    .path()
+                    .resolve("rclone/rclone.exe", BaseDirectory::Resource)
+                {
+                    Ok(path) if path.exists() => Some(path),
+                    Ok(path) => {
+                        warn!(
+                            "Binário do rclone empacotado não encontrado em {}",
+                            path.display()
+                        );
+                        None
+                    }
+                    Err(err) => {
+                        warn!("Falha ao resolver o binário do rclone empacotado: {}", err);
+                        None
+                    }
+                }
+            } else {
+                None
+            };
+
+            commands::rclone_commands::set_rclone_paths(rclone_executable_path, rclone_config_path);
 
             // Inicializar banco de dados
             let db_path = app_data_dir.join("score_maestro.db");
@@ -169,6 +200,7 @@ pub fn run() {
             commands::backup_commands::import_backup_cloud_file,
             commands::backup_commands::apply_server_changes_on_client,
             // Rclone
+            commands::rclone_commands::generate_rclone_config,
             commands::rclone_commands::test_rclone_connection,
             commands::rclone_commands::upload_with_rclone,
             commands::rclone_commands::test_rclone_upload,

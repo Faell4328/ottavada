@@ -56,9 +56,16 @@ export interface GoogleServiceAccount {
   client_x509_cert_url: string;
 }
 
+export type RcloneProvider = "koofr" | "google_drive";
+
 export interface RcloneConfig {
-  remote: string;
-  path: string;
+  provider: RcloneProvider;
+}
+
+export interface RcloneSetupInput {
+  provider: RcloneProvider;
+  email?: string | null;
+  appPassword?: string | null;
 }
 
 export enum BackupStatus {

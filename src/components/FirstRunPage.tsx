@@ -1,12 +1,18 @@
-import { useState, useEffect } from "react";
-import { Music, AlertCircle, CheckCircle, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { CheckCircle, Loader2, Music } from "lucide-react";
 import toast from "react-hot-toast";
-import { useAppState } from "../context/AppContext";
+
 import * as api from "../api/commands";
-import { getErrorMessage } from "../utils/errors";
+import { useAppState } from "../context/AppContext";
 import { useRcloneTest } from "../hooks/useRcloneTest";
+import { getErrorMessage } from "../utils/errors";
+import type { RcloneProvider } from "../types";
 
 type Step = "name" | "type" | "rclone-setup" | "confirm";
+
+function getRcloneProviderLabel(provider: RcloneProvider) {
+  return provider === "koofr" ? "Koofr" : "Google Drive";
+}
 
 export default function FirstRunPage() {
   const { completeFirstRun } = useAppState();
@@ -14,71 +20,127 @@ export default function FirstRunPage() {
   const [computerName, setComputerName] = useState("");
   const [computerType, setComputerType] = useState<"Server" | "Client" | "">("Server");
   const [step, setStep] = useState<Step>("name");
-  const [rcloneRemote, setRcloneRemote] = useState("");
-  const [rclonePath, setRclonePath] = useState("ScoreMaestro");
+  const [rcloneProvider, setRcloneProvider] = useState<RcloneProvider>("koofr");
+  const [rcloneEmail, setRcloneEmail] = useState("");
+  const [rcloneAppPassword, setRcloneAppPassword] = useState("");
+  const [rcloneConfigGenerated, setRcloneConfigGenerated] = useState(false);
   const [rcloneConfigured, setRcloneConfigured] = useState(false);
+  const [isGeneratingRcloneConfig, setIsGeneratingRcloneConfig] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const { isTestingRclone, testRclone } = useRcloneTest({
-    remote: rcloneRemote,
-    path: rclonePath,
+  const { testRclone } = useRcloneTest({
+    provider: rcloneProvider,
     onSuccess: () => setRcloneConfigured(true),
     onFailure: () => setRcloneConfigured(false),
   });
 
   useEffect(() => {
-    // Generate a UUID for the computer
-    api.generateComputerId()
+    void api.generateComputerId()
       .then(setComputerId)
       .catch(() => {
         toast.error("Erro ao gerar ID do computador");
       });
   }, []);
 
-  async function handleNameSubmit() {
+  function handleProviderChange(nextProvider: RcloneProvider) {
+    setRcloneProvider(nextProvider);
+    setRcloneEmail("");
+    setRcloneAppPassword("");
+    setRcloneConfigGenerated(false);
+    setRcloneConfigured(false);
+  }
+
+  async function handleGenerateRcloneConfig() {
+    if (rcloneProvider === "koofr") {
+      if (!rcloneEmail.trim()) {
+        toast.error("Informe o email do Koofr");
+        return;
+      }
+
+      if (!rcloneAppPassword.trim()) {
+        toast.error("Informe a senha do aplicativo do Koofr");
+        return;
+      }
+    }
+
+    setIsGeneratingRcloneConfig(true);
+    try {
+      await api.generateRcloneConfig({
+        provider: rcloneProvider,
+        email: rcloneProvider === "koofr" ? rcloneEmail.trim() : null,
+        appPassword: rcloneProvider === "koofr" ? rcloneAppPassword.trim() : null,
+      });
+
+      const wasConfigured = await testRclone();
+      if (!wasConfigured) {
+        setRcloneConfigGenerated(false);
+        setRcloneConfigured(false);
+        return;
+      }
+
+      setRcloneConfigGenerated(true);
+      setRcloneConfigured(true);
+      toast.success(
+        rcloneProvider === "google_drive"
+          ? "Google Drive configurado e testado com sucesso."
+          : "Koofr configurado e testado com sucesso."
+      );
+    } catch (error) {
+      setRcloneConfigGenerated(false);
+      setRcloneConfigured(false);
+      toast.error(`Erro ao gerar configuração do rclone: ${getErrorMessage(error)}`);
+    } finally {
+      setIsGeneratingRcloneConfig(false);
+    }
+  }
+
+  function handleNameSubmit() {
     if (!computerName.trim()) {
       toast.error("Digite o nome do computador");
       return;
     }
+
     setStep("type");
   }
 
-  async function handleTypeSubmit() {
+  function handleTypeSubmit() {
     if (!computerType) {
       toast.error("Selecione o tipo de computador");
       return;
     }
+
     setStep("rclone-setup");
   }
 
   async function handleWithRclone() {
-    if (!rcloneRemote.trim()) {
-      toast.error("Preencha o nome do remote do rclone");
+    if (!rcloneConfigGenerated) {
+      toast.error("Gere e teste a configuração do rclone antes de continuar");
       return;
     }
 
     if (!rcloneConfigured) {
-      toast.error("Teste a conexão com rclone antes de continuar");
+      toast.error("A configuração do rclone precisa estar aprovada antes de continuar");
       return;
     }
-    
-    // Deletar arquivo de teste local da pasta /nuvem
+
     try {
       await api.deleteRcloneTestFile();
     } catch (error) {
-      // Não bloqueia o fluxo se falhar ao deletar
       console.warn("Aviso ao deletar arquivo de teste local:", error);
     }
-    
+
     setStep("confirm");
   }
 
   async function handleConfirm() {
     setIsLoading(true);
     try {
-      const rcloneJson = JSON.stringify({ remote: rcloneRemote, path: rclonePath });
-
-      await completeFirstRun(computerId, computerName.trim(), computerType, rcloneJson);
+      await completeFirstRun(
+        computerId,
+        computerName.trim(),
+        computerType,
+        JSON.stringify({ provider: rcloneProvider })
+      );
     } catch (error) {
       toast.error(`Erro: ${getErrorMessage(error)}`);
       setIsLoading(false);
@@ -88,79 +150,72 @@ export default function FirstRunPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-[#33465d] to-[#5d6d82]">
       <div className="w-full max-w-2xl rounded-xl bg-white p-8 shadow-2xl">
-        {/* Logo */}
-        <div className="flex flex-col items-center mb-8">
-          <div className="flex items-center gap-3 mb-2">
+        <div className="mb-8 flex flex-col items-center">
+          <div className="mb-2 flex items-center gap-3">
             <Music className="h-10 w-10 text-[#4f84d7]" />
-            <h1 className="text-2xl font-bold text-[#2f4259]">
-              Score Maestro
-            </h1>
+            <h1 className="text-2xl font-bold text-[#2f4259]">Score Maestro</h1>
           </div>
-          <p className="text-sm text-[#6b849e] text-center">
+          <p className="text-center text-sm text-[#6b849e]">
             Organize suas partituras com versionamento e backups automáticos
           </p>
         </div>
 
-        {/* Step 1: Computer Name */}
         {step === "name" && (
           <>
-            <h2 className="text-lg font-semibold text-[#34485d] mb-4">
-              Configure seu computador
-            </h2>
+            <h2 className="mb-4 text-lg font-semibold text-[#34485d]">Configure seu computador</h2>
 
             <div className="mb-6">
-              <label className="block text-sm font-semibold text-[#34485d] mb-1.5">
+              <label className="mb-1.5 block text-sm font-semibold text-[#34485d]">
                 ID do computador
               </label>
               <input
                 value={computerId}
                 disabled
-                className="w-full h-10 rounded-lg border border-[#c5cfdb] bg-[#f0f3f8] px-3 text-sm text-[#4d6075] outline-none cursor-not-allowed font-mono"
+                className="h-10 w-full cursor-not-allowed rounded-lg border border-[#c5cfdb] bg-[#f0f3f8] px-3 font-mono text-sm text-[#4d6075] outline-none"
               />
-              <p className="text-xs text-[#8b9db2] mt-1">
+              <p className="mt-1 text-xs text-[#8b9db2]">
                 Identificador único gerado automaticamente. Será usado para sincronizar dados entre computadores.
               </p>
             </div>
 
             <div className="mb-6">
-              <label className="block text-sm font-semibold text-[#34485d] mb-1.5">
+              <label className="mb-1.5 block text-sm font-semibold text-[#34485d]">
                 Nome do computador
               </label>
               <input
                 value={computerName}
                 onChange={(e) => setComputerName(e.target.value)}
-                className="w-full h-10 rounded-lg border border-[#c5cfdb] bg-[#f8fafd] px-3 text-sm text-[#4d6075] outline-none focus:border-[#7ba0d4] focus:ring-2 focus:ring-[#7ba0d4]/20"
+                className="h-10 w-full rounded-lg border border-[#c5cfdb] bg-[#f8fafd] px-3 text-sm text-[#4d6075] outline-none focus:border-[#7ba0d4] focus:ring-2 focus:ring-[#7ba0d4]/20"
                 placeholder="Ex: Estúdio, Home, Sala Ensaio..."
               />
-              <p className="text-xs text-[#8b9db2] mt-1">
+              <p className="mt-1 text-xs text-[#8b9db2]">
                 Nome descritivo para este computador. Você pode alterá-lo depois nas configurações.
               </p>
             </div>
 
             <button
+              type="button"
               onClick={handleNameSubmit}
-              className="w-full h-11 rounded-lg bg-[#4f84d7] text-sm font-bold text-white hover:bg-[#3d6fb8] transition-colors cursor-pointer border-0"
+              className="h-11 w-full rounded-lg border-0 bg-[#4f84d7] text-sm font-bold text-white transition-colors hover:bg-[#3d6fb8] cursor-pointer"
             >
               Próximo
             </button>
           </>
         )}
 
-        {/* Step 2: Computer Type */}
         {step === "type" && (
           <>
-            <h2 className="text-lg font-semibold text-[#34485d] mb-4">
+            <h2 className="mb-4 text-lg font-semibold text-[#34485d]">
               Qual é o tipo de computador?
             </h2>
 
-            <p className="text-sm text-[#6b849e] mb-6">
+            <p className="mb-6 text-sm text-[#6b849e]">
               Escolha o tipo que se aplica ao seu computador:
             </p>
 
-            {/* Server Option */}
             <div
               onClick={() => setComputerType("Server")}
-              className={`mb-4 p-6 rounded-lg border-2 cursor-pointer transition-all ${
+              className={`mb-4 rounded-lg border-2 p-6 transition-all cursor-pointer ${
                 computerType === "Server"
                   ? "border-[#4f84d7] bg-[#f0f3f8]"
                   : "border-[#c5cfdb] bg-white hover:border-[#7ba0d4]"
@@ -168,18 +223,16 @@ export default function FirstRunPage() {
             >
               <div className="flex items-start gap-4">
                 <div
-                  className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                  className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border-2 ${
                     computerType === "Server"
                       ? "border-[#4f84d7] bg-[#4f84d7]"
                       : "border-[#c5cfdb]"
                   }`}
                 >
-                  {computerType === "Server" && (
-                    <div className="w-2 h-2 bg-white rounded-full" />
-                  )}
+                  {computerType === "Server" && <div className="h-2 w-2 rounded-full bg-white" />}
                 </div>
                 <div>
-                  <h3 className="font-semibold text-[#34485d] mb-1">Servidor</h3>
+                  <h3 className="mb-1 font-semibold text-[#34485d]">Servidor</h3>
                   <p className="text-xs text-[#6b849e]">
                     Computador mestre. Mantém todas as partituras indexadas localmente, detecta mudanças e é referência para sincronização com outros computadores.
                   </p>
@@ -187,10 +240,9 @@ export default function FirstRunPage() {
               </div>
             </div>
 
-            {/* Client Option */}
             <div
               onClick={() => setComputerType("Client")}
-              className={`mb-6 p-6 rounded-lg border-2 cursor-pointer transition-all ${
+              className={`mb-6 rounded-lg border-2 p-6 transition-all cursor-pointer ${
                 computerType === "Client"
                   ? "border-[#4f84d7] bg-[#f0f3f8]"
                   : "border-[#c5cfdb] bg-white hover:border-[#7ba0d4]"
@@ -198,18 +250,16 @@ export default function FirstRunPage() {
             >
               <div className="flex items-start gap-4">
                 <div
-                  className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                  className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border-2 ${
                     computerType === "Client"
                       ? "border-[#4f84d7] bg-[#4f84d7]"
                       : "border-[#c5cfdb]"
                   }`}
                 >
-                  {computerType === "Client" && (
-                    <div className="w-2 h-2 bg-white rounded-full" />
-                  )}
+                  {computerType === "Client" && <div className="h-2 w-2 rounded-full bg-white" />}
                 </div>
                 <div>
-                  <h3 className="font-semibold text-[#34485d] mb-1">Cliente</h3>
+                  <h3 className="mb-1 font-semibold text-[#34485d]">Cliente</h3>
                   <p className="text-xs text-[#6b849e]">
                     Computador secundário. Não indexa o diretório local, consulta partituras na versão principal e pode propor mudanças (que requerem aprovação do servidor).
                   </p>
@@ -218,196 +268,233 @@ export default function FirstRunPage() {
             </div>
 
             <button
+              type="button"
               onClick={handleTypeSubmit}
-              className="w-full h-11 rounded-lg bg-[#4f84d7] text-sm font-bold text-white hover:bg-[#3d6fb8] transition-colors cursor-pointer border-0"
+              className="h-11 w-full rounded-lg border-0 bg-[#4f84d7] text-sm font-bold text-white transition-colors hover:bg-[#3d6fb8] cursor-pointer"
             >
               Próximo
             </button>
 
             <button
+              type="button"
               onClick={() => setStep("name")}
-              className="w-full h-10 rounded-lg bg-white text-sm font-semibold text-[#4f84d7] border border-[#7ba0d4] hover:bg-[#f8fafd] transition-colors cursor-pointer mt-2"
+              className="mt-2 h-10 w-full rounded-lg border border-[#7ba0d4] bg-white text-sm font-semibold text-[#4f84d7] transition-colors hover:bg-[#f8fafd] cursor-pointer"
             >
               Voltar
             </button>
           </>
         )}
 
-        {/* Step 3: Rclone Setup */}
         {step === "rclone-setup" && (
           <>
-            <h2 className="text-lg font-semibold text-[#34485d] mb-4">
-              Configure o Rclone
-            </h2>
+            <h2 className="mb-4 text-lg font-semibold text-[#34485d]">Configure o Rclone</h2>
 
-            <p className="text-sm text-[#6b849e] mb-6">
-              Rclone sincroniza seus backups com a nuvem. Configure e valide agora para concluir o primeiro acesso.
+            <p className="mb-6 text-sm text-[#6b849e]">
+              Escolha o provedor de nuvem e conclua a configuração em uma única ação.
             </p>
 
-            {/* Option 1: With Rclone */}
-            <div className="mb-6 p-4 border border-[#c5cfdb] rounded-lg">
-              <h3 className="font-semibold text-[#34485d] mb-3">
-                Com sincronização em nuvem
-              </h3>
-
-              <p className="text-xs text-[#6b849e] mb-4">
-                Configure o rclone em seu computador primeiro. Pode fazer download em{" "}
-                <a 
-                  href="https://rclone.org/downloads/" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-[#4f84d7] hover:underline font-semibold"
-                >
-                  rclone.org/downloads
-                </a>
-              </p>
-
-              {/* Rclone Remote Name */}
-              <div className="mb-4">
-                <label className="block text-xs font-semibold text-[#34485d] mb-2">
-                  Nome do Remote (ex: gdrive, pcloud)
-                </label>
-                <input
-                  value={rcloneRemote}
-                  onChange={(e) => {
-                    setRcloneRemote(e.target.value);
-                    setRcloneConfigured(false);
-                  }}
-                  className="w-full h-10 rounded-lg border border-[#c5cfdb] bg-[#f8fafd] px-3 text-sm text-[#4d6075] outline-none focus:border-[#7ba0d4] focus:ring-2 focus:ring-[#7ba0d4]/20"
-                  placeholder="Nome do remote do rclone"
-                />
-              </div>
-
-              {/* Rclone Path */}
-              <div className="mb-4">
-                <label className="block text-xs font-semibold text-[#34485d] mb-2">
-                  Caminho na nuvem (ex: /ScoreMaestro)
-                </label>
-                <input
-                  value={rclonePath}
-                  onChange={(e) => {
-                    setRclonePath(e.target.value);
-                    setRcloneConfigured(false);
-                  }}
-                  className="w-full h-10 rounded-lg border border-[#c5cfdb] bg-[#f8fafd] px-3 text-sm text-[#4d6075] outline-none focus:border-[#7ba0d4] focus:ring-2 focus:ring-[#7ba0d4]/20"
-                  placeholder="/ScoreMaestro"
-                />
-              </div>
-
-              {/* Test Button */}
-              <button
-                onClick={() => {
-                  void testRclone();
-                }}
-                disabled={isTestingRclone || !rcloneRemote.trim()}
-                className={`w-full h-10 rounded-lg text-sm font-bold transition-colors cursor-pointer border-0 mb-4 flex items-center justify-center gap-2 ${
-                  isTestingRclone || !rcloneRemote.trim()
-                    ? "bg-[#9db3d1] cursor-not-allowed text-white"
-                    : "bg-[#7ba0d4] hover:bg-[#6a8ec0] text-white"
-                }`}
-              >
-                {isTestingRclone && <Loader2 className="h-4 w-4 animate-spin" />}
-                {isTestingRclone ? "Testando..." : "Fazer Teste"}
-              </button>
-
-              {/* Status */}
-              {rcloneConfigured && (
-                <div className="p-3 bg-green-50 border border-green-200 rounded-lg flex items-start gap-2 mb-4">
-                  <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-xs font-semibold text-green-800">
-                      Rclone configurado com sucesso
-                    </p>
-                    <p className="text-xs text-green-700 mt-1">
-                      Remote: <code className="bg-green-100 px-1">{rcloneRemote}</code>
-                    </p>
-                    <p className="text-xs text-green-700">
-                      Caminho: <code className="bg-green-100 px-1">{rclonePath}</code>
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {rcloneRemote && !rcloneConfigured && !isTestingRclone && (
-                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start gap-2 mb-4">
-                  <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-xs font-semibold text-yellow-800">
-                      Teste pendente
-                    </p>
-                    <p className="text-xs text-yellow-700 mt-1">
-                      Clique em "Testar Conexão" para validar as configurações
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              <button
-                onClick={handleWithRclone}
-                disabled={!rcloneConfigured && !!rcloneRemote.trim()}
-                className={`w-full h-10 rounded-lg text-sm font-bold text-white transition-colors cursor-pointer border-0 ${
-                  !rcloneConfigured && rcloneRemote.trim()
-                    ? "bg-[#9db3d1] cursor-not-allowed"
-                    : "bg-[#4f84d7] hover:bg-[#3d6fb8]"
-                }`}
-              >
-                Continuar com Rclone
-              </button>
-            </div>
-
-            <button
-              onClick={() => setStep("type")}
-              className="w-full h-10 rounded-lg bg-white text-sm font-semibold text-[#4f84d7] border border-[#7ba0d4] hover:bg-[#f8fafd] transition-colors cursor-pointer mt-2"
-            >
-              Voltar
-            </button>
-          </>
-        )}
-
-        {/* Step 4: Confirmation */}
-        {step === "confirm" && (
-          <>
-            <h2 className="text-lg font-semibold text-[#34485d] mb-6">
-              Confirme suas configurações
-            </h2>
-
-            <div className="space-y-4 mb-6">
-              <div className="p-4 bg-[#f8fafd] rounded-lg border border-[#c5cfdb]">
-                <p className="text-xs text-[#8b9db2] mb-1">ID do computador</p>
-                <p className="text-sm font-mono text-[#34485d]">
-                  {computerId}
+            <div className="mb-4 rounded-xl border border-[#c5cfdb] bg-[#f8fafd] p-4">
+              <div className="mb-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8b9db2]">
+                  Provedor de nuvem
+                </p>
+                <p className="mt-1 text-xs text-[#6b849e]">
+                  Koofr é o recomendado para este fluxo inicial. Google Drive abre o navegador para autenticação.
                 </p>
               </div>
 
-              <div className="p-4 bg-[#f8fafd] rounded-lg border border-[#c5cfdb]">
-                <p className="text-xs text-[#8b9db2] mb-1">Nome do computador</p>
+              <div className="grid gap-3 md:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => handleProviderChange("koofr")}
+                  className={`rounded-lg border p-4 text-left transition-colors cursor-pointer ${
+                    rcloneProvider === "koofr"
+                      ? "border-[#4f84d7] bg-white"
+                      : "border-[#c5cfdb] bg-white/70 hover:border-[#7ba0d4]"
+                  }`}
+                >
+                  <div className="mb-2 flex items-center gap-2">
+                    <span className="rounded-full bg-[#e8eef7] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.2em] text-[#4f84d7]">
+                      Recomendado
+                    </span>
+                  </div>
+                  <p className="text-sm font-semibold text-[#34485d]">Koofr</p>
+                  <p className="mt-1 text-xs text-[#6b849e]">
+                    Use a senha de aplicativo criada em https://app.koofr.net/.
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleProviderChange("google_drive")}
+                  className={`rounded-lg border p-4 text-left transition-colors cursor-pointer ${
+                    rcloneProvider === "google_drive"
+                      ? "border-[#4f84d7] bg-white"
+                      : "border-[#c5cfdb] bg-white/70 hover:border-[#7ba0d4]"
+                  }`}
+                >
+                  <p className="text-sm font-semibold text-[#34485d]">Google Drive</p>
+                  <p className="mt-1 text-xs text-[#6b849e]">
+                    Autentique pelo navegador usando o fluxo padrão do rclone.
+                  </p>
+                </button>
+              </div>
+            </div>
+
+            <div className="mb-4 rounded-xl border border-[#c5cfdb] bg-white p-4">
+              <div className="mb-3">
+                <p className="text-sm font-semibold text-[#34485d]">
+                  {getRcloneProviderLabel(rcloneProvider)}
+                </p>
+                <p className="text-xs text-[#6b849e]">
+                  {rcloneProvider === "google_drive"
+                    ? "Clique em Abrir navegador para autenticar e concluir a autorização."
+                    : "Informe o email e a senha de aplicativo do Koofr."}
+                </p>
+              </div>
+
+              {rcloneProvider === "koofr" ? (
+                <div className="space-y-3">
+                  <div>
+                    <label className="mb-2 block text-xs font-semibold text-[#34485d]">
+                      Email do Koofr
+                    </label>
+                    <input
+                      value={rcloneEmail}
+                      onChange={(e) => setRcloneEmail(e.target.value)}
+                      className="h-10 w-full rounded-lg border border-[#c5cfdb] bg-[#f8fafd] px-3 text-sm text-[#4d6075] outline-none focus:border-[#7ba0d4] focus:ring-2 focus:ring-[#7ba0d4]/20"
+                      placeholder="voce@exemplo.com"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-xs font-semibold text-[#34485d]">
+                      Senha do aplicativo
+                    </label>
+                    <input
+                      type="password"
+                      value={rcloneAppPassword}
+                      onChange={(e) => setRcloneAppPassword(e.target.value)}
+                      className="h-10 w-full rounded-lg border border-[#c5cfdb] bg-[#f8fafd] px-3 text-sm text-[#4d6075] outline-none focus:border-[#7ba0d4] focus:ring-2 focus:ring-[#7ba0d4]/20"
+                      placeholder="Senha criada no Koofr"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="text-xs text-[#6b849e]">
+                  <p>
+                    Clique em <span className="font-semibold text-[#34485d]">Abrir navegador para autenticar</span> para concluir a autorização do Google Drive.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                void handleGenerateRcloneConfig();
+              }}
+              disabled={
+                isGeneratingRcloneConfig ||
+                (rcloneProvider === "koofr" && (!rcloneEmail.trim() || !rcloneAppPassword.trim()))
+              }
+              className={`mb-4 flex h-10 w-full items-center justify-center gap-2 rounded-lg border-0 text-sm font-bold transition-colors cursor-pointer ${
+                isGeneratingRcloneConfig ||
+                (rcloneProvider === "koofr" && (!rcloneEmail.trim() || !rcloneAppPassword.trim()))
+                  ? "cursor-not-allowed bg-[#9db3d1] text-white"
+                  : "bg-[#4f84d7] text-white hover:bg-[#3d6fb8]"
+              }`}
+            >
+              {isGeneratingRcloneConfig && <Loader2 className="h-4 w-4 animate-spin" />}
+              {isGeneratingRcloneConfig
+                ? "Configurando..."
+                : rcloneProvider === "google_drive"
+                  ? "Configurar e testar Google Drive"
+                  : "Configurar e testar Koofr"}
+            </button>
+
+            {rcloneConfigured && (
+              <div className="mb-4 rounded-lg border border-green-200 bg-green-50 p-3">
+                <div className="flex items-start gap-2">
+                  <CheckCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-green-600" />
+                  <div>
+                    <p className="text-xs font-semibold text-green-800">Rclone configurado e testado com sucesso</p>
+                    <p className="mt-1 text-xs text-green-700">
+                      Remote padrão: <code className="bg-green-100 px-1">{rcloneProvider === "koofr" ? "koofr" : "gdrive"}</code>
+                    </p>
+                    <p className="text-xs text-green-700">
+                      Caminho padrão: <code className="bg-green-100 px-1">ScoreMaestro</code>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleWithRclone}
+                disabled={!rcloneConfigured}
+                className={`h-10 flex-1 rounded-lg border-0 text-sm font-bold text-white transition-colors cursor-pointer ${
+                  !rcloneConfigured
+                    ? "cursor-not-allowed bg-[#9db3d1]"
+                    : "bg-[#4f84d7] hover:bg-[#3d6fb8]"
+                }`}
+              >
+                Continuar
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setStep("type")}
+                className="h-10 flex-1 rounded-lg border border-[#7ba0d4] bg-white text-sm font-semibold text-[#4f84d7] transition-colors hover:bg-[#f8fafd] cursor-pointer"
+              >
+                Voltar
+              </button>
+            </div>
+          </>
+        )}
+
+        {step === "confirm" && (
+          <>
+            <h2 className="mb-6 text-lg font-semibold text-[#34485d]">Confirme suas configurações</h2>
+
+            <div className="mb-6 space-y-4">
+              <div className="rounded-lg border border-[#c5cfdb] bg-[#f8fafd] p-4">
+                <p className="mb-1 text-xs text-[#8b9db2]">ID do computador</p>
+                <p className="text-sm font-mono text-[#34485d]">{computerId}</p>
+              </div>
+
+              <div className="rounded-lg border border-[#c5cfdb] bg-[#f8fafd] p-4">
+                <p className="mb-1 text-xs text-[#8b9db2]">Nome do computador</p>
                 <p className="text-sm font-semibold text-[#34485d]">
                   {computerName || "(não preenchido)"}
                 </p>
               </div>
 
-              <div className="p-4 bg-[#f8fafd] rounded-lg border border-[#c5cfdb]">
-                <p className="text-xs text-[#8b9db2] mb-1">Tipo de computador</p>
+              <div className="rounded-lg border border-[#c5cfdb] bg-[#f8fafd] p-4">
+                <p className="mb-1 text-xs text-[#8b9db2]">Tipo de computador</p>
                 <p className="text-sm font-semibold text-[#34485d]">
                   {computerType === "Server" ? "Servidor" : "Cliente"}
                 </p>
               </div>
 
-              <div className="p-4 bg-[#f8fafd] rounded-lg border border-[#c5cfdb]">
-                <p className="text-xs text-[#8b9db2] mb-1">Modo de sincronização</p>
+              <div className="rounded-lg border border-[#c5cfdb] bg-[#f8fafd] p-4">
+                <p className="mb-1 text-xs text-[#8b9db2]">Modo de sincronização</p>
                 <p className="text-sm font-semibold text-[#34485d]">
                   <span className="text-green-600">Rclone</span>
-                  <span className="text-xs text-[#6b849e]"> ({rcloneRemote}:{rclonePath})</span>
+                  <span className="text-xs text-[#6b849e]"> ({rcloneProvider === "koofr" ? "koofr" : "gdrive"}:ScoreMaestro)</span>
                 </p>
               </div>
             </div>
 
             <button
+              type="button"
               onClick={handleConfirm}
               disabled={isLoading}
-              className={`w-full h-11 rounded-lg text-sm font-bold text-white transition-colors cursor-pointer border-0 ${
+              className={`h-11 w-full rounded-lg border-0 text-sm font-bold text-white transition-colors cursor-pointer ${
                 isLoading
-                  ? "bg-[#9db3d1] cursor-not-allowed"
+                  ? "cursor-not-allowed bg-[#9db3d1]"
                   : "bg-[#4f84d7] hover:bg-[#3d6fb8]"
               }`}
             >
@@ -415,9 +502,10 @@ export default function FirstRunPage() {
             </button>
 
             <button
+              type="button"
               onClick={() => setStep("rclone-setup")}
               disabled={isLoading}
-              className="w-full h-10 rounded-lg bg-white text-sm font-semibold text-[#4f84d7] border border-[#7ba0d4] hover:bg-[#f8fafd] transition-colors cursor-pointer mt-2"
+              className="mt-2 h-10 w-full rounded-lg border border-[#7ba0d4] bg-white text-sm font-semibold text-[#4f84d7] transition-colors hover:bg-[#f8fafd] cursor-pointer"
             >
               Voltar
             </button>

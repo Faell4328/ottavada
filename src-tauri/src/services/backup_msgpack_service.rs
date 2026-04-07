@@ -178,6 +178,11 @@ pub fn import_backup_msgpack(
         )));
     }
 
+    let mut payload = payload;
+    if let Some(current_rclone_config) = settings.rclone_config.clone() {
+        payload.settings.rclone_config = Some(current_rclone_config);
+    }
+
     restore_backup_payload(db, &payload)?;
 
     if let Err(e) = store.save_app_settings(&payload.settings) {
@@ -438,9 +443,9 @@ fn validate_backup_file_integrity(
         && verified_payload.settings.first_run_completed == expected_payload.settings.first_run_completed
         && verified_payload.settings.database_local == expected_payload.settings.database_local
         && verified_payload.settings.rclone_config.as_ref().map(|config| {
-            (config.remote.as_str(), config.path.as_str())
+            config.provider.clone()
         }) == expected_payload.settings.rclone_config.as_ref().map(|config| {
-            (config.remote.as_str(), config.path.as_str())
+            config.provider.clone()
         })
         && verified_payload.settings.last_backup_timestamp == expected_payload.settings.last_backup_timestamp
         && verified_payload.categories.len() == expected_payload.categories.len()

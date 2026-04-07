@@ -275,6 +275,7 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 	- [ ] Koofr - O usuário precisa adicionar as credências do "koofr" (`https://app.koofr.net/`), solicitando a senha do aplicativo criada no site (`rclone obscure "SUA_SENHA"` e depois `rclone --config ./rclone.conf config create meuKoofr koofr user=email password=senha_obscure`, precisa ajustar o caminho do config igual na documentação)
 	- [ ] Google Drive - O usuário precisar autenticar via navegador web (`rclone --config ./rclone.conf authorize "drive"` e depois `rclone --config ./rclone.conf config create meuDrive drive token='JSON_AQUI'`, precisa ajustar o caminho do config igual na documentação).
 	! Depois disso, deve ir para etapa de teste (igual o fluxo normal)
+	! O usuário não pode mais colocar nome e nem o caminho, será padrão: GoogleDrive é `gdrive` e Koofr é `koofr`, o caminho será: `ScoreMaestro`.
 - [ ] Migrar do "rclone do sistema operacional" para o "rclone do projeto". O binário está em: `src-tauri/bin/rclone.exe`. Para chamar é necessário: `rclone --config /caminho/do/seu/rclone.conf ...`, precisa ajustar o caminho do config igual na documentação.
 
 ## v1.0

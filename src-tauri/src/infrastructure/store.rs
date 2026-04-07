@@ -5,7 +5,7 @@ use tracing::info;
 use crate::domain::errors::AppError;
 use crate::domain::models::{
     AppSettings, BackupDatabaseStep, BackupStatus, ComputerType, GoogleDriveMode,
-    GoogleServiceAccount, SongBackupStatus,
+    GoogleServiceAccount, RcloneConfig, RcloneProvider, SongBackupStatus,
 };
 
 const STORE_FILENAME: &str = "app-store.json";
@@ -51,6 +51,39 @@ impl SystemStore {
         Ok(())
     }
 
+    fn parse_rclone_provider(value: &serde_json::Value) -> RcloneProvider {
+        let raw_provider = value.get("provider").and_then(|v| v.as_str());
+        let raw_remote_or_name = value
+            .get("remote")
+            .or_else(|| value.get("name"))
+            .and_then(|v| v.as_str());
+
+        match raw_provider.or(raw_remote_or_name) {
+            Some(value) if value.eq_ignore_ascii_case("google_drive") => {
+                RcloneProvider::GoogleDrive
+            }
+            Some(value)
+                if value.eq_ignore_ascii_case("drive")
+                    || value.eq_ignore_ascii_case("gdrive")
+                    || value.to_lowercase().contains("drive") =>
+            {
+                RcloneProvider::GoogleDrive
+            }
+            Some(_) => RcloneProvider::Koofr,
+            None => RcloneProvider::default(),
+        }
+    }
+
+    fn parse_rclone_config(value: &serde_json::Value) -> Option<RcloneConfig> {
+        if !value.is_object() {
+            return None;
+        }
+
+        Some(RcloneConfig {
+            provider: Self::parse_rclone_provider(value),
+        })
+    }
+
     /// Obtém as configurações do sistema
     pub fn get_app_settings(&self) -> Result<AppSettings, AppError> {
         let store = self.load_store()?;
@@ -76,19 +109,8 @@ impl SystemStore {
 
         let rclone_config = store
             .get("rclone_config")
-            .and_then(|v| {
-                serde_json::from_value::<crate::domain::models::RcloneConfig>(v.clone()).ok()
-            })
-            .or_else(|| {
-                let rclone = store.get("rclone")?;
-                let remote = rclone
-                    .get("name")
-                    .or_else(|| rclone.get("remote"))
-                    .and_then(|v| v.as_str())?
-                    .to_string();
-                let path = rclone.get("path")?.as_str()?.to_string();
-                Some(crate::domain::models::RcloneConfig { remote, path })
-            });
+            .and_then(Self::parse_rclone_config)
+            .or_else(|| store.get("rclone").and_then(Self::parse_rclone_config));
 
         let cloud = store.get("cloud");
         let last_snapshot_timestamp = cloud
@@ -172,17 +194,19 @@ impl SystemStore {
     pub fn save_app_settings(&self, settings: &AppSettings) -> Result<(), AppError> {
         let mut store = self.load_store()?;
 
-        // Estrutura canônica (documentação): id, name, type, rclone, cloud
+        // Estrutura canônica (documentação): id, name, type, rclone_config, cloud
         store["id"] = serde_json::json!(settings.computer_id);
         store["name"] = serde_json::json!(settings.computer_name.clone().unwrap_or_default());
         store["type"] = serde_json::json!(settings.computer_type.as_store_str());
 
         if let Some(ref rclone_cfg) = settings.rclone_config {
-            store["rclone"] = serde_json::json!({
-                "name": rclone_cfg.remote,
-                "path": rclone_cfg.path,
-            });
+            let rclone_json = serde_json::to_value(rclone_cfg).map_err(|e| {
+                AppError::Generic(format!("Erro ao serializar rclone config: {}", e))
+            })?;
+            store["rclone_config"] = rclone_json;
+            store.as_object_mut().map(|obj| obj.remove("rclone"));
         } else {
+            store.as_object_mut().map(|obj| obj.remove("rclone_config"));
             store.as_object_mut().map(|obj| obj.remove("rclone"));
         }
 
@@ -221,15 +245,6 @@ impl SystemStore {
             store
                 .as_object_mut()
                 .map(|obj| obj.remove("google_service_account"));
-        }
-
-        if let Some(ref rclone_cfg) = settings.rclone_config {
-            let rclone_json = serde_json::to_value(rclone_cfg).map_err(|e| {
-                AppError::Generic(format!("Erro ao serializar rclone config: {}", e))
-            })?;
-            store["rclone_config"] = rclone_json;
-        } else {
-            store.as_object_mut().map(|obj| obj.remove("rclone_config"));
         }
 
         if let Some(database_local) = settings.database_local {

@@ -245,8 +245,35 @@ impl GoogleServiceAccount {
 /// Configuração do Rclone para sincronização em nuvem
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RcloneConfig {
-    pub remote: String,
-    pub path: String,
+    #[serde(default)]
+    pub provider: RcloneProvider,
+}
+
+/// Provedor de nuvem usado pelo rclone
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum RcloneProvider {
+    Koofr,
+    GoogleDrive,
+}
+
+impl Default for RcloneProvider {
+    fn default() -> Self {
+        Self::Koofr
+    }
+}
+
+impl RcloneProvider {
+    pub fn default_remote_name(&self) -> &'static str {
+        match self {
+            RcloneProvider::Koofr => "koofr",
+            RcloneProvider::GoogleDrive => "gdrive",
+        }
+    }
+
+    pub fn default_cloud_path() -> &'static str {
+        "ScoreMaestro"
+    }
 }
 
 /// Status de um backup

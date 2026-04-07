@@ -69,18 +69,6 @@ pub fn complete_first_run(
     let rclone_config: RcloneConfig = serde_json::from_str(&rclone_config_json)
         .map_err(|e| AppError::Generic(format!("Configuração rclone inválida: {}", e)))?;
 
-    if rclone_config.remote.trim().is_empty() {
-        return Err(AppError::Generic(
-            "Campo 'remote' do rclone é obrigatório".to_string(),
-        ));
-    }
-
-    if rclone_config.path.trim().is_empty() {
-        return Err(AppError::Generic(
-            "Campo 'path' do rclone é obrigatório".to_string(),
-        ));
-    }
-
     settings.rclone_config = Some(rclone_config);
     settings.google_drive_mode = GoogleDriveMode::Local;
     info!("Rclone configurado");

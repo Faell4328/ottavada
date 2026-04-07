@@ -4,6 +4,8 @@ import type {
   Category,
   AppSettings,
   IndexedFile,
+  RcloneSetupInput,
+  RcloneProvider,
 } from "../types";
 
 // ── Songs ──
@@ -236,12 +238,16 @@ export async function generateComputerId(): Promise<string> {
 
 // ── Rclone ──
 
+export async function generateRcloneConfig(setup: RcloneSetupInput): Promise<void> {
+  return invoke("generate_rclone_config", { setup });
+}
+
 export async function testRcloneConnection(remote: string, path: string): Promise<boolean> {
   return invoke("test_rclone_connection", { remote, path });
 }
 
-export async function testRcloneUpload(remote: string, path: string): Promise<void> {
-  return invoke("test_rclone_upload", { remote, path });
+export async function testRcloneUpload(provider: RcloneProvider): Promise<void> {
+  return invoke("test_rclone_upload", { provider });
 }
 
 export async function uploadWithRclone(

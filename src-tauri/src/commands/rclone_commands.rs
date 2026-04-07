@@ -6,7 +6,7 @@ use std::collections::HashSet;
 use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Stdio};
 use std::sync::{Mutex, OnceLock};
 use std::thread;
 use std::time::Duration;
@@ -14,16 +14,44 @@ use std::time::Instant;
 use tauri::State;
 use tracing::{error, info, warn};
 
-/// Retorna o comandо correto para executar rclone baseado no sistema operacional
-///
-/// - Windows: C:\rclone\rclone.exe
-/// - Linux/macOS: rclone (do PATH)
-fn get_rclone_command() -> String {
-    if cfg!(target_os = "windows") {
-        "C:\\rclone\\rclone.exe".to_string()
-    } else {
-        "rclone".to_string()
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RcloneSetupRequest {
+    pub provider: crate::domain::models::RcloneProvider,
+    pub email: Option<String>,
+    pub app_password: Option<String>,
+}
+
+static RCLONE_EXECUTABLE_PATH: OnceLock<PathBuf> = OnceLock::new();
+static RCLONE_CONFIG_PATH: OnceLock<PathBuf> = OnceLock::new();
+
+pub fn set_rclone_paths(executable_path: Option<PathBuf>, config_path: PathBuf) {
+    if let Some(path) = executable_path {
+        let _ = RCLONE_EXECUTABLE_PATH.set(path);
     }
+
+    let _ = RCLONE_CONFIG_PATH.set(config_path);
+}
+
+/// Retorna o comando correto para executar o rclone do projeto quando disponível.
+///
+/// Em ambientes não-Windows, ou quando o binário empacotado não estiver presente,
+/// mantém o fallback para o `rclone` do PATH para não quebrar o desenvolvimento local.
+fn get_rclone_command() -> PathBuf {
+    RCLONE_EXECUTABLE_PATH
+        .get()
+        .cloned()
+        .unwrap_or_else(|| PathBuf::from("rclone"))
+}
+
+fn new_rclone_command() -> Command {
+    let mut cmd = configure_no_window_command(Command::new(get_rclone_command()));
+
+    if let Some(config_path) = RCLONE_CONFIG_PATH.get() {
+        cmd.arg("--config").arg(config_path);
+    }
+
+    cmd
 }
 
 fn ensure_cloud_dir(app_data_dir: &Path) -> Result<PathBuf, AppError> {
@@ -155,8 +183,10 @@ fn terminate_process_pid(pid: u32) -> Result<(), AppError> {
 }
 
 fn run_rclone_once(args: &[&str], operation_label: &str) -> Result<std::process::Output, AppError> {
-    let mut cmd = configure_no_window_command(Command::new(get_rclone_command()));
+    let mut cmd = new_rclone_command();
     cmd.args(args);
+    cmd.stdout(Stdio::piped());
+    cmd.stderr(Stdio::piped());
 
     let child = cmd.spawn().map_err(|e| {
         error!("Erro ao executar rclone [{}]: {:?}", operation_label, e);
@@ -175,6 +205,127 @@ fn run_rclone_once(args: &[&str], operation_label: &str) -> Result<std::process:
 
     unregister_rclone_pid(pid);
     output
+}
+
+fn rclone_config_path() -> Result<PathBuf, AppError> {
+    RCLONE_CONFIG_PATH
+        .get()
+        .cloned()
+        .ok_or_else(|| AppError::Generic("Caminho do rclone.conf não foi inicializado".to_string()))
+}
+
+fn build_rclone_remote_target(
+    provider: &crate::domain::models::RcloneProvider,
+    relative_path: Option<&str>,
+) -> String {
+    let clean_relative_path = relative_path
+        .map(|value| value.trim().trim_start_matches('/').trim_end_matches('/'))
+        .filter(|value| !value.is_empty());
+
+    let mut remote_path = crate::domain::models::RcloneProvider::default_cloud_path()
+        .trim()
+        .trim_start_matches('/')
+        .trim_end_matches('/')
+        .to_string();
+
+    if let Some(relative_path) = clean_relative_path {
+        if !remote_path.is_empty() {
+            remote_path.push('/');
+        }
+        remote_path.push_str(relative_path);
+    }
+
+    if remote_path.is_empty() {
+        format!("{}:", provider.default_remote_name())
+    } else {
+        format!("{}:{}", provider.default_remote_name(), remote_path)
+    }
+}
+
+fn write_rclone_config(setup: &RcloneSetupRequest) -> Result<(), AppError> {
+    let provider = &setup.provider;
+    let remote = provider.default_remote_name();
+
+    let config_path = rclone_config_path()?;
+    if let Some(parent_dir) = config_path.parent() {
+        std::fs::create_dir_all(parent_dir).map_err(|e| {
+            AppError::Generic(format!("Erro ao preparar diretório do rclone.conf: {}", e))
+        })?;
+    }
+
+    match setup.provider {
+        crate::domain::models::RcloneProvider::Koofr => {
+            let email = setup
+                .email
+                .as_ref()
+                .map(|value| value.trim())
+                .filter(|value| !value.is_empty())
+                .ok_or_else(|| AppError::Generic("Informe o email do Koofr".to_string()))?;
+            let app_password = setup
+                .app_password
+                .as_ref()
+                .map(|value| value.trim())
+                .filter(|value| !value.is_empty())
+                .ok_or_else(|| {
+                    AppError::Generic("Informe a senha do aplicativo do Koofr".to_string())
+                })?;
+
+            let password_arg = format!("password={}", app_password);
+            let user_arg = format!("user={}", email);
+            let args = [
+                "config",
+                "create",
+                remote,
+                "koofr",
+                user_arg.as_str(),
+                password_arg.as_str(),
+            ];
+
+            let output = run_rclone_once(&args, "rclone-config-create-koofr")?;
+            if !output.status.success() {
+                return Err(AppError::Generic(format!(
+                    "Falha ao gerar configuração do Koofr: {}",
+                    String::from_utf8_lossy(&output.stderr)
+                )));
+            }
+        }
+        crate::domain::models::RcloneProvider::GoogleDrive => {
+            let args = ["config", "create", remote, "drive", "config_is_local=true"];
+
+            let output = run_rclone_once(&args, "rclone-config-create-drive")?;
+            if !output.status.success() {
+                return Err(AppError::Generic(format!(
+                    "Falha ao gerar configuração do Google Drive: {}",
+                    String::from_utf8_lossy(&output.stderr)
+                )));
+            }
+        }
+    }
+
+    let current_config = std::fs::read_to_string(&config_path).map_err(|e| {
+        AppError::Generic(format!("Falha ao validar o rclone.conf gerado: {}", e))
+    })?;
+
+    if current_config.trim().is_empty() {
+        return Err(AppError::Generic(
+            "O rclone.conf foi gerado vazio".to_string(),
+        ));
+    }
+
+    info!(
+        "rclone.conf gerado com sucesso em {} para o remote '{}'",
+        config_path.display(),
+        remote
+    );
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn generate_rclone_config(setup: RcloneSetupRequest) -> Result<(), AppError> {
+    tauri::async_runtime::spawn_blocking(move || write_rclone_config(&setup))
+        .await
+        .map_err(|e| AppError::Generic(format!("Erro ao gerar configuração do rclone: {}", e)))?
 }
 
 pub fn terminate_running_rclone_processes() {
@@ -221,7 +372,6 @@ fn append_common_copy_flags(args: &mut Vec<&str>) {
     args.extend([
         "--transfers",
         RCLONE_TRANSFERS,
-        "--check-first",
         "--retries",
         RCLONE_RETRIES,
         "--low-level-retries",
@@ -240,7 +390,6 @@ fn append_common_sync_flags(args: &mut Vec<&str>) {
         "--rc-addr=127.0.0.1:5572",
         "--transfers",
         RCLONE_TRANSFERS,
-        "--check-first",
         "--retries",
         RCLONE_RETRIES,
         "--low-level-retries",
@@ -266,34 +415,11 @@ fn resolve_sync_targets(
     let rclone_config = settings
         .rclone_config
         .ok_or_else(|| AppError::Generic("Configuração do rclone não encontrada".to_string()))?;
-
-    let clean_remote_path = rclone_config
-        .path
-        .trim()
-        .trim_start_matches('/')
-        .trim_end_matches('/');
+    let remote_target = build_rclone_remote_target(&rclone_config.provider, relative_path);
 
     let clean_relative_path = relative_path
         .map(|value| value.trim().trim_start_matches('/').trim_end_matches('/'))
         .filter(|value| !value.is_empty());
-
-    let mut remote_path = String::new();
-    if !clean_remote_path.is_empty() {
-        remote_path.push_str(clean_remote_path);
-    }
-
-    if let Some(relative_path) = clean_relative_path {
-        if !remote_path.is_empty() {
-            remote_path.push('/');
-        }
-        remote_path.push_str(relative_path);
-    }
-
-    let remote_target = if remote_path.is_empty() {
-        format!("{}:", rclone_config.remote)
-    } else {
-        format!("{}:{}", rclone_config.remote, remote_path)
-    };
 
     let cloud_local_dir = ensure_cloud_dir(store.app_data_dir())?;
     let local_target = if let Some(relative_path) = clean_relative_path {
@@ -546,7 +672,7 @@ pub fn test_rclone_connection(remote: String, path: String) -> Result<bool, AppE
 
     // Primeiro, testar a conexão com o remote root
     info!("Testando acesso ao remote: {}", remote);
-    let mut cmd = configure_no_window_command(Command::new(get_rclone_command()));
+    let mut cmd = new_rclone_command();
     let output = cmd
         .args(&["lsd", &format!("{}:", remote), "--max-depth", "1"])
         .output()
@@ -578,7 +704,7 @@ pub fn test_rclone_connection(remote: String, path: String) -> Result<bool, AppE
     // Se um caminho específico foi fornecido, tentar verificar se existe
     if !clean_path.is_empty() {
         info!("Verificando se o caminho existe: {}", clean_path);
-        let mut path_cmd = configure_no_window_command(Command::new(get_rclone_command()));
+        let mut path_cmd = new_rclone_command();
         let path_test = path_cmd
             .args(&[
                 "lsd",
@@ -700,17 +826,7 @@ fn upload_cloud_paths_with_rclone_impl(
         .rclone_config
         .ok_or_else(|| AppError::Generic("Configuração do rclone não encontrada".to_string()))?;
 
-    let clean_remote_path = rclone_config
-        .path
-        .trim()
-        .trim_start_matches('/')
-        .trim_end_matches('/');
-
-    let remote_target = if clean_remote_path.is_empty() {
-        format!("{}:", rclone_config.remote)
-    } else {
-        format!("{}:{}", rclone_config.remote, clean_remote_path)
-    };
+    let remote_target = build_rclone_remote_target(&rclone_config.provider, None);
 
     let cloud_local_dir = ensure_cloud_dir(store.app_data_dir())?;
     let cloud_local_dir_str = cloud_local_dir.to_str().ok_or_else(|| {
@@ -939,23 +1055,25 @@ pub fn sync_cloud_directory_with_rclone_impl(
 #[tauri::command]
 pub async fn test_rclone_upload(
     store: State<'_, SystemStore>,
-    remote: String,
-    path: String,
+    provider: crate::domain::models::RcloneProvider,
 ) -> Result<(), AppError> {
     let app_data_dir = store.app_data_dir().clone();
 
     run_blocking_with_store(
         app_data_dir,
         "Falha interna ao testar upload do rclone",
-        move |store| test_rclone_upload_impl(&store, &remote, &path),
+        move |store| test_rclone_upload_impl(&store, &provider),
     )
     .await
 }
 
-fn test_rclone_upload_impl(store: &SystemStore, remote: &str, path: &str) -> Result<(), AppError> {
+fn test_rclone_upload_impl(
+    store: &SystemStore,
+    provider: &crate::domain::models::RcloneProvider,
+) -> Result<(), AppError> {
     info!(
-        "Iniciando teste de upload com rclone: remote={}, path={}",
-        remote, path
+        "Iniciando teste de upload com rclone: provider={:?}",
+        provider
     );
 
     // Criar diretório de testes se não existir
@@ -972,13 +1090,7 @@ fn test_rclone_upload_impl(store: &SystemStore, remote: &str, path: &str) -> Res
 
     info!("Arquivo de teste criado: {:?}", test_file_path);
 
-    // Limpar o path (remover barras extras)
-    let clean_path = path.trim().trim_start_matches('/').trim_end_matches('/');
-    let remote_path = if clean_path.is_empty() {
-        format!("{}:", remote)
-    } else {
-        format!("{}:{}", remote, clean_path)
-    };
+    let remote_path = build_rclone_remote_target(provider, None);
 
     // Fazer upload do arquivo de teste
     info!("Iniciando upload para: {}", remote_path);
@@ -988,7 +1100,7 @@ fn test_rclone_upload_impl(store: &SystemStore, remote: &str, path: &str) -> Res
 
     let mut args = vec!["copy", test_file_str, remote_path.as_str(), "--no-traverse"];
     append_common_copy_flags(&mut args);
-    let output = run_rclone_with_retry(&args, "test-upload")?;
+    let output = run_rclone_once(&args, "test-upload")?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);

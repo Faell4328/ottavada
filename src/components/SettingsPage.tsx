@@ -6,11 +6,15 @@ import toast from "react-hot-toast";
 import { useAppState } from "../context/AppContext";
 import * as api from "../api/commands";
 import { getErrorMessage } from "../utils/errors";
-import { useRcloneTest } from "../hooks/useRcloneTest";
 import { ChangeComputerTypeModal } from "./ChangeComputerTypeModal";
+import { RcloneProviderModal } from "./RcloneProviderModal.tsx";
 import { RcloneLicenseModal } from "./RcloneLicenseModal";
 import { formatBackupTimestamp } from "../utils/formatters";
-import type { AppSettings } from "../types";
+import type { AppSettings, RcloneProvider } from "../types";
+
+function getRcloneProviderLabel(provider: RcloneProvider) {
+  return provider === "koofr" ? "Koofr" : "Google Drive";
+}
 
 export default function SettingsPage() {
   const {
@@ -40,20 +44,19 @@ export default function SettingsPage() {
   const [isImportingBackup, setIsImportingBackup] = useState(false);
   const [isImportingBackupCloud, setIsImportingBackupCloud] = useState(false);
   const [isGeneratingBackupCloud, setIsGeneratingBackupCloud] = useState(false);
-  const [rcloneRemote, setRcloneRemote] = useState("");
-  const [rclonePath, setRclonePath] = useState("ScoreMaestro");
+  const [rcloneProvider, setRcloneProvider] = useState<RcloneProvider>("koofr");
+  const [rcloneConfigGenerated, setRcloneConfigGenerated] = useState(false);
+  const [isRcloneProviderModalOpen, setIsRcloneProviderModalOpen] = useState(false);
   const [isRcloneLicenseModalOpen, setIsRcloneLicenseModalOpen] = useState(false);
-
-  const { isTestingRclone, testRclone } = useRcloneTest({
-    remote: rcloneRemote,
-    path: rclonePath,
-  });
 
   // Carregar dados do rclone da store quando o componente monta ou settings muda
   useEffect(() => {
     if (state.settings?.rclone_config) {
-      setRcloneRemote(state.settings.rclone_config.remote);
-      setRclonePath(state.settings.rclone_config.path);
+      setRcloneProvider(state.settings.rclone_config.provider);
+      setRcloneConfigGenerated(true);
+    } else {
+      setRcloneProvider("koofr");
+      setRcloneConfigGenerated(false);
     }
   }, [state.settings]);
 
@@ -65,6 +68,45 @@ export default function SettingsPage() {
 
   function update(partial: Partial<AppSettings>) {
     setSettings((prev) => ({ ...prev, ...partial }));
+  }
+
+  async function handleGenerateRcloneConfig(setup: {
+    provider: RcloneProvider;
+    email?: string | null;
+    appPassword?: string | null;
+  }) {
+    try {
+      await api.generateRcloneConfig(setup);
+
+      toast.success(
+        setup.provider === "google_drive"
+          ? "Google Drive autenticado com sucesso."
+          : "Koofr configurado com sucesso."
+      );
+    } catch (error) {
+      toast.error(`Erro ao gerar configuração do rclone: ${getErrorMessage(error)}`);
+      throw error;
+    }
+  }
+
+  async function handleTestRcloneConfig(provider: RcloneProvider) {
+    try {
+      await api.testRcloneUpload(provider);
+      toast.success(
+        provider === "google_drive"
+          ? "Teste do Google Drive aprovado."
+          : "Teste do Koofr aprovado."
+      );
+    } catch (error) {
+      toast.error(`Erro ao testar o rclone: ${getErrorMessage(error)}`);
+      throw error;
+    }
+  }
+
+  function handleApproveRcloneProvider(provider: RcloneProvider) {
+    setRcloneProvider(provider);
+    setRcloneConfigGenerated(true);
+    setIsRcloneProviderModalOpen(false);
   }
 
   function handleComputerTypeChange() {
@@ -90,15 +132,17 @@ export default function SettingsPage() {
   }
 
   async function handleSave() {
+    if (!rcloneConfigGenerated) {
+      toast.error("Gere a configuração do rclone antes de salvar");
+      return;
+    }
+
     // Atualizar os dados de rclone no objeto settings antes de salvar
     const updatedSettings: AppSettings = {
       ...settings,
-      rclone_config: (rcloneRemote.trim() || rclonePath.trim()) 
-        ? {
-            remote: rcloneRemote,
-            path: rclonePath,
-          }
-        : null,
+      rclone_config: {
+        provider: rcloneProvider,
+      },
     };
     
     try {
@@ -326,46 +370,41 @@ export default function SettingsPage() {
           </Field>
         </Section>
 
-        {/* Rclone */}
-        <Section title="Rclone">
-          <Field label="Remote do rclone">
-            <input
-              value={rcloneRemote}
-              onChange={(e) => setRcloneRemote(e.target.value)}
-              className="w-full h-9 rounded border border-[#c5cfdb] bg-white px-3 text-sm text-[#4d6075] outline-none focus:border-[#7ba0d4]"
-              placeholder="Ex: gdrive"
-            />
-            <p className="text-xs text-[#8b9db2] mt-1">
-              Nome do remote configurado no rclone (geralmente 'gdrive')
+        <Section title="Provedor de Nuvem">
+          <div className="rounded-xl border border-[#c5cfdb] bg-[#f8fafd] p-4">
+            <p className="mt-1 text-xs text-[#6b849e]">
+              Provedor atual: <span className="font-semibold text-[#34485d]">{getRcloneProviderLabel(rcloneProvider)}</span>
             </p>
-          </Field>
-
-          <Field label="Caminho no remote">
-            <input
-              value={rclonePath}
-              onChange={(e) => setRclonePath(e.target.value)}
-              className="w-full h-9 rounded border border-[#c5cfdb] bg-white px-3 text-sm text-[#4d6075] outline-none focus:border-[#7ba0d4]"
-              placeholder="Ex: ScoreMaestro"
-            />
-            <p className="text-xs text-[#8b9db2] mt-1">
-              Caminho onde os backups serão salvos
+            <p className="mt-1 text-xs text-[#6b849e]">
+              Remote padrão: <span className="font-semibold text-[#34485d]">{rcloneProvider === "koofr" ? "koofr" : "gdrive"}</span>
             </p>
-          </Field>
+            <p className="mt-1 text-xs text-[#6b849e]">
+              Caminho padrão: <span className="font-semibold text-[#34485d]">ScoreMaestro</span>
+            </p>
 
-          <div>
+            {rcloneConfigGenerated ? (
+              <div className="mt-3 rounded-lg border border-green-200 bg-green-50 p-3">
+                <p className="text-xs font-semibold text-green-800">Configuração pronta</p>
+                <p className="mt-1 text-xs text-green-700">
+                  A configuração do rclone já foi gerada para este provedor.
+                </p>
+              </div>
+            ) : (
+              <div className="mt-3 rounded-lg border border-yellow-200 bg-yellow-50 p-3">
+                <p className="text-xs font-semibold text-yellow-800">Configuração pendente</p>
+                <p className="mt-1 text-xs text-yellow-700">
+                  Clique para abrir o modal e gerar ou trocar o provedor de nuvem.
+                </p>
+              </div>
+            )}
+
             <button
               type="button"
-              onClick={() => {
-                void testRclone();
-              }}
-              disabled={isTestingRclone || !rcloneRemote.trim()}
-              className="h-9 px-4 rounded border border-[#c5cfdb] bg-white hover:bg-[#f2f5fa] text-sm font-medium text-[#344b61] disabled:opacity-50 transition-colors cursor-pointer"
+              onClick={() => setIsRcloneProviderModalOpen(true)}
+              className="mt-4 h-9 rounded border border-[#4f84d7] bg-[#4f84d7] px-4 text-sm font-medium text-white transition-colors hover:bg-[#3d6fb8] cursor-pointer"
             >
-              {isTestingRclone ? "Testando..." : "Testar Rclone"}
+              Mudar provedor de nuvem
             </button>
-            <p className="text-xs text-[#8b9db2] mt-1">
-              Clique para testar a conexão com o rclone. Um arquivo de teste será enviado.
-            </p>
           </div>
         </Section>
 
@@ -513,6 +552,15 @@ export default function SettingsPage() {
       <RcloneLicenseModal
         isOpen={isRcloneLicenseModalOpen}
         onClose={() => setIsRcloneLicenseModalOpen(false)}
+      />
+
+      <RcloneProviderModal
+        isOpen={isRcloneProviderModalOpen}
+        currentProvider={rcloneProvider}
+        onClose={() => setIsRcloneProviderModalOpen(false)}
+        onGenerate={handleGenerateRcloneConfig}
+        onTest={handleTestRcloneConfig}
+        onApprove={handleApproveRcloneProvider}
       />
     </div>
   );
