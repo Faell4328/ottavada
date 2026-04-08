@@ -251,6 +251,7 @@ fn apply_snapshot(db: &Database, payload: &SnapshotMessagePack) -> Result<(), Ap
     }
 
     tx.commit()?;
+    db.ensure_default_category()?;
     Ok(())
 }
 

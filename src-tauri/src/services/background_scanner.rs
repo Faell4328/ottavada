@@ -1,5 +1,5 @@
 use std::path::Path;
-use tracing::info;
+use tracing::{info, warn};
 
 use crate::domain::models::ScoreStatus;
 use crate::infrastructure::database::Database;
@@ -19,6 +19,7 @@ pub fn run_initial_scan(db: &Database, host_id: &str) {
 
     let mut changed_count = 0;
     let mut not_found_count = 0;
+    let mut recovered_count = 0;
 
     info!("Total de arquivos para verificar: {}", scores.len());
 
@@ -65,8 +66,48 @@ pub fn run_initial_scan(db: &Database, host_id: &str) {
         }
     }
 
+    if let Ok(not_found_scores) = db.get_not_found_scores_by_host(host_id) {
+        info!(
+            "Verificando {} arquivo(s) marcado(s) como not_found no boot",
+            not_found_scores.len()
+        );
+
+        for (score_id, file_path, _stored_size, _stored_modified_at_str) in not_found_scores {
+            let path = Path::new(&file_path);
+
+            if !path.exists() || !path.is_file() {
+                continue;
+            }
+
+            match get_file_metadata(path) {
+                Ok((current_size, current_modified_at)) => {
+                    if db
+                        .update_score_status(
+                            &score_id,
+                            ScoreStatus::Main,
+                            host_id,
+                            Some((current_size, current_modified_at)),
+                        )
+                        .is_ok()
+                    {
+                        recovered_count += 1;
+                        info!("✓ Status recuperado para main: {}", file_path);
+                    } else {
+                        warn!("Erro ao recuperar status para main: {}", file_path);
+                    }
+                }
+                Err(e) => {
+                    warn!(
+                        "Erro ao obter metadados do arquivo recuperado {}: {:?}",
+                        file_path, e
+                    );
+                }
+            }
+        }
+    }
+
     info!(
-        "Verificação inicial concluída: {} alterações, {} não encontrados",
-        changed_count, not_found_count
+        "Verificação inicial concluída: {} alterações, {} não encontrados, {} recuperados",
+        changed_count, not_found_count, recovered_count
     );
 }

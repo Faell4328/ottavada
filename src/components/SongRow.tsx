@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useRef } from "react";
+import React from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import toast from "react-hot-toast";
 import type { SongListItem } from "../types";
@@ -45,23 +45,6 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(function Son
   const author = [song.composer, song.arranger].filter(Boolean).join(" / ");
   const isClient = isClientComputer(computerType);
   const isActionLocked = isClient || isLocked;
-  const rowRef = useRef<HTMLTableRowElement | null>(null);
-
-  useLayoutEffect(() => {
-    if (!isExpanded || !rowRef.current) {
-      return;
-    }
-
-    const row = rowRef.current;
-    const animationFrame = window.requestAnimationFrame(() => {
-      row.scrollIntoView({ behavior: "smooth", block: "start", inline: "nearest" });
-    });
-
-    return () => {
-      window.cancelAnimationFrame(animationFrame);
-    };
-  }, [isExpanded]);
-
   const handleMenuAction = (e: React.MouseEvent, action: () => void) => {
     e.stopPropagation();
     action();
@@ -88,14 +71,13 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(function Son
     <>
       <tr
         ref={(node) => {
-          rowRef.current = node;
-
           if (typeof ref === "function") {
             ref(node);
           } else if (ref) {
             ref.current = node;
           }
         }}
+        id={`song-row-${song.id}`}
         style={{ scrollMarginTop: "4.75rem" }}
         className={`border-b border-[#d8e0ea] text-sm text-[#344b61] ${
           isExpanded ? "bg-[#eef3f9] font-bold" : "hover:bg-[#f2f5fa]"

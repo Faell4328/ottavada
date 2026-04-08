@@ -311,9 +311,9 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [x] Muda texto para "selecionar arquivo(s)" no overflow menu, permitir também o usuário escolher 1 ou mais arquivos.
 - [x] Ao editar informação da música, não precisa abrir para mostrar as partituras/instrumentos.
 - [x] Ao selecionar uma categoria de SideBar, ao adicionar uma música ou indexar ele já deve vir com a categoria marcada por padrão.
-- [ ] Ao trocar de provedor com sucesso nas configurações, executar o fluxo de força snapshot.
-- [ ] Retirar toast duplicado ao configurar e testar provedor no primeiro acesso.
-- [ ] Ao iniciar o aplicativo (servidor), deve buscar alterações nos arquivos de partitura/instrumentos (apenas isso em segundo plano - outra thread).
+- [ ] Ao trocar de provedor ou de conta com sucesso nas configurações, executar o fluxo de força snapshot.
+- [x] Retirar toast duplicado ao configurar e testar provedor no primeiro acesso.
+- [x] Ao iniciar o aplicativo (servidor), deve iniciar fluxo de "aplicar alterações"
 - [ ] Adicionar uma categoria default, que é a categoria "Sem categoria", quando uma música não possui categoria, ela virá para essa categoria.
 - [ ] Caso o nome da música possua número, ex: 1, 2, 3, 4, 5, 6, 7, 8 e 9, adicionar um 0 antes, ex: 01, 02, 03, 04, 05, 06, 07, 08 e 09.
 - [ ] Adicionar nas configurações/Sobre a quantidade de músicas e partituras (separadas por: main, pedding e not foud).

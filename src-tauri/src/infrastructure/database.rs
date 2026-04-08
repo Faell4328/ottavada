@@ -8,6 +8,8 @@ use crate::domain::models::datetime_utils;
 use crate::domain::models::*;
 
 const CHANGE_ORIGIN_SERVER: &str = "server";
+const DEFAULT_CATEGORY_ID: &str = "default-category";
+const DEFAULT_CATEGORY_NAME: &str = "Sem categoria";
 
 #[derive(Debug, Clone)]
 pub struct ChangedFieldRecord {
@@ -181,7 +183,41 @@ impl Database {
             CREATE INDEX IF NOT EXISTS idx_backupSongs_status ON backupSongs(status);
         ")?;
 
+        Self::ensure_default_category_with_conn(conn)?;
+
         Ok(())
+    }
+
+    fn ensure_default_category_with_conn(conn: &Connection) -> Result<(), AppError> {
+        conn.execute(
+            "INSERT OR IGNORE INTO categories (id, name) VALUES (?1, ?2)",
+            params![DEFAULT_CATEGORY_ID, DEFAULT_CATEGORY_NAME],
+        )?;
+
+        let mut stmt = conn.prepare(
+            "SELECT id FROM songs WHERE id NOT IN (
+                SELECT DISTINCT song_id FROM categoriesSongs
+            )",
+        )?;
+
+        let song_ids: Vec<String> = stmt
+            .query_map([], |row| row.get(0))?
+            .filter_map(|result| result.ok())
+            .collect();
+
+        for song_id in song_ids {
+            conn.execute(
+                "INSERT OR IGNORE INTO categoriesSongs (id, category_id, song_id) VALUES (?1, ?2, ?3)",
+                params![uuid::Uuid::new_v4().to_string(), DEFAULT_CATEGORY_ID, song_id],
+            )?;
+        }
+
+        Ok(())
+    }
+
+    pub fn ensure_default_category(&self) -> Result<(), AppError> {
+        let conn = self.conn.lock().unwrap();
+        Self::ensure_default_category_with_conn(&conn)
     }
 
     fn insert_changed_field(
@@ -217,6 +253,11 @@ impl Database {
     pub fn insert_song(&self, song: &Song, category_ids: &[String]) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
         let now_ts = chrono::Local::now().timestamp();
+        let category_ids = if category_ids.is_empty() {
+            vec![DEFAULT_CATEGORY_ID.to_string()]
+        } else {
+            category_ids.to_vec()
+        };
 
         conn.execute(
             "INSERT INTO songs (id, name, composer, arranger, is_favorite, last_score_file_modified_at)
@@ -291,6 +332,11 @@ impl Database {
 
     pub fn update_song(&self, song: &Song, category_ids: &[String]) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
+        let category_ids = if category_ids.is_empty() {
+            vec![DEFAULT_CATEGORY_ID.to_string()]
+        } else {
+            category_ids.to_vec()
+        };
 
         let original_song = conn
             .query_row(
@@ -328,7 +374,7 @@ impl Database {
             params![song.id],
         )?;
 
-        for category_id in category_ids {
+        for category_id in &category_ids {
             let rel_id = uuid::Uuid::new_v4().to_string();
             conn.execute(
                 "INSERT OR IGNORE INTO categoriesSongs (id, category_id, song_id) VALUES (?1, ?2, ?3)",
@@ -1239,6 +1285,7 @@ impl Database {
 
     pub fn get_all_categories(&self) -> Result<Vec<Category>, AppError> {
         let conn = self.conn.lock().unwrap();
+        Self::ensure_default_category_with_conn(&conn)?;
         let mut stmt = conn.prepare("SELECT id, name FROM categories ORDER BY name")?;
 
         let categories = stmt
@@ -1258,6 +1305,12 @@ impl Database {
 
     pub fn delete_category(&self, category_id: &str) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
+
+        if category_id == DEFAULT_CATEGORY_ID {
+            return Err(AppError::Generic(
+                "A categoria 'Sem categoria' nao pode ser removida".to_string(),
+            ));
+        }
 
         let relation_ids: Vec<String> = {
             let mut stmt = conn.prepare("SELECT id FROM categoriesSongs WHERE category_id = ?1")?;

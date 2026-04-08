@@ -559,6 +559,7 @@ fn restore_backup_payload(db: &Database, payload: &BackupMessagePack) -> Result<
     }
 
     tx.commit()?;
+    db.ensure_default_category()?;
     Ok(())
 }
 

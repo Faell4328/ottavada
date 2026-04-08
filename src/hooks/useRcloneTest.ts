@@ -11,6 +11,10 @@ interface UseRcloneTestParams {
   onFailure?: () => void;
 }
 
+interface TestRcloneOptions {
+  silent?: boolean;
+}
+
 export function useRcloneTest({
   provider,
   onSuccess,
@@ -18,11 +22,13 @@ export function useRcloneTest({
 }: UseRcloneTestParams) {
   const [isTestingRclone, setIsTestingRclone] = useState(false);
 
-  const testRclone = useCallback(async () => {
+  const testRclone = useCallback(async (options: TestRcloneOptions = {}) => {
     setIsTestingRclone(true);
     try {
       await api.testRcloneUpload(provider);
-      toast.success("Teste realizado com sucesso! Arquivo enviado para o rclone.");
+      if (!options.silent) {
+        toast.success("Teste realizado com sucesso! Arquivo enviado para o rclone.");
+      }
       onSuccess?.();
       return true;
     } catch (error) {

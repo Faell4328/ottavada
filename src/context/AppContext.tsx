@@ -28,7 +28,7 @@ export function useAppState() {
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
-  const startupCloudSyncTriggeredRef = useRef(false);
+  const startupScanTriggeredRef = useRef(false);
 
   const getErrorMessage = useCallback((err: unknown, fallback: string) => {
     const message = extractErrorMessage(err);
@@ -121,7 +121,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   });
 
   useEffect(() => {
-    if (startupCloudSyncTriggeredRef.current) {
+    if (startupScanTriggeredRef.current) {
       return;
     }
 
@@ -129,11 +129,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (state.settings.computer_type !== "Client") {
+    if (state.settings.computer_type !== "Server" && state.settings.computer_type !== "Client") {
       return;
     }
 
-    startupCloudSyncTriggeredRef.current = true;
+    startupScanTriggeredRef.current = true;
     void scanFilesForChanges(true);
   }, [state.isLoading, state.isFirstRun, state.settings, scanFilesForChanges]);
 

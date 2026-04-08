@@ -157,10 +157,19 @@ export default function SettingsPage() {
         provider: rcloneProvider,
       },
     };
-    
+
     try {
+      const previousProvider = state.settings?.rclone_config?.provider ?? null;
       await saveSettings(updatedSettings);
       toast.success("Configurações salvas com sucesso!");
+
+      if (previousProvider !== rcloneProvider) {
+        const snapshotCreated = await handleForceSnapshot();
+        if (!snapshotCreated) {
+          return;
+        }
+      }
+
       navigate("/");
     } catch (error) {
       console.error("Failed to save settings:", error);
@@ -171,12 +180,12 @@ export default function SettingsPage() {
   async function handleForceSnapshot() {
     if (settings.computer_type !== "Server") {
       toast.error("A geração de snapshot é permitida apenas no servidor");
-      return;
+      return false;
     }
 
     if (isSyncLocked) {
       toast.error("Operação bloqueada durante sincronização");
-      return;
+      return false;
     }
 
     setIsGeneratingSnapshot(true);
@@ -190,8 +199,10 @@ export default function SettingsPage() {
 
       await scanFilesForChanges({ forceCloudSync: true });
       await Promise.all([loadSongs(), loadCategories()]);
+      return true;
     } catch (error) {
       toast.error(`Erro ao gerar snapshot/aplicar alterações: ${getErrorMessage(error)}`);
+      return false;
     } finally {
       setIsGeneratingSnapshot(false);
     }
@@ -254,7 +265,6 @@ export default function SettingsPage() {
     }
 
     setIsImportingBackup(true);
-    let shouldRunForcedSnapshot = false;
     try {
       const summary = await api.importBackupFile(selectedPath);
       await Promise.all([loadSettings(), loadSongs(), loadCategories()]);

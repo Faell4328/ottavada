@@ -109,6 +109,16 @@ export default function SongsList() {
     [loadSongScores]
   );
 
+  const scrollSongIntoView = useCallback((songId: string) => {
+    window.requestAnimationFrame(() => {
+      document.getElementById(`song-row-${songId}`)?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+        inline: "nearest",
+      });
+    });
+  }, []);
+
   useEffect(() => {
     if (state.selectedSong) {
       return;
@@ -159,6 +169,7 @@ export default function SongsList() {
       selectScore(null);
       selectSong(song);
       closeAllMenus();
+      scrollSongIntoView(song.id);
       void (async () => {
         try {
           await loadSongScores(song.id);
@@ -167,7 +178,15 @@ export default function SongsList() {
         }
       })();
     },
-    [clearSongScores, closeAllMenus, loadSongScores, selectScore, selectSong, state.selectedSong?.id]
+    [
+      clearSongScores,
+      closeAllMenus,
+      loadSongScores,
+      scrollSongIntoView,
+      selectScore,
+      selectSong,
+      state.selectedSong?.id,
+    ]
   );
 
   const handleToggleScoreStatus = useCallback(
@@ -359,7 +378,11 @@ export default function SongsList() {
                         onToggleFavorite={() => toggleFavorite(song.id)}
                         onAddFile={() => handleAddFileToSong(song)}
                         onEdit={() => {
-                          setEditingSong(song);
+                          setEditingSong({
+                            ...song,
+                            category_ids: [...song.category_ids],
+                            scores: [...song.scores],
+                          });
                           setIsEditMusicModalOpen(true);
                         }}
                         onDelete={deleteSong}

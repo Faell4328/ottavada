@@ -71,7 +71,7 @@ export default function FirstRunPage() {
         appPassword: rcloneProvider === "koofr" ? rcloneAppPassword.trim() : null,
       });
 
-      const wasConfigured = await testRclone();
+      const wasConfigured = await testRclone({ silent: true });
       if (!wasConfigured) {
         setRcloneConfigGenerated(false);
         setRcloneConfigured(false);

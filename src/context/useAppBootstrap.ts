@@ -68,22 +68,6 @@ export function useAppBootstrap({
               }
             })();
           }
-
-          void (async () => {
-            let attempts = 0;
-            const maxAttempts = 60;
-
-            while (attempts < maxAttempts) {
-              const completed = await api.isInitialScanCompleted();
-              if (completed) {
-                await loadSongs();
-                break;
-              }
-
-              attempts += 1;
-              await new Promise((resolve) => setTimeout(resolve, 1000));
-            }
-          })();
         }
       } catch (err) {
         console.error("Failed to initialize app:", err);
