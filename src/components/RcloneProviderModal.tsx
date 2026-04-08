@@ -131,21 +131,6 @@ export function RcloneProviderModal({
       }
     >
       <div className="space-y-4">
-        <div className="rounded-xl border border-[#d8e0ea] bg-[#f8fafd] p-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8b9db2]">
-            Provedor atual
-          </p>
-          <div className="mt-2 flex items-center gap-2">
-            <CheckCircle className="h-4 w-4 text-[#4f84d7]" />
-            <p className="text-sm font-semibold text-[#34485d]">
-              {getProviderLabel(currentProvider)}
-            </p>
-          </div>
-          <p className="mt-1 text-xs text-[#6b849e]">
-            Primeiro gere a configuração. Depois rode o teste para liberar a troca do provedor.
-          </p>
-        </div>
-
         <div className="grid gap-3 md:grid-cols-2">
           <button
             type="button"

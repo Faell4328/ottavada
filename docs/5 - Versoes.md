@@ -105,6 +105,7 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - v0.7 - Lapidando
 - v0.8 - Melhorias na usabilidade
 - v0.9 - Melhorias na usabilidade e confiança
+- v0.10 - Melhorias
 - v1.0 - Adição de licença e telemetria.
 ## v0.4
 - [x] Atualizar bando de dados
@@ -268,15 +269,39 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 	- [x] Adicionar nesse campo o texto: "Este software utiliza rclone (licença MIT)". Ao clicar deve abrir a licença completa. Caso o usuário parar o mouse sobre ele, irá aparecer "abrir licença". Deve ter um estilização de link (bonito).
 	- [x] A licença deve abrir em um modal com o texto da licença.
 
-- [ ] Ajustando página de primeiro acesso, etapa de "Configure o Rclone".
-	- [ ] Atualize o texto do primeiro acesso, não é necessário mais baixar o rclone.
-	- [ ] Antes do usuário testar o rclone, o usuário deve escolher o campo "provedor de nuvem". Sendo "koofr" e "google drive", sendo o "koofr" marcado por padrão. Deve ter um texto descrevendo, avisando que o koofr e o google drive, tendo um texto em cima do "koofr": "recomendado".
+- [x] Ajustando página de primeiro acesso, etapa de "Configure o Rclone".
+	- [x] Atualize o texto do primeiro acesso, não é necessário mais baixar o rclone.
+	- [x] Antes do usuário testar o rclone, o usuário deve escolher o campo "provedor de nuvem". Sendo "koofr" e "google drive", sendo o "koofr" marcado por padrão. Deve ter um texto descrevendo, avisando que o koofr e o google drive, tendo um texto em cima do "koofr": "recomendado".
 	- Na parte de baixo deve ter as configurações, refletindo a opção escolhida:
-	- [ ] Koofr - O usuário precisa adicionar as credências do "koofr" (`https://app.koofr.net/`), solicitando a senha do aplicativo criada no site (`rclone obscure "SUA_SENHA"` e depois `rclone --config ./rclone.conf config create meuKoofr koofr user=email password=senha_obscure`, precisa ajustar o caminho do config igual na documentação)
-	- [ ] Google Drive - O usuário precisar autenticar via navegador web (`rclone --config ./rclone.conf authorize "drive"` e depois `rclone --config ./rclone.conf config create meuDrive drive token='JSON_AQUI'`, precisa ajustar o caminho do config igual na documentação).
+	- [x] Koofr - O usuário precisa adicionar as credências do "koofr" (`https://app.koofr.net/`), solicitando a senha do aplicativo criada no site (`rclone obscure "SUA_SENHA"` e depois `rclone --config ./rclone.conf config create meuKoofr koofr user=email password=senha_obscure`, precisa ajustar o caminho do config igual na documentação)
+	- [x] Google Drive - O usuário precisar autenticar via navegador web (`rclone --config ./rclone.conf authorize "drive"` e depois `rclone --config ./rclone.conf config create meuDrive drive token='JSON_AQUI'`, precisa ajustar o caminho do config igual na documentação).
 	! Depois disso, deve ir para etapa de teste (igual o fluxo normal)
 	! O usuário não pode mais colocar nome e nem o caminho, será padrão: GoogleDrive é `gdrive` e Koofr é `koofr`, o caminho será: `ScoreMaestro`.
-- [ ] Migrar do "rclone do sistema operacional" para o "rclone do projeto". O binário está em: `src-tauri/bin/rclone.exe`. Para chamar é necessário: `rclone --config /caminho/do/seu/rclone.conf ...`, precisa ajustar o caminho do config igual na documentação.
+- [x] Ajustar também as configurações.
+- [x] Migrar do "rclone do sistema operacional" para o "rclone do projeto". O binário está em: `src-tauri/bin/rclone.exe`. Para chamar é necessário: `rclone --config /caminho/do/seu/rclone.conf ...`, precisa ajustar o caminho do config igual na documentação.
+
+## v0.10
+
+- [ ] Mudar o carregamento das partituras na página inicial. Listar apenas as músicas, carregar a partitura apenas quando for clicado para expandir a música. Quando for fechada, deve ser descartado a lista de partituras da música fechada.
+- [ ] Não está sendo pegado o nome de todos as partituras/instrumentos, que ficam depois do "-", ex: `298H.C. AVANTE SERVO DE JEOVA - Bass Guitar.mus`. Como é um instrumentos não listado, deve fica após os listados em ordem alfabética.
+- [ ] Padronizar a duração de todos os toast para 8 segundos.
+- [ ] Muda texto para "selecionar arquivo(s)" no overflow menu, permitir também o usuário escolher 1 ou mais arquivos.
+- [ ] Ao editar informação da música, não precisa abrir para mostrar as partituras/instrumentos.
+- [ ] Ao selecionar uma categoria de SideBar, ao adicionar uma música ou indexar ele já deve vir com a categoria marcada por padrão.
+- [ ] Ao trocar de provedor com sucesso nas configurações, executar o fluxo de força snapshot.
+- [ ] Retirar toast duplicado ao configurar e testar provedor no primeiro acesso.
+- [ ] Ao iniciar o aplicativo (servidor), deve buscar alterações nos arquivos de partitura/instrumentos (apenas isso em segundo plano - outra thread).
+- [ ] Adicionar uma categoria default, que é a categoria "Sem categoria", quando uma música não possui categoria, ela virá para essa categoria.
+- [ ] Caso o nome da música possua número, ex: 1, 2, 3, 4, 5, 6, 7, 8 e 9, adicionar um 0 antes, ex: 01, 02, 03, 04, 05, 06, 07, 08 e 09.
+- [ ] Adicionar nas configurações/Sobre a quantidade de músicas e partituras (separadas por: main, pedding e not foud).
+- [ ] Arrumar a ordenação das músicas, está ficando bugada quando o nome tem algum sinal na letra.
+
+**Tenho que pensar mais um pouco**
+- [ ] Quando o usuário selecionar para indexar um diretório e no diretório não tem nada, deve aparecer um modal listando tudo que tem dentro e com um botão para o usuário abrir o local.
+- [ ] Adicionar uma barreira para o usuário não adicionar novas música, mexer em configurações ou editar alguma informação de música, partitura e etc.
+- [ ] Caso o arquivo já exista em alguma música o tratamento deve ser diferente, tanto modal, quanto `toast`.
+- [ ] Aumentar a quantidade de `transfers` no `rclone` sem quebrar o StatusBar.
+- [ ] Arrumar a barra de pesquisa.
 
 ## v1.0
 - [ ] Montar um plano para atualizar o software.
