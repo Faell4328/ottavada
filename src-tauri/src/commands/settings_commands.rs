@@ -9,6 +9,7 @@ use crate::domain::models::{
 };
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
+use crate::commands::rclone_commands::terminate_running_rclone_processes;
 
 #[tauri::command]
 pub fn get_settings(
@@ -148,6 +149,7 @@ pub fn has_pending_changes(
 
 #[tauri::command]
 pub fn exit_application(app: AppHandle) {
+    terminate_running_rclone_processes();
     app.exit(0);
 }
 

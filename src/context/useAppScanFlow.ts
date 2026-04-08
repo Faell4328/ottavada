@@ -295,9 +295,9 @@ export function useAppScanFlow({
       const hasDetectedFileChanges =
         changedCount > 0 || recoveredCount > 0 || notFoundCount > 0;
 
-      // Fluxo base do servidor: verificar, compactar e gerar events.
-      // A etapa 4/5 só aparece quando houver upload ou snapshot automático.
-      currentTotalSteps = 3;
+      // Fluxo base do servidor: verificar, compactar, gerar events e subir para a nuvem.
+      // Snapshot adiciona uma etapa extra ao total.
+      currentTotalSteps = 4;
       updateStepProgress(changedCount);
 
       dispatch({

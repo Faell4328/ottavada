@@ -350,6 +350,57 @@ pub fn terminate_running_rclone_processes() {
     }
 }
 
+pub fn terminate_stale_rclone_rc_processes() {
+    #[cfg(target_os = "windows")]
+    {
+        let output = configure_no_window_command(Command::new("taskkill"))
+            .args(["/IM", "rclone.exe", "/T", "/F"])
+            .output();
+
+        match output {
+            Ok(output) if output.status.success() => {
+                info!("Processos rclone órfãos encerrados durante a inicialização");
+            }
+            Ok(output) => {
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                if !stderr.trim().is_empty() {
+                    warn!("Falha ao encerrar rclone órfão no Windows: {}", stderr);
+                }
+            }
+            Err(err) => {
+                warn!("Falha ao executar taskkill para limpar rclone órfão: {}", err);
+            }
+        }
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        let pattern = "--rc-addr=127.0.0.1:5572";
+        let output = Command::new("pkill")
+            .args(["-TERM", "-f", "--", pattern])
+            .output();
+
+        match output {
+            Ok(output) if output.status.success() => {
+                info!("Processos rclone órfãos encerrados durante a inicialização");
+            }
+            Ok(output) => {
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                if !stderr.trim().is_empty() {
+                    warn!("Falha ao encerrar rclone órfão no Unix: {}", stderr);
+                }
+
+                let _ = Command::new("pkill")
+                    .args(["-KILL", "-f", "--", pattern])
+                    .output();
+            }
+            Err(err) => {
+                warn!("Falha ao executar pkill para limpar rclone órfão: {}", err);
+            }
+        }
+    }
+}
+
 fn run_rclone_with_retry(args: &[&str], operation_label: &str) -> Result<std::process::Output, AppError> {
     let mut output = run_rclone_once(args, operation_label)?;
     if output.status.success() {
@@ -361,6 +412,18 @@ fn run_rclone_with_retry(args: &[&str], operation_label: &str) -> Result<std::pr
         "Falha na 1a tentativa do rclone [{}]: {}",
         operation_label, first_stderr
     );
+
+    if first_stderr.contains("Failed to start remote control")
+        && first_stderr.contains("address already in use")
+    {
+        warn!(
+            "Porta RC ocupada detectada durante [{}]. Tentando limpar processos órfãos antes da segunda tentativa",
+            operation_label
+        );
+        terminate_stale_rclone_rc_processes();
+        thread::sleep(Duration::from_millis(500));
+    }
+
     info!(
         "Tentando novamente rclone [{}] por falha transitória",
         operation_label

@@ -91,6 +91,7 @@ pub fn run() {
             };
 
             commands::rclone_commands::set_rclone_paths(rclone_executable_path, rclone_config_path);
+            commands::rclone_commands::terminate_stale_rclone_rc_processes();
 
             // Inicializar banco de dados
             let db_path = app_data_dir.join("score_maestro.db");
