@@ -129,7 +129,7 @@ function App() {
   return (
     <AppProvider>
       <AppContent />
-      <Toaster position="bottom-right" />
+      <Toaster position="bottom-right" toastOptions={{ duration: 8000 }} />
     </AppProvider>
   );
 }

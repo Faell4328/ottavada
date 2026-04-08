@@ -131,12 +131,44 @@ fn looks_like_known_instrument(value: &str) -> bool {
     PREFIXES.iter().any(|prefix| normalized.starts_with(prefix))
 }
 
+fn looks_like_non_instrument_descriptor(value: &str) -> bool {
+    let normalized = normalize_instrument_probe(value);
+    if normalized.is_empty() {
+        return false;
+    }
+
+    const FIRST_WORDS: &[&str] = &[
+        "part",
+        "parte",
+        "section",
+        "arr",
+        "arranjo",
+        "arrangement",
+        "score",
+        "grade",
+        "partitura",
+        "regencia",
+        "versao",
+        "version",
+    ];
+
+    let first_word = normalized.split_whitespace().next().unwrap_or("");
+    if FIRST_WORDS.contains(&first_word) {
+        return true;
+    }
+
+    const PHRASES: &[&str] = &["full score", "conductor score", "partitura completa", "partitura geral"];
+    PHRASES.iter().any(|phrase| normalized.starts_with(phrase))
+}
+
 /// Extrai o nome do instrumento a partir do nome do arquivo.
 /// Suporta tanto "nome da música - instrumento.ext" quanto "instrumento.ext".
 fn parse_instrument_from_file_stem(file_stem: &str, song_name: &str) -> Option<String> {
     if let Some(idx) = file_stem.rfind(" - ") {
         let normalized = normalize_optional_score_name(Some(&file_stem[idx + 3..]));
-        return normalized.filter(|candidate| looks_like_known_instrument(candidate));
+        return normalized.filter(|candidate| {
+            normalize_song_name(candidate) != song_name && !looks_like_non_instrument_descriptor(candidate)
+        });
     }
 
     let normalized_instrument = normalize_optional_score_name(Some(file_stem));
@@ -238,6 +270,15 @@ mod tests {
     fn test_parse_instrument_with_suffix() {
         let instrument = parse_instrument_from_file_stem("Canon in D - Violino 1", "CANON IN D");
         assert_eq!(instrument, Some("Violino 1".to_string()));
+    }
+
+    #[test]
+    fn test_parse_instrument_with_unknown_suffix() {
+        let instrument = parse_instrument_from_file_stem(
+            "298H.C. AVANTE SERVO DE JEOVA - Bass Guitar",
+            "298H.C. AVANTE SERVO DE JEOVA",
+        );
+        assert_eq!(instrument, Some("Bass Guitar".to_string()));
     }
 
     #[test]

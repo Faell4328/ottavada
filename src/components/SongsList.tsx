@@ -168,7 +168,13 @@ export default function SongsList() {
       selectScore(null);
       selectSong(song);
       closeAllMenus();
-      void loadSongScores(song.id);
+      void (async () => {
+        try {
+          await loadSongScores(song.id);
+        } catch {
+          // loadSongScores já exibe o toast de erro.
+        }
+      })();
     },
     [clearSongScores, closeAllMenus, loadSongScores, selectScore, selectSong, state.selectedSong?.id]
   );
@@ -300,7 +306,7 @@ export default function SongsList() {
       </div>
 
       <div className="overflow-hidden rounded border border-[#c8d1dc] bg-[#f8fafd] flex-1 flex flex-col">
-        <div className="overflow-y-auto flex-1">
+        <div className="overflow-y-auto flex-1 scroll-smooth">
           <table className="w-full border-collapse">
             <thead>
               <tr className="border-b border-[#ced7e3] bg-[#eef2f6] text-xs font-bold text-[#34485d] sticky top-0">

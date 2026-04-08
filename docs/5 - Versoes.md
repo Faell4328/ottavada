@@ -289,6 +289,7 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 	- E boqueando o usuário quando clica para: "aplicar alterações", "verificar alterações", "forçar geração de snapshot". Para por exemplo: o usuário não adicione uma música enquanto o sistema está fazendo upload, o que pode quebrar ou causar inconsistências.
 		- É evidente, que o correto é o sistema permitir isso, mas não tenho tempo para fazer o correto, isso ficara para próximas versões. No atual momento, minhas escolha é a "gambiarra".
 - [ ] Quando o usuário expande uma música, a lista deve rolar para que a linha da música fique alinhada ao topo da área de listagem (visível logo abaixo do header), exceto se já estiver visível no topo ou não for possível.
+	- O problema atual: quando se tem aberto uma música com muitas partituras e é aberto uma música com poucas, o usuário pode ficar perdido, porque a música e partituras foi para cima.
 - [ ] Não está sendo pegado o nome de todos as partituras/instrumentos, que ficam depois do "-", ex: `298H.C. AVANTE SERVO DE JEOVA - Bass Guitar.mus`. Como é um instrumentos não listado, deve fica após os listados em ordem alfabética.
 - [ ] Padronizar a duração de todos os toast para 8 segundos.
 - [ ] Caso o arquivo já exista em alguma música o tratamento deve ser diferente, tanto modal, quanto `toast`.

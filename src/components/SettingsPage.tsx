@@ -260,9 +260,7 @@ export default function SettingsPage() {
       await Promise.all([loadSettings(), loadSongs(), loadCategories()]);
       toast.success(
         `Backup local importado com sucesso. O backup é de ${formatBackupTimestamp(summary.generated_at)}; alterações posteriores não estão incluídas.`,
-        {
-          duration: 8000,
-        }
+          { duration: 8000 }
       );
       shouldRunForcedSnapshot = true;
     } catch (error) {
@@ -299,9 +297,7 @@ export default function SettingsPage() {
       await Promise.all([loadSettings(), loadSongs(), loadCategories()]);
       toast.success(
         `Backup da nuvem importado com sucesso. O backup é de ${formatBackupTimestamp(summary.generated_at)}; alterações posteriores não estão incluídas.`,
-        {
-          duration: 5000,
-        }
+          { duration: 8000 }
       );
       shouldRunForcedSnapshot = true;
     } catch (error) {

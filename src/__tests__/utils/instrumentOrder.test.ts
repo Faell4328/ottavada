@@ -102,9 +102,9 @@ describe("compareInstrumentNames", () => {
   });
 
   it("sorts unknown instruments alphabetically after known ones", () => {
-    const names = ["zither", "oboe", "accordion", "xylophone"];
+    const names = ["zither", "oboe", "accordion", "Bass Guitar", "xylophone"];
     const sorted = [...names].sort((a, b) => compareInstrumentNames(a, b));
 
-    expect(sorted).toEqual(["oboe", "accordion", "xylophone", "zither"]);
+    expect(sorted).toEqual(["oboe", "accordion", "Bass Guitar", "xylophone", "zither"]);
   });
 });
