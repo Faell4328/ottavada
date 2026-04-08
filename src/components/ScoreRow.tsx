@@ -130,15 +130,27 @@ function ScoreRow({
             </span>
 
             <div className="flex items-center justify-end px-3">
-              {!isClient ? (
-                <ContextMenu
-                  isOpen={isMenuOpen}
-                  onToggle={(e) => {
-                    e.stopPropagation();
-                    isMenuOpen ? onMenuClose() : onMenuOpen(menuId);
-                  }}
-                  disabled={isActionLocked}
-                >
+              <ContextMenu
+                isOpen={isMenuOpen}
+                onToggle={(e) => {
+                  e.stopPropagation();
+                  isMenuOpen ? onMenuClose() : onMenuOpen(menuId);
+                }}
+                disabled={isActionLocked}
+              >
+                {isClient ? (
+                  <ContextMenuItem
+                    label="Abrir"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void openScoreFile();
+                      onMenuClose();
+                    }}
+                    disabled={statusKey === "not_found" || isActionLocked}
+                    isLast
+                  />
+                ) : (
+                  <>
                   <ContextMenuItem
                     label="Abrir"
                     onClick={(e) => {
@@ -176,10 +188,9 @@ function ScoreRow({
                     disabled={isActionLocked}
                     isLast
                   />
-                </ContextMenu>
-              ) : (
-                <span className="text-xs text-[#8b9db2]">Somente leitura</span>
-              )}
+                  </>
+                )}
+              </ContextMenu>
             </div>
           </div>
         </td>

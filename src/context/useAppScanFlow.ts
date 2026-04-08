@@ -237,6 +237,25 @@ export function useAppScanFlow({
         });
         const syncSummary = await api.applyServerChangesOnClient();
 
+        dispatch({
+          type: "SET_OPERATION_STATUS",
+          payload: {
+            title: "Etapa 2 - Atualizando interface",
+            detail: "Recarregando músicas e partituras",
+            stepCurrent: 2,
+            stepTotal: clientTotalSteps,
+          },
+        });
+
+        dispatch({
+          type: "SET_SCAN_PROGRESS",
+          payload: {
+            total: clientTotalSteps,
+            completed: 1,
+            changedFiles: syncSummary.events_applied,
+          },
+        });
+
         await Promise.all([loadSongs(), loadCategories(), loadSettings()]);
 
         dispatch({
@@ -249,10 +268,7 @@ export function useAppScanFlow({
         });
 
         if (!isAutomatic) {
-          const appliedSummary = syncSummary.snapshot_applied
-            ? `snapshot aplicado + ${syncSummary.events_applied} evento(s)`
-            : `${syncSummary.events_applied} evento(s) aplicado(s)`;
-          toast.success(`Sincronização concluída: ${appliedSummary}`);
+          toast.success("Músicas e partituras atualizadas");
         }
 
         scheduleScanReset(1500);
@@ -294,6 +310,10 @@ export function useAppScanFlow({
       const hasPendingChanges = await api.hasPendingChanges();
       const hasDetectedFileChanges =
         changedCount > 0 || recoveredCount > 0 || notFoundCount > 0;
+
+      if (!isAutomatic && changedCount > 0) {
+        toast.success("Músicas e partituras atualizadas");
+      }
 
       // Fluxo base do servidor: verificar, compactar, gerar events e subir para a nuvem.
       // Snapshot adiciona uma etapa extra ao total.
@@ -443,9 +463,6 @@ export function useAppScanFlow({
 
       if (!isAutomatic) {
         const summaryParts: string[] = [];
-        if (changedCount > 0) {
-          summaryParts.push(`${changedCount} alterado(s)`);
-        }
         if (recoveredCount > 0) {
           summaryParts.push(`${recoveredCount} recuperado(s)`);
         }

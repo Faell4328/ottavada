@@ -181,76 +181,79 @@ pub fn apply_server_changes_for_client(
 }
 
 fn apply_snapshot(db: &Database, payload: &SnapshotMessagePack) -> Result<(), AppError> {
-    let mut conn = db.conn.lock().unwrap();
-    let tx = conn.transaction()?;
+    {
+        let mut conn = db.conn.lock().unwrap();
+        let tx = conn.transaction()?;
 
-    tx.execute_batch(
-        "
-        DELETE FROM changedField;
-        DELETE FROM backupSongs;
-        DELETE FROM categoriesSongs;
-        DELETE FROM scores;
-        DELETE FROM songs;
-        DELETE FROM categories;
-    ",
-    )?;
-
-    for category in &payload.categories {
-        tx.execute(
-            "INSERT INTO categories (id, name) VALUES (?1, ?2)",
-            params![category.id, category.name],
-        )?;
-    }
-
-    for song in &payload.songs {
-        let last_score_file_modified_at = song
-            .scores
-            .iter()
-            .map(|score| score.updated_at)
-            .max()
-            .unwrap_or(payload.generated_at);
-
-        tx.execute(
-            "INSERT INTO songs (id, name, composer, arranger, is_favorite, last_score_file_modified_at)
-             VALUES (?1, ?2, ?3, ?4, 0, ?5)",
-            params![
-                song.id,
-                song.name,
-                song.composer,
-                song.arranger,
-                last_score_file_modified_at,
-            ],
+        tx.execute_batch(
+            "
+            DELETE FROM changedField;
+            DELETE FROM backupSongs;
+            DELETE FROM categoriesSongs;
+            DELETE FROM scores;
+            DELETE FROM songs;
+            DELETE FROM categories;
+        ",
         )?;
 
-        for category_id in &song.categories_id {
+        for category in &payload.categories {
             tx.execute(
-                "INSERT OR IGNORE INTO categoriesSongs (id, category_id, song_id) VALUES (?1, ?2, ?3)",
-                params![uuid::Uuid::new_v4().to_string(), category_id, song.id],
+                "INSERT INTO categories (id, name) VALUES (?1, ?2)",
+                params![category.id, category.name],
             )?;
         }
 
-        for score in &song.scores {
-            let file_extension = normalize_extension(score.extension.as_deref())
-                .unwrap_or_else(|| "score".to_string());
+        for song in &payload.songs {
+            let last_score_file_modified_at = song
+                .scores
+                .iter()
+                .map(|score| score.updated_at)
+                .max()
+                .unwrap_or(payload.generated_at);
 
             tx.execute(
-                "INSERT INTO scores (id, song_id, name, host_id, file_path, file_name, file_size, file_modified_at, status)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, 0, datetime(?7, 'unixepoch'), ?8)",
+                "INSERT INTO songs (id, name, composer, arranger, is_favorite, last_score_file_modified_at)
+                 VALUES (?1, ?2, ?3, ?4, 0, ?5)",
                 params![
-                    score.id,
                     song.id,
-                    score.name,
-                    "server",
-                    format!("/cloud/songs/{}", song.id),
-                    format!("{}.{}", score.id, file_extension),
-                    score.updated_at,
-                    score.status,
+                    song.name,
+                    song.composer,
+                    song.arranger,
+                    last_score_file_modified_at,
                 ],
             )?;
+
+            for category_id in &song.categories_id {
+                tx.execute(
+                    "INSERT OR IGNORE INTO categoriesSongs (id, category_id, song_id) VALUES (?1, ?2, ?3)",
+                    params![uuid::Uuid::new_v4().to_string(), category_id, song.id],
+                )?;
+            }
+
+            for score in &song.scores {
+                let file_extension = normalize_extension(score.extension.as_deref())
+                    .unwrap_or_else(|| "score".to_string());
+
+                tx.execute(
+                    "INSERT INTO scores (id, song_id, name, host_id, file_path, file_name, file_size, file_modified_at, status)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, 0, datetime(?7, 'unixepoch'), ?8)",
+                    params![
+                        score.id,
+                        song.id,
+                        score.name,
+                        "server",
+                        format!("/cloud/songs/{}", song.id),
+                        format!("{}.{}", score.id, file_extension),
+                        score.updated_at,
+                        score.status,
+                    ],
+                )?;
+            }
         }
+
+        tx.commit()?;
     }
 
-    tx.commit()?;
     db.ensure_default_category()?;
     Ok(())
 }
@@ -741,8 +744,11 @@ mod tests {
         assert_eq!(songs[0].scores[0].file_extension, "musx");
 
         let categories = db.get_all_categories().expect("get categories");
-        assert_eq!(categories.len(), 1);
-        assert_eq!(categories[0].name, "Harpa");
+        assert_eq!(categories.len(), 2);
+        assert!(categories.iter().any(|category| category.name == "Harpa"));
+        assert!(categories
+            .iter()
+            .any(|category| category.name == "Sem categoria"));
     }
 
     #[test]

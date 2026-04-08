@@ -98,43 +98,50 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(function Son
         <td className="px-3.5 py-2">
           <div className="flex items-center justify-between">
             <span className="text-[#5c7089]">—</span>
-            {!isClient ? (
-              <ContextMenu
-                isOpen={isMenuOpen}
-                onToggle={(e) => {
-                  e.stopPropagation();
-                  isMenuOpen ? onMenuClose() : onMenuOpen(menuId);
-                }}
-                disabled={isActionLocked}
-              >
+            <ContextMenu
+              isOpen={isMenuOpen}
+              onToggle={(e) => {
+                e.stopPropagation();
+                isMenuOpen ? onMenuClose() : onMenuOpen(menuId);
+              }}
+              disabled={isActionLocked}
+            >
+              {isClient ? (
                 <ContextMenuItem
-                  label={song.is_favorite ? "Remover de favoritos" : "Adicionar aos favoritos"}
-                  onClick={(e) => handleMenuAction(e, onToggleFavorite)}
-                  disabled={isActionLocked}
-                />
-                <ContextMenuItem
-                  label="Selecionar arquivo(s)"
-                  onClick={(e) => handleMenuAction(e, onAddFile)}
-                  disabled={isActionLocked}
-                />
-                <ContextMenuItem
-                  label="Editar"
-                  onClick={(e) => handleMenuAction(e, onEdit)}
-                  disabled={isActionLocked}
-                />
-                <ContextMenuItem
-                  label="Deletar"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDelete();
-                  }}
+                  label="Abrir"
+                  onClick={(e) => handleMenuAction(e, onToggle)}
                   disabled={isActionLocked}
                   isLast
                 />
-              </ContextMenu>
-            ) : (
-              <span className="text-xs text-[#8b9db2]">Somente leitura</span>
-            )}
+              ) : (
+                <>
+                  <ContextMenuItem
+                    label={song.is_favorite ? "Remover de favoritos" : "Adicionar aos favoritos"}
+                    onClick={(e) => handleMenuAction(e, onToggleFavorite)}
+                    disabled={isActionLocked}
+                  />
+                  <ContextMenuItem
+                    label="Selecionar arquivo(s)"
+                    onClick={(e) => handleMenuAction(e, onAddFile)}
+                    disabled={isActionLocked}
+                  />
+                  <ContextMenuItem
+                    label="Editar"
+                    onClick={(e) => handleMenuAction(e, onEdit)}
+                    disabled={isActionLocked}
+                  />
+                  <ContextMenuItem
+                    label="Deletar"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete();
+                    }}
+                    disabled={isActionLocked}
+                    isLast
+                  />
+                </>
+              )}
+            </ContextMenu>
           </div>
         </td>
       </tr>

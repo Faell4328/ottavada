@@ -140,7 +140,7 @@ export default function TopBar({
           />
           <ActionButton
             icon={<RefreshCw className={`h-4 w-4 ${state.isScanningFiles ? 'animate-spin' : ''}`} />}
-            title={isClient ? clientBlockedTitle : isSyncLocked ? syncBlockedTitle : "Aplicar alterações"}
+            title={isSyncLocked ? syncBlockedTitle : isClient ? "Consultar alterações" : "Aplicar alterações"}
             onClick={() => {
               if (isSyncLocked) {
                 toast.error(syncBlockedTitle);
@@ -149,7 +149,7 @@ export default function TopBar({
 
               void scanFilesForChanges();
             }}
-            disabled={isClient || isSyncLocked}
+            disabled={isSyncLocked}
           />
           <ActionButton
             icon={<Settings className="h-4 w-4" />}

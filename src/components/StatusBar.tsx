@@ -97,15 +97,7 @@ export default function StatusBar() {
               {bytesRemaining !== null && <span>Faltam {formatBytes(bytesRemaining)}</span>}
               {etaText && <span>ETA {etaText}</span>}
             </>
-          ) : (
-            <>
-              {state.scanProgress.changedFiles > 0 && (
-                <span className="font-semibold text-green-700">
-                  {state.scanProgress.changedFiles} alterado(s)
-                </span>
-              )}
-            </>
-          )}
+          ) : null}
         </div>
       </div>
     </footer>

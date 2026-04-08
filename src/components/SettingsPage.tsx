@@ -187,11 +187,6 @@ export default function SettingsPage() {
   }
 
   async function handleSave() {
-    if (isClient) {
-      toast.error("Configurações não podem ser alteradas em um cliente");
-      return;
-    }
-
     if (isSyncLocked) {
       toast.error("Operação bloqueada durante sincronização");
       return;
@@ -458,12 +453,6 @@ export default function SettingsPage() {
       </div>
 
       <div className="flex-1 p-6 max-w-2xl mx-auto w-full">
-        {isClient && (
-          <div className="mb-4 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            Este computador está em modo cliente. A tela de configurações é somente leitura.
-          </div>
-        )}
-
         {/* Computador */}
         <Section title="Computador">
           <Field label="Nome do computador">
@@ -474,7 +463,7 @@ export default function SettingsPage() {
                   computer_name: e.target.value || null,
                 })
               }
-              disabled={isClient || isSyncLocked}
+              disabled={isSyncLocked}
               className="w-full h-9 rounded border border-[#c5cfdb] bg-white px-3 text-sm text-[#4d6075] outline-none focus:border-[#7ba0d4]"
               placeholder="Ex: Estúdio, Home, Sala Ensaio..."
             />
@@ -488,7 +477,7 @@ export default function SettingsPage() {
               <button
                 type="button"
                 onClick={handleComputerTypeChange}
-                disabled={isTogglingType || isClient || isSyncLocked}
+                disabled={isTogglingType || isSyncLocked}
                 className="h-9 px-4 rounded border border-[#c5cfdb] bg-white hover:bg-[#f2f5fa] text-sm font-medium text-[#344b61] disabled:opacity-50 transition-colors cursor-pointer"
               >
                 {isTogglingType ? "Alternando..." : "Alternar"}
@@ -681,7 +670,7 @@ export default function SettingsPage() {
           <button
             type="button"
             onClick={handleSave}
-            disabled={!rcloneConfigGenerated || isClient || isSettingsOperationInProgress}
+            disabled={!rcloneConfigGenerated || isSettingsOperationInProgress}
             className="h-9 rounded bg-[#4f84d7] px-6 text-sm font-semibold text-white hover:bg-[#3d6fb8] transition-colors cursor-pointer border-0"
           >
             Salvar
