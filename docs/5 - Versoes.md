@@ -282,16 +282,17 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 
 ## v0.10
 
+**Melhorias**
 - [x] Mudar o carregamento das partituras na página inicial. Listar apenas as músicas, carregar a partitura apenas quando for clicado para expandir a música. Quando for fechada, deve ser descartado a lista de partituras da música fechada.
 	- Eu realizei teste e adicionei em torno de 290 músicas, quer seria 40 a 45% de todas as músicas da orquestra. Com apenas essa quantidade, ao mover o cursor rapidamente, senti uma lerdeza e até bugs visuais para renderizar tudo (mesmo não mostrando).
 - [x] Adicionar uma barreira para o usuário não adicionar novas música, mexer em configurações ou editar alguma informação de música, partitura e etc.
 	- Limitando o cliente no backend.
 	- E boqueando o usuário quando clica para: "aplicar alterações", "verificar alterações", "forçar geração de snapshot". Para por exemplo: o usuário não adicione uma música enquanto o sistema está fazendo upload, o que pode quebrar ou causar inconsistências.
 		- É evidente, que o correto é o sistema permitir isso, mas não tenho tempo para fazer o correto, isso ficara para próximas versões. No atual momento, minhas escolha é a "gambiarra".
-- [ ] Quando o usuário expande uma música, a lista deve rolar para que a linha da música fique alinhada ao topo da área de listagem (visível logo abaixo do header), exceto se já estiver visível no topo ou não for possível.
+- [x] Quando o usuário expande uma música, a lista deve rolar para que a linha da música fique alinhada ao topo da área de listagem (visível logo abaixo do header), exceto se já estiver visível no topo ou não for possível.
 	- O problema atual: quando se tem aberto uma música com muitas partituras e é aberto uma música com poucas, o usuário pode ficar perdido, porque a música e partituras foi para cima.
-- [ ] Não está sendo pegado o nome de todos as partituras/instrumentos, que ficam depois do "-", ex: `298H.C. AVANTE SERVO DE JEOVA - Bass Guitar.mus`. Como é um instrumentos não listado, deve fica após os listados em ordem alfabética.
-- [ ] Padronizar a duração de todos os toast para 8 segundos.
+- [x] Não está sendo pegado o nome de todos as partituras/instrumentos, que ficam depois do "-", ex: `298H.C. AVANTE SERVO DE JEOVA - Bass Guitar.mus`. Como é um instrumentos não listado, deve fica após os listados em ordem alfabética.
+- [x] Padronizar a duração de todos os toast para 8 segundos.
 - [ ] Caso o arquivo já exista em alguma música o tratamento deve ser diferente, tanto modal, quanto `toast`.
 	- Aparece um toast avisando que foi adicionando x partituras, sendo que já existem.
 	- Minha ideia é simples, se o arquivo já está sendo utilizado, deve-se orientar o usuário: "Esse arquivo já está sendo utilizado na música x - (instrumento y ou sem instrumentos especificado)".
@@ -307,6 +308,9 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [ ] Adicionar nas configurações/Sobre a quantidade de músicas e partituras (separadas por: main, pedding e not foud).
 	- [ ] Ter cache no `tauri-plugin-store`, para não ter que ficar recalculando tudo.
 - [ ] Arrumar a ordenação das músicas, está ficando bugada quando o nome tem algum sinal na letra.
+
+**Correção**
+- [x] Quando estou com uma música aberta e clico para abrir outra, as vezes ocorre da música ficar sem partitura (sendo que ela tem), precisando abrir e fechar novamente para aparecer.
 
 **Tenho que pensar mais um pouco**
 - [ ] Quando o usuário selecionar para indexar um diretório e no diretório não tem nada, deve aparecer um modal listando tudo que tem dentro e com um botão para o usuário abrir o local.

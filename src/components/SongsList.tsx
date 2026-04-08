@@ -83,9 +83,7 @@ export default function SongsList() {
         const scores = await api.getScoresForSong(songId);
         const sortedScores = [...scores].sort((a, b) => compareInstrumentNames(a.name, b.name));
 
-        if (expandedSongIdRef.current === songId) {
-          setScoresBySongId((prev) => ({ ...prev, [songId]: sortedScores }));
-        }
+        setScoresBySongId((prev) => ({ ...prev, [songId]: sortedScores }));
 
         return sortedScores;
       } catch (err) {
@@ -93,15 +91,7 @@ export default function SongsList() {
         toast.error("Erro ao carregar partituras da música");
         throw err;
       } finally {
-        setLoadingScoresBySongId((prev) => {
-          if (expandedSongIdRef.current !== songId) {
-            const next = { ...prev };
-            delete next[songId];
-            return next;
-          }
-
-          return { ...prev, [songId]: false };
-        });
+        setLoadingScoresBySongId((prev) => ({ ...prev, [songId]: false }));
       }
     },
     [scoresBySongId]
@@ -258,6 +248,19 @@ export default function SongsList() {
     return map;
   }, [scoresBySongId]);
 
+  const getDisplayedScoresForSong = useCallback(
+    (song: SongListItem) => {
+      const cachedScores = sortedScoresBySongId.get(song.id);
+
+      if (cachedScores) {
+        return cachedScores;
+      }
+
+      return [...song.scores].sort((a, b) => compareInstrumentNames(a.name, b.name));
+    },
+    [sortedScoresBySongId]
+  );
+
   const closeAddFileModal = () => {
     setIsAddFileModalOpen(false);
     setSongForAddFile(null);
@@ -327,66 +330,74 @@ export default function SongsList() {
                   </td>
                 </tr>
               ) : (
-                state.songs.map((song) => (
-                  <React.Fragment key={song.id}>
-                    <MemoizedSongRow
-                      song={song}
-                      isExpanded={state.selectedSong?.id === song.id}
-                      onToggle={() => {
-                        void handleToggleSong(song);
-                      }}
-                      onToggleFavorite={() => toggleFavorite(song.id)}
-                      onAddFile={() => handleAddFileToSong(song)}
-                      onEdit={() => {
-                        setEditingSong(song);
-                        setIsEditMusicModalOpen(true);
-                      }}
-                      onDelete={deleteSong}
-                      menuId={`song-${song.id}`}
-                      isMenuOpen={openMenuId === `song-${song.id}`}
-                      onMenuOpen={(id) => setOpenMenuId(id)}
-                      onMenuClose={closeAllMenus}
-                      computerType={state.settings?.computer_type}
-                      isLocked={isSyncLocked}
-                    />
-                    {state.selectedSong?.id === song.id && (
-                      loadingScoresBySongId[song.id] ? (
-                        <tr>
-                          <td colSpan={3} className="px-3.5 py-3 text-sm text-[#7b8da1] bg-[#f7f9fc]">
-                            Carregando partituras...
-                          </td>
-                        </tr>
-                      ) : (
-                        (sortedScoresBySongId.get(song.id) ?? []).map((score) => (
-                          <MemoizedScoreRow
-                            key={score.id}
-                            score={score}
-                            onSelectScore={() => {
-                              selectScore(state.selectedScore?.id === score.id ? null : score);
-                              closeAllMenus();
-                            }}
-                            menuId={`score-${score.id}`}
-                            isMenuOpen={openMenuId === `score-${score.id}`}
-                            onMenuOpen={(id) => setOpenMenuId(id)}
-                            onMenuClose={closeAllMenus}
-                            onEdit={() => {
-                              setEditingScore(score);
-                              setIsEditScoreModalOpen(true);
-                            }}
-                            onStatusChange={async (scoreId, status) => {
-                              await handleToggleScoreStatus(song.id, scoreId, status);
-                            }}
-                            onDelete={async (scoreId) => {
-                              await handleDeleteScore(song.id, scoreId);
-                            }}
-                            computerType={state.settings?.computer_type}
-                            isLocked={isSyncLocked}
-                          />
-                        ))
-                      )
-                    )}
-                  </React.Fragment>
-                ))
+                state.songs.map((song) => {
+                  const displayedScores = getDisplayedScoresForSong(song);
+                  const shouldShowLoadingRow =
+                    state.selectedSong?.id === song.id &&
+                    loadingScoresBySongId[song.id] &&
+                    !sortedScoresBySongId.has(song.id) &&
+                    song.scores.length === 0;
+
+                  return (
+                    <React.Fragment key={song.id}>
+                      <MemoizedSongRow
+                        song={song}
+                        isExpanded={state.selectedSong?.id === song.id}
+                        onToggle={() => {
+                          void handleToggleSong(song);
+                        }}
+                        onToggleFavorite={() => toggleFavorite(song.id)}
+                        onAddFile={() => handleAddFileToSong(song)}
+                        onEdit={() => {
+                          setEditingSong(song);
+                          setIsEditMusicModalOpen(true);
+                        }}
+                        onDelete={deleteSong}
+                        menuId={`song-${song.id}`}
+                        isMenuOpen={openMenuId === `song-${song.id}`}
+                        onMenuOpen={(id) => setOpenMenuId(id)}
+                        onMenuClose={closeAllMenus}
+                        computerType={state.settings?.computer_type}
+                        isLocked={isSyncLocked}
+                      />
+                      {state.selectedSong?.id === song.id &&
+                        (shouldShowLoadingRow ? (
+                          <tr>
+                            <td colSpan={3} className="px-3.5 py-3 text-sm text-[#7b8da1] bg-[#f7f9fc]">
+                              Carregando partituras...
+                            </td>
+                          </tr>
+                        ) : (
+                          displayedScores.map((score) => (
+                            <MemoizedScoreRow
+                              key={score.id}
+                              score={score}
+                              onSelectScore={() => {
+                                selectScore(state.selectedScore?.id === score.id ? null : score);
+                                closeAllMenus();
+                              }}
+                              menuId={`score-${score.id}`}
+                              isMenuOpen={openMenuId === `score-${score.id}`}
+                              onMenuOpen={(id) => setOpenMenuId(id)}
+                              onMenuClose={closeAllMenus}
+                              onEdit={() => {
+                                setEditingScore(score);
+                                setIsEditScoreModalOpen(true);
+                              }}
+                              onStatusChange={async (scoreId, status) => {
+                                await handleToggleScoreStatus(song.id, scoreId, status);
+                              }}
+                              onDelete={async (scoreId) => {
+                                await handleDeleteScore(song.id, scoreId);
+                              }}
+                              computerType={state.settings?.computer_type}
+                              isLocked={isSyncLocked}
+                            />
+                          ))
+                        ))}
+                    </React.Fragment>
+                  );
+                })
               )}
             </tbody>
           </table>
