@@ -7,7 +7,9 @@ export function normalizeSongNameInput(value: string): string {
 }
 
 export function normalizeSongNameForSave(value: string): string {
-  return collapseWhitespace(value).toUpperCase();
+  return collapseWhitespace(value)
+    .toUpperCase()
+    .replace(/\b([1-9])\b/g, "0$1");
 }
 
 export function normalizeScoreNameInput(value: string): string {

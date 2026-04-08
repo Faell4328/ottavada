@@ -33,11 +33,7 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_notification::init())
-        .on_window_event(|_window, event| {
-            if matches!(event, tauri::WindowEvent::Destroyed) {
-                commands::rclone_commands::terminate_running_rclone_processes();
-            }
-        })
+        .on_window_event(|_window, _event| {})
         .setup(|app| {
             let app_data_dir = app
                 .path()
@@ -183,6 +179,7 @@ pub fn run() {
             commands::category_commands::delete_category,
             // Settings
             commands::settings_commands::get_settings,
+            commands::settings_commands::refresh_library_summary_cache,
             commands::settings_commands::save_settings,
             commands::settings_commands::is_first_run,
             commands::settings_commands::complete_first_run,

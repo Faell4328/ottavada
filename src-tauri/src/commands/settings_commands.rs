@@ -4,14 +4,38 @@ use tauri::{AppHandle, State};
 use tracing::{error, info};
 
 use crate::domain::errors::AppError;
-use crate::domain::models::{AppSettings, ComputerType, GoogleDriveMode, OperationGuard, RcloneConfig};
+use crate::domain::models::{
+    AppSettings, ComputerType, GoogleDriveMode, LibrarySummary, OperationGuard, RcloneConfig,
+};
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
 
 #[tauri::command]
-pub fn get_settings(store: State<'_, SystemStore>) -> Result<AppSettings, AppError> {
+pub fn get_settings(
+    db: State<'_, Database>,
+    store: State<'_, SystemStore>,
+) -> Result<AppSettings, AppError> {
     info!("Buscando configurações");
-    store.get_app_settings()
+    let mut settings = store.get_app_settings()?;
+
+    if settings.library_summary.is_none() {
+        settings.library_summary = Some(db.get_library_summary_counts()?);
+        store.save_app_settings(&settings)?;
+    }
+
+    Ok(settings)
+}
+
+#[tauri::command]
+pub fn refresh_library_summary_cache(
+    db: State<'_, Database>,
+    store: State<'_, SystemStore>,
+) -> Result<LibrarySummary, AppError> {
+    let mut settings = store.get_app_settings()?;
+    let summary = db.get_library_summary_counts()?;
+    settings.library_summary = Some(summary.clone());
+    store.save_app_settings(&settings)?;
+    Ok(summary)
 }
 
 #[tauri::command]
@@ -124,7 +148,6 @@ pub fn has_pending_changes(
 
 #[tauri::command]
 pub fn exit_application(app: AppHandle) {
-    crate::commands::rclone_commands::terminate_running_rclone_processes();
     app.exit(0);
 }
 

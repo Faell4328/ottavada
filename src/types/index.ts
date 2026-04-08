@@ -38,9 +38,21 @@ export interface AppSettings {
   database_local?: number;
   backup_database_step?: BackupDatabaseStep | null;
   backup_songs_step?: SongBackupStatus[] | null;
+  library_summary?: LibrarySummary | null;
   last_snapshot_timestamp?: number | null;
   last_change_timestamp?: number | null;
   last_backup_timestamp?: number | null;
+}
+
+export interface LibraryStatusSummary {
+  songs_count: number;
+  scores_count: number;
+}
+
+export interface LibrarySummary {
+  main: LibraryStatusSummary;
+  pending: LibraryStatusSummary;
+  not_found: LibraryStatusSummary;
 }
 
 export interface GoogleServiceAccount {

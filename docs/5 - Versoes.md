@@ -314,16 +314,16 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [x] Ao trocar de provedor ou de conta com sucesso nas configurações, executar o fluxo de força snapshot.
 - [x] Retirar toast duplicado ao configurar e testar provedor no primeiro acesso.
 - [x] Ao iniciar o aplicativo (servidor), deve iniciar fluxo de "aplicar alterações"
-- [ ] Adicionar uma categoria default, que é a categoria "Sem categoria", quando uma música não possui categoria, ela virá para essa categoria.
-- [ ] Caso o nome da música possua número, ex: 1, 2, 3, 4, 5, 6, 7, 8 e 9, adicionar um 0 antes, ex: 01, 02, 03, 04, 05, 06, 07, 08 e 09.
-- [ ] Adicionar nas configurações/Sobre a quantidade de músicas e partituras (separadas por: main, pedding e not foud).
-	- [ ] Ter cache no `tauri-plugin-store`, para não ter que ficar recalculando tudo.
-- [ ] Arrumar a ordenação das músicas, está ficando bugada quando o nome tem algum sinal na letra.
+- [x] Adicionar uma categoria default, que é a categoria "Sem categoria", quando uma música não possui categoria, ela virá para essa categoria.
+- [x] Caso o nome da música possua número, ex: 1, 2, 3, 4, 5, 6, 7, 8 e 9, adicionar um 0 antes, ex: 01, 02, 03, 04, 05, 06, 07, 08 e 09.
+- [x] Adicionar nas configurações/Sobre a quantidade de músicas e partituras (separadas por: main, pedding e not foud).
+	- [x] Ter cache no `tauri-plugin-store`, para não ter que ficar recalculando tudo.
+- [x] Arrumar a ordenação das músicas, está ficando bugada quando o nome tem algum sinal na letra.
 
 **Correção**
 - [x] Quando estou com uma música aberta e clico para abrir outra, as vezes ocorre da música ficar sem partitura (sendo que ela tem), precisando abrir e fechar novamente para aparecer.
 - [x] A aplicação trava ao "importa backup local" e possivelmente da nuvem também.
-- [ ] Quando está sendo feito o upload dos arquivos no servidor, o aplicativo é fechado e aberto novamente, não se dá continuidade ao upload. Isso funcionava anteriormente.
+- [x] Quando está sendo feito o upload dos arquivos no servidor, o aplicativo é fechado e aberto novamente, não se dá continuidade ao upload. Isso funcionava anteriormente.
 
 **Tenho que pensar mais um pouco**
 - [ ] Quando o usuário selecionar para indexar um diretório e no diretório não tem nada, deve aparecer um modal listando tudo que tem dentro e com um botão para o usuário abrir o local.

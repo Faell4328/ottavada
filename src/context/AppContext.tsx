@@ -15,6 +15,7 @@ import type { AppContextValue } from "./types";
 import { useAppBootstrap } from "./useAppBootstrap";
 import { useAppCrudActions } from "./useAppCrudActions";
 import { useAppScanFlow } from "./useAppScanFlow";
+import { compareSongNames } from "../utils/songOrder";
 
 const AppContext = createContext<AppContextValue | null>(null);
 
@@ -56,7 +57,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
             return api.getAllSongSummaries();
           })();
 
-      dispatch({ type: "SET_SONGS", payload: songs });
+      dispatch({
+        type: "SET_SONGS",
+        payload: [...songs].sort((a, b) => compareSongNames(a.name, b.name)),
+      });
     } catch (err) {
       console.error("Failed to load songs:", err);
     }
@@ -117,6 +121,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     computerType: state.settings?.computer_type,
     loadSongs,
     loadCategories,
+    loadSettings,
     getErrorMessage,
   });
 

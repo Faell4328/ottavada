@@ -305,6 +305,15 @@ fn build_client_extracted_score_name(song_name: &str, score_name: Option<&str>) 
     format!("{} - {}", song, score)
 }
 
+fn refresh_library_summary_cache(
+    db: &Database,
+    store: &SystemStore,
+) -> Result<(), AppError> {
+    let mut settings = store.get_app_settings()?;
+    settings.library_summary = Some(db.get_library_summary_counts()?);
+    store.save_app_settings(&settings)
+}
+
 #[tauri::command]
 pub fn update_score(
     db: State<'_, Database>,
@@ -342,6 +351,7 @@ pub fn update_score(
     )
     .map(|_| {
         info!("Partitura atualizada com sucesso: {}", score_id);
+        let _ = refresh_library_summary_cache(&db, &store);
     })
     .map_err(|e| {
         error!("Erro ao atualizar partitura {}: {:?}", score_id, e);
@@ -410,6 +420,8 @@ pub fn add_score_to_song(
         e
     })?;
 
+    let _ = refresh_library_summary_cache(&db, &store);
+
     db.get_song_list_item_by_id(&song_id).map(|updated_song| {
         info!(
             "Partitura adicionada com sucesso: song_id={}, score_id={}",
@@ -443,6 +455,10 @@ pub fn add_scores_to_song(
 
         db.insert_score(&score)?;
         added_count += 1;
+    }
+
+    if added_count > 0 {
+        let _ = refresh_library_summary_cache(&db, &store);
     }
 
     if added_count == 0 {
@@ -550,6 +566,7 @@ pub fn update_score_status(
     }
 
     db.update_score_status(&score_id, ScoreStatus::Main, &settings.computer_id, None)?;
+    let _ = refresh_library_summary_cache(&db, &store);
 
     info!(
         "Status da partitura {} atualizado com sucesso para {}",
@@ -570,6 +587,7 @@ pub fn delete_score(
     db.delete_score(&score_id)
         .map(|_| {
             info!("Partitura deletada com sucesso: {}", score_id);
+            let _ = refresh_library_summary_cache(&db, &store);
         })
         .map_err(|e| {
             error!("Erro ao deletar partitura: {:?}", e);

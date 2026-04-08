@@ -103,6 +103,7 @@ fn unregister_rclone_pid(pid: u32) {
     }
 }
 
+#[allow(dead_code)]
 fn list_active_rclone_pids() -> Vec<u32> {
     if let Ok(guard) = active_rclone_pids().lock() {
         guard.iter().copied().collect()
@@ -139,6 +140,7 @@ fn terminate_process_pid(pid: u32) -> Result<(), AppError> {
 }
 
 #[cfg(not(target_os = "windows"))]
+#[allow(dead_code)]
 fn terminate_process_pid(pid: u32) -> Result<(), AppError> {
     let pid_str = pid.to_string();
 
@@ -328,6 +330,7 @@ pub async fn generate_rclone_config(setup: RcloneSetupRequest) -> Result<(), App
         .map_err(|e| AppError::Generic(format!("Erro ao gerar configuração do rclone: {}", e)))?
 }
 
+#[allow(dead_code)]
 pub fn terminate_running_rclone_processes() {
     let pids = list_active_rclone_pids();
     if pids.is_empty() {

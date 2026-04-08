@@ -4,6 +4,7 @@ import type {
   ScoreListItem,
   Category,
   AppSettings,
+  LibrarySummary,
   IndexedFile,
   RcloneSetupInput,
   RcloneProvider,
@@ -244,6 +245,10 @@ export async function exitApplication(): Promise<void> {
 
 export async function markLocalChangesAsApplied(): Promise<void> {
   return invoke("mark_local_changes_as_applied");
+}
+
+export async function refreshLibrarySummaryCache(): Promise<LibrarySummary> {
+  return invoke("refresh_library_summary_cache");
 }
 
 // ── File Scanning ──

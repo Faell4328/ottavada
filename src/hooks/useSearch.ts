@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import * as api from "../api/commands";
 import type { SongListItem } from "../types";
+import { compareSongNames } from "../utils/songOrder";
 
 export function useSearch(onQueryChange: (query: string) => void) {
   const [localQuery, setLocalQuery] = useState("");
@@ -22,7 +23,7 @@ export function useSearch(onQueryChange: (query: string) => void) {
     debounceRef.current = setTimeout(async () => {
       try {
         const results = await api.getSearchSuggestions(localQuery, 8);
-        setSuggestions(results);
+        setSuggestions([...results].sort((a, b) => compareSongNames(a.name, b.name)));
         setShowSuggestions(true);
         onQueryChange(localQuery);
       } catch (err) {

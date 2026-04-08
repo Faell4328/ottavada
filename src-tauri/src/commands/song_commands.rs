@@ -63,6 +63,15 @@ where
     }
 }
 
+fn refresh_library_summary_cache(
+    db: &Database,
+    store: &SystemStore,
+) -> Result<(), AppError> {
+    let mut settings = store.get_app_settings()?;
+    settings.library_summary = Some(db.get_library_summary_counts()?);
+    store.save_app_settings(&settings)
+}
+
 #[tauri::command]
 pub fn get_all_songs(db: State<'_, Database>) -> Result<Vec<SongListItem>, AppError> {
     info!("Buscando todas as músicas");
@@ -321,7 +330,10 @@ pub fn import_indexed_files(
         None,
         None,
     )
-    .map(|result| result.songs)
+    .map(|result| {
+        let _ = refresh_library_summary_cache(&db, &store);
+        result.songs
+    })
 }
 
 #[tauri::command]
@@ -351,6 +363,7 @@ pub fn import_indexed_files_with_metadata(
         arranger.as_deref(),
     )
     .map(|result| {
+        let _ = refresh_library_summary_cache(&db, &store);
         info!(
             "Importação de arquivos concluída com sucesso: músicas retornadas={}, partituras adicionadas={}",
             result.songs.len(),
@@ -450,6 +463,8 @@ pub fn create_song_with_metadata(
             e
         })?;
 
+    let _ = refresh_library_summary_cache(&db, &store);
+
     db.get_song_list_item_by_id(&song_id).map(|created| {
         info!("Música criada com sucesso: {} ({})", created.name, created.id);
         created
@@ -490,6 +505,7 @@ pub fn update_song(
     };
 
     db.update_song(&updated_song, &category_ids)?;
+    let _ = refresh_library_summary_cache(&db, &store);
     db.get_song_list_item_by_id(&song_id)
 }
 
@@ -520,6 +536,7 @@ pub fn delete_song(
     info!("Deletando música: {}", song_id);
 
     db.delete_song(&song_id)?;
+    let _ = refresh_library_summary_cache(&db, &store);
 
     let archive_path = store
         .app_data_dir()

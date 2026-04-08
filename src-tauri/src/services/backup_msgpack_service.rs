@@ -188,6 +188,9 @@ pub fn import_backup_msgpack(
 
     restore_backup_payload(db, &payload)?;
 
+    let library_summary = db.get_library_summary_counts()?;
+    payload.settings.library_summary = Some(library_summary);
+
     if let Err(e) = store.save_app_settings(&payload.settings) {
         return Err(AppError::Generic(format!(
             "Banco restaurado, mas falhou ao restaurar configuracoes do app-store: {}",

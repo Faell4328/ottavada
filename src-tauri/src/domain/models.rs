@@ -109,6 +109,7 @@ pub struct AppSettings {
     pub database_local: Option<u64>,
     pub backup_database_step: Option<BackupDatabaseStep>,
     pub backup_songs_step: Option<Vec<SongBackupStatus>>,
+    pub library_summary: Option<LibrarySummary>,
     pub last_snapshot_timestamp: Option<i64>,
     pub last_change_timestamp: Option<i64>,
     pub last_backup_timestamp: Option<i64>,
@@ -127,11 +128,25 @@ impl Default for AppSettings {
             database_local: None,
             backup_database_step: None,
             backup_songs_step: None,
+            library_summary: None,
             last_snapshot_timestamp: None,
             last_change_timestamp: None,
             last_backup_timestamp: None,
         }
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct LibraryStatusSummary {
+    pub songs_count: usize,
+    pub scores_count: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct LibrarySummary {
+    pub main: LibraryStatusSummary,
+    pub pending: LibraryStatusSummary,
+    pub not_found: LibraryStatusSummary,
 }
 
 /// Trait para validar permissões de operação baseado na configuração do computador

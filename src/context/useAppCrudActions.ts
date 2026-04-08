@@ -112,13 +112,14 @@ export function useAppCrudActions({
       );
       dispatch({ type: "UPDATE_SELECTED_SONG", payload: updatedSong });
       await Promise.all([loadSongs(), loadCategories()]);
+      await loadSettings();
       toast.success("Música atualizada com sucesso!");
     } catch (err) {
       console.error("Failed to update song:", err);
       toast.error(getErrorMessage(err, "Erro ao atualizar música"));
       throw err;
     }
-  }, [dispatch, getErrorMessage, loadCategories, loadSongs]);
+  }, [dispatch, getErrorMessage, loadCategories, loadSettings, loadSongs]);
 
   const updateScore = useCallback(async (
     scoreId: string,
@@ -131,13 +132,14 @@ export function useAppCrudActions({
         dispatch({ type: "SET_SELECTED_SCORE", payload: null });
       }
       await loadSongs();
+      await loadSettings();
       toast.success("Partitura atualizada com sucesso!");
     } catch (err) {
       console.error("Failed to update score:", err);
       toast.error(getErrorMessage(err, "Erro ao atualizar partitura"));
       throw err;
     }
-  }, [dispatch, getErrorMessage, loadSongs, state.selectedScore]);
+  }, [dispatch, getErrorMessage, loadSettings, loadSongs, state.selectedScore]);
 
   const updateScoreStatus = useCallback(async (
     scoreId: string,
@@ -152,13 +154,15 @@ export function useAppCrudActions({
       );
       dispatch({ type: "SET_SONGS", payload: updatedSongs });
 
+      await loadSettings();
+
       toast.success("Partitura definida como Principal!");
     } catch (err) {
       console.error("Failed to update score status:", err);
       toast.error(getErrorMessage(err, "Erro ao atualizar status da partitura"));
       throw err;
     }
-  }, [dispatch, getErrorMessage, state.songs]);
+  }, [dispatch, getErrorMessage, loadSettings, state.songs]);
 
   const deleteScore = useCallback(async (scoreId: string) => {
     try {
@@ -167,13 +171,14 @@ export function useAppCrudActions({
         dispatch({ type: "SET_SELECTED_SCORE", payload: null });
       }
       await loadSongs();
+      await loadSettings();
       toast.success("Partitura deletada com sucesso!");
     } catch (err) {
       console.error("Failed to delete score:", err);
       toast.error(getErrorMessage(err, "Erro ao deletar partitura"));
       throw err;
     }
-  }, [dispatch, getErrorMessage, loadSongs, state.selectedScore]);
+  }, [dispatch, getErrorMessage, loadSettings, loadSongs, state.selectedScore]);
 
   const deleteSong = useCallback(async (songId: string) => {
     try {
@@ -185,13 +190,14 @@ export function useAppCrudActions({
       dispatch({ type: "SET_SELECTED_SCORE", payload: null });
 
       await loadSongs();
+      await loadSettings();
       toast.success("Música deletada com sucesso!");
     } catch (err) {
       console.error("Failed to delete song:", err);
       toast.error(getErrorMessage(err, "Erro ao deletar música"));
       throw err;
     }
-  }, [dispatch, getErrorMessage, loadSongs, state.selectedSong]);
+  }, [dispatch, getErrorMessage, loadSettings, loadSongs, state.selectedSong]);
 
   const saveSettings = useCallback(async (settings: AppSettings) => {
     try {

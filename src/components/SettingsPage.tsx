@@ -38,6 +38,7 @@ export default function SettingsPage() {
       first_run_completed: true,
       google_service_account: null,
       rclone_config: null,
+      library_summary: null,
     }
   );
   const [isTogglingType, setIsTogglingType] = useState(false);
@@ -439,6 +440,8 @@ export default function SettingsPage() {
     ? formatBackupTimestamp(settings.last_backup_timestamp)
     : "Nunca gerado";
 
+  const librarySummary = settings.library_summary;
+
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-b from-[#edf1f6] via-[#f2f5fa] to-[#f8fafd] select-none">
       {/* Header */}
@@ -644,6 +647,25 @@ export default function SettingsPage() {
 
         {/* Sobre */}
         <Section title="Sobre">
+          {librarySummary && (
+            <div className="mb-3 rounded-xl border border-[#d8e0ea] bg-white/80 p-3 text-xs text-[#4f6887]">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <SummaryColumn
+                  label="Músicas"
+                  main={librarySummary.main.songs_count}
+                  pending={librarySummary.pending.songs_count}
+                  notFound={librarySummary.not_found.songs_count}
+                />
+                <SummaryColumn
+                  label="Partituras"
+                  main={librarySummary.main.scores_count}
+                  pending={librarySummary.pending.scores_count}
+                  notFound={librarySummary.not_found.scores_count}
+                />
+              </div>
+            </div>
+          )}
+
           <button
             type="button"
             onClick={() => setIsRcloneLicenseModalOpen(true)}
@@ -735,6 +757,38 @@ function Field({
         {label}
       </label>
       {children}
+    </div>
+  );
+}
+
+function SummaryColumn({
+  label,
+  main,
+  pending,
+  notFound,
+}: {
+  label: string;
+  main: number;
+  pending: number;
+  notFound: number;
+}) {
+  return (
+    <div className="rounded-lg border border-[#e1e7ef] bg-[#f8fafd] p-3">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6b849e]">{label}</p>
+      <div className="mt-2 space-y-1 text-sm text-[#34485d]">
+        <div className="flex items-center justify-between">
+          <span>Main</span>
+          <strong>{main}</strong>
+        </div>
+        <div className="flex items-center justify-between">
+          <span>Pending</span>
+          <strong>{pending}</strong>
+        </div>
+        <div className="flex items-center justify-between">
+          <span>Not found</span>
+          <strong>{notFound}</strong>
+        </div>
+      </div>
     </div>
   );
 }

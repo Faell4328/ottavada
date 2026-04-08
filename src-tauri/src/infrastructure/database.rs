@@ -628,6 +628,43 @@ impl Database {
         Ok(grouped)
     }
 
+    pub fn get_library_summary_counts(&self) -> Result<LibrarySummary, AppError> {
+        let conn = self.conn.lock().unwrap();
+        let mut summary = LibrarySummary::default();
+
+        let mut stmt = conn.prepare(
+            "SELECT status, COUNT(*) AS scores_count, COUNT(DISTINCT song_id) AS songs_count
+             FROM scores
+             WHERE status IN ('main', 'pending', 'not_found')
+             GROUP BY status",
+        )?;
+
+        let rows = stmt.query_map([], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, usize>(1)?,
+                row.get::<_, usize>(2)?,
+            ))
+        })?;
+
+        for row in rows {
+            let (status, scores_count, songs_count) = row?;
+            let bucket = LibraryStatusSummary {
+                songs_count,
+                scores_count,
+            };
+
+            match status.as_str() {
+                "main" => summary.main = bucket,
+                "pending" => summary.pending = bucket,
+                "not_found" => summary.not_found = bucket,
+                _ => {}
+            }
+        }
+
+        Ok(summary)
+    }
+
     pub fn get_all_songs(&self) -> Result<Vec<SongListItem>, AppError> {
         let conn = self.conn.lock().unwrap();
         Self::query_song_list_items(

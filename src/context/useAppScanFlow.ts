@@ -9,6 +9,7 @@ interface UseAppScanFlowParams {
   computerType: "Server" | "Client" | undefined;
   loadSongs: () => Promise<void>;
   loadCategories: () => Promise<void>;
+  loadSettings: () => Promise<void>;
   getErrorMessage: (err: unknown, fallback: string) => string;
 }
 
@@ -26,6 +27,7 @@ export function useAppScanFlow({
   computerType,
   loadSongs,
   loadCategories,
+  loadSettings,
   getErrorMessage,
 }: UseAppScanFlowParams) {
   const scanResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -235,7 +237,7 @@ export function useAppScanFlow({
         });
         const syncSummary = await api.applyServerChangesOnClient();
 
-        await Promise.all([loadSongs(), loadCategories()]);
+        await Promise.all([loadSongs(), loadCategories(), loadSettings()]);
 
         dispatch({
           type: "SET_SCAN_PROGRESS",
@@ -293,20 +295,9 @@ export function useAppScanFlow({
       const hasDetectedFileChanges =
         changedCount > 0 || recoveredCount > 0 || notFoundCount > 0;
 
-      if (!hasPendingChanges && !hasDetectedFileChanges && !forceCloudSync) {
-        updateStepProgress(changedCount);
-
-        if (!isAutomatic) {
-          toast.success("Verificação concluída sem alterações");
-        }
-
-        scheduleScanReset(1000);
-        return;
-      }
-
-      // Fluxo com alterações: 4 etapas base (verificar, compactar, eventos, upload).
-      // Pode virar 5 quando for necessário gerar snapshot automático.
-      currentTotalSteps = 4;
+      // Fluxo base do servidor: verificar, compactar e gerar events.
+      // A etapa 4/5 só aparece quando houver upload ou snapshot automático.
+      currentTotalSteps = 3;
       updateStepProgress(changedCount);
 
       dispatch({
@@ -362,76 +353,81 @@ export function useAppScanFlow({
         }
       }
 
-      const hasCloudChanges =
-        generatedArchives > 0 ||
-        eventsSummary.events_count > 0 ||
-        snapshotGenerated ||
-        forceCloudSync;
+      const uploadStep = snapshotGenerated ? 5 : 4;
 
-      if (hasCloudChanges) {
-        const uploadStep = snapshotGenerated ? 5 : 4;
+      dispatch({
+        type: "SET_OPERATION_STATUS",
+        payload: {
+          title: `Etapa ${uploadStep} - Upload para nuvem`,
+          detail: hasPendingChanges || hasDetectedFileChanges || forceCloudSync
+            ? "Enviando arquivos alterados para a nuvem"
+            : "Sem alterações locais, validando sincronização da nuvem",
+          stepCurrent: uploadStep,
+          stepTotal: currentTotalSteps,
+        },
+      });
 
-        dispatch({
-          type: "SET_OPERATION_STATUS",
-          payload: {
-            title: `Etapa ${uploadStep} - Upload para nuvem`,
-            detail: "Enviando arquivos alterados para a nuvem",
-            stepCurrent: uploadStep,
-            stepTotal: currentTotalSteps,
-          },
-        });
+      const shouldUseFullSync =
+        snapshotGenerated || eventsSummary.events_count === 0 || (!hasPendingChanges && !hasDetectedFileChanges);
 
-        const shouldUseFullSync = snapshotGenerated || eventsSummary.events_count === 0;
+      if (shouldUseFullSync) {
+        // Full sync garante que a etapa de upload sempre exista no fluxo do servidor.
+        if (snapshotGenerated) {
+          let uploadError: unknown = null;
 
-        if (shouldUseFullSync) {
-          // Full sync ainda e necessario quando existe chance de remocao de arquivo remoto.
-          if (snapshotGenerated) {
-            let uploadError: unknown = null;
-
-            for (let attempt = 1; attempt <= 2; attempt += 1) {
-              try {
-                await runSyncWithProgress("upload");
-                uploadError = null;
-                break;
-              } catch (error) {
-                uploadError = error;
-                if (attempt === 1 && !isAutomatic) {
-                  toast("Falha no upload do snapshot. Tentando novamente...", {
-                    icon: "⚠️",
-                  });
-                }
+          for (let attempt = 1; attempt <= 2; attempt += 1) {
+            try {
+              await runSyncWithProgress("upload");
+              uploadError = null;
+              break;
+            } catch (error) {
+              uploadError = error;
+              if (attempt === 1 && !isAutomatic) {
+                toast("Falha no upload do snapshot. Tentando novamente...", {
+                  icon: "⚠️",
+                });
               }
             }
+          }
 
-            if (uploadError) {
-              throw uploadError;
-            }
-          } else {
-            await runSyncWithProgress("upload");
+          if (uploadError) {
+            throw uploadError;
           }
         } else {
-          const uploadPaths = new Set<string>();
+          await runSyncWithProgress("upload");
+        }
+      } else {
+        const uploadPaths = new Set<string>();
 
-          for (const archiveResult of archiveSummary.results ?? []) {
-            if (archiveResult.generated && archiveResult.song_id) {
-              uploadPaths.add(`songs/${archiveResult.song_id}.tar.zst`);
-            }
+        for (const archiveResult of archiveSummary.results ?? []) {
+          if (archiveResult.generated && archiveResult.song_id) {
+            uploadPaths.add(`songs/${archiveResult.song_id}.tar.zst`);
           }
-
-          if (eventsSummary.events_count > 0) {
-            uploadPaths.add("events/events.msgpack.zst");
-          }
-
-          await runSelectiveUploadWithProgress(Array.from(uploadPaths));
         }
 
-        completedSteps += 1;
-        updateStepProgress(changedCount);
+        if (eventsSummary.events_count > 0) {
+          uploadPaths.add("events/events.msgpack.zst");
+        }
+
+        if (uploadPaths.size === 0) {
+          await runSyncWithProgress("upload");
+        } else {
+          await runSelectiveUploadWithProgress(Array.from(uploadPaths));
+        }
       }
+
+      completedSteps += 1;
+      updateStepProgress(changedCount);
 
       // Atualiza o marcador de "alterações aplicadas" somente ao concluir com sucesso.
       await api.markLocalChangesAsApplied();
+      await api.refreshLibrarySummaryCache();
+      await loadSettings();
       updateStepProgress(changedCount);
+
+      if (!hasPendingChanges && !hasDetectedFileChanges && !forceCloudSync && !isAutomatic) {
+        toast.success("Verificação concluída sem alterações");
+      }
 
       if (notFoundCount > 0 && !isAutomatic) {
         toast(`⚠ ${notFoundCount} arquivo(s) não encontrado(s)`, { icon: "⚠️" });
@@ -494,6 +490,7 @@ export function useAppScanFlow({
     getErrorMessage,
     loadCategories,
     loadSongs,
+    loadSettings,
     resetScanState,
     runSelectiveUploadWithProgress,
     runSyncWithProgress,

@@ -155,6 +155,10 @@ fn scan_files_for_changes_impl(db: &Database, store: &SystemStore) -> Result<Sca
         failed_files.len()
     );
 
+    let mut updated_settings = store.get_app_settings()?;
+    updated_settings.library_summary = Some(db.get_library_summary_counts()?);
+    store.save_app_settings(&updated_settings)?;
+
     // TODO: Exportar apenas as mudanças (tabela "changed") como {computerId}.msgpack.zst
     // Não exportar todo o banco de dados
 

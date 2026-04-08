@@ -15,6 +15,12 @@ describe("nameFormat", () => {
     it("trims and uppercases on save", () => {
       expect(normalizeSongNameForSave("  Amazing   Grace  ")).toBe("AMAZING GRACE");
     });
+
+    it("pads standalone single digits on save", () => {
+      expect(normalizeSongNameForSave("Hino 1")).toBe("HINO 01");
+      expect(normalizeSongNameForSave("Hino 9")).toBe("HINO 09");
+      expect(normalizeSongNameForSave("Hino 10")).toBe("HINO 10");
+    });
   });
 
   describe("score name", () => {

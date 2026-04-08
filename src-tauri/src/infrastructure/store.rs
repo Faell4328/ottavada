@@ -5,7 +5,7 @@ use tracing::info;
 use crate::domain::errors::AppError;
 use crate::domain::models::{
     AppSettings, BackupDatabaseStep, BackupStatus, ComputerType, GoogleDriveMode,
-    GoogleServiceAccount, RcloneConfig, RcloneProvider, SongBackupStatus,
+    GoogleServiceAccount, LibrarySummary, RcloneConfig, RcloneProvider, SongBackupStatus,
 };
 
 const STORE_FILENAME: &str = "app-store.json";
@@ -158,6 +158,10 @@ impl SystemStore {
                     .collect()
             });
 
+                let library_summary = store
+                    .get("library_summary")
+                    .and_then(|value| serde_json::from_value::<LibrarySummary>(value.clone()).ok());
+
         let settings = AppSettings {
             computer_id,
             computer_name,
@@ -182,6 +186,7 @@ impl SystemStore {
                 .and_then(|v: &serde_json::Value| v.as_u64()),
             backup_database_step,
             backup_songs_step,
+            library_summary,
             last_snapshot_timestamp,
             last_change_timestamp,
             last_backup_timestamp,
@@ -290,6 +295,14 @@ impl SystemStore {
                 .map(|obj| obj.remove("backup_songs_step"));
         }
 
+        if let Some(ref library_summary) = settings.library_summary {
+            store["library_summary"] = serde_json::to_value(library_summary).map_err(|e| {
+                AppError::Generic(format!("Erro ao serializar library summary: {}", e))
+            })?;
+        } else {
+            store.as_object_mut().map(|obj| obj.remove("library_summary"));
+        }
+
         if let Some(last_snapshot_timestamp) = settings.last_snapshot_timestamp {
             store["cloud"]["lastSnapshotTimestamp"] = serde_json::json!(last_snapshot_timestamp);
         }
@@ -335,6 +348,8 @@ impl SystemStore {
                 }
             }
         }
+
+        settings.library_summary = Some(db.get_library_summary_counts()?);
 
         self.save_app_settings(settings)
     }
