@@ -15,10 +15,14 @@ interface RcloneProviderModalProps {
 
 function getPrimaryActionLabel(provider: RcloneProvider, currentProvider: RcloneProvider) {
   if (provider === "google_drive") {
-    return provider === currentProvider ? "Gerar e testar Google Drive" : "Trocar e testar Google Drive";
+    return provider === currentProvider
+      ? "Atualizar e testar Google Drive"
+      : "Trocar para Google Drive e testar";
   }
 
-  return provider === currentProvider ? "Gerar e testar Koofr" : "Trocar e testar Koofr";
+  return provider === currentProvider
+    ? "Atualizar e testar Koofr"
+    : "Trocar para Koofr e testar";
 }
 
 export function RcloneProviderModal({
@@ -32,9 +36,7 @@ export function RcloneProviderModal({
   const [selectedProvider, setSelectedProvider] = useState<RcloneProvider>(currentProvider);
   const [email, setEmail] = useState("");
   const [appPassword, setAppPassword] = useState("");
-  const [hasGeneratedConfig, setHasGeneratedConfig] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [isTesting, setIsTesting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (!isOpen) {
@@ -44,12 +46,10 @@ export function RcloneProviderModal({
     setSelectedProvider(currentProvider);
     setEmail("");
     setAppPassword("");
-    setHasGeneratedConfig(false);
-    setIsGenerating(false);
-    setIsTesting(false);
+    setIsSubmitting(false);
   }, [currentProvider, isOpen]);
 
-  async function handleGenerate() {
+  async function handleSubmit() {
     if (selectedProvider === "koofr") {
       if (!email.trim()) {
         return;
@@ -60,31 +60,20 @@ export function RcloneProviderModal({
       }
     }
 
-    setIsGenerating(true);
+    setIsSubmitting(true);
     try {
       await onGenerate({
         provider: selectedProvider,
         email: selectedProvider === "koofr" ? email.trim() : null,
         appPassword: selectedProvider === "koofr" ? appPassword.trim() : null,
       });
-      setHasGeneratedConfig(true);
-    } catch {
-      // O erro já é tratado no componente pai; o modal apenas permanece aberto.
-    } finally {
-      setIsGenerating(false);
-    }
-  }
-
-  async function handleTestAndApprove() {
-    setIsTesting(true);
-    try {
       await onTest(selectedProvider);
       onApprove(selectedProvider);
       onClose();
     } catch {
       // O erro já é tratado no componente pai; o modal apenas permanece aberto.
     } finally {
-      setIsTesting(false);
+      setIsSubmitting(false);
     }
   }
 
@@ -100,28 +89,24 @@ export function RcloneProviderModal({
             type="button"
             onClick={onClose}
             className="flex-1 rounded border border-[#c5cfdb] bg-white px-4 py-2 text-sm font-medium text-[#344b61] transition-colors hover:bg-[#f2f5fa]"
-            disabled={isGenerating}
+            disabled={isSubmitting}
           >
             Fechar
           </button>
           <button
             type="button"
             onClick={() => {
-              void (hasGeneratedConfig ? handleTestAndApprove() : handleGenerate());
+              void handleSubmit();
             }}
             className="flex-1 rounded bg-[#4f84d7] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#3d6fb8] disabled:cursor-not-allowed disabled:opacity-50"
             disabled={
-              isGenerating || isTesting ||
+              isSubmitting ||
               (selectedProvider === "koofr" && (!email.trim() || !appPassword.trim()))
             }
           >
-            {isGenerating
-              ? "Gerando..."
-              : isTesting
+            {isSubmitting
                 ? "Testando..."
-                : hasGeneratedConfig
-                  ? "Testar e aplicar"
-                  : getPrimaryActionLabel(selectedProvider, currentProvider)}
+                : getPrimaryActionLabel(selectedProvider, currentProvider)}
           </button>
         </div>
       }
@@ -218,16 +203,7 @@ export function RcloneProviderModal({
               Ao confirmar, o navegador será aberto para gerar a configuração.
             </p>
             <p className="mt-1 text-xs text-[#6b849e]">
-              Depois disso, o teste valida se o provedor pode ser aplicado com segurança.
-            </p>
-          </div>
-        )}
-
-        {hasGeneratedConfig && (
-          <div className="rounded-xl border border-green-200 bg-green-50 p-4">
-            <p className="text-sm font-semibold text-green-800">Configuração gerada</p>
-            <p className="mt-1 text-xs text-green-700">
-              Agora execute o teste para confirmar a troca do provedor.
+              O teste é executado automaticamente na mesma etapa antes de aplicar.
             </p>
           </div>
         )}

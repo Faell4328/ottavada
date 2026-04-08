@@ -49,8 +49,18 @@ export default function SettingsPage() {
   const [isGeneratingBackupCloud, setIsGeneratingBackupCloud] = useState(false);
   const [rcloneProvider, setRcloneProvider] = useState<RcloneProvider>("koofr");
   const [rcloneConfigGenerated, setRcloneConfigGenerated] = useState(false);
+  const [hasRcloneConfigChange, setHasRcloneConfigChange] = useState(false);
   const [isRcloneProviderModalOpen, setIsRcloneProviderModalOpen] = useState(false);
   const [isRcloneLicenseModalOpen, setIsRcloneLicenseModalOpen] = useState(false);
+
+  const isSettingsOperationInProgress =
+    isTogglingType ||
+    isGeneratingSnapshot ||
+    isExportingBackup ||
+    isImportingBackup ||
+    isImportingBackupCloud ||
+    isGeneratingBackupCloud ||
+    isSyncLocked;
 
   // Carregar dados do rclone da store quando o componente monta ou settings muda
   useEffect(() => {
@@ -109,7 +119,17 @@ export default function SettingsPage() {
   function handleApproveRcloneProvider(provider: RcloneProvider) {
     setRcloneProvider(provider);
     setRcloneConfigGenerated(true);
+    setHasRcloneConfigChange(true);
     setIsRcloneProviderModalOpen(false);
+  }
+
+  function handleBackNavigation() {
+    if (isSettingsOperationInProgress) {
+      toast.error("Aguarde a operação atual terminar antes de sair das configurações");
+      return;
+    }
+
+    navigate("/");
   }
 
   function handleComputerTypeChange() {
@@ -163,12 +183,14 @@ export default function SettingsPage() {
       await saveSettings(updatedSettings);
       toast.success("Configurações salvas com sucesso!");
 
-      if (previousProvider !== rcloneProvider) {
+      if (previousProvider !== rcloneProvider || hasRcloneConfigChange) {
         const snapshotCreated = await handleForceSnapshot();
         if (!snapshotCreated) {
           return;
         }
       }
+
+      setHasRcloneConfigChange(false);
 
       navigate("/");
     } catch (error) {
@@ -265,6 +287,7 @@ export default function SettingsPage() {
     }
 
     setIsImportingBackup(true);
+    let shouldRunForcedSnapshot = false;
     try {
       const summary = await api.importBackupFile(selectedPath);
       await Promise.all([loadSettings(), loadSongs(), loadCategories()]);
@@ -280,7 +303,7 @@ export default function SettingsPage() {
     }
 
     if (shouldRunForcedSnapshot) {
-      void handleForceSnapshot();
+      await handleForceSnapshot();
     }
   }
 
@@ -317,7 +340,7 @@ export default function SettingsPage() {
     }
 
     if (shouldRunForcedSnapshot) {
-      void handleForceSnapshot();
+      await handleForceSnapshot();
     }
   }
 
@@ -368,7 +391,8 @@ export default function SettingsPage() {
       <div className="flex items-center gap-3 border-b border-[#d8e0ea] bg-[#eef2f6] px-4 py-3">
         <button
           type="button"
-          onClick={() => navigate("/")}
+          onClick={handleBackNavigation}
+          disabled={isSettingsOperationInProgress}
           className="flex h-8 w-8 items-center justify-center rounded border border-[#c5cfdb] bg-white hover:bg-[#f2f5fa] transition-colors cursor-pointer"
         >
           <ArrowLeft className="h-4 w-4 text-[#344b61]" />
@@ -452,7 +476,7 @@ export default function SettingsPage() {
             <button
               type="button"
               onClick={() => setIsRcloneProviderModalOpen(true)}
-              disabled={isClient || isSyncLocked}
+              disabled={isClient || isSettingsOperationInProgress}
               className="mt-4 h-9 rounded border border-[#4f84d7] bg-[#4f84d7] px-4 text-sm font-medium text-white transition-colors hover:bg-[#3d6fb8] cursor-pointer"
             >
               Mudar provedor de nuvem
@@ -579,7 +603,7 @@ export default function SettingsPage() {
           <button
             type="button"
             onClick={handleSave}
-            disabled={!rcloneConfigGenerated || isClient || isSyncLocked}
+            disabled={!rcloneConfigGenerated || isClient || isSettingsOperationInProgress}
             className="h-9 rounded bg-[#4f84d7] px-6 text-sm font-semibold text-white hover:bg-[#3d6fb8] transition-colors cursor-pointer border-0"
           >
             Salvar

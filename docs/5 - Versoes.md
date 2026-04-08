@@ -322,6 +322,7 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 
 **Correção**
 - [x] Quando estou com uma música aberta e clico para abrir outra, as vezes ocorre da música ficar sem partitura (sendo que ela tem), precisando abrir e fechar novamente para aparecer.
+- [ ] A aplicação trava ao "importa backup local" e possivelmente da nuvem também.
 
 **Tenho que pensar mais um pouco**
 - [ ] Quando o usuário selecionar para indexar um diretório e no diretório não tem nada, deve aparecer um modal listando tudo que tem dentro e com um botão para o usuário abrir o local.

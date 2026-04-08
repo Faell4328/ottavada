@@ -130,27 +130,46 @@ pub async fn generate_snapshot_file(
 }
 
 #[tauri::command]
-pub fn export_backup_file(
+pub async fn export_backup_file(
     db: State<'_, Database>,
     store: State<'_, SystemStore>,
     output_path: Option<String>,
 ) -> Result<BackupFileSummary, AppError> {
-    require_server_settings(&store)?;
+    let db = db.inner().clone();
+    let app_data_dir = store.app_data_dir().clone();
 
-    export_backup_msgpack(&db, &store, output_path)
+    run_blocking_with_store(
+        app_data_dir,
+        "Falha interna ao exportar backup local",
+        move |store| {
+            require_server_settings(&store)?;
+            export_backup_msgpack(&db, &store, output_path)
+        },
+    )
+    .await
 }
 
 #[tauri::command]
-pub fn import_backup_file(
+pub async fn import_backup_file(
     db: State<'_, Database>,
     store: State<'_, SystemStore>,
     backup_path: String,
 ) -> Result<BackupImportSummary, AppError> {
-    require_server_settings(&store)?;
+    let db = db.inner().clone();
+    let app_data_dir = store.app_data_dir().clone();
 
-    let summary = import_backup_msgpack(&db, &store, backup_path)?;
-    refresh_song_archives_after_backup_import(&db, &store)?;
-    Ok(summary)
+    run_blocking_with_store(
+        app_data_dir,
+        "Falha interna ao importar backup local",
+        move |store| {
+            require_server_settings(&store)?;
+
+            let summary = import_backup_msgpack(&db, &store, backup_path)?;
+            refresh_song_archives_after_backup_import(&db, &store)?;
+            Ok(summary)
+        },
+    )
+    .await
 }
 
 #[tauri::command]
