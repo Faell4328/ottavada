@@ -11,7 +11,7 @@ import { getErrorMessage } from "../utils/errors";
 import { getDirectoryPath, isSamePath } from "../utils/paths";
 import { getSidebarViewLabel } from "../utils/sidebarView";
 import type { IndexedFile, ScoreListItem, SongListItem } from "../types";
-import { AddScoreToSongModal } from "./AddScoreToSongModal";
+import { AddScoreToSongModal } from "./AddScoreToSongModal.tsx";
 import { EditMusicModal } from "./EditMusicModal";
 import { EditScoreModal } from "./EditScoreModal";
 import { MemoizedScoreRow } from "./ScoreRow";
@@ -40,7 +40,7 @@ export default function SongsList() {
   const [isEditScoreModalOpen, setIsEditScoreModalOpen] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [songForAddFile, setSongForAddFile] = useState<SongListItem | null>(null);
-  const [pendingFileToAdd, setPendingFileToAdd] = useState<IndexedFile | null>(null);
+  const [pendingFilesToAdd, setPendingFilesToAdd] = useState<IndexedFile[]>([]);
   const [existingScoresForAddFile, setExistingScoresForAddFile] = useState<ScoreListItem[]>([]);
   const [isAddFileModalOpen, setIsAddFileModalOpen] = useState(false);
   const [scoresBySongId, setScoresBySongId] = useState<Record<string, ScoreListItem[]>>({});
@@ -186,13 +186,13 @@ export default function SongsList() {
     [deleteScore, refreshScoresForSong]
   );
 
-  async function handleSaveFileToSong(file: IndexedFile) {
+  async function handleSaveFilesToSong(files: IndexedFile[]) {
     if (!songForAddFile) {
       throw new Error("Música inválida para adicionar arquivo");
     }
 
     try {
-      const updatedSong = await api.addScoreToSong(songForAddFile.id, file);
+      const updatedSong = await api.addScoresToSong(songForAddFile.id, files);
       search.clearSearch();
       await loadSongs();
       selectSong(updatedSong);
@@ -200,7 +200,7 @@ export default function SongsList() {
         ...prev,
         [updatedSong.id]: [...updatedSong.scores].sort((a, b) => compareInstrumentNames(a.name, b.name)),
       }));
-      toast.success("Arquivo adicionado com sucesso");
+      toast.success(`${files.length} arquivo(s) adicionado(s) com sucesso`);
     } catch (err) {
       console.error("Failed to add file to song:", err);
       throw new Error(getErrorMessage(err));
@@ -211,29 +211,35 @@ export default function SongsList() {
     try {
       const selected = await open({
         directory: false,
-        multiple: false,
+        multiple: true,
         filters: [{ name: "Partituras", extensions: ["pdf", "PDF", "mus", "MUS", "musx", "MUSX"] }],
       });
 
       if (!selected) return;
 
-      const selectedPath = Array.isArray(selected) ? selected[0] : selected;
-      const directory = getDirectoryPath(selectedPath);
-      const scannedFiles = await api.scanDirectory(directory);
-      const indexedFile = scannedFiles.find((file) => isSamePath(file.path, selectedPath));
+      const selectedPaths = Array.isArray(selected) ? selected : [selected];
+      const indexedFiles: IndexedFile[] = [];
 
-      if (!indexedFile) {
-        toast.error("Não foi possível identificar o arquivo selecionado. Tente novamente.");
-        return;
+      for (const selectedPath of selectedPaths) {
+        const directory = getDirectoryPath(selectedPath);
+        const scannedFiles = await api.scanDirectory(directory);
+        const indexedFile = scannedFiles.find((file) => isSamePath(file.path, selectedPath));
+
+        if (!indexedFile) {
+          toast.error("Não foi possível identificar um dos arquivos selecionados. Tente novamente.");
+          return;
+        }
+
+        indexedFiles.push(indexedFile);
       }
 
       setSongForAddFile(song);
       const existingScores = await api.getScoresForSong(song.id);
       setExistingScoresForAddFile(existingScores);
-      setPendingFileToAdd({
-        ...indexedFile,
+      setPendingFilesToAdd(indexedFiles.map((file) => ({
+        ...file,
         name: song.name,
-      });
+      })));
       setIsAddFileModalOpen(true);
     } catch (err) {
       console.error("Failed to add file to song:", err);
@@ -267,7 +273,7 @@ export default function SongsList() {
   const closeAddFileModal = () => {
     setIsAddFileModalOpen(false);
     setSongForAddFile(null);
-    setPendingFileToAdd(null);
+    setPendingFilesToAdd([]);
     setExistingScoresForAddFile([]);
   };
 
@@ -432,10 +438,10 @@ export default function SongsList() {
       <AddScoreToSongModal
         isOpen={isAddFileModalOpen}
         songName={songForAddFile?.name ?? ""}
-        file={pendingFileToAdd}
+        files={pendingFilesToAdd}
         existingScores={existingScoresForAddFile}
         onClose={closeAddFileModal}
-        onSave={handleSaveFileToSong}
+        onSave={handleSaveFilesToSong}
       />
     </section>
   );

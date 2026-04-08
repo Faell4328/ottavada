@@ -308,9 +308,9 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 	- [x] O toast deve aparecer apenas a quantidade de partituras realmente adicionadas e não total.
 	- Outras;
 	- [x] No caso de "indexar diretório", se a música já existir e todas as partituras existirem também, o botão de salvar deve ficar desativado.
-- [ ] Muda texto para "selecionar arquivo(s)" no overflow menu, permitir também o usuário escolher 1 ou mais arquivos.
-- [ ] Ao editar informação da música, não precisa abrir para mostrar as partituras/instrumentos.
-- [ ] Ao selecionar uma categoria de SideBar, ao adicionar uma música ou indexar ele já deve vir com a categoria marcada por padrão.
+- [x] Muda texto para "selecionar arquivo(s)" no overflow menu, permitir também o usuário escolher 1 ou mais arquivos.
+- [x] Ao editar informação da música, não precisa abrir para mostrar as partituras/instrumentos.
+- [x] Ao selecionar uma categoria de SideBar, ao adicionar uma música ou indexar ele já deve vir com a categoria marcada por padrão.
 - [ ] Ao trocar de provedor com sucesso nas configurações, executar o fluxo de força snapshot.
 - [ ] Retirar toast duplicado ao configurar e testar provedor no primeiro acesso.
 - [ ] Ao iniciar o aplicativo (servidor), deve buscar alterações nos arquivos de partitura/instrumentos (apenas isso em segundo plano - outra thread).

@@ -17,12 +17,14 @@ interface AddMusicModalProps {
     arranger: string | null;
     categoryIds: string[];
   }) => Promise<void>;
+  defaultCategoryIds?: string[];
 }
 
 export function AddMusicModal({
   isOpen,
   onClose,
   onSave,
+  defaultCategoryIds = [],
 }: AddMusicModalProps) {
   const { state } = useAppState();
   const [title, setTitle] = useState("");
@@ -43,10 +45,10 @@ export function AddMusicModal({
       setTitle("");
       setComposer("");
       setArranger("");
-      setSelectedCategories([]);
+      setSelectedCategories(defaultCategoryIds);
       setError("");
     }
-  }, [isOpen]);
+  }, [defaultCategoryIds, isOpen]);
 
   const toggleCategory = (categoryId: string) => {
     setSelectedCategories((prev) =>

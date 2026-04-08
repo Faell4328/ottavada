@@ -67,7 +67,7 @@ describe("AddScoreToSongModal", () => {
       <AddScoreToSongModal
         isOpen={false}
         songName="HINO NACIONAL"
-        file={sampleFile}
+        files={[sampleFile]}
         onClose={mockOnClose}
         onSave={mockOnSave}
       />
@@ -81,7 +81,7 @@ describe("AddScoreToSongModal", () => {
       <AddScoreToSongModal
         isOpen={true}
         songName="HINO NACIONAL"
-        file={sampleFile}
+        files={[sampleFile]}
         onClose={mockOnClose}
         onSave={mockOnSave}
       />
@@ -101,7 +101,7 @@ describe("AddScoreToSongModal", () => {
       <AddScoreToSongModal
         isOpen={true}
         songName="HINO NACIONAL"
-        file={sampleFile}
+        files={[sampleFile]}
         existingScores={existingScores}
         onClose={mockOnClose}
         onSave={mockOnSave}
@@ -110,9 +110,8 @@ describe("AddScoreToSongModal", () => {
 
     const warning = screen.getByText("Essa partitura já foi adicionada");
 
-    expect(warning.nextElementSibling).toHaveTextContent(
-      "HINO NACIONAL - Flauta.musx"
-    );
+    expect(warning).toBeInTheDocument();
+    expect(screen.getByText("HINO NACIONAL - Flauta.musx")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("Nome do instrumento")).toHaveAttribute("readonly");
     expect(screen.getByRole("button", { name: "Salvar" })).toBeDisabled();
   });
@@ -127,7 +126,7 @@ describe("AddScoreToSongModal", () => {
       <AddScoreToSongModal
         isOpen={true}
         songName="HINO NACIONAL"
-        file={sampleFile}
+        files={[sampleFile]}
         onClose={mockOnClose}
         onSave={mockOnSave}
       />
@@ -151,7 +150,7 @@ describe("AddScoreToSongModal", () => {
       <AddScoreToSongModal
         isOpen={true}
         songName="HINO NACIONAL"
-        file={sampleFile}
+        files={[sampleFile]}
         onClose={mockOnClose}
         onSave={mockOnSave}
       />
@@ -163,11 +162,13 @@ describe("AddScoreToSongModal", () => {
     fireEvent.click(screen.getByText("Salvar"));
 
     await waitFor(() => {
-      expect(mockOnSave).toHaveBeenCalledWith({
-        ...sampleFile,
-        name: "HINO NACIONAL",
-        instrument: normalizeScoreNameForSave("FLAUTA 1"),
-      });
+      expect(mockOnSave).toHaveBeenCalledWith([
+        {
+          ...sampleFile,
+          name: "HINO NACIONAL",
+          instrument: normalizeScoreNameForSave("FLAUTA 1"),
+        },
+      ]);
       expect(mockOnClose).toHaveBeenCalled();
     });
   });
@@ -179,7 +180,7 @@ describe("AddScoreToSongModal", () => {
       <AddScoreToSongModal
         isOpen={true}
         songName="HINO NACIONAL"
-        file={sampleFile}
+        files={[sampleFile]}
         onClose={mockOnClose}
         onSave={mockOnSave}
       />

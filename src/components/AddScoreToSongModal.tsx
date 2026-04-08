@@ -12,34 +12,31 @@ import { describeScoreConflict, findExistingScoreConflictInSong } from "../utils
 interface AddScoreToSongModalProps {
   isOpen: boolean;
   songName: string;
-  file: IndexedFile | null;
+  files: IndexedFile[];
   existingScores?: ScoreListItem[];
   onClose: () => void;
-  onSave: (file: IndexedFile) => Promise<void>;
+  onSave: (files: IndexedFile[]) => Promise<void>;
 }
 
 export function AddScoreToSongModal({
   isOpen,
   songName,
-  file,
+  files,
   existingScores,
   onClose,
   onSave,
 }: AddScoreToSongModalProps) {
-  const [instrumentName, setInstrumentName] = useState("");
+  const { state } = useAppState();
+  const scoresForDuplicateCheck = existingScores ?? state.selectedSong?.scores ?? [];
+  const [instrumentNames, setInstrumentNames] = useState<Record<number, string>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
   const [openingScorePath, setOpeningScorePath] = useState<string | null>(null);
   const [openingLocationPath, setOpeningLocationPath] = useState<string | null>(null);
-  const { state } = useAppState();
-  const scoresForDuplicateCheck = existingScores ?? state.selectedSong?.scores ?? [];
-  const scoreConflict = useMemo(
-    () => {
-      if (!file) {
-        return null;
-      }
 
-      const currentSong: SongListItem = state.selectedSong
+  const currentSong = useMemo<SongListItem>(
+    () =>
+      state.selectedSong
         ? { ...state.selectedSong, scores: scoresForDuplicateCheck }
         : {
             id: "",
@@ -50,26 +47,43 @@ export function AddScoreToSongModal({
             is_favorite: false,
             category_ids: [],
             scores: scoresForDuplicateCheck,
-          };
-
-      return findExistingScoreConflictInSong(currentSong, file);
-    },
-    [file, scoresForDuplicateCheck, songName, state.selectedSong]
+          },
+    [scoresForDuplicateCheck, songName, state.selectedSong]
   );
-  const isDuplicateScore = scoreConflict !== null;
-  const conflictMessage = scoreConflict ? describeScoreConflict(scoreConflict) : null;
+
+  const activeFileEntries = useMemo(
+    () => files.map((file, idx) => ({ file, idx })),
+    [files]
+  );
+
+  const duplicateEntries = useMemo(
+    () => activeFileEntries.filter(({ file }) => findExistingScoreConflictInSong(currentSong, file) !== null),
+    [activeFileEntries, currentSong]
+  );
+
+  const addableEntries = useMemo(
+    () => activeFileEntries.filter(({ file }) => findExistingScoreConflictInSong(currentSong, file) === null),
+    [activeFileEntries, currentSong]
+  );
+
+  const hasAddableFiles = addableEntries.length > 0;
 
   useEffect(() => {
-    if (!isOpen || !file) {
+    if (!isOpen || files.length === 0) {
       return;
     }
 
-    setInstrumentName(normalizeScoreNameInput(file.instrument || ""));
+    const names: Record<number, string> = {};
+    files.forEach((file, idx) => {
+      names[idx] = normalizeScoreNameInput(file.instrument || "");
+    });
+
+    setInstrumentNames(names);
     setError("");
     setIsSaving(false);
     setOpeningScorePath(null);
     setOpeningLocationPath(null);
-  }, [isOpen, file]);
+  }, [files, isOpen]);
 
   const handleOpenScore = async (path: string) => {
     setOpeningScorePath(path);
@@ -98,13 +112,13 @@ export function AddScoreToSongModal({
   };
 
   const handleSave = async () => {
-    if (!file) {
+    if (activeFileEntries.length === 0) {
       setError("Nenhum arquivo selecionado");
       return;
     }
 
-    if (isDuplicateScore) {
-      setError(describeScoreConflict(scoreConflict));
+    if (!hasAddableFiles) {
+      setError("Nenhuma partitura nova para adicionar");
       return;
     }
 
@@ -112,11 +126,13 @@ export function AddScoreToSongModal({
     setError("");
 
     try {
-      await onSave({
+      const filesToSave = addableEntries.map(({ file, idx }) => ({
         ...file,
         name: songName,
-        instrument: normalizeScoreNameForSave(instrumentName),
-      });
+        instrument: normalizeScoreNameForSave(instrumentNames[idx] ?? file.instrument),
+      }));
+
+      await onSave(filesToSave);
       onClose();
     } catch (err) {
       setError(getErrorMessage(err));
@@ -125,13 +141,9 @@ export function AddScoreToSongModal({
     }
   };
 
-  if (!file) {
+  if (files.length === 0) {
     return null;
   }
-
-  const fileName = getFileName(file.path) || file.name;
-  const directoryPath = getDirectoryPath(file.path);
-  const isBusy = openingScorePath === file.path || openingLocationPath === file.path;
 
   return (
     <Modal
@@ -144,74 +156,94 @@ export function AddScoreToSongModal({
           onCancel={onClose}
           onConfirm={handleSave}
           isSaving={isSaving}
-          confirmDisabled={isDuplicateScore}
+          confirmDisabled={!hasAddableFiles}
         />
       }
     >
       <FormField label="Nome da Musica">
-        <TextInput
-          value={songName}
-          onChange={() => {}}
-          placeholder="Nome da musica"
-          readOnly
-        />
+        <TextInput value={songName} onChange={() => {}} placeholder="Nome da musica" readOnly />
       </FormField>
 
-      <FormField label="Partitura selecionada">
-        <div className="rounded border border-[#c5cfdb] bg-white p-3 space-y-3">
-          <div className="min-w-0">
-            {conflictMessage && (
-              <p className="mb-1.5 text-xs font-semibold text-amber-700">
-                {conflictMessage}
-              </p>
-            )}
-            <p className="text-xs text-[#5d738b] font-semibold break-all whitespace-normal">
-              {fileName}
-            </p>
-            <p className="text-[11px] text-[#8b9db2] break-all whitespace-normal mt-0.5">
-              {directoryPath}
-            </p>
-          </div>
+      <FormField label={`Partitura selecionada${activeFileEntries.length > 1 ? ` (${activeFileEntries.length})` : ""}`}>
+        {duplicateEntries.length > 0 && (
+          <p className="mb-1.5 text-xs font-semibold text-amber-700">
+            {duplicateEntries.length === 1
+              ? "Essa partitura já foi adicionada"
+              : `${duplicateEntries.length} partituras já foram adicionadas e serão ignoradas.`}
+          </p>
+        )}
+        <div className="rounded border border-[#c5cfdb] bg-white p-3 space-y-4 max-h-75 overflow-y-auto">
+          {activeFileEntries.map(({ file, idx }) => {
+            const fileName = getFileName(file.path) || file.name;
+            const directoryPath = getDirectoryPath(file.path);
+            const conflict = findExistingScoreConflictInSong(currentSong, file);
+            const isLocked = conflict !== null;
+            const isBusy = openingScorePath === file.path || openingLocationPath === file.path;
 
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => handleOpenScore(file.path)}
-              disabled={isBusy}
-              className="inline-flex items-center gap-1 rounded border border-[#d8e0ea] px-2 py-1 text-[11px] text-[#5d738b] hover:bg-[#eef3f8] disabled:cursor-not-allowed disabled:opacity-60"
-              title="Abrir partitura"
-            >
-              {openingScorePath === file.path ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <ExternalLink className="h-3.5 w-3.5" />
-              )}
-              Abrir partitura
-            </button>
+            return (
+              <div key={idx} className="space-y-2">
+                <div className="min-w-0">
+                  {conflict && (
+                    <p className="mb-1.5 text-xs font-semibold text-amber-700">
+                      {describeScoreConflict(conflict)}
+                    </p>
+                  )}
+                  <p className="text-xs text-[#5d738b] font-semibold break-all whitespace-normal">
+                    {fileName}
+                  </p>
+                  <p className="text-[11px] text-[#8b9db2] break-all whitespace-normal mt-0.5">
+                    {directoryPath}
+                  </p>
+                </div>
 
-            <button
-              type="button"
-              onClick={() => handleOpenLocal(file.path)}
-              disabled={isBusy}
-              className="inline-flex items-center gap-1 rounded border border-[#d8e0ea] px-2 py-1 text-[11px] text-[#5d738b] hover:bg-[#eef3f8] disabled:cursor-not-allowed disabled:opacity-60"
-              title="Abrir local"
-            >
-              {openingLocationPath === file.path ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <FolderOpen className="h-3.5 w-3.5" />
-              )}
-              Abrir local
-            </button>
-          </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenScore(file.path)}
+                    disabled={isBusy}
+                    className="inline-flex items-center gap-1 rounded border border-[#d8e0ea] px-2 py-1 text-[11px] text-[#5d738b] hover:bg-[#eef3f8] disabled:cursor-not-allowed disabled:opacity-60"
+                    title="Abrir partitura"
+                  >
+                    {openingScorePath === file.path ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    )}
+                    Abrir partitura
+                  </button>
 
-          <TextInput
-            value={instrumentName}
-            onChange={(value) => setInstrumentName(normalizeScoreNameInput(value))}
-            placeholder="Nome do instrumento"
-            autoFocus
-            readOnly={isDuplicateScore}
-          />
+                  <button
+                    type="button"
+                    onClick={() => handleOpenLocal(file.path)}
+                    disabled={isBusy}
+                    className="inline-flex items-center gap-1 rounded border border-[#d8e0ea] px-2 py-1 text-[11px] text-[#5d738b] hover:bg-[#eef3f8] disabled:cursor-not-allowed disabled:opacity-60"
+                    title="Abrir local"
+                  >
+                    {openingLocationPath === file.path ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <FolderOpen className="h-3.5 w-3.5" />
+                    )}
+                    Abrir local
+                  </button>
+
+                </div>
+
+                <TextInput
+                  value={instrumentNames[idx] || ""}
+                  onChange={(value) => {
+                    setInstrumentNames((prev) => ({
+                      ...prev,
+                      [idx]: normalizeScoreNameInput(value),
+                    }));
+                  }}
+                  placeholder="Nome do instrumento"
+                  autoFocus={idx === 0}
+                  readOnly={isLocked}
+                />
+              </div>
+            );
+          })}
         </div>
       </FormField>
 

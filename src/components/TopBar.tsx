@@ -1,5 +1,5 @@
 import { Music, FolderSearch, Settings, RefreshCw } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useAppState } from "../context/AppContext";
@@ -28,6 +28,13 @@ export default function TopBar({
   const [pendingFiles, setPendingFiles] = useState<IndexedFile[]>([]);
   const [existingSongsForAddFiles, setExistingSongsForAddFiles] = useState<SongListItem[]>([]);
   const [showAddFilesModal, setShowAddFilesModal] = useState(false);
+  const selectedCategoryIds = useMemo(
+    () =>
+      typeof state.sidebarView === "object" && state.sidebarView.type === "category"
+        ? [state.sidebarView.id]
+        : [],
+    [state.sidebarView]
+  );
 
   // Forçar reload quando scores muda - isso garante que a UI atualiza
   const handleScoresChange = async () => {
@@ -164,6 +171,7 @@ export default function TopBar({
         isOpen={showAddMusicModal}
         onClose={() => setShowAddMusicModal(false)}
         onSave={handleCreateMusic}
+        defaultCategoryIds={selectedCategoryIds}
       />
 
       <AddFilesModal
@@ -172,6 +180,7 @@ export default function TopBar({
         existingSongs={existingSongsForAddFiles}
         onClose={handleCloseAddFilesModal}
         onSuccess={handleAddFilesModalSuccess}
+        defaultCategoryIds={selectedCategoryIds}
       />
     </>
   );

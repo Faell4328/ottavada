@@ -26,6 +26,7 @@ interface AddFilesModalProps {
   existingSongs?: SongListItem[];
   onClose: () => void;
   onSuccess: (addedCount: number) => Promise<void>;
+  defaultCategoryIds?: string[];
 }
 
 export function AddFilesModal({
@@ -34,6 +35,7 @@ export function AddFilesModal({
   existingSongs,
   onClose,
   onSuccess,
+  defaultCategoryIds = [],
 }: AddFilesModalProps) {
   const { state } = useAppState();
   const songsForDuplicateCheck = existingSongs ?? state.songs;
@@ -89,7 +91,7 @@ export function AddFilesModal({
       setTitle(normalizeSongNameInput(files[0].name || ""));
       setComposer("");
       setArranger("");
-      setSelectedCategories([]);
+      setSelectedCategories(defaultCategoryIds);
       setError("");
       setRemovedFileIndices(new Set());
       setEditingInstrumentIndex(null);
@@ -102,7 +104,7 @@ export function AddFilesModal({
       });
       setInstrumentNames(names);
     }
-  }, [isOpen, files]);
+  }, [defaultCategoryIds, files, isOpen]);
 
   const toggleCategory = (categoryId: string) => {
     setSelectedCategories((prev) =>
