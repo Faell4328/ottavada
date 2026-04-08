@@ -28,6 +28,9 @@ export function EditMusicModal({
   onSave,
 }: EditMusicModalProps) {
   const { state } = useAppState();
+  const visibleCategories = state.categories.filter(
+    (category) => category.name.toLowerCase() !== "sem categoria"
+  );
   const [title, setTitle] = useState("");
   const [composer, setComposer] = useState("");
   const [arranger, setArranger] = useState("");
@@ -125,7 +128,7 @@ export function EditMusicModal({
 
       <FormField label="Categorias (múltiplas seleções)">
         <CategoryCheckboxList
-          categories={state.categories}
+          categories={visibleCategories}
           selectedIds={selectedCategories}
           onToggle={toggleCategory}
           disabled={isSaving}

@@ -27,6 +27,9 @@ export function AddMusicModal({
   defaultCategoryIds = [],
 }: AddMusicModalProps) {
   const { state } = useAppState();
+  const visibleCategories = state.categories.filter(
+    (category) => category.name.toLowerCase() !== "sem categoria"
+  );
   const [title, setTitle] = useState("");
   const [composer, setComposer] = useState("");
   const [arranger, setArranger] = useState("");
@@ -137,10 +140,10 @@ export function AddMusicModal({
         />
       </FormField>
 
-      {state.categories.length > 0 && (
+      {visibleCategories.length > 0 && (
         <FormField label="Categorias">
           <CategoryCheckboxList
-            categories={state.categories}
+            categories={visibleCategories}
             selectedIds={selectedCategories}
             onToggle={toggleCategory}
           />

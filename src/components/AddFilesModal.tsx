@@ -38,6 +38,9 @@ export function AddFilesModal({
   defaultCategoryIds = [],
 }: AddFilesModalProps) {
   const { state } = useAppState();
+  const visibleCategories = state.categories.filter(
+    (category) => category.name.toLowerCase() !== "sem categoria"
+  );
   const songsForDuplicateCheck = existingSongs ?? state.songs;
   const [title, setTitle] = useState("");
   const [composer, setComposer] = useState("");
@@ -269,10 +272,10 @@ export function AddFilesModal({
             />
           </FormField>
 
-          {state.categories.length > 0 && (
+          {visibleCategories.length > 0 && (
             <FormField label="Categorias">
               <CategoryCheckboxList
-                categories={state.categories}
+                categories={visibleCategories}
                 selectedIds={selectedCategories}
                 onToggle={toggleCategory}
               />
