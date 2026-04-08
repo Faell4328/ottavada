@@ -71,8 +71,23 @@ pub fn get_all_songs(db: State<'_, Database>) -> Result<Vec<SongListItem>, AppEr
 }
 
 #[tauri::command]
+pub fn get_all_song_summaries(db: State<'_, Database>) -> Result<Vec<SongListItem>, AppError> {
+    info!("Buscando resumos de todas as músicas");
+    run_song_query_with_logging("Busca de resumos de músicas concluída", || {
+        db.get_all_song_summaries()
+    })
+}
+
+#[tauri::command]
 pub fn get_favorited_songs(db: State<'_, Database>) -> Result<Vec<SongListItem>, AppError> {
     db.get_favorited_songs()
+}
+
+#[tauri::command]
+pub fn get_favorited_song_summaries(
+    db: State<'_, Database>,
+) -> Result<Vec<SongListItem>, AppError> {
+    db.get_favorited_song_summaries()
 }
 
 #[tauri::command]
@@ -81,9 +96,24 @@ pub fn get_songs_with_drafts(db: State<'_, Database>) -> Result<Vec<SongListItem
 }
 
 #[tauri::command]
+pub fn get_song_summaries_with_drafts(
+    db: State<'_, Database>,
+) -> Result<Vec<SongListItem>, AppError> {
+    db.get_song_summaries_with_drafts()
+}
+
+#[tauri::command]
 #[allow(dead_code)]
 pub fn get_songs_with_not_found(db: State<'_, Database>) -> Result<Vec<SongListItem>, AppError> {
     db.get_songs_with_not_found()
+}
+
+#[tauri::command]
+#[allow(dead_code)]
+pub fn get_song_summaries_with_not_found(
+    db: State<'_, Database>,
+) -> Result<Vec<SongListItem>, AppError> {
+    db.get_song_summaries_with_not_found()
 }
 
 #[tauri::command]
@@ -99,8 +129,10 @@ pub fn search_songs(db: State<'_, Database>, query: String) -> Result<Vec<SongLi
 #[tauri::command]
 pub fn toggle_favorite(
     db: State<'_, Database>,
+    store: State<'_, SystemStore>,
     song_id: String,
 ) -> Result<bool, AppError> {
+    require_server_settings(&store)?;
     info!("Alternando favorito para música: {}", song_id);
     match db.toggle_favorite(&song_id) {
         Ok(is_now_favorite) => {
@@ -311,6 +343,14 @@ pub fn get_songs_by_category(
     category_id: String,
 ) -> Result<Vec<SongListItem>, AppError> {
     db.get_songs_by_category(&category_id)
+}
+
+#[tauri::command]
+pub fn get_song_summaries_by_category(
+    db: State<'_, Database>,
+    category_id: String,
+) -> Result<Vec<SongListItem>, AppError> {
+    db.get_song_summaries_by_category(&category_id)
 }
 
 /// Verifica se é servidor e valida nome único, retornando o computer_id

@@ -12,6 +12,7 @@ import { useAppState } from "../context/AppContext";
 import type { SidebarView } from "../types";
 import { isClientComputer } from "../utils/computer";
 import { isSidebarViewActive } from "../utils/sidebarView";
+import toast from "react-hot-toast";
 
 export default function Sidebar() {
   const { state, setSidebarView, createCategory, deleteCategory } =
@@ -22,6 +23,11 @@ export default function Sidebar() {
 
   const currentView = state.sidebarView;
   const isClient = isClientComputer(state.settings?.computer_type);
+  const isSyncLocked = state.isScanningFiles || state.rcloneProgress.direction !== null;
+  const isCategoryLocked = isClient || isSyncLocked;
+  const categoryLockedTitle = isClient
+    ? "Operação não permitida para cliente"
+    : "Operação bloqueada durante sincronização";
   const libraryViews: Array<{ view: SidebarView; label: string; icon: ReactNode }> = [
     {
       view: "all",
@@ -46,6 +52,11 @@ export default function Sidebar() {
   ];
 
   async function handleCreateCategory() {
+    if (isCategoryLocked) {
+      toast.error(categoryLockedTitle);
+      return;
+    }
+
     const name = newCategoryName.trim();
     if (!name) return;
 
@@ -112,6 +123,8 @@ export default function Sidebar() {
             <button
               type="button"
               onClick={() => setShowNewCategory(!showNewCategory)}
+              disabled={isSyncLocked}
+              title={isSyncLocked ? categoryLockedTitle : "Adicionar categoria"}
               className="flex h-5 w-5 items-center justify-center rounded bg-white/10 hover:bg-white/20 transition-colors cursor-pointer border-0 text-white/80"
             >
               <Plus className="h-3 w-3" />
@@ -124,7 +137,7 @@ export default function Sidebar() {
             <input
               value={newCategoryName}
               onChange={(e) => setNewCategoryName(e.target.value)}
-              disabled={isCreatingCategory}
+              disabled={isCreatingCategory || isSyncLocked}
               className="flex-1 h-7 rounded border border-white/24 bg-white/14 px-2 text-sm text-white placeholder-white/50 outline-none focus:border-white/40"
               placeholder="Nome da categoria"
               autoFocus
@@ -152,7 +165,7 @@ export default function Sidebar() {
                 }
                 className="flex-1"
               />
-              {!isClient && (
+              {!isCategoryLocked && (
                 <button
                   type="button"
                   onClick={() => deleteCategory(cat.id)}

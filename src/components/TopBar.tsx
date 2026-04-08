@@ -21,7 +21,9 @@ export default function TopBar({
   const { loadSongs, loadCategories, state, scanFilesForChanges } = useAppState();
   const navigate = useNavigate();
   const isClient = isClientComputer(state.settings?.computer_type);
+  const isSyncLocked = state.isScanningFiles || state.rcloneProgress.direction !== null;
   const clientBlockedTitle = "Operação não permitida para cliente";
+  const syncBlockedTitle = "Operação bloqueada durante sincronização";
   const [showAddMusicModal, setShowAddMusicModal] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<IndexedFile[]>([]);
   const [showAddFilesModal, setShowAddFilesModal] = useState(false);
@@ -37,6 +39,11 @@ export default function TopBar({
   };
 
   async function handleScanDirectory() {
+    if (isSyncLocked) {
+      toast.error(syncBlockedTitle);
+      return;
+    }
+
     try {
       const selected = await open({ directory: true, multiple: false });
       if (selected) {
@@ -55,6 +62,11 @@ export default function TopBar({
   }
 
   function handleAddMusic() {
+    if (isSyncLocked) {
+      toast.error(syncBlockedTitle);
+      return;
+    }
+
     setShowAddMusicModal(true);
   }
 
@@ -105,28 +117,41 @@ export default function TopBar({
         <div className="flex items-center gap-2">
           <ActionButton
             icon={<Music className="h-4 w-4" />}
-            title={isClient ? clientBlockedTitle : "Adicionar música"}
+            title={isClient ? clientBlockedTitle : isSyncLocked ? syncBlockedTitle : "Adicionar música"}
             onClick={handleAddMusic}
-            disabled={isClient}
+            disabled={isClient || isSyncLocked}
           />
           <ActionButton
             icon={<FolderSearch className="h-4 w-4" />}
-            title={isClient ? clientBlockedTitle : "Indexar diretório"}
+            title={isClient ? clientBlockedTitle : isSyncLocked ? syncBlockedTitle : "Indexar diretório"}
             onClick={handleScanDirectory}
-            disabled={isClient}
+            disabled={isClient || isSyncLocked}
           />
           <ActionButton
             icon={<RefreshCw className={`h-4 w-4 ${state.isScanningFiles ? 'animate-spin' : ''}`} />}
-            title={isClient ? "Verificar alterações" : "Aplicar alterações"}
+            title={isClient ? clientBlockedTitle : isSyncLocked ? syncBlockedTitle : "Aplicar alterações"}
             onClick={() => {
+              if (isSyncLocked) {
+                toast.error(syncBlockedTitle);
+                return;
+              }
+
               void scanFilesForChanges();
             }}
-            disabled={state.isScanningFiles}
+            disabled={isClient || isSyncLocked}
           />
           <ActionButton
             icon={<Settings className="h-4 w-4" />}
-            title="Configurações"
-            onClick={() => navigate("/settings")}
+            title={isSyncLocked ? syncBlockedTitle : "Configurações"}
+            onClick={() => {
+              if (isSyncLocked) {
+                toast.error(syncBlockedTitle);
+                return;
+              }
+
+              navigate("/settings");
+            }}
+            disabled={isSyncLocked}
           />
         </div>
       </header>

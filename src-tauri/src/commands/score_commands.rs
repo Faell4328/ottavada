@@ -504,6 +504,14 @@ pub fn open_file_location(file_path: String) -> Result<(), AppError> {
 }
 
 #[tauri::command]
+pub fn get_scores_for_song(
+    db: State<'_, Database>,
+    song_id: String,
+) -> Result<Vec<ScoreListItem>, AppError> {
+    db.get_scores_for_song(&song_id)
+}
+
+#[tauri::command]
 pub fn update_score_status(
     db: State<'_, Database>,
     store: State<'_, SystemStore>,

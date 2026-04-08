@@ -11,6 +11,7 @@ import { RcloneProviderModal } from "./RcloneProviderModal.tsx";
 import { RcloneLicenseModal } from "./RcloneLicenseModal";
 import { formatBackupTimestamp } from "../utils/formatters";
 import type { AppSettings, RcloneProvider } from "../types";
+import { isClientComputer } from "../utils/computer";
 
 function getRcloneProviderLabel(provider: RcloneProvider) {
   return provider === "koofr" ? "Koofr" : "Google Drive";
@@ -26,6 +27,8 @@ export default function SettingsPage() {
     scanFilesForChanges,
   } = useAppState();
   const navigate = useNavigate();
+  const isClient = isClientComputer(state.settings?.computer_type);
+  const isSyncLocked = state.isScanningFiles || state.rcloneProgress.direction !== null;
   const [settings, setSettings] = useState<AppSettings>(
     state.settings ?? {
       computer_id: "",
@@ -132,6 +135,16 @@ export default function SettingsPage() {
   }
 
   async function handleSave() {
+    if (isClient) {
+      toast.error("Configurações não podem ser alteradas em um cliente");
+      return;
+    }
+
+    if (isSyncLocked) {
+      toast.error("Operação bloqueada durante sincronização");
+      return;
+    }
+
     if (!rcloneConfigGenerated) {
       toast.error("Gere a configuração do rclone antes de salvar");
       return;
@@ -161,6 +174,11 @@ export default function SettingsPage() {
       return;
     }
 
+    if (isSyncLocked) {
+      toast.error("Operação bloqueada durante sincronização");
+      return;
+    }
+
     setIsGeneratingSnapshot(true);
     try {
       const summary = await api.generateSnapshotFile(true);
@@ -182,6 +200,11 @@ export default function SettingsPage() {
   async function handleExportBackup() {
     if (settings.computer_type !== "Server") {
       toast.error("A exportacao de backup e permitida apenas no servidor");
+      return;
+    }
+
+    if (isSyncLocked) {
+      toast.error("Operação bloqueada durante sincronização");
       return;
     }
 
@@ -211,6 +234,11 @@ export default function SettingsPage() {
   async function handleImportBackup() {
     if (settings.computer_type !== "Server") {
       toast.error("A importacao de backup e permitida apenas no servidor");
+      return;
+    }
+
+    if (isSyncLocked) {
+      toast.error("Operação bloqueada durante sincronização");
       return;
     }
 
@@ -254,6 +282,11 @@ export default function SettingsPage() {
       return;
     }
 
+    if (isSyncLocked) {
+      toast.error("Operação bloqueada durante sincronização");
+      return;
+    }
+
     if (!settings.rclone_config) {
       toast.error("Configure o rclone antes de importar o backup da nuvem");
       return;
@@ -285,6 +318,11 @@ export default function SettingsPage() {
   async function handleGenerateBackupCloud() {
     if (settings.computer_type !== "Server") {
       toast.error("A geração de backup na nuvem é permitida apenas no servidor");
+      return;
+    }
+
+    if (isSyncLocked) {
+      toast.error("Operação bloqueada durante sincronização");
       return;
     }
 
@@ -333,6 +371,12 @@ export default function SettingsPage() {
       </div>
 
       <div className="flex-1 p-6 max-w-2xl mx-auto w-full">
+        {isClient && (
+          <div className="mb-4 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            Este computador está em modo cliente. A tela de configurações é somente leitura.
+          </div>
+        )}
+
         {/* Computador */}
         <Section title="Computador">
           <Field label="Nome do computador">
@@ -343,6 +387,7 @@ export default function SettingsPage() {
                   computer_name: e.target.value || null,
                 })
               }
+              disabled={isClient || isSyncLocked}
               className="w-full h-9 rounded border border-[#c5cfdb] bg-white px-3 text-sm text-[#4d6075] outline-none focus:border-[#7ba0d4]"
               placeholder="Ex: Estúdio, Home, Sala Ensaio..."
             />
@@ -356,7 +401,7 @@ export default function SettingsPage() {
               <button
                 type="button"
                 onClick={handleComputerTypeChange}
-                disabled={isTogglingType}
+                disabled={isTogglingType || isClient || isSyncLocked}
                 className="h-9 px-4 rounded border border-[#c5cfdb] bg-white hover:bg-[#f2f5fa] text-sm font-medium text-[#344b61] disabled:opacity-50 transition-colors cursor-pointer"
               >
                 {isTogglingType ? "Alternando..." : "Alternar"}
@@ -401,6 +446,7 @@ export default function SettingsPage() {
             <button
               type="button"
               onClick={() => setIsRcloneProviderModalOpen(true)}
+              disabled={isClient || isSyncLocked}
               className="mt-4 h-9 rounded border border-[#4f84d7] bg-[#4f84d7] px-4 text-sm font-medium text-white transition-colors hover:bg-[#3d6fb8] cursor-pointer"
             >
               Mudar provedor de nuvem
@@ -417,7 +463,9 @@ export default function SettingsPage() {
               disabled={
                 isGeneratingSnapshot ||
                 state.isScanningFiles ||
-                settings.computer_type !== "Server"
+                isSyncLocked ||
+                settings.computer_type !== "Server" ||
+                isClient
               }
               className="h-9 px-4 rounded border border-[#c5cfdb] bg-white hover:bg-[#f2f5fa] text-sm font-medium text-[#344b61] disabled:opacity-50 transition-colors cursor-pointer"
             >
@@ -438,7 +486,7 @@ export default function SettingsPage() {
             <button
               type="button"
               onClick={handleExportBackup}
-              disabled={isExportingBackup || settings.computer_type !== "Server"}
+              disabled={isExportingBackup || settings.computer_type !== "Server" || isClient || isSyncLocked}
               className="h-9 px-4 rounded border border-[#c5cfdb] bg-white hover:bg-[#f2f5fa] text-sm font-medium text-[#344b61] disabled:opacity-50 transition-colors cursor-pointer"
             >
               {isExportingBackup ? "Exportando..." : "Exportar backup local"}
@@ -447,7 +495,7 @@ export default function SettingsPage() {
             <button
               type="button"
               onClick={handleImportBackup}
-              disabled={isImportingBackup || settings.computer_type !== "Server"}
+              disabled={isImportingBackup || settings.computer_type !== "Server" || isClient || isSyncLocked}
               className="h-9 px-4 rounded border border-[#c5cfdb] bg-white hover:bg-[#f2f5fa] text-sm font-medium text-[#344b61] disabled:opacity-50 transition-colors cursor-pointer"
             >
               {isImportingBackup ? "Importando..." : "Importar backup local"}
@@ -468,7 +516,9 @@ export default function SettingsPage() {
               disabled={
                 isGeneratingBackupCloud ||
                 settings.computer_type !== "Server" ||
-                !settings.rclone_config
+                !settings.rclone_config ||
+                isSyncLocked ||
+                isClient
               }
               className="h-9 px-4 rounded border border-[#c5cfdb] bg-white hover:bg-[#f2f5fa] text-sm font-medium text-[#344b61] disabled:opacity-50 transition-colors cursor-pointer"
             >
@@ -481,7 +531,9 @@ export default function SettingsPage() {
               disabled={
                 isImportingBackupCloud ||
                 settings.computer_type !== "Server" ||
-                !settings.rclone_config
+                !settings.rclone_config ||
+                isSyncLocked ||
+                isClient
               }
               className="h-9 px-4 rounded border border-[#c5cfdb] bg-white hover:bg-[#f2f5fa] text-sm font-medium text-[#344b61] disabled:opacity-50 transition-colors cursor-pointer"
             >
@@ -521,6 +573,7 @@ export default function SettingsPage() {
           <button
             type="button"
             onClick={handleSave}
+            disabled={!rcloneConfigGenerated || isClient || isSyncLocked}
             className="h-9 rounded bg-[#4f84d7] px-6 text-sm font-semibold text-white hover:bg-[#3d6fb8] transition-colors cursor-pointer border-0"
           >
             Salvar

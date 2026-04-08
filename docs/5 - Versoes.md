@@ -104,8 +104,8 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - v0.6 - Foco no `client`
 - v0.7 - Lapidando
 - v0.8 - Melhorias na usabilidade
-- v0.9 - Melhorias na usabilidade e confiança
-- v0.10 - Melhorias
+- v0.9 - Backup automático, adição do `rclone` ao sistema, facilidade na troca de provedor (`koofr` ou `google drive`), correção de progresso no `StatusBar`, entre outras melhorias e correções.
+- v0.10 - Melhorias e correções que foram encontradas, durante uso e testes massivos
 - v1.0 - Adição de licença e telemetria.
 ## v0.4
 - [x] Atualizar bando de dados
@@ -282,9 +282,19 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 
 ## v0.10
 
-- [ ] Mudar o carregamento das partituras na página inicial. Listar apenas as músicas, carregar a partitura apenas quando for clicado para expandir a música. Quando for fechada, deve ser descartado a lista de partituras da música fechada.
+- [x] Mudar o carregamento das partituras na página inicial. Listar apenas as músicas, carregar a partitura apenas quando for clicado para expandir a música. Quando for fechada, deve ser descartado a lista de partituras da música fechada.
+	- Eu realizei teste e adicionei em torno de 290 músicas, quer seria 40 a 45% de todas as músicas da orquestra. Com apenas essa quantidade, ao mover o cursor rapidamente, senti uma lerdeza e até bugs visuais para renderizar tudo (mesmo não mostrando).
+- [x] Adicionar uma barreira para o usuário não adicionar novas música, mexer em configurações ou editar alguma informação de música, partitura e etc.
+	- Limitando o cliente no backend.
+	- E boqueando o usuário quando clica para: "aplicar alterações", "verificar alterações", "forçar geração de snapshot". Para por exemplo: o usuário não adicione uma música enquanto o sistema está fazendo upload, o que pode quebrar ou causar inconsistências.
+		- É evidente, que o correto é o sistema permitir isso, mas não tenho tempo para fazer o correto, isso ficara para próximas versões. No atual momento, minhas escolha é a "gambiarra".
+- [ ] Quando o usuário expande uma música, a lista deve rolar para que a linha da música fique alinhada ao topo da área de listagem (visível logo abaixo do header), exceto se já estiver visível no topo ou não for possível.
 - [ ] Não está sendo pegado o nome de todos as partituras/instrumentos, que ficam depois do "-", ex: `298H.C. AVANTE SERVO DE JEOVA - Bass Guitar.mus`. Como é um instrumentos não listado, deve fica após os listados em ordem alfabética.
 - [ ] Padronizar a duração de todos os toast para 8 segundos.
+- [ ] Caso o arquivo já exista em alguma música o tratamento deve ser diferente, tanto modal, quanto `toast`.
+	- Aparece um toast avisando que foi adicionando x partituras, sendo que já existem.
+	- Minha ideia é simples, se o arquivo já está sendo utilizado, deve-se orientar o usuário: "Esse arquivo já está sendo utilizado na música x - (instrumento y ou sem instrumentos especificado)".
+	- Também, adicionar um texto avisando quando o nome da música já existe: "Essa música já existe em seu repertorio no aplicativo, os instrumentos listados abaixo serão adicionado".
 - [ ] Muda texto para "selecionar arquivo(s)" no overflow menu, permitir também o usuário escolher 1 ou mais arquivos.
 - [ ] Ao editar informação da música, não precisa abrir para mostrar as partituras/instrumentos.
 - [ ] Ao selecionar uma categoria de SideBar, ao adicionar uma música ou indexar ele já deve vir com a categoria marcada por padrão.
@@ -294,12 +304,13 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [ ] Adicionar uma categoria default, que é a categoria "Sem categoria", quando uma música não possui categoria, ela virá para essa categoria.
 - [ ] Caso o nome da música possua número, ex: 1, 2, 3, 4, 5, 6, 7, 8 e 9, adicionar um 0 antes, ex: 01, 02, 03, 04, 05, 06, 07, 08 e 09.
 - [ ] Adicionar nas configurações/Sobre a quantidade de músicas e partituras (separadas por: main, pedding e not foud).
+	- [ ] Ter cache no `tauri-plugin-store`, para não ter que ficar recalculando tudo.
 - [ ] Arrumar a ordenação das músicas, está ficando bugada quando o nome tem algum sinal na letra.
 
 **Tenho que pensar mais um pouco**
 - [ ] Quando o usuário selecionar para indexar um diretório e no diretório não tem nada, deve aparecer um modal listando tudo que tem dentro e com um botão para o usuário abrir o local.
-- [ ] Adicionar uma barreira para o usuário não adicionar novas música, mexer em configurações ou editar alguma informação de música, partitura e etc.
-- [ ] Caso o arquivo já exista em alguma música o tratamento deve ser diferente, tanto modal, quanto `toast`.
+	- Foi encontrados músicas que possuem arquivos com esse padrão`{nomeMusica} - {instrumento}.C`, ou que estão em subpastas no diretório.
+	- Não sei ao certo, como resolver esse problema. Ao menos, pretendo colocar alguma orientação ao usuário. Sinceramente não sei.
 - [ ] Aumentar a quantidade de `transfers` no `rclone` sem quebrar o StatusBar.
 - [ ] Arrumar a barra de pesquisa.
 

@@ -443,6 +443,7 @@ impl Database {
             &conn,
             "SELECT id, name, composer, arranger, datetime('now') AS updated_at, is_favorite FROM songs WHERE id = ?1",
             &[&song_id as &dyn rusqlite::ToSql],
+            true,
         )?;
         items
             .pop()
@@ -454,6 +455,7 @@ impl Database {
         conn: &Connection,
         sql: &str,
         params: &[&dyn rusqlite::ToSql],
+        include_scores: bool,
     ) -> Result<Vec<SongListItem>, AppError> {
         let mut stmt = conn.prepare(sql)?;
 
@@ -472,7 +474,7 @@ impl Database {
             })?
             .collect::<Result<Vec<_>, _>>()?;
 
-        if songs.is_empty() {
+        if songs.is_empty() || !include_scores {
             return Ok(songs);
         }
 
@@ -588,6 +590,19 @@ impl Database {
              FROM songs
              ORDER BY name COLLATE NOCASE ASC, id ASC",
             &[],
+            true,
+        )
+    }
+
+    pub fn get_all_song_summaries(&self) -> Result<Vec<SongListItem>, AppError> {
+        let conn = self.conn.lock().unwrap();
+        Self::query_song_list_items(
+            &conn,
+            "SELECT id, name, composer, arranger, datetime('now') AS updated_at, is_favorite
+             FROM songs
+             ORDER BY name COLLATE NOCASE ASC, id ASC",
+            &[],
+            false,
         )
     }
 
@@ -600,6 +615,20 @@ impl Database {
              WHERE is_favorite = 1
              ORDER BY name COLLATE NOCASE ASC, id ASC",
             &[],
+            true,
+        )
+    }
+
+    pub fn get_favorited_song_summaries(&self) -> Result<Vec<SongListItem>, AppError> {
+        let conn = self.conn.lock().unwrap();
+        Self::query_song_list_items(
+            &conn,
+            "SELECT id, name, composer, arranger, datetime('now') AS updated_at, is_favorite
+             FROM songs
+             WHERE is_favorite = 1
+             ORDER BY name COLLATE NOCASE ASC, id ASC",
+            &[],
+            false,
         )
     }
 
@@ -632,6 +661,24 @@ impl Database {
                 OR COALESCE(s.arranger, '') LIKE ?1
              ORDER BY s.name COLLATE NOCASE ASC, s.id ASC",
             &[&like_query as &dyn rusqlite::ToSql],
+            true,
+        )
+    }
+
+    #[allow(dead_code)]
+    pub fn search_song_summaries(&self, query: &str) -> Result<Vec<SongListItem>, AppError> {
+        let conn = self.conn.lock().unwrap();
+        let like_query = format!("%{}%", query.trim());
+        Self::query_song_list_items(
+            &conn,
+            "SELECT s.id, s.name, s.composer, s.arranger, datetime('now') AS updated_at, s.is_favorite
+             FROM songs s
+             WHERE s.name LIKE ?1
+                OR COALESCE(s.composer, '') LIKE ?1
+                OR COALESCE(s.arranger, '') LIKE ?1
+             ORDER BY s.name COLLATE NOCASE ASC, s.id ASC",
+            &[&like_query as &dyn rusqlite::ToSql],
+            false,
         )
     }
 
@@ -645,6 +692,24 @@ impl Database {
              WHERE cs.category_id = ?1
              ORDER BY s.name COLLATE NOCASE ASC, s.id ASC",
             &[&category_id as &dyn rusqlite::ToSql],
+            true,
+        )
+    }
+
+    pub fn get_song_summaries_by_category(
+        &self,
+        category_id: &str,
+    ) -> Result<Vec<SongListItem>, AppError> {
+        let conn = self.conn.lock().unwrap();
+        Self::query_song_list_items(
+            &conn,
+            "SELECT s.id, s.name, s.composer, s.arranger, datetime('now') AS updated_at, s.is_favorite
+             FROM songs s
+             INNER JOIN categoriesSongs cs ON cs.song_id = s.id
+             WHERE cs.category_id = ?1
+             ORDER BY s.name COLLATE NOCASE ASC, s.id ASC",
+            &[&category_id as &dyn rusqlite::ToSql],
+            false,
         )
     }
 
@@ -658,6 +723,21 @@ impl Database {
              WHERE sc.status = 'draft'
              ORDER BY s.name COLLATE NOCASE ASC, s.id ASC",
             &[],
+            true,
+        )
+    }
+
+    pub fn get_song_summaries_with_drafts(&self) -> Result<Vec<SongListItem>, AppError> {
+        let conn = self.conn.lock().unwrap();
+        Self::query_song_list_items(
+            &conn,
+            "SELECT DISTINCT s.id, s.name, s.composer, s.arranger, datetime('now') AS updated_at, s.is_favorite
+             FROM songs s
+             INNER JOIN scores sc ON sc.song_id = s.id
+             WHERE sc.status = 'draft'
+             ORDER BY s.name COLLATE NOCASE ASC, s.id ASC",
+            &[],
+            false,
         )
     }
 
@@ -672,7 +752,28 @@ impl Database {
              WHERE sc.status = 'not_found'
              ORDER BY s.name COLLATE NOCASE ASC, s.id ASC",
             &[],
+            true,
         )
+    }
+
+    pub fn get_song_summaries_with_not_found(&self) -> Result<Vec<SongListItem>, AppError> {
+        let conn = self.conn.lock().unwrap();
+        Self::query_song_list_items(
+            &conn,
+            "SELECT DISTINCT s.id, s.name, s.composer, s.arranger, datetime('now') AS updated_at, s.is_favorite
+             FROM songs s
+             INNER JOIN scores sc ON sc.song_id = s.id
+             WHERE sc.status = 'not_found'
+             ORDER BY s.name COLLATE NOCASE ASC, s.id ASC",
+            &[],
+            false,
+        )
+    }
+
+    pub fn get_scores_for_song(&self, song_id: &str) -> Result<Vec<ScoreListItem>, AppError> {
+        let conn = self.conn.lock().unwrap();
+        let mut grouped = Self::get_scores_for_songs(&conn, &[song_id.to_string()])?;
+        Ok(grouped.remove(song_id).unwrap_or_default())
     }
 
     // ── Scores ──

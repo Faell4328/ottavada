@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import type {
   SongListItem,
+  ScoreListItem,
   Category,
   AppSettings,
   IndexedFile,
@@ -14,20 +15,40 @@ export async function getAllSongs(): Promise<SongListItem[]> {
   return invoke("get_all_songs");
 }
 
+export async function getAllSongSummaries(): Promise<SongListItem[]> {
+  return invoke("get_all_song_summaries");
+}
+
 export async function getFavoritedSongs(): Promise<SongListItem[]> {
   return invoke("get_favorited_songs");
+}
+
+export async function getFavoritedSongSummaries(): Promise<SongListItem[]> {
+  return invoke("get_favorited_song_summaries");
 }
 
 export async function getSongsWithDrafts(): Promise<SongListItem[]> {
   return invoke("get_songs_with_drafts");
 }
 
+export async function getSongSummariesWithDrafts(): Promise<SongListItem[]> {
+  return invoke("get_song_summaries_with_drafts");
+}
+
 export async function getSongsWithNotFound(): Promise<SongListItem[]> {
   return invoke("get_songs_with_not_found");
 }
 
+export async function getSongSummariesWithNotFound(): Promise<SongListItem[]> {
+  return invoke("get_song_summaries_with_not_found");
+}
+
 export async function searchSongs(query: string): Promise<SongListItem[]> {
   return invoke("search_songs", { query });
+}
+
+export async function searchSongSummaries(query: string): Promise<SongListItem[]> {
+  return invoke("search_song_summaries", { query });
 }
 
 export async function toggleFavorite(songId: string): Promise<boolean> {
@@ -63,6 +84,12 @@ export async function getSongsByCategory(
   categoryId: string
 ): Promise<SongListItem[]> {
   return invoke("get_songs_by_category", { categoryId });
+}
+
+export async function getSongSummariesByCategory(
+  categoryId: string
+): Promise<SongListItem[]> {
+  return invoke("get_song_summaries_by_category", { categoryId });
 }
 
 export async function createSong(name: string): Promise<SongListItem> {
@@ -135,6 +162,10 @@ export async function deleteScore(scoreId: string): Promise<void> {
 
 export async function deleteSong(songId: string): Promise<void> {
   return invoke("delete_song", { songId });
+}
+
+export async function getScoresForSong(songId: string): Promise<ScoreListItem[]> {
+  return invoke("get_scores_for_song", { songId });
 }
 
 export async function getSearchSuggestions(query: string, limit?: number): Promise<SongListItem[]> {

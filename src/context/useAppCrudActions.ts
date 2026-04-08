@@ -52,15 +52,33 @@ export function useAppCrudActions({
   }, [dispatch]);
 
   const createCategory = useCallback(async (name: string) => {
+    if (state.settings?.computer_type === "Client" || state.isScanningFiles || state.rcloneProgress.direction !== null) {
+      toast.error(
+        state.settings?.computer_type === "Client"
+          ? "Operação não permitida para cliente"
+          : "Operação bloqueada durante sincronização"
+      );
+      return;
+    }
+
     try {
       await api.createCategory(name);
       await loadCategories();
     } catch (err) {
       console.error("Failed to create category:", err);
     }
-  }, [loadCategories]);
+  }, [loadCategories, state.isScanningFiles, state.rcloneProgress.direction, state.settings?.computer_type]);
 
   const deleteCategory = useCallback(async (categoryId: string) => {
+    if (state.settings?.computer_type === "Client" || state.isScanningFiles || state.rcloneProgress.direction !== null) {
+      toast.error(
+        state.settings?.computer_type === "Client"
+          ? "Operação não permitida para cliente"
+          : "Operação bloqueada durante sincronização"
+      );
+      return;
+    }
+
     try {
       await api.deleteCategory(categoryId);
       await loadCategories();
@@ -75,7 +93,7 @@ export function useAppCrudActions({
     } catch (err) {
       console.error("Failed to delete category:", err);
     }
-  }, [dispatch, loadCategories, state.sidebarView]);
+  }, [dispatch, loadCategories, state.isScanningFiles, state.rcloneProgress.direction, state.settings?.computer_type, state.sidebarView]);
 
   const updateSong = useCallback(async (
     songId: string,

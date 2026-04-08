@@ -5,14 +5,16 @@ interface ContextMenuProps {
   isOpen: boolean;
   onToggle: (e: React.MouseEvent) => void;
   children: React.ReactNode;
+  disabled?: boolean;
 }
 
-export function ContextMenu({ isOpen, onToggle, children }: ContextMenuProps) {
+export function ContextMenu({ isOpen, onToggle, children, disabled = false }: ContextMenuProps) {
   return (
     <div className="relative">
       <button
         type="button"
         onClick={onToggle}
+        disabled={disabled}
         className="p-1 rounded transition-colors hover:bg-white/20"
         title="Menu de ações"
       >

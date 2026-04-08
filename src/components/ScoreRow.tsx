@@ -24,6 +24,7 @@ interface ScoreRowProps {
   onStatusChange: (scoreId: string, status: "main") => Promise<void>;
   onDelete: (scoreId: string) => Promise<void>;
   computerType?: string;
+  isLocked: boolean;
 }
 
 function ScoreRow({
@@ -37,10 +38,12 @@ function ScoreRow({
   onStatusChange,
   onDelete,
   computerType,
+  isLocked,
 }: ScoreRowProps) {
   const [isOpening, setIsOpening] = useState(false);
   const confirmation = useConfirmation();
   const isClient = isClientComputer(computerType);
+  const isActionLocked = isClient || isLocked;
   const statusKey = normalizeScoreStatus(score.status);
 
   const openScoreFile = async () => {
@@ -127,42 +130,56 @@ function ScoreRow({
             </span>
 
             <div className="flex items-center justify-end px-3">
-              <ContextMenu
-                isOpen={isMenuOpen}
-                onToggle={(e) => {
-                  e.stopPropagation();
-                  isMenuOpen ? onMenuClose() : onMenuOpen(menuId);
-                }}
-              >
-                <ContextMenuItem
-                  label="Abrir"
-                  onClick={(e) => {
+              {!isClient ? (
+                <ContextMenu
+                  isOpen={isMenuOpen}
+                  onToggle={(e) => {
                     e.stopPropagation();
-                    void openScoreFile();
-                    onMenuClose();
+                    isMenuOpen ? onMenuClose() : onMenuOpen(menuId);
                   }}
-                  disabled={statusKey === "not_found"}
-                />
-                {statusKey === "draft" && !isClient && (
+                  disabled={isActionLocked}
+                >
                   <ContextMenuItem
-                    label="Definir como Principal"
-                    onClick={(e) => { e.stopPropagation(); handleSetAsMain(); }}
+                    label="Abrir"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void openScoreFile();
+                      onMenuClose();
+                    }}
+                    disabled={statusKey === "not_found" || isActionLocked}
                   />
-                )}
-                {!isClient && (
+                  {statusKey === "draft" && (
+                    <ContextMenuItem
+                      label="Definir como Principal"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSetAsMain();
+                      }}
+                      disabled={isActionLocked}
+                    />
+                  )}
                   <ContextMenuItem
                     label="Editar"
-                    onClick={(e) => { e.stopPropagation(); onEdit(); onMenuClose(); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit();
+                      onMenuClose();
+                    }}
+                    disabled={isActionLocked}
                   />
-                )}
-                {!isClient && (
                   <ContextMenuItem
                     label="Deletar"
-                    onClick={(e) => { e.stopPropagation(); handleDelete(); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete();
+                    }}
+                    disabled={isActionLocked}
                     isLast
                   />
-                )}
-              </ContextMenu>
+                </ContextMenu>
+              ) : (
+                <span className="text-xs text-[#8b9db2]">Somente leitura</span>
+              )}
             </div>
           </div>
         </td>

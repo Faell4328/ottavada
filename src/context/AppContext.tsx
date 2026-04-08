@@ -40,20 +40,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const query = state.searchQuery.trim();
 
       const songs = query
-        ? await api.searchSongs(query)
+        ? await api.searchSongSummaries(query)
         : await (async () => {
-            if (state.sidebarView === "favorites") return api.getFavoritedSongs();
-            if (state.sidebarView === "drafts") return api.getSongsWithDrafts();
-            if (state.sidebarView === "not_found") return api.getSongsWithNotFound();
+            if (state.sidebarView === "favorites") return api.getFavoritedSongSummaries();
+            if (state.sidebarView === "drafts") return api.getSongSummariesWithDrafts();
+            if (state.sidebarView === "not_found") return api.getSongSummariesWithNotFound();
 
             if (
               typeof state.sidebarView === "object" &&
               state.sidebarView.type === "category"
             ) {
-              return api.getSongsByCategory(state.sidebarView.id);
+              return api.getSongSummariesByCategory(state.sidebarView.id);
             }
 
-            return api.getAllSongs();
+            return api.getAllSongSummaries();
           })();
 
       dispatch({ type: "SET_SONGS", payload: songs });

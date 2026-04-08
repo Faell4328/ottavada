@@ -1,20 +1,21 @@
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Search, FileMusic } from "lucide-react";
 import { open } from "@tauri-apps/plugin-dialog";
+import toast from "react-hot-toast";
+
+import * as api from "../api/commands";
 import { useAppState } from "../context/AppContext";
-import { EditMusicModal } from "./EditMusicModal";
-import { EditScoreModal } from "./EditScoreModal";
-import { AddScoreToSongModal } from "./AddScoreToSongModal";
-import { MemoizedSongRow } from "./SongRow";
-import { MemoizedScoreRow } from "./ScoreRow";
-import { getDirectoryPath, isSamePath } from "../utils/paths";
 import { useSearch } from "../hooks/useSearch";
 import { compareInstrumentNames } from "../utils/instrumentOrder";
-import * as api from "../api/commands";
-import toast from "react-hot-toast";
-import type { SongListItem, ScoreListItem, IndexedFile } from "../types";
 import { getErrorMessage } from "../utils/errors";
+import { getDirectoryPath, isSamePath } from "../utils/paths";
 import { getSidebarViewLabel } from "../utils/sidebarView";
+import type { IndexedFile, ScoreListItem, SongListItem } from "../types";
+import { AddScoreToSongModal } from "./AddScoreToSongModal";
+import { EditMusicModal } from "./EditMusicModal";
+import { EditScoreModal } from "./EditScoreModal";
+import { MemoizedScoreRow } from "./ScoreRow";
+import { MemoizedSongRow } from "./SongRow";
 
 export default function SongsList() {
   const {
@@ -30,7 +31,9 @@ export default function SongsList() {
     deleteScore,
     deleteSong,
   } = useAppState();
+
   const search = useSearch(setSearchQuery);
+  const expandedSongIdRef = useRef<string | null>(null);
   const [editingSong, setEditingSong] = useState<SongListItem | null>(null);
   const [isEditMusicModalOpen, setIsEditMusicModalOpen] = useState(false);
   const [editingScore, setEditingScore] = useState<ScoreListItem | null>(null);
@@ -39,8 +42,91 @@ export default function SongsList() {
   const [songForAddFile, setSongForAddFile] = useState<SongListItem | null>(null);
   const [pendingFileToAdd, setPendingFileToAdd] = useState<IndexedFile | null>(null);
   const [isAddFileModalOpen, setIsAddFileModalOpen] = useState(false);
+  const [scoresBySongId, setScoresBySongId] = useState<Record<string, ScoreListItem[]>>({});
+  const [loadingScoresBySongId, setLoadingScoresBySongId] = useState<Record<string, boolean>>({});
+  const isSyncLocked = state.isScanningFiles || state.rcloneProgress.direction !== null;
 
-  const closeAllMenus = () => setOpenMenuId(null);
+  const closeAllMenus = useCallback(() => setOpenMenuId(null), []);
+
+  const clearSongScores = useCallback((songId: string) => {
+    setScoresBySongId((prev) => {
+      if (!(songId in prev)) {
+        return prev;
+      }
+
+      const next = { ...prev };
+      delete next[songId];
+      return next;
+    });
+
+    setLoadingScoresBySongId((prev) => {
+      if (!(songId in prev)) {
+        return prev;
+      }
+
+      const next = { ...prev };
+      delete next[songId];
+      return next;
+    });
+  }, []);
+
+  const loadSongScores = useCallback(
+    async (songId: string, force = false) => {
+      if (!force && scoresBySongId[songId]) {
+        return scoresBySongId[songId];
+      }
+
+      expandedSongIdRef.current = songId;
+      setLoadingScoresBySongId((prev) => ({ ...prev, [songId]: true }));
+
+      try {
+        const scores = await api.getScoresForSong(songId);
+        const sortedScores = [...scores].sort((a, b) => compareInstrumentNames(a.name, b.name));
+
+        if (expandedSongIdRef.current === songId) {
+          setScoresBySongId((prev) => ({ ...prev, [songId]: sortedScores }));
+        }
+
+        return sortedScores;
+      } catch (err) {
+        console.error("Failed to load scores for song:", err);
+        toast.error("Erro ao carregar partituras da música");
+        throw err;
+      } finally {
+        setLoadingScoresBySongId((prev) => {
+          if (expandedSongIdRef.current !== songId) {
+            const next = { ...prev };
+            delete next[songId];
+            return next;
+          }
+
+          return { ...prev, [songId]: false };
+        });
+      }
+    },
+    [scoresBySongId]
+  );
+
+  const refreshScoresForSong = useCallback(
+    async (songId: string | null) => {
+      if (!songId || expandedSongIdRef.current !== songId) {
+        return;
+      }
+
+      await loadSongScores(songId, true);
+    },
+    [loadSongScores]
+  );
+
+  useEffect(() => {
+    if (state.selectedSong) {
+      return;
+    }
+
+    expandedSongIdRef.current = null;
+    setScoresBySongId({});
+    setLoadingScoresBySongId({});
+  }, [state.selectedSong]);
 
   const handleSaveMusic = async (data: {
     songId: string;
@@ -59,28 +145,49 @@ export default function SongsList() {
     filePath: string;
   }) => {
     await updateScore(data.scoreFileId, data.instrumentName, data.filePath);
+    await refreshScoresForSong(data.songId);
   };
 
-  const viewLabel = getSidebarViewLabel(state.sidebarView);
+  const handleToggleSong = useCallback(
+    async (song: SongListItem) => {
+      const isExpanded = state.selectedSong?.id === song.id;
 
-  const sortedScoresBySongId = useMemo(() => {
-    const map = new Map<string, ScoreListItem[]>();
+      if (isExpanded) {
+        expandedSongIdRef.current = null;
+        selectScore(null);
+        selectSong(null);
+        clearSongScores(song.id);
+        closeAllMenus();
+        return;
+      }
 
-    for (const song of state.songs) {
-      map.set(
-        song.id,
-        [...song.scores].sort((a, b) => compareInstrumentNames(a.name, b.name))
-      );
-    }
+      if (state.selectedSong?.id) {
+        clearSongScores(state.selectedSong.id);
+      }
 
-    return map;
-  }, [state.songs]);
+      selectScore(null);
+      selectSong(song);
+      closeAllMenus();
+      void loadSongScores(song.id);
+    },
+    [clearSongScores, closeAllMenus, loadSongScores, selectScore, selectSong, state.selectedSong?.id]
+  );
 
-  const closeAddFileModal = () => {
-    setIsAddFileModalOpen(false);
-    setSongForAddFile(null);
-    setPendingFileToAdd(null);
-  };
+  const handleToggleScoreStatus = useCallback(
+    async (songId: string, scoreId: string, status: "main") => {
+      await updateScoreStatus(scoreId, status);
+      await refreshScoresForSong(songId);
+    },
+    [refreshScoresForSong, updateScoreStatus]
+  );
+
+  const handleDeleteScore = useCallback(
+    async (songId: string, scoreId: string) => {
+      await deleteScore(scoreId);
+      await refreshScoresForSong(songId);
+    },
+    [deleteScore, refreshScoresForSong]
+  );
 
   async function handleSaveFileToSong(file: IndexedFile) {
     if (!songForAddFile) {
@@ -92,6 +199,10 @@ export default function SongsList() {
       search.clearSearch();
       await loadSongs();
       selectSong(updatedSong);
+      setScoresBySongId((prev) => ({
+        ...prev,
+        [updatedSong.id]: [...updatedSong.scores].sort((a, b) => compareInstrumentNames(a.name, b.name)),
+      }));
       toast.success("Arquivo adicionado com sucesso");
     } catch (err) {
       console.error("Failed to add file to song:", err);
@@ -131,16 +242,31 @@ export default function SongsList() {
     }
   }
 
+  const sortedScoresBySongId = useMemo(() => {
+    const map = new Map<string, ScoreListItem[]>();
+
+    for (const [songId, scores] of Object.entries(scoresBySongId)) {
+      map.set(songId, [...scores]);
+    }
+
+    return map;
+  }, [scoresBySongId]);
+
+  const closeAddFileModal = () => {
+    setIsAddFileModalOpen(false);
+    setSongForAddFile(null);
+    setPendingFileToAdd(null);
+  };
+
   return (
     <section className="flex flex-1 flex-col gap-2.5 bg-[#edf1f6] p-3.5 border-r border-[#c8d1dc] overflow-hidden">
       <div className="flex items-center justify-between mb-1">
-        <h2 className="text-sm font-bold text-[#2f4259]">{viewLabel}</h2>
+        <h2 className="text-sm font-bold text-[#2f4259]">{getSidebarViewLabel(state.sidebarView)}</h2>
         <span className="text-xs text-[#6b849e]">
           {state.songs.length} música{state.songs.length !== 1 ? "s" : ""}
         </span>
       </div>
 
-      {/* Search with Suggestions */}
       <div className="relative flex gap-1.5 h-9" ref={search.suggestionsRef}>
         <div className="relative flex-1 min-w-0">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#8694a6]" />
@@ -173,7 +299,6 @@ export default function SongsList() {
         </div>
       </div>
 
-      {/* Table */}
       <div className="overflow-hidden rounded border border-[#c8d1dc] bg-[#f8fafd] flex-1 flex flex-col">
         <div className="overflow-y-auto flex-1">
           <table className="w-full border-collapse">
@@ -202,8 +327,7 @@ export default function SongsList() {
                       song={song}
                       isExpanded={state.selectedSong?.id === song.id}
                       onToggle={() => {
-                        selectSong(state.selectedSong?.id === song.id ? null : song);
-                        closeAllMenus();
+                        void handleToggleSong(song);
                       }}
                       onToggleFavorite={() => toggleFavorite(song.id)}
                       onAddFile={() => handleAddFileToSong(song)}
@@ -217,29 +341,44 @@ export default function SongsList() {
                       onMenuOpen={(id) => setOpenMenuId(id)}
                       onMenuClose={closeAllMenus}
                       computerType={state.settings?.computer_type}
+                      isLocked={isSyncLocked}
                     />
-                    {state.selectedSong?.id === song.id &&
-                      (sortedScoresBySongId.get(song.id) ?? []).map((score) => (
-                        <MemoizedScoreRow
-                          key={score.id}
-                          score={score}
-                          onSelectScore={() => {
-                            selectScore(state.selectedScore?.id === score.id ? null : score);
-                            closeAllMenus();
-                          }}
-                          menuId={`score-${score.id}`}
-                          isMenuOpen={openMenuId === `score-${score.id}`}
-                          onMenuOpen={(id) => setOpenMenuId(id)}
-                          onMenuClose={closeAllMenus}
-                          onEdit={() => {
-                            setEditingScore(score);
-                            setIsEditScoreModalOpen(true);
-                          }}
-                          onStatusChange={updateScoreStatus}
-                          onDelete={deleteScore}
-                          computerType={state.settings?.computer_type}
-                        />
-                      ))}
+                    {state.selectedSong?.id === song.id && (
+                      loadingScoresBySongId[song.id] ? (
+                        <tr>
+                          <td colSpan={3} className="px-3.5 py-3 text-sm text-[#7b8da1] bg-[#f7f9fc]">
+                            Carregando partituras...
+                          </td>
+                        </tr>
+                      ) : (
+                        (sortedScoresBySongId.get(song.id) ?? []).map((score) => (
+                          <MemoizedScoreRow
+                            key={score.id}
+                            score={score}
+                            onSelectScore={() => {
+                              selectScore(state.selectedScore?.id === score.id ? null : score);
+                              closeAllMenus();
+                            }}
+                            menuId={`score-${score.id}`}
+                            isMenuOpen={openMenuId === `score-${score.id}`}
+                            onMenuOpen={(id) => setOpenMenuId(id)}
+                            onMenuClose={closeAllMenus}
+                            onEdit={() => {
+                              setEditingScore(score);
+                              setIsEditScoreModalOpen(true);
+                            }}
+                            onStatusChange={async (scoreId, status) => {
+                              await handleToggleScoreStatus(song.id, scoreId, status);
+                            }}
+                            onDelete={async (scoreId) => {
+                              await handleDeleteScore(song.id, scoreId);
+                            }}
+                            computerType={state.settings?.computer_type}
+                            isLocked={isSyncLocked}
+                          />
+                        ))
+                      )
+                    )}
                   </React.Fragment>
                 ))
               )}
@@ -248,20 +387,27 @@ export default function SongsList() {
         </div>
       </div>
 
-      {/* Modals */}
       <EditMusicModal
         isOpen={isEditMusicModalOpen}
         score={editingSong}
-        onClose={() => { setIsEditMusicModalOpen(false); setEditingSong(null); }}
+        onClose={() => {
+          setIsEditMusicModalOpen(false);
+          setEditingSong(null);
+        }}
         onSave={handleSaveMusic}
       />
+
       <EditScoreModal
         isOpen={isEditScoreModalOpen}
         score={state.selectedSong}
         instrument={editingScore}
-        onClose={() => { setIsEditScoreModalOpen(false); setEditingScore(null); }}
+        onClose={() => {
+          setIsEditScoreModalOpen(false);
+          setEditingScore(null);
+        }}
         onSave={handleSaveScore}
       />
+
       <AddScoreToSongModal
         isOpen={isAddFileModalOpen}
         songName={songForAddFile?.name ?? ""}

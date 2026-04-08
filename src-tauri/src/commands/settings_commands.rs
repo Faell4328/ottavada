@@ -4,7 +4,7 @@ use tauri::{AppHandle, State};
 use tracing::{error, info};
 
 use crate::domain::errors::AppError;
-use crate::domain::models::{AppSettings, ComputerType, GoogleDriveMode, RcloneConfig};
+use crate::domain::models::{AppSettings, ComputerType, GoogleDriveMode, OperationGuard, RcloneConfig};
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
 
@@ -20,6 +20,7 @@ pub fn save_settings(store: State<'_, SystemStore>, settings: AppSettings) -> Re
         "Salvando configurações para computador: {}",
         settings.computer_id
     );
+    settings.require_server_only()?;
     match store.save_app_settings(&settings) {
         Ok(_) => {
             info!("Configurações salvas com sucesso");
@@ -86,6 +87,7 @@ pub fn is_initial_scan_completed(scan_flag: State<'_, Arc<AtomicBool>>) -> bool 
 pub fn toggle_computer_type(store: State<'_, SystemStore>) -> Result<String, AppError> {
     info!("Alternando tipo de computador");
     let mut settings = store.get_app_settings()?;
+    settings.require_server_only()?;
 
     let new_type = match settings.computer_type {
         ComputerType::Server => ComputerType::Client,
