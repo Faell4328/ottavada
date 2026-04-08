@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { CheckCircle } from "lucide-react";
 
 import type { RcloneProvider, RcloneSetupInput } from "../types";
 import { Modal } from "./ui/Modal";
@@ -13,9 +12,6 @@ interface RcloneProviderModalProps {
   onApprove: (provider: RcloneProvider) => void;
 }
 
-function getProviderLabel(provider: RcloneProvider) {
-  return provider === "koofr" ? "Koofr" : "Google Drive";
-}
 
 function getPrimaryActionLabel(provider: RcloneProvider, currentProvider: RcloneProvider) {
   if (provider === "google_drive") {
