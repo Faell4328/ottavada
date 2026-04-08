@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAppState } from "../context/AppContext";
 import { Modal, ModalFooterButtons, FormField, TextInput, ErrorMessage } from "./ui";
 import { CategoryCheckboxList } from "./ui/CategoryCheckboxList";
@@ -6,6 +6,7 @@ import {
   normalizeSongNameForSave,
   normalizeSongNameInput,
 } from "../utils/nameFormat";
+import { describeExistingSongWarning, findSongByName } from "../utils/libraryDuplicates";
 
 interface AddMusicModalProps {
   isOpen: boolean;
@@ -30,6 +31,12 @@ export function AddMusicModal({
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
+  const normalizedTitle = useMemo(() => normalizeSongNameForSave(title), [title]);
+  const existingSong = useMemo(
+    () => findSongByName(state.songs, normalizedTitle),
+    [normalizedTitle, state.songs]
+  );
+  const isDuplicateSong = existingSong !== null;
 
   useEffect(() => {
     if (isOpen) {
@@ -50,10 +57,13 @@ export function AddMusicModal({
   };
 
   const handleSave = async () => {
-    const normalizedTitle = normalizeSongNameForSave(title);
-
     if (!normalizedTitle) {
       setError("Digite o título da música");
+      return;
+    }
+
+    if (isDuplicateSong) {
+      setError(describeExistingSongWarning());
       return;
     }
 
@@ -87,17 +97,24 @@ export function AddMusicModal({
           onCancel={onClose}
           onConfirm={handleSave}
           isSaving={isSaving}
+          confirmDisabled={isDuplicateSong}
           confirmLabel="Salvar"
           savingLabel="Criando..."
         />
       }
     >
       <FormField label="Nome da Música" required>
+        {isDuplicateSong && (
+          <p className="mb-1.5 text-xs font-semibold text-amber-700">
+            {describeExistingSongWarning()}
+          </p>
+        )}
         <TextInput
           value={title}
           onChange={(value) => setTitle(normalizeSongNameInput(value))}
           placeholder="Nome da música"
           autoFocus
+          readOnly={isDuplicateSong}
           onKeyDown={(e) => { if (e.key === "Enter") handleSave(); }}
         />
       </FormField>

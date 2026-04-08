@@ -1,16 +1,19 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ExternalLink, FolderOpen, Loader2 } from "lucide-react";
-import type { IndexedFile } from "../types";
+import { useAppState } from "../context/AppContext";
+import type { IndexedFile, ScoreListItem, SongListItem } from "../types";
 import * as api from "../api/commands";
 import { Modal, ModalFooterButtons, FormField, TextInput, ErrorMessage } from "./ui";
 import { getDirectoryPath, getFileName } from "../utils/paths";
 import { normalizeScoreNameForSave, normalizeScoreNameInput } from "../utils/nameFormat";
 import { getErrorMessage } from "../utils/errors";
+import { describeScoreConflict, findExistingScoreConflictInSong } from "../utils/libraryDuplicates";
 
 interface AddScoreToSongModalProps {
   isOpen: boolean;
   songName: string;
   file: IndexedFile | null;
+  existingScores?: ScoreListItem[];
   onClose: () => void;
   onSave: (file: IndexedFile) => Promise<void>;
 }
@@ -19,6 +22,7 @@ export function AddScoreToSongModal({
   isOpen,
   songName,
   file,
+  existingScores,
   onClose,
   onSave,
 }: AddScoreToSongModalProps) {
@@ -27,6 +31,33 @@ export function AddScoreToSongModal({
   const [error, setError] = useState("");
   const [openingScorePath, setOpeningScorePath] = useState<string | null>(null);
   const [openingLocationPath, setOpeningLocationPath] = useState<string | null>(null);
+  const { state } = useAppState();
+  const scoresForDuplicateCheck = existingScores ?? state.selectedSong?.scores ?? [];
+  const scoreConflict = useMemo(
+    () => {
+      if (!file) {
+        return null;
+      }
+
+      const currentSong: SongListItem = state.selectedSong
+        ? { ...state.selectedSong, scores: scoresForDuplicateCheck }
+        : {
+            id: "",
+            name: songName,
+            composer: null,
+            arranger: null,
+            updated_at: "",
+            is_favorite: false,
+            category_ids: [],
+            scores: scoresForDuplicateCheck,
+          };
+
+      return findExistingScoreConflictInSong(currentSong, file);
+    },
+    [file, scoresForDuplicateCheck, songName, state.selectedSong]
+  );
+  const isDuplicateScore = scoreConflict !== null;
+  const conflictMessage = scoreConflict ? describeScoreConflict(scoreConflict) : null;
 
   useEffect(() => {
     if (!isOpen || !file) {
@@ -72,6 +103,11 @@ export function AddScoreToSongModal({
       return;
     }
 
+    if (isDuplicateScore) {
+      setError(describeScoreConflict(scoreConflict));
+      return;
+    }
+
     setIsSaving(true);
     setError("");
 
@@ -108,6 +144,7 @@ export function AddScoreToSongModal({
           onCancel={onClose}
           onConfirm={handleSave}
           isSaving={isSaving}
+          confirmDisabled={isDuplicateScore}
         />
       }
     >
@@ -123,6 +160,11 @@ export function AddScoreToSongModal({
       <FormField label="Partitura selecionada">
         <div className="rounded border border-[#c5cfdb] bg-white p-3 space-y-3">
           <div className="min-w-0">
+            {conflictMessage && (
+              <p className="mb-1.5 text-xs font-semibold text-amber-700">
+                {conflictMessage}
+              </p>
+            )}
             <p className="text-xs text-[#5d738b] font-semibold break-all whitespace-normal">
               {fileName}
             </p>
@@ -168,6 +210,7 @@ export function AddScoreToSongModal({
             onChange={(value) => setInstrumentName(normalizeScoreNameInput(value))}
             placeholder="Nome do instrumento"
             autoFocus
+            readOnly={isDuplicateScore}
           />
         </div>
       </FormField>

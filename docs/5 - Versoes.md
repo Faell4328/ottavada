@@ -293,10 +293,21 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 	- O problema atual: quando se tem aberto uma música com muitas partituras e é aberto uma música com poucas, o usuário pode ficar perdido, porque a música e partituras foi para cima.
 - [x] Não está sendo pegado o nome de todos as partituras/instrumentos, que ficam depois do "-", ex: `298H.C. AVANTE SERVO DE JEOVA - Bass Guitar.mus`. Como é um instrumentos não listado, deve fica após os listados em ordem alfabética.
 - [x] Padronizar a duração de todos os toast para 8 segundos.
-- [ ] Caso o arquivo já exista em alguma música o tratamento deve ser diferente, tanto modal, quanto `toast`.
-	- Aparece um toast avisando que foi adicionando x partituras, sendo que já existem.
-	- Minha ideia é simples, se o arquivo já está sendo utilizado, deve-se orientar o usuário: "Esse arquivo já está sendo utilizado na música x - (instrumento y ou sem instrumentos especificado)".
-	- Também, adicionar um texto avisando quando o nome da música já existe: "Essa música já existe em seu repertorio no aplicativo, os instrumentos listados abaixo serão adicionado".
+- [x] Tratamento especial quando a música e/ou partitura existir, valendo tanto para o "adicionar música", "indexar diretório" e "adicionar arquivo" (na música):
+	- Música já existe:
+	- [x] Deve aparecer uma mensagem acima do nome: "Essa música já existe em seu repertorio".
+	- [x] Não deve ser possível alterar o nome da música (sendo readonly).
+	- [x] No caso de "adicionar música", o botão de salvar deve ficar desativado.
+	- [x] No caso de "indexar diretório", não deve aparecer para adicionar compositor, arranjador e categorias.
+	- Partitura já existe:
+	- [x] Deve aparecer uma mensagem acima do nome: "Essa partitura já foi adicionada".
+	- [x] Não deve ser possível alterar o nome da partitura (sendo readonly).
+	- [x] Não deve ser possível deletar a partitura.
+	- [x] No caso de "adicionar arquivo", o botão de salvar deve estar desativado.
+	- Toast:
+	- [x] O toast deve aparecer apenas a quantidade de partituras realmente adicionadas e não total.
+	- Outras;
+	- [x] No caso de "indexar diretório", se a música já existir e todas as partituras existirem também, o botão de salvar deve ficar desativado.
 - [ ] Muda texto para "selecionar arquivo(s)" no overflow menu, permitir também o usuário escolher 1 ou mais arquivos.
 - [ ] Ao editar informação da música, não precisa abrir para mostrar as partituras/instrumentos.
 - [ ] Ao selecionar uma categoria de SideBar, ao adicionar uma música ou indexar ele já deve vir com a categoria marcada por padrão.

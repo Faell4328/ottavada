@@ -2,6 +2,7 @@ use chrono::Local;
 use std::path::Path;
 use tauri::State;
 use tracing::{error, info, warn};
+use serde::Serialize;
 
 use crate::commands::common::require_server_settings;
 use crate::domain::errors::AppError;
@@ -164,7 +165,7 @@ fn import_files_core(
     category_ids: &[String],
     composer: Option<&str>,
     arranger: Option<&str>,
-) -> Result<Vec<SongListItem>, AppError> {
+) -> Result<ImportIndexedFilesResult, AppError> {
     let now = Local::now().naive_local();
 
     // Agrupar arquivos por nome da música
@@ -180,33 +181,14 @@ fn import_files_core(
     }
 
     let all_songs = db.get_all_songs()?;
+    let mut added_count = 0;
 
     for (song_name, group_files) in &groups {
         let existing_song = all_songs
             .iter()
             .find(|s| s.name.eq_ignore_ascii_case(song_name));
 
-        let song_id = if let Some(existing) = existing_song {
-            existing.id.clone()
-        } else {
-            let new_song_id = uuid::Uuid::new_v4().to_string();
-            let song = Song {
-                id: new_song_id.clone(),
-                name: song_name.clone(),
-                composer: normalized_optional_text_ref(composer),
-                arranger: normalized_optional_text_ref(arranger),
-                is_favorite: false,
-                status: ScoreStatus::Main,
-                updated_at: now,
-                updated_by: host_id.to_string(),
-            };
-            db.insert_song(&song, category_ids)?;
-            new_song_id
-        };
-
-        let existing_scores = all_songs
-            .iter()
-            .find(|s| s.id == song_id)
+        let existing_scores = existing_song
             .map(|s| s.scores.clone())
             .unwrap_or_default();
 
@@ -219,6 +201,7 @@ fn import_files_core(
             .filter(|score| score.name.is_none())
             .map(|score| score.file_path.clone())
             .collect();
+        let mut files_to_add = Vec::new();
 
         for indexed_file in group_files {
             let normalized_instrument =
@@ -257,6 +240,44 @@ fn import_files_core(
                 ..(*indexed_file).clone()
             };
 
+            files_to_add.push((
+                normalized_file,
+                score_file_path,
+                file_name,
+                file_size,
+                file_modified_at,
+            ));
+
+            if let Some(instrument) = normalized_instrument {
+                known_named_instruments.push(instrument);
+            } else {
+                known_unnamed_paths.push(indexed_file.path.clone());
+            }
+        }
+
+        if files_to_add.is_empty() {
+            continue;
+        }
+
+        let song_id = if let Some(existing) = existing_song {
+            existing.id.clone()
+        } else {
+            let new_song_id = uuid::Uuid::new_v4().to_string();
+            let song = Song {
+                id: new_song_id.clone(),
+                name: song_name.clone(),
+                composer: normalized_optional_text_ref(composer),
+                arranger: normalized_optional_text_ref(arranger),
+                is_favorite: false,
+                status: ScoreStatus::Main,
+                updated_at: now,
+                updated_by: host_id.to_string(),
+            };
+            db.insert_song(&song, category_ids)?;
+            new_song_id
+        };
+
+        for (normalized_file, score_file_path, file_name, file_size, file_modified_at) in files_to_add {
             let score = Score::new_from_file(
                 song_id.clone(),
                 host_id.to_string(),
@@ -267,16 +288,20 @@ fn import_files_core(
             );
 
             db.insert_score(&score)?;
-
-            if let Some(instrument) = normalized_instrument {
-                known_named_instruments.push(instrument);
-            } else {
-                known_unnamed_paths.push(indexed_file.path.clone());
-            }
+            added_count += 1;
         }
     }
 
-    db.get_all_songs()
+    Ok(ImportIndexedFilesResult {
+        songs: db.get_all_songs()?,
+        added_count,
+    })
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ImportIndexedFilesResult {
+    pub songs: Vec<SongListItem>,
+    pub added_count: usize,
 }
 
 #[tauri::command]
@@ -296,6 +321,7 @@ pub fn import_indexed_files(
         None,
         None,
     )
+    .map(|result| result.songs)
 }
 
 #[tauri::command]
@@ -306,7 +332,7 @@ pub fn import_indexed_files_with_metadata(
     category_ids: Vec<String>,
     composer: Option<String>,
     arranger: Option<String>,
-) -> Result<Vec<SongListItem>, AppError> {
+) -> Result<ImportIndexedFilesResult, AppError> {
     let settings = require_server_settings(&store)?;
     info!(
         "Importando arquivos indexados com metadados: files={}, categories={}, composer_set={}, arranger_set={}",
@@ -324,12 +350,13 @@ pub fn import_indexed_files_with_metadata(
         composer.as_deref(),
         arranger.as_deref(),
     )
-    .map(|songs| {
+    .map(|result| {
         info!(
-            "Importação de arquivos concluída com sucesso: músicas retornadas={}",
-            songs.len()
+            "Importação de arquivos concluída com sucesso: músicas retornadas={}, partituras adicionadas={}",
+            result.songs.len(),
+            result.added_count
         );
-        songs
+        result
     })
     .map_err(|e| {
         error!("Erro ao importar arquivos indexados: {:?}", e);

@@ -52,6 +52,7 @@ interface ModalFooterButtonsProps {
   onCancel: () => void;
   onConfirm: () => void;
   isSaving: boolean;
+  confirmDisabled?: boolean;
   cancelLabel?: string;
   confirmLabel?: string;
   savingLabel?: string;
@@ -61,6 +62,7 @@ export function ModalFooterButtons({
   onCancel,
   onConfirm,
   isSaving,
+  confirmDisabled,
   cancelLabel = "Cancelar",
   confirmLabel = "Salvar",
   savingLabel = "Salvando...",
@@ -77,7 +79,7 @@ export function ModalFooterButtons({
       <button
         onClick={onConfirm}
         className="flex-1 rounded bg-[#4f84d7] px-3 py-2 text-sm font-medium text-white hover:bg-[#3d6fb8] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        disabled={isSaving}
+        disabled={isSaving || confirmDisabled}
       >
         {isSaving ? savingLabel : confirmLabel}
       </button>

@@ -1,12 +1,34 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { AddScoreToSongModal } from "../../components/AddScoreToSongModal";
+import { AppProvider } from "../../context/AppContext";
 import type { IndexedFile } from "../../types";
 import * as api from "../../api/commands";
 import { normalizeScoreNameForSave } from "../../utils/nameFormat";
 
 vi.mock("@tauri-apps/api/core", () => ({
-  invoke: vi.fn(),
+  invoke: vi.fn(async (cmd: string) => {
+    switch (cmd) {
+      case "is_first_run":
+        return false;
+      case "get_all_songs":
+        return [];
+      case "get_categories":
+        return [];
+      case "get_settings":
+        return {
+          computer_id: "test-id",
+          computer_name: "Test",
+          google_drive_mode: "Local",
+          first_run_completed: true,
+          google_service_account: null,
+        };
+      case "scan_files_for_changes":
+        return { changed_files: [], failed_files: [] };
+      default:
+        return null;
+    }
+  }),
 }));
 
 const sampleFile: IndexedFile = {
@@ -16,9 +38,24 @@ const sampleFile: IndexedFile = {
   extension: "musx",
 };
 
+const existingScores = [
+  {
+    id: "score-1",
+    name: "Flauta",
+    file_path: "/library/HINO NACIONAL - Flauta.musx",
+    file_extension: "musx",
+    updated_at: "2026-04-08T00:00:00.000Z",
+    status: "main",
+  },
+];
+
 describe("AddScoreToSongModal", () => {
   const mockOnClose = vi.fn();
   const mockOnSave = vi.fn();
+
+  function renderWithProvider(ui: React.ReactElement) {
+    return render(<AppProvider>{ui}</AppProvider>);
+  }
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -26,7 +63,7 @@ describe("AddScoreToSongModal", () => {
   });
 
   it("should not render when isOpen is false", () => {
-    render(
+    renderWithProvider(
       <AddScoreToSongModal
         isOpen={false}
         songName="HINO NACIONAL"
@@ -40,7 +77,7 @@ describe("AddScoreToSongModal", () => {
   });
 
   it("should render song name as readonly and allow instrument editing", () => {
-    render(
+    renderWithProvider(
       <AddScoreToSongModal
         isOpen={true}
         songName="HINO NACIONAL"
@@ -59,13 +96,34 @@ describe("AddScoreToSongModal", () => {
     expect(instrumentInput).toHaveValue("Flauta 2");
   });
 
+  it("should show duplicate score warning above the score name and disable save", () => {
+    renderWithProvider(
+      <AddScoreToSongModal
+        isOpen={true}
+        songName="HINO NACIONAL"
+        file={sampleFile}
+        existingScores={existingScores}
+        onClose={mockOnClose}
+        onSave={mockOnSave}
+      />
+    );
+
+    const warning = screen.getByText("Essa partitura já foi adicionada");
+
+    expect(warning.nextElementSibling).toHaveTextContent(
+      "HINO NACIONAL - Flauta.musx"
+    );
+    expect(screen.getByPlaceholderText("Nome do instrumento")).toHaveAttribute("readonly");
+    expect(screen.getByRole("button", { name: "Salvar" })).toBeDisabled();
+  });
+
   it("should open score file and file location", async () => {
     const openFilePathSpy = vi.spyOn(api, "openFilePath").mockResolvedValue(undefined);
     const openFileLocationSpy = vi
       .spyOn(api, "openFileLocation")
       .mockResolvedValue(undefined);
 
-    render(
+    renderWithProvider(
       <AddScoreToSongModal
         isOpen={true}
         songName="HINO NACIONAL"
@@ -89,7 +147,7 @@ describe("AddScoreToSongModal", () => {
   });
 
   it("should save with edited instrument and close modal", async () => {
-    render(
+    renderWithProvider(
       <AddScoreToSongModal
         isOpen={true}
         songName="HINO NACIONAL"
@@ -117,7 +175,7 @@ describe("AddScoreToSongModal", () => {
   it("should show error when save fails", async () => {
     mockOnSave.mockRejectedValue(new Error("Falha ao adicionar"));
 
-    render(
+    renderWithProvider(
       <AddScoreToSongModal
         isOpen={true}
         songName="HINO NACIONAL"

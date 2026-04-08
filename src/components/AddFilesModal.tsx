@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { ExternalLink, FolderOpen, Loader2, Trash2 } from "lucide-react";
 import { useAppState } from "../context/AppContext";
-import type { IndexedFile } from "../types";
+import type { IndexedFile, SongListItem } from "../types";
 import * as api from "../api/commands";
 import { Modal, ModalFooterButtons, FormField, TextInput, ErrorMessage } from "./ui";
 import { CategoryCheckboxList } from "./ui/CategoryCheckboxList";
@@ -13,21 +13,30 @@ import {
   normalizeSongNameInput,
 } from "../utils/nameFormat";
 import { compareInstrumentNames } from "../utils/instrumentOrder";
+import {
+  describeExistingSongWarning,
+  describeScoreConflict,
+  findExistingScoreConflict,
+  findSongByName,
+} from "../utils/libraryDuplicates";
 
 interface AddFilesModalProps {
   isOpen: boolean;
   files: IndexedFile[];
+  existingSongs?: SongListItem[];
   onClose: () => void;
-  onSuccess: () => Promise<void>;
+  onSuccess: (addedCount: number) => Promise<void>;
 }
 
 export function AddFilesModal({
   isOpen,
   files,
+  existingSongs,
   onClose,
   onSuccess,
 }: AddFilesModalProps) {
   const { state } = useAppState();
+  const songsForDuplicateCheck = existingSongs ?? state.songs;
   const [title, setTitle] = useState("");
   const [composer, setComposer] = useState("");
   const [arranger, setArranger] = useState("");
@@ -39,6 +48,41 @@ export function AddFilesModal({
   const [editingInstrumentIndex, setEditingInstrumentIndex] = useState<number | null>(null);
   const [openingScorePath, setOpeningScorePath] = useState<string | null>(null);
   const [openingLocationPath, setOpeningLocationPath] = useState<string | null>(null);
+  const normalizedTitle = useMemo(() => normalizeSongNameForSave(title), [title]);
+  const existingSong = useMemo(
+    () => findSongByName(songsForDuplicateCheck, normalizedTitle),
+    [normalizedTitle, songsForDuplicateCheck]
+  );
+  const duplicateMap = useMemo(() => {
+    const map = new Map<number, ReturnType<typeof findExistingScoreConflict>>();
+
+    files.forEach((file, idx) => {
+      map.set(idx, findExistingScoreConflict(songsForDuplicateCheck, file, normalizedTitle));
+    });
+
+    return map;
+  }, [files, normalizedTitle, songsForDuplicateCheck]);
+  const activeFileEntries = useMemo(
+    () => files.map((file, idx) => ({ file, idx })).filter(({ idx }) => !removedFileIndices.has(idx)),
+    [files, removedFileIndices]
+  );
+  const duplicateEntries = activeFileEntries.filter(({ idx }) => duplicateMap.get(idx) !== null);
+  const addableEntries = activeFileEntries.filter(({ idx }) => duplicateMap.get(idx) === null);
+  const hasAddableFiles = addableEntries.length > 0;
+  const isDuplicateSong = existingSong !== null;
+  const getLiveConflict = (file: IndexedFile) =>
+    existingSong
+      ? findExistingScoreConflict([existingSong], file, existingSong.name)
+      : findExistingScoreConflict(songsForDuplicateCheck, file, normalizedTitle);
+  const duplicateSummaryMessage = isDuplicateSong
+    ? activeFileEntries.length === 0
+      ? ""
+      : duplicateEntries.length === 0
+        ? "Essa música já existe em seu repertorio."
+        : `${describeExistingSongWarning()} ${addableEntries.length} partitura(s) nova(s) serão adicionadas.`
+    : duplicateEntries.length > 0
+      ? `${duplicateEntries.length} partitura(s) já foram adicionadas e serão ignoradas.`
+      : "";
 
   useEffect(() => {
     if (isOpen && files.length > 0) {
@@ -110,17 +154,18 @@ export function AddFilesModal({
   };
 
   const handleSave = async () => {
-    const normalizedTitle = normalizeSongNameForSave(title);
-
     if (!normalizedTitle) {
       setError("O título da música é obrigatório");
       return;
     }
 
-    const activeFiles = files.filter((_, idx) => !removedFileIndices.has(idx));
-    
-    if (activeFiles.length === 0) {
+    if (activeFileEntries.length === 0) {
       setError("Adicione pelo menos um arquivo");
+      return;
+    }
+
+    if (!hasAddableFiles) {
+      setError("Nenhuma partitura nova para adicionar");
       return;
     }
 
@@ -128,26 +173,25 @@ export function AddFilesModal({
     setError("");
 
     try {
-      const filteredFiles = activeFiles.map((f) => {
-        const originalIdx = files.indexOf(f);
+      const filteredFiles = activeFileEntries.map(({ file, idx }) => {
         return {
-          path: f.path,
+          path: file.path,
           name: normalizedTitle,
           instrument: normalizeScoreNameForSave(
-            instrumentNames[originalIdx] ?? f.instrument
+            instrumentNames[idx] ?? file.instrument
           ),
-          extension: f.extension,
+          extension: file.extension,
         };
       });
 
-      await api.importIndexedFilesWithMetadata(
+      const importResult = await api.importIndexedFilesWithMetadata(
         filteredFiles,
         selectedCategories,
         composer.trim() || null,
         arranger.trim() || null
       );
 
-      await onSuccess();
+      await onSuccess(importResult.added_count);
       onClose();
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Erro ao salvar";
@@ -159,11 +203,9 @@ export function AddFilesModal({
 
   if (files.length === 0) return null;
 
-  const activeFiles = files.filter((_, idx) => !removedFileIndices.has(idx));
-  const instrumentCount = activeFiles.length;
-  const visibleFiles = files
-    .map((file, idx) => ({ file, idx }))
-    .filter(({ idx }) => !removedFileIndices.has(idx))
+  const instrumentCount = activeFileEntries.length;
+  const visibleFiles = activeFileEntries
+    .slice()
     .sort((a, b) => {
       // Keep list stable while the user is actively typing in an input.
       // After blur, reorder based on edited instrument names.
@@ -188,42 +230,53 @@ export function AddFilesModal({
           onCancel={onClose}
           onConfirm={handleSave}
           isSaving={isSaving}
+          confirmDisabled={!hasAddableFiles}
         />
       }
     >
       <FormField label="Nome da Música" required>
+        {duplicateSummaryMessage && (
+          <p className="mb-1.5 text-xs font-semibold text-amber-700">
+            {duplicateSummaryMessage}
+          </p>
+        )}
         <TextInput
           value={title}
           onChange={(value) => setTitle(normalizeSongNameInput(value))}
           placeholder="Nome da música"
           autoFocus
+          readOnly={isDuplicateSong}
         />
       </FormField>
 
-      <FormField label="Compositor">
-        <TextInput
-          value={composer}
-          onChange={setComposer}
-          placeholder="Nome do compositor"
-        />
-      </FormField>
+      {!isDuplicateSong && (
+        <>
+          <FormField label="Compositor">
+            <TextInput
+              value={composer}
+              onChange={setComposer}
+              placeholder="Nome do compositor"
+            />
+          </FormField>
 
-      <FormField label="Arranjador">
-        <TextInput
-          value={arranger}
-          onChange={setArranger}
-          placeholder="Nome do arranjador"
-        />
-      </FormField>
+          <FormField label="Arranjador">
+            <TextInput
+              value={arranger}
+              onChange={setArranger}
+              placeholder="Nome do arranjador"
+            />
+          </FormField>
 
-      {state.categories.length > 0 && (
-        <FormField label="Categorias">
-          <CategoryCheckboxList
-            categories={state.categories}
-            selectedIds={selectedCategories}
-            onToggle={toggleCategory}
-          />
-        </FormField>
+          {state.categories.length > 0 && (
+            <FormField label="Categorias">
+              <CategoryCheckboxList
+                categories={state.categories}
+                selectedIds={selectedCategories}
+                onToggle={toggleCategory}
+              />
+            </FormField>
+          )}
+        </>
       )}
 
       {instrumentCount > 0 && (
@@ -232,11 +285,19 @@ export function AddFilesModal({
             {visibleFiles.map(({ file, idx }) => {
               const fileName = getFileName(file.path) || file.name;
               const directoryPath = getDirectoryPath(file.path);
+              const conflict = getLiveConflict(file);
+              const isLocked = conflict !== null;
+              const conflictMessage = conflict ? describeScoreConflict(conflict) : null;
               
               return (
                 <div key={idx} className="space-y-1">
                   <div className="flex items-center justify-between">
                     <div className="min-w-0 flex-1 pr-2">
+                      {conflictMessage && (
+                        <p className="text-xs font-semibold text-amber-700">
+                          {conflictMessage}
+                        </p>
+                      )}
                       <p className="text-xs text-[#5d738b] font-semibold break-all whitespace-normal">
                         {fileName}
                       </p>
@@ -247,7 +308,8 @@ export function AddFilesModal({
                     <button
                       type="button"
                       onClick={() => removeFile(idx)}
-                      className="p-1 text-[#8b9db2] hover:text-red-500 transition-colors"
+                      disabled={isLocked}
+                      className="p-1 text-[#8b9db2] hover:text-red-500 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
                       title="Remover arquivo"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -290,6 +352,7 @@ export function AddFilesModal({
                     onFocus={() => setEditingInstrumentIndex(idx)}
                     onBlur={() => setEditingInstrumentIndex(null)}
                     placeholder="Nome do instrumento"
+                    readOnly={isLocked}
                   />
                 </div>
               );

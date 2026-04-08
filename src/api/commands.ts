@@ -71,7 +71,7 @@ export async function importIndexedFilesWithMetadata(
   categoryIds: string[] = [],
   composer: string | null = null,
   arranger: string | null = null
-): Promise<SongListItem[]> {
+): Promise<ImportIndexedFilesResult> {
   return invoke("import_indexed_files_with_metadata", {
     files,
     categoryIds,
@@ -253,6 +253,11 @@ export interface ScanResult {
   not_found_files: string[];
   recovered_files: string[];
   failed_files: Array<[string, string]>;
+}
+
+export interface ImportIndexedFilesResult {
+  songs: SongListItem[];
+  added_count: number;
 }
 
 export async function scanFilesForChanges(): Promise<ScanResult> {

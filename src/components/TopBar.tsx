@@ -5,10 +5,10 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { useAppState } from "../context/AppContext";
 import * as api from "../api/commands";
 import toast from "react-hot-toast";
-import type { IndexedFile } from "../types";
+import type { IndexedFile, SongListItem } from "../types";
 import { getErrorMessage } from "../utils/errors";
 import { isClientComputer } from "../utils/computer";
-import { AddFilesModal } from "./AddFilesModal";
+import { AddFilesModal } from "./AddFilesModal.tsx";
 import { AddMusicModal } from "./AddMusicModal";
 
 interface TopBarProps {
@@ -26,6 +26,7 @@ export default function TopBar({
   const syncBlockedTitle = "Operação bloqueada durante sincronização";
   const [showAddMusicModal, setShowAddMusicModal] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<IndexedFile[]>([]);
+  const [existingSongsForAddFiles, setExistingSongsForAddFiles] = useState<SongListItem[]>([]);
   const [showAddFilesModal, setShowAddFilesModal] = useState(false);
 
   // Forçar reload quando scores muda - isso garante que a UI atualiza
@@ -52,7 +53,9 @@ export default function TopBar({
           toast.error("Nenhuma música encontrada no diretório selecionado");
           return;
         }
+        const existingSongs = await api.getAllSongs();
         setPendingFiles(files);
+        setExistingSongsForAddFiles(existingSongs);
         setShowAddFilesModal(true);
       }
     } catch (err) {
@@ -95,10 +98,11 @@ export default function TopBar({
   function handleCloseAddFilesModal() {
     setShowAddFilesModal(false);
     setPendingFiles([]);
+    setExistingSongsForAddFiles([]);
   }
 
-  async function handleAddFilesModalSuccess() {
-    toast.success(`${pendingFiles.length} arquivo(s) adicionado(s) com sucesso`);
+  async function handleAddFilesModalSuccess(addedCount: number) {
+    toast.success(`${addedCount} arquivo(s) adicionado(s) com sucesso`);
     handleCloseAddFilesModal();
     await handleScoresChange();
   }
@@ -165,6 +169,7 @@ export default function TopBar({
       <AddFilesModal
         isOpen={showAddFilesModal}
         files={pendingFiles}
+        existingSongs={existingSongsForAddFiles}
         onClose={handleCloseAddFilesModal}
         onSuccess={handleAddFilesModalSuccess}
       />

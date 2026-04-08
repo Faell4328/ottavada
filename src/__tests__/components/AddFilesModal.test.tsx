@@ -47,6 +47,28 @@ const sampleFiles: IndexedFile[] = [
   { path: "/music/Canon - Violino.musx", name: "Canon", instrument: "Violino", extension: "musx" },
 ];
 
+const duplicateSongs = [
+  {
+    id: "song-1",
+    name: "CANON",
+    composer: null,
+    arranger: null,
+    updated_at: "2026-04-08T00:00:00.000Z",
+    is_favorite: false,
+    category_ids: [],
+    scores: [
+      {
+        id: "score-1",
+        name: "Flauta",
+        file_path: "/library/Canon - Flauta.musx",
+        file_extension: "musx",
+        updated_at: "2026-04-08T00:00:00.000Z",
+        status: "main",
+      },
+    ],
+  },
+];
+
 function renderWithProvider(ui: React.ReactElement) {
   return render(<AppProvider>{ui}</AppProvider>);
 }
@@ -137,6 +159,25 @@ describe("AddFilesModal", () => {
 
     fireEvent.change(instrumentInputs[0], { target: { value: "Flauta 2 Transversal" } });
     expect(instrumentInputs[0]).toHaveValue("Flauta 2 Transversal");
+  });
+
+  it("should show duplicate score feedback above the score file name and keep the input readonly", () => {
+    renderWithProvider(
+      <AddFilesModal
+        isOpen={true}
+        files={sampleFiles}
+        existingSongs={duplicateSongs}
+        onClose={mockOnClose}
+        onSuccess={mockOnSuccess}
+      />
+    );
+
+    const conflictMessage = screen.getAllByText("Essa partitura já foi adicionada")[0];
+    const scoreName = screen.getAllByText("Canon - Flauta.musx")[0];
+    const instrumentInput = screen.getAllByPlaceholderText("Nome do instrumento")[0];
+
+    expect(conflictMessage.nextElementSibling).toBe(scoreName);
+    expect(instrumentInput).toHaveAttribute("readonly");
   });
 
   it("should open selected file with default app", async () => {
