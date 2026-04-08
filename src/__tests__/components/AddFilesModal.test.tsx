@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { AddFilesModal } from "../../components/AddFilesModal";
 import { AppProvider } from "../../context/AppContext";
-import type { IndexedFile } from "../../types";
+import type { IndexedFile, SongListItem } from "../../types";
 import * as api from "../../api/commands";
 
 // Mock Tauri APIs
@@ -47,7 +47,7 @@ const sampleFiles: IndexedFile[] = [
   { path: "/music/Canon - Violino.musx", name: "Canon", instrument: "Violino", extension: "musx" },
 ];
 
-const duplicateSongs = [
+const duplicateSongs: SongListItem[] = [
   {
     id: "song-1",
     name: "CANON",

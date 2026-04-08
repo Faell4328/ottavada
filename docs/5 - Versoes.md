@@ -311,7 +311,7 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [x] Muda texto para "selecionar arquivo(s)" no overflow menu, permitir também o usuário escolher 1 ou mais arquivos.
 - [x] Ao editar informação da música, não precisa abrir para mostrar as partituras/instrumentos.
 - [x] Ao selecionar uma categoria de SideBar, ao adicionar uma música ou indexar ele já deve vir com a categoria marcada por padrão.
-- [ ] Ao trocar de provedor ou de conta com sucesso nas configurações, executar o fluxo de força snapshot.
+- [x] Ao trocar de provedor ou de conta com sucesso nas configurações, executar o fluxo de força snapshot.
 - [x] Retirar toast duplicado ao configurar e testar provedor no primeiro acesso.
 - [x] Ao iniciar o aplicativo (servidor), deve iniciar fluxo de "aplicar alterações"
 - [ ] Adicionar uma categoria default, que é a categoria "Sem categoria", quando uma música não possui categoria, ela virá para essa categoria.
@@ -322,7 +322,8 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 
 **Correção**
 - [x] Quando estou com uma música aberta e clico para abrir outra, as vezes ocorre da música ficar sem partitura (sendo que ela tem), precisando abrir e fechar novamente para aparecer.
-- [ ] A aplicação trava ao "importa backup local" e possivelmente da nuvem também.
+- [x] A aplicação trava ao "importa backup local" e possivelmente da nuvem também.
+- [ ] Quando está sendo feito o upload dos arquivos no servidor, o aplicativo é fechado e aberto novamente, não se dá continuidade ao upload. Isso funcionava anteriormente.
 
 **Tenho que pensar mais um pouco**
 - [ ] Quando o usuário selecionar para indexar um diretório e no diretório não tem nada, deve aparecer um modal listando tudo que tem dentro e com um botão para o usuário abrir o local.

@@ -197,10 +197,10 @@ export function useAppCrudActions({
     try {
       await api.saveSettings(settings);
       dispatch({ type: "SET_SETTINGS", payload: settings });
-      toast.success("Configurações salvas com sucesso!");
     } catch (err) {
       console.error("Failed to save settings:", err);
       toast.error("Erro ao salvar configurações");
+      throw err;
     }
   }, [dispatch]);
 

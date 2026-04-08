@@ -1,4 +1,6 @@
 use std::fs;
+use std::fs::File;
+use std::io::BufReader;
 use std::path::{Path, PathBuf};
 
 use rusqlite::params;
@@ -165,10 +167,11 @@ pub fn import_backup_msgpack(
     let settings = store.get_app_settings()?;
     settings.require_server_only()?;
 
-    let bytes = fs::read(&backup_path)
-        .map_err(|e| AppError::Generic(format!("Erro ao ler backup.msgpack: {}", e)))?;
+    let file = File::open(&backup_path)
+        .map_err(|e| AppError::Generic(format!("Erro ao abrir backup.msgpack: {}", e)))?;
+    let reader = BufReader::new(file);
 
-    let payload: BackupMessagePack = rmp_serde::from_slice(&bytes)
+    let payload: BackupMessagePack = rmp_serde::from_read(reader)
         .map_err(|e| AppError::Generic(format!("Erro ao desserializar backup.msgpack: {}", e)))?;
 
     if payload.schema_version != BACKUP_SCHEMA_VERSION {
@@ -465,100 +468,103 @@ fn validate_backup_file_integrity(
 }
 
 fn restore_backup_payload(db: &Database, payload: &BackupMessagePack) -> Result<(), AppError> {
-    let mut conn = db.conn.lock().unwrap();
-    let tx = conn.transaction()?;
+    {
+        let mut conn = db.conn.lock().unwrap();
+        let tx = conn.transaction()?;
 
-    tx.execute_batch(
-        "
-        DELETE FROM changedField;
-        DELETE FROM backupSongs;
-        DELETE FROM categoriesSongs;
-        DELETE FROM scores;
-        DELETE FROM songs;
-        DELETE FROM categories;
-    ",
-    )?;
-
-    for category in &payload.categories {
-        tx.execute(
-            "INSERT INTO categories (id, name) VALUES (?1, ?2)",
-            params![category.id, category.name],
+        tx.execute_batch(
+            "
+            DELETE FROM changedField;
+            DELETE FROM backupSongs;
+            DELETE FROM categoriesSongs;
+            DELETE FROM scores;
+            DELETE FROM songs;
+            DELETE FROM categories;
+        ",
         )?;
+
+        for category in &payload.categories {
+            tx.execute(
+                "INSERT INTO categories (id, name) VALUES (?1, ?2)",
+                params![category.id, category.name],
+            )?;
+        }
+
+        for song in &payload.songs {
+            tx.execute(
+                "INSERT INTO songs (id, name, composer, arranger, is_favorite, last_score_file_modified_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                params![
+                    song.id,
+                    song.name,
+                    song.composer,
+                    song.arranger,
+                    song.is_favorite as i32,
+                    song.last_score_file_modified_at,
+                ],
+            )?;
+        }
+
+        for score in &payload.scores {
+            tx.execute(
+                "INSERT INTO scores (id, song_id, name, host_id, file_path, file_name, file_size, file_modified_at, status)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+                params![
+                    score.id,
+                    score.song_id,
+                    score.name,
+                    score.host_id,
+                    score.file_path,
+                    score.file_name,
+                    score.file_size,
+                    score.file_modified_at,
+                    score.status,
+                ],
+            )?;
+        }
+
+        for relation in &payload.categories_songs {
+            tx.execute(
+                "INSERT INTO categoriesSongs (id, category_id, song_id) VALUES (?1, ?2, ?3)",
+                params![relation.id, relation.category_id, relation.song_id],
+            )?;
+        }
+
+        for backup_song in &payload.backup_songs {
+            tx.execute(
+                "INSERT INTO backupSongs (id, song_id, status, last_backup_at, error_message)
+                 VALUES (?1, ?2, ?3, ?4, ?5)",
+                params![
+                    backup_song.id,
+                    backup_song.song_id,
+                    backup_song.status,
+                    backup_song.last_backup_at,
+                    backup_song.error_message,
+                ],
+            )?;
+        }
+
+        for change in &payload.changed_field {
+            tx.execute(
+                "INSERT INTO changedField (id, origin, type, entity, entityId, field, oldValue, newValue, timestamp)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+                params![
+                    change.id,
+                    change.origin,
+                    change.change_type,
+                    change.entity,
+                    change.entity_id,
+                    change.field,
+                    change.old_value,
+                    change.new_value,
+                    change.timestamp,
+                ],
+            )?;
+        }
+
+        tx.commit()?;
     }
 
-    for song in &payload.songs {
-        tx.execute(
-            "INSERT INTO songs (id, name, composer, arranger, is_favorite, last_score_file_modified_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-            params![
-                song.id,
-                song.name,
-                song.composer,
-                song.arranger,
-                song.is_favorite as i32,
-                song.last_score_file_modified_at,
-            ],
-        )?;
-    }
-
-    for score in &payload.scores {
-        tx.execute(
-            "INSERT INTO scores (id, song_id, name, host_id, file_path, file_name, file_size, file_modified_at, status)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
-            params![
-                score.id,
-                score.song_id,
-                score.name,
-                score.host_id,
-                score.file_path,
-                score.file_name,
-                score.file_size,
-                score.file_modified_at,
-                score.status,
-            ],
-        )?;
-    }
-
-    for relation in &payload.categories_songs {
-        tx.execute(
-            "INSERT INTO categoriesSongs (id, category_id, song_id) VALUES (?1, ?2, ?3)",
-            params![relation.id, relation.category_id, relation.song_id],
-        )?;
-    }
-
-    for backup_song in &payload.backup_songs {
-        tx.execute(
-            "INSERT INTO backupSongs (id, song_id, status, last_backup_at, error_message)
-             VALUES (?1, ?2, ?3, ?4, ?5)",
-            params![
-                backup_song.id,
-                backup_song.song_id,
-                backup_song.status,
-                backup_song.last_backup_at,
-                backup_song.error_message,
-            ],
-        )?;
-    }
-
-    for change in &payload.changed_field {
-        tx.execute(
-            "INSERT INTO changedField (id, origin, type, entity, entityId, field, oldValue, newValue, timestamp)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
-            params![
-                change.id,
-                change.origin,
-                change.change_type,
-                change.entity,
-                change.entity_id,
-                change.field,
-                change.old_value,
-                change.new_value,
-                change.timestamp,
-            ],
-        )?;
-    }
-
-    tx.commit()?;
     db.ensure_default_category()?;
     Ok(())
 }

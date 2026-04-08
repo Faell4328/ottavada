@@ -9,7 +9,7 @@ interface RcloneProviderModalProps {
   onClose: () => void;
   onGenerate: (setup: RcloneSetupInput) => Promise<void>;
   onTest: (provider: RcloneProvider) => Promise<void>;
-  onApprove: (provider: RcloneProvider) => void;
+  onApprove: (provider: RcloneProvider) => Promise<void>;
 }
 
 
@@ -68,7 +68,7 @@ export function RcloneProviderModal({
         appPassword: selectedProvider === "koofr" ? appPassword.trim() : null,
       });
       await onTest(selectedProvider);
-      onApprove(selectedProvider);
+      await onApprove(selectedProvider);
       onClose();
     } catch {
       // O erro já é tratado no componente pai; o modal apenas permanece aberto.

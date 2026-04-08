@@ -116,11 +116,42 @@ export default function SettingsPage() {
     }
   }
 
-  function handleApproveRcloneProvider(provider: RcloneProvider) {
+  async function handleApproveRcloneProvider(provider: RcloneProvider) {
     setRcloneProvider(provider);
     setRcloneConfigGenerated(true);
     setHasRcloneConfigChange(true);
-    setIsRcloneProviderModalOpen(false);
+
+    if (isClient) {
+      return;
+    }
+
+    if (isSyncLocked) {
+      toast.error("Operação bloqueada durante sincronização");
+      throw new Error("SYNC_LOCKED");
+    }
+
+    const baseSettings = state.settings ?? settings;
+    const updatedSettings: AppSettings = {
+      ...baseSettings,
+      rclone_config: {
+        provider,
+      },
+    };
+
+    try {
+      await saveSettings(updatedSettings);
+      await loadSettings();
+
+      const snapshotCreated = await handleForceSnapshot(updatedSettings);
+      if (!snapshotCreated) {
+        throw new Error("SNAPSHOT_FAILED");
+      }
+
+      setHasRcloneConfigChange(false);
+    } catch (error) {
+      toast.error(`Erro ao aplicar troca de provedor/conta: ${getErrorMessage(error)}`);
+      throw error;
+    }
   }
 
   function handleBackNavigation() {
@@ -184,7 +215,7 @@ export default function SettingsPage() {
       toast.success("Configurações salvas com sucesso!");
 
       if (previousProvider !== rcloneProvider || hasRcloneConfigChange) {
-        const snapshotCreated = await handleForceSnapshot();
+        const snapshotCreated = await handleForceSnapshot(updatedSettings);
         if (!snapshotCreated) {
           return;
         }
@@ -199,8 +230,10 @@ export default function SettingsPage() {
     }
   }
 
-  async function handleForceSnapshot() {
-    if (settings.computer_type !== "Server") {
+  async function handleForceSnapshot(settingsOverride?: AppSettings) {
+    const currentSettings = settingsOverride ?? state.settings ?? settings;
+
+    if (currentSettings.computer_type !== "Server") {
       toast.error("A geração de snapshot é permitida apenas no servidor");
       return false;
     }
@@ -211,6 +244,8 @@ export default function SettingsPage() {
     }
 
     setIsGeneratingSnapshot(true);
+    navigate("/");
+    const loadingToastId = toast.loading("Gerando snapshot e aplicando alterações...");
     try {
       const summary = await api.generateSnapshotFile(true);
       await loadSettings();
@@ -226,6 +261,7 @@ export default function SettingsPage() {
       toast.error(`Erro ao gerar snapshot/aplicar alterações: ${getErrorMessage(error)}`);
       return false;
     } finally {
+      toast.dismiss(loadingToastId);
       setIsGeneratingSnapshot(false);
     }
   }
@@ -287,24 +323,33 @@ export default function SettingsPage() {
     }
 
     setIsImportingBackup(true);
-    let shouldRunForcedSnapshot = false;
-    try {
-      const summary = await api.importBackupFile(selectedPath);
-      await Promise.all([loadSettings(), loadSongs(), loadCategories()]);
-      toast.success(
-        `Backup local importado com sucesso. O backup é de ${formatBackupTimestamp(summary.generated_at)}; alterações posteriores não estão incluídas.`,
-          { duration: 8000 }
-      );
-      shouldRunForcedSnapshot = true;
-    } catch (error) {
-      toast.error(`Erro ao importar backup local ou gerar snapshot: ${getErrorMessage(error)}`);
-    } finally {
-      setIsImportingBackup(false);
-    }
+    navigate("/");
+    const loadingToastId = toast.loading("Importando backup local...");
 
-    if (shouldRunForcedSnapshot) {
-      await handleForceSnapshot();
-    }
+    void (async () => {
+      let shouldRunForcedSnapshot = false;
+      let refreshedSettings: AppSettings | null = null;
+      try {
+        const summary = await api.importBackupFile(selectedPath);
+        toast.success(
+          `Backup local importado com sucesso. O backup é de ${formatBackupTimestamp(summary.generated_at)}; alterações posteriores não estão incluídas.`,
+          { duration: 8000 }
+        );
+        refreshedSettings = await api.getSettings();
+        setSettings(refreshedSettings);
+        await Promise.all([loadSettings(), loadSongs(), loadCategories()]);
+        shouldRunForcedSnapshot = true;
+      } catch (error) {
+        toast.error(`Erro ao importar backup local: ${getErrorMessage(error)}`);
+      } finally {
+        toast.dismiss(loadingToastId);
+        setIsImportingBackup(false);
+      }
+
+      if (shouldRunForcedSnapshot) {
+        void handleForceSnapshot(refreshedSettings ?? undefined);
+      }
+    })();
   }
 
   async function handleImportBackupCloud() {
@@ -324,24 +369,33 @@ export default function SettingsPage() {
     }
 
     setIsImportingBackupCloud(true);
-    let shouldRunForcedSnapshot = false;
-    try {
-      const summary = await api.importBackupCloudFile();
-      await Promise.all([loadSettings(), loadSongs(), loadCategories()]);
-      toast.success(
-        `Backup da nuvem importado com sucesso. O backup é de ${formatBackupTimestamp(summary.generated_at)}; alterações posteriores não estão incluídas.`,
-          { duration: 8000 }
-      );
-      shouldRunForcedSnapshot = true;
-    } catch (error) {
-      toast.error(`Erro ao importar backup da nuvem: ${getErrorMessage(error)}`);
-    } finally {
-      setIsImportingBackupCloud(false);
-    }
+    navigate("/");
+    const loadingToastId = toast.loading("Importando backup da nuvem...");
 
-    if (shouldRunForcedSnapshot) {
-      await handleForceSnapshot();
-    }
+    void (async () => {
+      let shouldRunForcedSnapshot = false;
+      let refreshedSettings: AppSettings | null = null;
+      try {
+        const summary = await api.importBackupCloudFile();
+        toast.success(
+          `Backup da nuvem importado com sucesso. O backup é de ${formatBackupTimestamp(summary.generated_at)}; alterações posteriores não estão incluídas.`,
+          { duration: 8000 }
+        );
+        refreshedSettings = await api.getSettings();
+        setSettings(refreshedSettings);
+        await Promise.all([loadSettings(), loadSongs(), loadCategories()]);
+        shouldRunForcedSnapshot = true;
+      } catch (error) {
+        toast.error(`Erro ao importar backup da nuvem: ${getErrorMessage(error)}`);
+      } finally {
+        toast.dismiss(loadingToastId);
+        setIsImportingBackupCloud(false);
+      }
+
+      if (shouldRunForcedSnapshot) {
+        void handleForceSnapshot(refreshedSettings ?? undefined);
+      }
+    })();
   }
 
   async function handleGenerateBackupCloud() {
@@ -489,7 +543,9 @@ export default function SettingsPage() {
           <div>
             <button
               type="button"
-              onClick={handleForceSnapshot}
+              onClick={() => {
+                void handleForceSnapshot();
+              }}
               disabled={
                 isGeneratingSnapshot ||
                 state.isScanningFiles ||

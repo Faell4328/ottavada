@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { AddScoreToSongModal } from "../../components/AddScoreToSongModal";
 import { AppProvider } from "../../context/AppContext";
-import type { IndexedFile } from "../../types";
+import type { IndexedFile, ScoreListItem } from "../../types";
 import * as api from "../../api/commands";
 import { normalizeScoreNameForSave } from "../../utils/nameFormat";
 
@@ -38,7 +38,7 @@ const sampleFile: IndexedFile = {
   extension: "musx",
 };
 
-const existingScores = [
+const existingScores: ScoreListItem[] = [
   {
     id: "score-1",
     name: "Flauta",

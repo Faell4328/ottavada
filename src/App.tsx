@@ -12,7 +12,9 @@ import {
   FirstRunPage,
 } from "./components";
 import { AppProvider, useAppState } from "./context/AppContext";
-import { exitApplication, hasPendingChanges } from "./api/commands";
+import { hasPendingChanges } from "./api/commands";
+
+const PENDING_CHANGES_TIMEOUT_MS = 1500;
 
 function LoadingScreen() {
   return (
@@ -58,11 +60,38 @@ function AppContent() {
             return;
           }
 
-          const hasChanges = await hasPendingChanges();
-          if (!hasChanges) {
+          const hasChangesResult = await Promise.race<boolean | null>([
+            hasPendingChanges(),
+            new Promise<null>((resolve) => {
+              setTimeout(() => resolve(null), PENDING_CHANGES_TIMEOUT_MS);
+            }),
+          ]);
+
+          if (hasChangesResult === null) {
+            event.preventDefault();
+
+            const shouldCloseWhileBusy = await confirm(
+              "Existe uma operação em andamento (ex: importação de backup). Deseja fechar agora mesmo?",
+              {
+                title: "Operação em andamento",
+                kind: "warning",
+                okLabel: "Fechar agora",
+                cancelLabel: "Aguardar",
+              }
+            );
+
+            if (shouldCloseWhileBusy) {
+              isForceClosingRef.current = true;
+              await appWindow.destroy();
+            }
+
+            return;
+          }
+
+          if (!hasChangesResult) {
             event.preventDefault();
             isForceClosingRef.current = true;
-            await exitApplication();
+            await appWindow.destroy();
             return;
           }
 
@@ -79,7 +108,7 @@ function AppContent() {
 
           if (shouldClose) {
             isForceClosingRef.current = true;
-            await exitApplication();
+            await appWindow.destroy();
           }
         } catch (error) {
           console.error("Erro ao validar alterações pendentes no fechamento:", error);

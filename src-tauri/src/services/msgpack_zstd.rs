@@ -54,7 +54,7 @@ pub fn read_zstd_msgpack<T: serde::de::DeserializeOwned>(
     path: &Path,
     file_label: &str,
 ) -> Result<T, AppError> {
-    let compressed = fs::read(path).map_err(|e| {
+    let file = fs::File::open(path).map_err(|e| {
         AppError::Generic(format!(
             "Erro ao ler {} em {}: {}",
             file_label,
@@ -63,7 +63,7 @@ pub fn read_zstd_msgpack<T: serde::de::DeserializeOwned>(
         ))
     })?;
 
-    let decompressed = zstd::stream::decode_all(compressed.as_slice()).map_err(|e| {
+    let decoder = zstd::stream::read::Decoder::new(file).map_err(|e| {
         AppError::Generic(format!(
             "Erro ao descompactar {} em {}: {}",
             file_label,
@@ -72,7 +72,7 @@ pub fn read_zstd_msgpack<T: serde::de::DeserializeOwned>(
         ))
     })?;
 
-    rmp_serde::from_slice::<T>(&decompressed).map_err(|e| {
+    rmp_serde::from_read::<_, T>(decoder).map_err(|e| {
         AppError::Generic(format!(
             "Erro ao desserializar MessagePack {} em {}: {}",
             file_label,
