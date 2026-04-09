@@ -28,6 +28,10 @@ export async function getFavoritedSongSummaries(): Promise<SongListItem[]> {
   return invoke("get_favorited_song_summaries");
 }
 
+export async function getSongListItemById(songId: string): Promise<SongListItem> {
+  return invoke("get_song_list_item_by_id", { songId });
+}
+
 export async function getSongsWithDrafts(): Promise<SongListItem[]> {
   return invoke("get_songs_with_drafts");
 }

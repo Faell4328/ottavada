@@ -337,6 +337,34 @@ mod tests {
     }
 
     #[test]
+    fn test_get_library_summary_counts_includes_pending_and_not_found() {
+        let db = make_db();
+        db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
+        db.insert_song(&make_song("s2", "Ave Maria"), &[]).unwrap();
+
+        let mut main_score = make_score(&db, "sc1", "s1", Some("Violino"));
+        main_score.status = ScoreStatus::Main;
+        db.insert_score(&main_score).unwrap();
+
+        let mut pending_score = make_score(&db, "sc2", "s1", Some("Piano"));
+        pending_score.status = ScoreStatus::Pending;
+        db.insert_score(&pending_score).unwrap();
+
+        let mut not_found_score = make_score(&db, "sc3", "s2", Some("Trompete"));
+        not_found_score.status = ScoreStatus::NotFound;
+        db.insert_score(&not_found_score).unwrap();
+
+        let summary = db.get_library_summary_counts().unwrap();
+
+        assert_eq!(summary.main.scores_count, 1);
+        assert_eq!(summary.main.songs_count, 1);
+        assert_eq!(summary.pending.scores_count, 1);
+        assert_eq!(summary.pending.songs_count, 1);
+        assert_eq!(summary.not_found.scores_count, 1);
+        assert_eq!(summary.not_found.songs_count, 1);
+    }
+
+    #[test]
     fn test_score_file_extension_derived() {
         let db = make_db();
         db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();

@@ -84,6 +84,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const refreshSelectedSong = useCallback(async () => {
+    if (!state.selectedSong) {
+      return;
+    }
+
+    try {
+      const refreshedSong = await api.getSongListItemById(state.selectedSong.id);
+      dispatch({ type: "UPDATE_SELECTED_SONG", payload: refreshedSong });
+    } catch (err) {
+      console.error("Failed to refresh selected song:", err);
+    }
+  }, [dispatch, state.selectedSong]);
+
   useAppBootstrap({
     state,
     dispatch,
@@ -113,6 +126,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     loadSongs,
     loadCategories,
     loadSettings,
+    refreshSelectedSong,
     getErrorMessage,
   });
 
@@ -122,6 +136,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     loadSongs,
     loadCategories,
     loadSettings,
+    refreshSelectedSong,
     getErrorMessage,
   });
 
@@ -148,6 +163,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       loadSongs,
       loadCategories,
       loadSettings,
+      refreshSelectedSong,
       setSidebarView,
       selectSong,
       selectScore,
@@ -169,6 +185,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       loadSongs,
       loadCategories,
       loadSettings,
+      refreshSelectedSong,
       setSidebarView,
       selectSong,
       selectScore,

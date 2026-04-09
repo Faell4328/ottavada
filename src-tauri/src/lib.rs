@@ -147,6 +147,7 @@ pub fn run() {
             commands::song_commands::get_all_song_summaries,
             commands::song_commands::get_favorited_songs,
             commands::song_commands::get_favorited_song_summaries,
+            commands::song_commands::get_song_list_item_by_id,
             commands::song_commands::get_songs_with_drafts,
             commands::song_commands::get_song_summaries_with_drafts,
             commands::song_commands::get_songs_with_not_found,

@@ -19,10 +19,8 @@ pub fn get_settings(
     info!("Buscando configurações");
     let mut settings = store.get_app_settings()?;
 
-    if settings.library_summary.is_none() {
-        settings.library_summary = Some(db.get_library_summary_counts()?);
-        store.save_app_settings(&settings)?;
-    }
+    settings.library_summary = Some(db.get_library_summary_counts()?);
+    store.save_app_settings(&settings)?;
 
     Ok(settings)
 }

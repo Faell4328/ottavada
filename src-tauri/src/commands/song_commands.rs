@@ -101,6 +101,14 @@ pub fn get_favorited_song_summaries(
 }
 
 #[tauri::command]
+pub fn get_song_list_item_by_id(
+    db: State<'_, Database>,
+    song_id: String,
+) -> Result<SongListItem, AppError> {
+    db.get_song_list_item_by_id(&song_id)
+}
+
+#[tauri::command]
 pub fn get_songs_with_drafts(db: State<'_, Database>) -> Result<Vec<SongListItem>, AppError> {
     db.get_songs_with_drafts()
 }

@@ -10,6 +10,7 @@ interface UseAppScanFlowParams {
   loadSongs: () => Promise<void>;
   loadCategories: () => Promise<void>;
   loadSettings: () => Promise<void>;
+  refreshSelectedSong: () => Promise<void>;
   getErrorMessage: (err: unknown, fallback: string) => string;
 }
 
@@ -28,6 +29,7 @@ export function useAppScanFlow({
   loadSongs,
   loadCategories,
   loadSettings,
+  refreshSelectedSong,
   getErrorMessage,
 }: UseAppScanFlowParams) {
   const scanResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -257,6 +259,7 @@ export function useAppScanFlow({
         });
 
         await Promise.all([loadSongs(), loadCategories(), loadSettings()]);
+        await refreshSelectedSong();
 
         dispatch({
           type: "SET_SCAN_PROGRESS",
@@ -486,6 +489,8 @@ export function useAppScanFlow({
         await loadSongs();
       }
 
+      await refreshSelectedSong();
+
       const delay = 1000;
       scheduleScanReset(delay);
     } catch (err) {
@@ -505,6 +510,7 @@ export function useAppScanFlow({
     loadSongs,
     loadSettings,
     resetScanState,
+    refreshSelectedSong,
     runSelectiveUploadWithProgress,
     runSyncWithProgress,
     scheduleScanReset,

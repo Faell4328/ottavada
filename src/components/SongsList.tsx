@@ -121,6 +121,14 @@ export default function SongsList() {
 
   useEffect(() => {
     if (state.selectedSong) {
+      if (state.selectedSong.scores.length > 0) {
+        setScoresBySongId((prev) => ({
+          ...prev,
+          [state.selectedSong.id]: [...state.selectedSong.scores].sort((a, b) =>
+            compareInstrumentNames(a.name, b.name)
+          ),
+        }));
+      }
       return;
     }
 

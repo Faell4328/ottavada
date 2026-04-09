@@ -11,6 +11,7 @@ interface UseAppCrudActionsParams {
   loadSongs: () => Promise<void>;
   loadCategories: () => Promise<void>;
   loadSettings: () => Promise<void>;
+  refreshSelectedSong: () => Promise<void>;
   getErrorMessage: (err: unknown, fallback: string) => string;
 }
 
@@ -20,6 +21,7 @@ export function useAppCrudActions({
   loadSongs,
   loadCategories,
   loadSettings,
+  refreshSelectedSong,
   getErrorMessage,
 }: UseAppCrudActionsParams) {
   const setSidebarView = useCallback((view: SidebarView) => {
@@ -112,6 +114,7 @@ export function useAppCrudActions({
       );
       dispatch({ type: "UPDATE_SELECTED_SONG", payload: updatedSong });
       await Promise.all([loadSongs(), loadCategories()]);
+      await refreshSelectedSong();
       await loadSettings();
       toast.success("Música atualizada com sucesso!");
     } catch (err) {
@@ -119,7 +122,7 @@ export function useAppCrudActions({
       toast.error(getErrorMessage(err, "Erro ao atualizar música"));
       throw err;
     }
-  }, [dispatch, getErrorMessage, loadCategories, loadSettings, loadSongs]);
+  }, [dispatch, getErrorMessage, loadCategories, loadSettings, loadSongs, refreshSelectedSong]);
 
   const updateScore = useCallback(async (
     scoreId: string,
@@ -132,6 +135,7 @@ export function useAppCrudActions({
         dispatch({ type: "SET_SELECTED_SCORE", payload: null });
       }
       await loadSongs();
+      await refreshSelectedSong();
       await loadSettings();
       toast.success("Partitura atualizada com sucesso!");
     } catch (err) {
@@ -139,7 +143,7 @@ export function useAppCrudActions({
       toast.error(getErrorMessage(err, "Erro ao atualizar partitura"));
       throw err;
     }
-  }, [dispatch, getErrorMessage, loadSettings, loadSongs, state.selectedScore]);
+  }, [dispatch, getErrorMessage, loadSettings, loadSongs, refreshSelectedSong, state.selectedScore]);
 
   const updateScoreStatus = useCallback(async (
     scoreId: string,
@@ -154,6 +158,7 @@ export function useAppCrudActions({
       );
       dispatch({ type: "SET_SONGS", payload: updatedSongs });
 
+      await refreshSelectedSong();
       await loadSettings();
 
       toast.success("Partitura definida como Principal!");
@@ -162,7 +167,7 @@ export function useAppCrudActions({
       toast.error(getErrorMessage(err, "Erro ao atualizar status da partitura"));
       throw err;
     }
-  }, [dispatch, getErrorMessage, loadSettings, state.songs]);
+  }, [dispatch, getErrorMessage, loadSettings, refreshSelectedSong, state.songs]);
 
   const deleteScore = useCallback(async (scoreId: string) => {
     try {
@@ -171,6 +176,7 @@ export function useAppCrudActions({
         dispatch({ type: "SET_SELECTED_SCORE", payload: null });
       }
       await loadSongs();
+      await refreshSelectedSong();
       await loadSettings();
       toast.success("Partitura deletada com sucesso!");
     } catch (err) {
@@ -178,7 +184,7 @@ export function useAppCrudActions({
       toast.error(getErrorMessage(err, "Erro ao deletar partitura"));
       throw err;
     }
-  }, [dispatch, getErrorMessage, loadSettings, loadSongs, state.selectedScore]);
+  }, [dispatch, getErrorMessage, loadSettings, loadSongs, refreshSelectedSong, state.selectedScore]);
 
   const deleteSong = useCallback(async (songId: string) => {
     try {
@@ -190,6 +196,7 @@ export function useAppCrudActions({
       dispatch({ type: "SET_SELECTED_SCORE", payload: null });
 
       await loadSongs();
+      await refreshSelectedSong();
       await loadSettings();
       toast.success("Música deletada com sucesso!");
     } catch (err) {
@@ -197,7 +204,7 @@ export function useAppCrudActions({
       toast.error(getErrorMessage(err, "Erro ao deletar música"));
       throw err;
     }
-  }, [dispatch, getErrorMessage, loadSettings, loadSongs, state.selectedSong]);
+  }, [dispatch, getErrorMessage, loadSettings, loadSongs, refreshSelectedSong, state.selectedSong]);
 
   const saveSettings = useCallback(async (settings: AppSettings) => {
     try {
@@ -225,7 +232,7 @@ export function useAppCrudActions({
       console.error("Failed to complete first run:", err);
       toast.error("Erro ao completar configuração inicial");
     }
-  }, [dispatch, loadCategories, loadSettings, loadSongs]);
+  }, [dispatch, loadCategories, loadSettings, loadSongs, refreshSelectedSong]);
 
   return {
     setSidebarView,
