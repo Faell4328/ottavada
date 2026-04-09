@@ -321,7 +321,7 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [x] Arrumar a ordenação das músicas, está ficando bugada quando o nome tem algum sinal na letra.
 - [x] As músicas e partituras `pedding` não está sendo listados corretamente nas configurações.
 - [x] Se a música tiver aberta e for clicado em "aplicar alterações" e "consultar alterações" deve atualizar as partituras abertas. Também quando alguma informação da partitura, ex: nome e etc.
-- [ ] Atualizar bloqueio das partitura assim que sair a etapa de "aplicar alterações", para não ter que fechar e abrir a música.
+- [x] Atualizar bloqueio das partitura assim que sair a etapa de "aplicar alterações", para não ter que fechar e abrir a música.
 
 **Correção**
 - [x] Quando estou com uma música aberta e clico para abrir outra, as vezes ocorre da música ficar sem partitura (sendo que ela tem), precisando abrir e fechar novamente para aparecer.

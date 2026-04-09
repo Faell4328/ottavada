@@ -7,7 +7,7 @@ import { ConfirmationModal } from "./ui/ConfirmationModal";
 import { useConfirmation } from "../hooks/useConfirmation";
 import { isClientComputer } from "../utils/computer";
 
-interface SongRowProps {
+export interface SongRowProps {
   song: SongListItem;
   isExpanded: boolean;
   onToggle: () => void;
@@ -160,7 +160,7 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(function Son
 
 SongRow.displayName = "SongRow";
 
-export const MemoizedSongRow = React.memo(SongRow, (prev, next) => {
+export function areSongRowPropsEqual(prev: SongRowProps, next: SongRowProps) {
   return (
     prev.song.id === next.song.id &&
     prev.song.name === next.song.name &&
@@ -170,8 +170,12 @@ export const MemoizedSongRow = React.memo(SongRow, (prev, next) => {
     prev.song.scores.length === next.song.scores.length &&
     prev.song.category_ids.length === next.song.category_ids.length &&
     prev.isExpanded === next.isExpanded &&
-    prev.isMenuOpen === next.isMenuOpen
+    prev.isMenuOpen === next.isMenuOpen &&
+    prev.isLocked === next.isLocked &&
+    prev.computerType === next.computerType
   );
-});
+}
+
+export const MemoizedSongRow = React.memo(SongRow, areSongRowPropsEqual);
 
 MemoizedSongRow.displayName = "MemoizedSongRow";

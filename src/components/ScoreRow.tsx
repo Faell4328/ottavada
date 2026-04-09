@@ -13,7 +13,7 @@ import {
   normalizeScoreStatus,
 } from "../utils/scoreStatus";
 
-interface ScoreRowProps {
+export interface ScoreRowProps {
   score: ScoreListItem;
   onSelectScore: () => void;
   menuId: string;
@@ -208,12 +208,15 @@ function ScoreRow({
   );
 }
 
-export const MemoizedScoreRow = React.memo(ScoreRow, (prev, next) => {
+export function areScoreRowPropsEqual(prev: ScoreRowProps, next: ScoreRowProps) {
   return (
     prev.score.id === next.score.id &&
     prev.score.name === next.score.name &&
-    normalizeScoreStatus(prev.score.status) ===
-      normalizeScoreStatus(next.score.status) &&
-    prev.isMenuOpen === next.isMenuOpen
+    normalizeScoreStatus(prev.score.status) === normalizeScoreStatus(next.score.status) &&
+    prev.isMenuOpen === next.isMenuOpen &&
+    prev.isLocked === next.isLocked &&
+    prev.computerType === next.computerType
   );
-});
+}
+
+export const MemoizedScoreRow = React.memo(ScoreRow, areScoreRowPropsEqual);
