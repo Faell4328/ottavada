@@ -10,6 +10,7 @@
     "tauri": "sh -lc 'set -a; . src-tauri/.env; set +a; APPIMAGE_EXTRACT_AND_RUN=1 tauri'",
     "tauri:build:win:x64": "sh -lc 'set -a; . src-tauri/.env; set +a; rustup target add x86_64-pc-windows-gnu && APPIMAGE_EXTRACT_AND_RUN=1 tauri build --target x86_64-pc-windows-gnu'",
     "tauri:build:win:x32": "sh -lc 'set -a; . src-tauri/.env; set +a; (mv src-tauri/rclone/rclone.exe src-tauri/rclone/rclone64.exe && mv src-tauri/rclone/rclone32.exe src-tauri/rclone/rclone.exe && rustup target add i686-pc-windows-gnu && APPIMAGE_EXTRACT_AND_RUN=1 tauri build --target i686-pc-windows-gnu && mv src-tauri/rclone/rclone.exe src-tauri/rclone/rclone32.exe && mv src-tauri/rclone/rclone64.exe src-tauri/rclone/rclone.exe) || (mv src-tauri/rclone/rclone.exe src-tauri/rclone/rclone32.exe && mv src-tauri/rclone/rclone64.exe src-tauri/rclone/rclone.exe)'",
+    "tauri:build:all": "npm run tauri:build:win:x64 && npm run tauri:build:win:x32",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui"

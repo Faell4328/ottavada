@@ -1,0 +1,15 @@
+{
+  "version": "0.10.0",
+  "notes": "Sei la",
+  "pub_date": "2026-04-09T12:00:00Z",
+  "platforms": {
+    "windows-x86_64": {
+      "signature": "ASSINATURA_X64",
+      "url": "https://github.com/Faell4328/Score-Maestro/releases/download/v0.10/Score.Maestro_0.10.0_x64-setup.exe"
+    },
+    "windows-i686": {
+      "signature": "ASSINATURA_X86",
+      "url": "https://github.com/Faell4328/Score-Maestro/releases/download/v0.10/Score.Maestro_0.10.0_x86-setup.exe"
+    }
+  }
+}
