@@ -122,10 +122,6 @@ export default function SettingsPage() {
     setRcloneConfigGenerated(true);
     setHasRcloneConfigChange(true);
 
-    if (isClient) {
-      return;
-    }
-
     if (isSyncLocked) {
       toast.error("Operação bloqueada durante sincronização");
       throw new Error("SYNC_LOCKED");
@@ -143,9 +139,11 @@ export default function SettingsPage() {
       await saveSettings(updatedSettings);
       await loadSettings();
 
-      const snapshotCreated = await handleForceSnapshot(updatedSettings);
-      if (!snapshotCreated) {
-        throw new Error("SNAPSHOT_FAILED");
+      if (updatedSettings.computer_type === "Server") {
+        const snapshotCreated = await handleForceSnapshot(updatedSettings);
+        if (!snapshotCreated) {
+          throw new Error("SNAPSHOT_FAILED");
+        }
       }
 
       setHasRcloneConfigChange(false);
@@ -210,7 +208,11 @@ export default function SettingsPage() {
       await saveSettings(updatedSettings);
       toast.success("Configurações salvas com sucesso!");
 
-      if (previousProvider !== rcloneProvider || hasRcloneConfigChange) {
+      const shouldForceSnapshot =
+        updatedSettings.computer_type === "Server" &&
+        (previousProvider !== rcloneProvider || hasRcloneConfigChange);
+
+      if (shouldForceSnapshot) {
         const snapshotCreated = await handleForceSnapshot(updatedSettings);
         if (!snapshotCreated) {
           return;
@@ -522,7 +524,7 @@ export default function SettingsPage() {
             <button
               type="button"
               onClick={() => setIsRcloneProviderModalOpen(true)}
-              disabled={isClient || isSettingsOperationInProgress}
+              disabled={isSettingsOperationInProgress}
               className="mt-4 h-9 rounded border border-[#4f84d7] bg-[#4f84d7] px-4 text-sm font-medium text-white transition-colors hover:bg-[#3d6fb8] cursor-pointer"
             >
               Mudar provedor de nuvem

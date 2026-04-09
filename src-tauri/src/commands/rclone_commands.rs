@@ -79,7 +79,7 @@ fn ensure_cloud_dir(app_data_dir: &Path) -> Result<PathBuf, AppError> {
     Ok(cloud_dir)
 }
 
-const RCLONE_TRANSFERS: &str = "1";
+const RCLONE_TRANSFERS: &str = "4";
 const RCLONE_RETRIES: &str = "2";
 const RCLONE_LOW_LEVEL_RETRIES: &str = "10";
 const RCLONE_CONNECT_TIMEOUT: &str = "10s";
@@ -551,6 +551,132 @@ pub struct RcloneRcStats {
     pub percentage: Option<f64>,
 }
 
+fn value_as_u64(value: &Value, keys: &[&str]) -> Option<u64> {
+    keys.iter()
+        .find_map(|key| value.get(*key).and_then(Value::as_u64))
+}
+
+fn value_as_i64(value: &Value, keys: &[&str]) -> Option<i64> {
+    keys.iter()
+        .find_map(|key| value.get(*key).and_then(Value::as_i64))
+}
+
+fn value_as_f64(value: &Value, keys: &[&str]) -> Option<f64> {
+    keys.iter()
+        .find_map(|key| value.get(*key).and_then(Value::as_f64))
+}
+
+fn parse_transferring_items(items: &[Value]) -> (u64, u64, Option<f64>) {
+    let mut active_bytes = 0_u64;
+    let mut total_sizes = 0_u64;
+    let mut weighted_progress = 0.0_f64;
+    let mut weighted_progress_weight = 0_u64;
+    let mut percentage_progress = 0.0_f64;
+    let mut percentage_items = 0_u64;
+
+    for item in items {
+        let item_size = value_as_u64(item, &["size"]).unwrap_or(0);
+        let item_bytes = value_as_u64(item, &["bytes"]).unwrap_or(0);
+        let item_percentage = value_as_f64(item, &["percentage"]).map(|value| (value / 100.0).clamp(0.0, 1.0));
+
+        let estimated_bytes = if item_size > 0 {
+            if item_bytes > 0 {
+                item_bytes.min(item_size)
+            } else if let Some(item_fraction) = item_percentage {
+                ((item_fraction * item_size as f64).round() as u64).min(item_size)
+            } else {
+                0
+            }
+        } else {
+            item_bytes
+        };
+
+        if item_size > 0 {
+            active_bytes = active_bytes.saturating_add(estimated_bytes);
+            total_sizes = total_sizes.saturating_add(item_size);
+            weighted_progress += estimated_bytes as f64;
+            weighted_progress_weight = weighted_progress_weight.saturating_add(item_size);
+            continue;
+        }
+
+        if let Some(item_fraction) = item_percentage {
+            percentage_progress += item_fraction;
+            percentage_items = percentage_items.saturating_add(1);
+        }
+
+        active_bytes = active_bytes.saturating_add(estimated_bytes);
+    }
+
+    let progress_fraction = if weighted_progress_weight > 0 {
+        Some((weighted_progress / weighted_progress_weight as f64).clamp(0.0, 1.0))
+    } else if percentage_items > 0 {
+        Some((percentage_progress / percentage_items as f64).clamp(0.0, 1.0))
+    } else {
+        None
+    };
+
+    (active_bytes, total_sizes, progress_fraction)
+}
+
+fn parse_rclone_rc_stats(parsed: &Value) -> RcloneRcStats {
+    let bytes = value_as_u64(parsed, &["bytes", "bytesTransferred"]).unwrap_or(0);
+    let total_bytes_raw = value_as_u64(parsed, &["totalBytes", "total_bytes"]).unwrap_or(0);
+
+    let speed_bytes_per_sec = value_as_f64(parsed, &["speed", "speedBytesPerSec", "speed_bytes_per_sec"]) 
+        .unwrap_or(0.0);
+    let eta_seconds = value_as_i64(parsed, &["eta", "etaSeconds", "eta_seconds"]).filter(|eta| *eta >= 0);
+
+    let transferring_items = parsed
+        .get("transferring")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    let checking_count = parsed
+        .get("checking")
+        .and_then(Value::as_array)
+        .map(|items| items.len())
+        .unwrap_or(0);
+
+    let transferring_count = transferring_items.len();
+    let active = transferring_count > 0 || checking_count > 0 || speed_bytes_per_sec > 0.0;
+
+    let (active_bytes, active_sizes, transferring_progress_fraction) =
+        parse_transferring_items(&transferring_items);
+
+    let bytes = bytes.max(active_bytes);
+    let total_bytes = if total_bytes_raw > 0 {
+        Some(total_bytes_raw)
+    } else if active_sizes > 0 {
+        Some(active_sizes.max(bytes))
+    } else {
+        None
+    };
+
+    let transfers_done = value_as_u64(parsed, &["transfers"]).unwrap_or(0);
+    let total_transfers = value_as_u64(parsed, &["totalTransfers", "total_transfers"]).filter(|total| *total > 0);
+
+    let percentage = if let Some(total) = total_bytes.filter(|total| *total > 0) {
+        Some(((bytes as f64 / total as f64) * 100.0).clamp(0.0, 100.0))
+    } else if let Some(total) = total_transfers {
+        let completed = transfers_done.min(total);
+        let remaining = total.saturating_sub(completed);
+        let inflight = (transferring_count as u64).min(remaining);
+        let inflight_progress = transferring_progress_fraction.unwrap_or(0.0) * inflight as f64;
+        Some((((completed as f64 + inflight_progress) / total as f64) * 100.0).clamp(0.0, 100.0))
+    } else {
+        transferring_progress_fraction.map(|fraction| (fraction * 100.0).clamp(0.0, 100.0))
+    };
+
+    RcloneRcStats {
+        active,
+        bytes,
+        total_bytes,
+        speed_bytes_per_sec,
+        eta_seconds,
+        percentage,
+    }
+}
+
 fn fetch_rclone_rc_stats() -> Result<Option<RcloneRcStats>, AppError> {
     let mut stream = match TcpStream::connect("127.0.0.1:5572") {
         Ok(stream) => stream,
@@ -590,90 +716,7 @@ fn fetch_rclone_rc_stats() -> Result<Option<RcloneRcStats>, AppError> {
     let parsed: Value = serde_json::from_str(body)
         .map_err(|e| AppError::Generic(format!("Erro ao parsear core/stats do rclone: {}", e)))?;
 
-    let bytes = parsed.get("bytes").and_then(Value::as_u64).unwrap_or(0);
-    let total_bytes_raw = parsed.get("totalBytes").and_then(Value::as_u64).unwrap_or(0);
-    let total_bytes = if total_bytes_raw > 0 {
-        Some(total_bytes_raw)
-    } else {
-        None
-    };
-
-    let speed_bytes_per_sec = parsed.get("speed").and_then(Value::as_f64).unwrap_or(0.0);
-    let eta_seconds = parsed.get("eta").and_then(Value::as_i64).filter(|eta| *eta >= 0);
-
-    let transferring_count = parsed
-        .get("transferring")
-        .and_then(Value::as_array)
-        .map(|items| items.len())
-        .unwrap_or(0);
-    let checking_count = parsed
-        .get("checking")
-        .and_then(Value::as_array)
-        .map(|items| items.len())
-        .unwrap_or(0);
-
-    let active = transferring_count > 0 || checking_count > 0 || speed_bytes_per_sec > 0.0;
-
-    let transferring_progress_fraction = parsed
-        .get("transferring")
-        .and_then(Value::as_array)
-        .and_then(|items| {
-            let mut sum_bytes = 0_u64;
-            let mut sum_sizes = 0_u64;
-            let mut sum_percentage_fraction = 0.0_f64;
-            let mut percentage_items = 0_u64;
-
-            for item in items {
-                let item_bytes = item.get("bytes").and_then(Value::as_u64).unwrap_or(0);
-                let item_size = item.get("size").and_then(Value::as_u64).unwrap_or(0);
-
-                if item_size > 0 {
-                    sum_bytes = sum_bytes.saturating_add(item_bytes.min(item_size));
-                    sum_sizes = sum_sizes.saturating_add(item_size);
-                    continue;
-                }
-
-                if let Some(item_percentage) = item.get("percentage").and_then(Value::as_f64) {
-                    sum_percentage_fraction += (item_percentage / 100.0).clamp(0.0, 1.0);
-                    percentage_items = percentage_items.saturating_add(1);
-                }
-            }
-
-            if sum_sizes > 0 {
-                Some((sum_bytes as f64 / sum_sizes as f64).clamp(0.0, 1.0))
-            } else if percentage_items > 0 {
-                Some((sum_percentage_fraction / percentage_items as f64).clamp(0.0, 1.0))
-            } else {
-                None
-            }
-        });
-
-    let transfers_done = parsed.get("transfers").and_then(Value::as_u64).unwrap_or(0);
-    let total_transfers = parsed
-        .get("totalTransfers")
-        .and_then(Value::as_u64)
-        .filter(|total| *total > 0);
-
-    let percentage = if let Some(total) = total_bytes.filter(|total| *total > 0) {
-        Some(((bytes as f64 / total as f64) * 100.0).clamp(0.0, 100.0))
-    } else if let Some(total) = total_transfers {
-        let completed = transfers_done.min(total);
-        let remaining = total.saturating_sub(completed);
-        let inflight = (transferring_count as u64).min(remaining);
-        let inflight_progress = transferring_progress_fraction.unwrap_or(0.0) * inflight as f64;
-        Some((((completed as f64 + inflight_progress) / total as f64) * 100.0).clamp(0.0, 100.0))
-    } else {
-        transferring_progress_fraction.map(|fraction| (fraction * 100.0).clamp(0.0, 100.0))
-    };
-
-    Ok(Some(RcloneRcStats {
-        active,
-        bytes,
-        total_bytes,
-        speed_bytes_per_sec,
-        eta_seconds,
-        percentage,
-    }))
+    Ok(Some(parse_rclone_rc_stats(&parsed)))
 }
 
 fn reset_rclone_rc_stats() -> Result<(), AppError> {
@@ -850,7 +893,7 @@ pub fn upload_with_rclone(
 /// Sempre utiliza os parâmetros exigidos pelo projeto:
 /// - `--rc`
 /// - `--rc-addr=127.0.0.1:5572`
-/// - `--transfers=10`
+/// - `--transfers=4`
 #[tauri::command]
 pub async fn sync_cloud_with_rclone(
     store: State<'_, SystemStore>,
@@ -864,6 +907,62 @@ pub async fn sync_cloud_with_rclone(
         move |store| sync_cloud_directory_with_rclone_impl(&store, &direction, None),
     )
     .await
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use super::parse_rclone_rc_stats;
+
+    #[test]
+    fn parses_multiple_transferring_items_when_root_bytes_are_stale() {
+        let parsed = json!({
+            "bytes": 0,
+            "totalBytes": 205_000_000,
+            "speed": 512_000,
+            "eta": 180,
+            "transfers": 0,
+            "totalTransfers": 4,
+            "transferring": [
+                { "name": "a.pdf", "bytes": 10_000_000, "size": 50_000_000, "percentage": 20.0 },
+                { "name": "b.pdf", "bytes": 15_000_000, "size": 50_000_000, "percentage": 30.0 },
+                { "name": "c.pdf", "bytes": 5_000_000, "size": 50_000_000, "percentage": 10.0 },
+                { "name": "d.pdf", "bytes": 0, "size": 55_000_000, "percentage": 0.0 }
+            ],
+            "checking": []
+        });
+
+        let stats = parse_rclone_rc_stats(&parsed);
+
+        assert!(stats.active);
+        assert_eq!(stats.bytes, 30_000_000);
+        assert_eq!(stats.total_bytes, Some(205_000_000));
+        assert_eq!(stats.speed_bytes_per_sec, 512_000.0);
+        assert_eq!(stats.eta_seconds, Some(180));
+        let percentage = stats.percentage.expect("percentage should be available");
+        assert!((percentage - 14.634146341463413).abs() < 0.000_001);
+    }
+
+    #[test]
+    fn estimates_transfer_bytes_from_percentage_when_needed() {
+        let parsed = json!({
+            "bytes": 0,
+            "totalBytes": 100,
+            "speed": 0,
+            "eta": null,
+            "transferring": [
+                { "name": "a.pdf", "bytes": 0, "size": 40, "percentage": 25.0 },
+                { "name": "b.pdf", "bytes": 0, "size": 60, "percentage": 50.0 }
+            ],
+            "checking": []
+        });
+
+        let stats = parse_rclone_rc_stats(&parsed);
+
+        assert_eq!(stats.bytes, 40);
+        assert_eq!(stats.percentage, Some(40.0));
+    }
 }
 
 #[tauri::command]
