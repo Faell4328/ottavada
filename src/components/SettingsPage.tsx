@@ -9,9 +9,11 @@ import { getErrorMessage } from "../utils/errors";
 import { ChangeComputerTypeModal } from "./ChangeComputerTypeModal";
 import { RcloneProviderModal } from "./RcloneProviderModal.tsx";
 import { RcloneLicenseModal } from "./RcloneLicenseModal";
+import { UpdateModal } from "./UpdateModal";
 import { formatBackupTimestamp } from "../utils/formatters";
-import type { AppSettings, RcloneProvider } from "../types";
+import type { AppSettings, RcloneProvider, UpdateInfo } from "../types";
 import { isClientComputer } from "../utils/computer";
+import packageJson from "../../package.json";
 
 function getRcloneProviderLabel(provider: RcloneProvider) {
   return provider === "koofr" ? "Koofr" : "Google Drive";
@@ -48,6 +50,10 @@ export default function SettingsPage() {
   const [isImportingBackup, setIsImportingBackup] = useState(false);
   const [isImportingBackupCloud, setIsImportingBackupCloud] = useState(false);
   const [isGeneratingBackupCloud, setIsGeneratingBackupCloud] = useState(false);
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
+  const [isInstallingUpdate, setIsInstallingUpdate] = useState(false);
+  const [availableUpdate, setAvailableUpdate] = useState<UpdateInfo | null>(null);
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const [rcloneProvider, setRcloneProvider] = useState<RcloneProvider>("koofr");
   const [rcloneConfigGenerated, setRcloneConfigGenerated] = useState(false);
   const [hasRcloneConfigChange, setHasRcloneConfigChange] = useState(false);
@@ -61,6 +67,8 @@ export default function SettingsPage() {
     isImportingBackup ||
     isImportingBackupCloud ||
     isGeneratingBackupCloud ||
+    isCheckingUpdate ||
+    isInstallingUpdate ||
     isSyncLocked;
 
   // Carregar dados do rclone da store quando o componente monta ou settings muda
@@ -429,6 +437,59 @@ export default function SettingsPage() {
     }
   }
 
+  async function handleCheckUpdate() {
+    if (isSyncLocked) {
+      toast.error("Operação bloqueada durante sincronização");
+      return;
+    }
+
+    if (isCheckingUpdate || isInstallingUpdate) {
+      return;
+    }
+
+    setIsCheckingUpdate(true);
+
+    try {
+      const result = await api.checkForUpdates();
+
+      if (!result.configured) {
+        toast.error("Atualização não configurada no aplicativo");
+        return;
+      }
+
+      if (result.update) {
+        setAvailableUpdate(result.update);
+        setIsUpdateModalOpen(true);
+        return;
+      }
+
+      toast.success("Nenhuma atualização disponível no momento");
+    } catch (error) {
+      toast.error(`Falha ao verificar atualização: ${getErrorMessage(error)}`);
+    } finally {
+      setIsCheckingUpdate(false);
+    }
+  }
+
+  async function handleInstallUpdate() {
+    if (!availableUpdate || isInstallingUpdate) {
+      return;
+    }
+
+    setIsInstallingUpdate(true);
+
+    try {
+      await api.installUpdate();
+      setIsUpdateModalOpen(false);
+      setAvailableUpdate(null);
+      toast.success("Atualização instalada com sucesso");
+    } catch (error) {
+      toast.error(`Erro ao instalar atualização: ${getErrorMessage(error)}`);
+    } finally {
+      setIsInstallingUpdate(false);
+    }
+  }
+
   const lastSnapshotLabel = settings.last_snapshot_timestamp
     ? new Date(settings.last_snapshot_timestamp * 1000).toLocaleString("pt-BR")
     : "Nunca gerado";
@@ -638,6 +699,28 @@ export default function SettingsPage() {
 
         {/* Sobre */}
         <Section title="Sobre">
+          <div className="mb-3 rounded-xl border border-[#d8e0ea] bg-white/80 p-3 text-xs text-[#4f6887]">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6b849e]">
+                  Versão do software
+                </p>
+                <p className="mt-1 text-sm font-semibold text-[#34485d]">{packageJson.version}</p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  void handleCheckUpdate();
+                }}
+                disabled={isSettingsOperationInProgress}
+                className="h-9 rounded border border-[#4f84d7] bg-[#4f84d7] px-4 text-sm font-medium text-white transition-colors hover:bg-[#3d6fb8] disabled:opacity-50 cursor-pointer"
+              >
+                {isCheckingUpdate ? "Consultando..." : "Consultar atualização"}
+              </button>
+            </div>
+          </div>
+
           {librarySummary && (
             <div className="mb-3 rounded-xl border border-[#d8e0ea] bg-white/80 p-3 text-xs text-[#4f6887]">
               <div className="grid gap-3 sm:grid-cols-2">
@@ -713,6 +796,16 @@ export default function SettingsPage() {
         onGenerate={handleGenerateRcloneConfig}
         onTest={handleTestRcloneConfig}
         onApprove={handleApproveRcloneProvider}
+      />
+
+      <UpdateModal
+        isOpen={isUpdateModalOpen}
+        update={availableUpdate}
+        isInstalling={isInstallingUpdate}
+        onCancel={() => setIsUpdateModalOpen(false)}
+        onConfirm={() => {
+          void handleInstallUpdate();
+        }}
       />
     </div>
   );

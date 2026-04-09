@@ -1,4 +1,4 @@
-import { Music, FolderSearch, Settings, RefreshCw } from "lucide-react";
+import { Download, Music, FolderSearch, Settings, RefreshCw } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -13,10 +13,16 @@ import { AddMusicModal } from "./AddMusicModal";
 
 interface TopBarProps {
   title?: string;
+  onUpdateClick: () => void;
+  isUpdateBusy: boolean;
+  hasAvailableUpdate: boolean;
 }
 
 export default function TopBar({
   title = "Score Maestro",
+  onUpdateClick,
+  isUpdateBusy,
+  hasAvailableUpdate,
 }: TopBarProps) {
   const { loadSongs, loadCategories, state, scanFilesForChanges } = useAppState();
   const navigate = useNavigate();
@@ -126,6 +132,15 @@ export default function TopBar({
         </div>
 
         <div className="flex items-center gap-2">
+          {hasAvailableUpdate && (
+            <ActionButton
+              icon={<Download className={`h-4 w-4 ${isUpdateBusy ? "animate-spin" : "animate-pulse"}`} />}
+              title={isSyncLocked ? syncBlockedTitle : "Atualização disponível"}
+              onClick={onUpdateClick}
+              disabled={isSyncLocked || isUpdateBusy}
+              accent
+            />
+          )}
           <ActionButton
             icon={<Music className="h-4 w-4" />}
             title={isClient ? clientBlockedTitle : isSyncLocked ? syncBlockedTitle : "Adicionar música"}
@@ -191,11 +206,13 @@ function ActionButton({
   title,
   onClick,
   disabled = false,
+  accent = false,
 }: {
   icon: React.ReactNode;
   title: string;
   onClick?: () => void;
   disabled?: boolean;
+  accent?: boolean;
 }) {
   return (
     <button
@@ -206,7 +223,9 @@ function ActionButton({
       className={`flex h-8 w-9 items-center justify-center rounded border border-white/25 text-white/90 transition-colors cursor-pointer ${
         disabled
           ? "bg-white/5 opacity-50 cursor-not-allowed"
-          : "bg-white/8 hover:bg-white/15"
+          : accent
+            ? "bg-amber-400/15 hover:bg-amber-400/25"
+            : "bg-white/8 hover:bg-white/15"
       }`}
     >
       {icon}

@@ -24,9 +24,14 @@ fn reset_temp_directory(app_data_dir: &Path) -> Result<(), std::io::Error> {
     Ok(())
 }
 
+fn updater_builder() -> tauri_plugin_updater::Builder {
+    tauri_plugin_updater::Builder::new()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(updater_builder().build())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
@@ -191,6 +196,9 @@ pub fn run() {
             commands::settings_commands::has_pending_changes,
             commands::settings_commands::exit_application,
             commands::settings_commands::mark_local_changes_as_applied,
+            // Updates
+            commands::update_commands::check_for_updates,
+            commands::update_commands::install_update,
             // Scan
             commands::scan_commands::scan_files_for_changes,
             commands::scan_commands::has_internet_connection,

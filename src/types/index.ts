@@ -100,6 +100,18 @@ export interface BackupDatabaseStep {
   updated_at?: string;
 }
 
+export interface UpdateInfo {
+  current_version: string;
+  version: string;
+  date: string | null;
+  body: string | null;
+}
+
+export interface UpdateCheckResult {
+  configured: boolean;
+  update: UpdateInfo | null;
+}
+
 export interface IndexedFile {
   path: string;
   name: string;

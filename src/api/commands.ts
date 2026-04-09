@@ -8,6 +8,7 @@ import type {
   IndexedFile,
   RcloneSetupInput,
   RcloneProvider,
+  UpdateCheckResult,
 } from "../types";
 
 // ── Songs ──
@@ -249,6 +250,14 @@ export async function exitApplication(): Promise<void> {
 
 export async function markLocalChangesAsApplied(): Promise<void> {
   return invoke("mark_local_changes_as_applied");
+}
+
+export async function checkForUpdates(): Promise<UpdateCheckResult> {
+  return invoke("check_for_updates");
+}
+
+export async function installUpdate(): Promise<void> {
+  return invoke("install_update");
 }
 
 export async function refreshLibrarySummaryCache(): Promise<LibrarySummary> {

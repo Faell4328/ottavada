@@ -13,5 +13,6 @@ export { AddScoreToSongModal } from "./AddScoreToSongModal";
 export { ChangeComputerTypeModal } from "./ChangeComputerTypeModal";
 export { RcloneProviderModal } from "./RcloneProviderModal";
 export { RcloneLicenseModal } from "./RcloneLicenseModal";
+export { UpdateModal } from "./UpdateModal";
 export { MemoizedSongRow } from "./SongRow";
 export { MemoizedScoreRow } from "./ScoreRow";
