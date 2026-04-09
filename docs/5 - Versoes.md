@@ -327,12 +327,10 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [x] Quando estou com uma música aberta e clico para abrir outra, as vezes ocorre da música ficar sem partitura (sendo que ela tem), precisando abrir e fechar novamente para aparecer.
 - [x] A aplicação trava ao "importa backup local" e possivelmente da nuvem também.
 - [x] Quando está sendo feito o upload dos arquivos no servidor, o aplicativo é fechado e aberto novamente, não se dá continuidade ao upload. Isso funcionava anteriormente.
-- [ ] Arrumar barra de pesquisa
-	- [ ] Não ir mostrando as possíveis música, deve ir filtrando na página Home a medida que é digitado. Removendo a sugestão que tinha antes.
-	- [ ] A pesquisa deve ser com referência onde o usuário está, na categoria especifica, em todas as música, favoritas e etc.
-
-**Tenho que pensar mais um pouco**
-- [ ] Aumentar a quantidade de `transfers` no `rclone` sem quebrar o StatusBar.
+- [x] Arrumar barra de pesquisa
+	- [x] Não ir mostrando as possíveis música, deve ir filtrando na página Home a medida que é digitado. Removendo a sugestão que tinha antes.
+	- [x] A pesquisa deve ser com referência onde o usuário está, na categoria especifica, em todas as música, favoritas e etc.
+- [x] Aumentar a quantidade de `transfers` no `rclone` sem quebrar o StatusBar.
 
 ## v1.0
 - [ ] Montar um plano para atualizar o software.

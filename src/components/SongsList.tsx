@@ -131,11 +131,13 @@ export default function SongsList() {
   }, []);
 
   useEffect(() => {
-    if (state.selectedSong) {
-      if (state.selectedSong.scores.length > 0) {
+    const selectedSong = state.selectedSong;
+
+    if (selectedSong) {
+      if (selectedSong.scores.length > 0) {
         setScoresBySongId((prev) => ({
           ...prev,
-          [state.selectedSong.id]: [...state.selectedSong.scores].sort((a, b) =>
+          [selectedSong.id]: [...selectedSong.scores].sort((a, b) =>
             compareInstrumentNames(a.name, b.name)
           ),
         }));
