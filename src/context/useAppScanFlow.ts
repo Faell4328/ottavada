@@ -449,10 +449,6 @@ export function useAppScanFlow({
         toast.success("Verificação concluída sem alterações");
       }
 
-      if (notFoundCount > 0 && !isAutomatic) {
-        toast(`⚠ ${notFoundCount} arquivo(s) não encontrado(s)`, { icon: "⚠️" });
-      }
-
       if (failedCount > 0 && !isAutomatic) {
         toast.error(`${failedCount} arquivo(s) falharam durante verificação`);
       }
