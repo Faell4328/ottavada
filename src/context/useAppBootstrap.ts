@@ -86,5 +86,5 @@ export function useAppBootstrap({
 
       void loadSongs();
     }
-  }, [state.sidebarView, state.searchQuery, state.isFirstRun, state.isLoading]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [state.sidebarView, state.isFirstRun, state.isLoading]); // eslint-disable-line react-hooks/exhaustive-deps
 }

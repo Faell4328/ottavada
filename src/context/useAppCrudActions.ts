@@ -26,7 +26,6 @@ export function useAppCrudActions({
 }: UseAppCrudActionsParams) {
   const setSidebarView = useCallback((view: SidebarView) => {
     dispatch({ type: "SET_SIDEBAR_VIEW", payload: view });
-    dispatch({ type: "SET_SEARCH_QUERY", payload: "" });
   }, [dispatch]);
 
   const selectSong = useCallback((song: SongListItem | null) => {

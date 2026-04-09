@@ -5,11 +5,11 @@ import toast from "react-hot-toast";
 
 import * as api from "../api/commands";
 import { useAppState } from "../context/AppContext";
-import { useSearch } from "../hooks/useSearch";
 import { compareInstrumentNames } from "../utils/instrumentOrder";
 import { getErrorMessage } from "../utils/errors";
 import { getDirectoryPath, isSamePath } from "../utils/paths";
 import { getSidebarViewLabel } from "../utils/sidebarView";
+import { normalizeSearchText, songMatchesSearchQuery } from "../utils/songSearch";
 import type { IndexedFile, ScoreListItem, SongListItem } from "../types";
 import { AddScoreToSongModal } from "./AddScoreToSongModal.tsx";
 import { EditMusicModal } from "./EditMusicModal";
@@ -32,7 +32,6 @@ export default function SongsList() {
     deleteSong,
   } = useAppState();
 
-  const search = useSearch(setSearchQuery);
   const expandedSongIdRef = useRef<string | null>(null);
   const [editingSong, setEditingSong] = useState<SongListItem | null>(null);
   const [isEditMusicModalOpen, setIsEditMusicModalOpen] = useState(false);
@@ -46,6 +45,18 @@ export default function SongsList() {
   const [scoresBySongId, setScoresBySongId] = useState<Record<string, ScoreListItem[]>>({});
   const [loadingScoresBySongId, setLoadingScoresBySongId] = useState<Record<string, boolean>>({});
   const isSyncLocked = state.isScanningFiles || state.rcloneProgress.direction !== null;
+  const normalizedSearchQuery = useMemo(
+    () => normalizeSearchText(state.searchQuery),
+    [state.searchQuery]
+  );
+
+  const displayedSongs = useMemo(() => {
+    if (!normalizedSearchQuery) {
+      return state.songs;
+    }
+
+    return state.songs.filter((song) => songMatchesSearchQuery(song, normalizedSearchQuery));
+  }, [normalizedSearchQuery, state.songs]);
 
   const closeAllMenus = useCallback(() => setOpenMenuId(null), []);
 
@@ -220,7 +231,7 @@ export default function SongsList() {
 
     try {
       const updatedSong = await api.addScoresToSong(songForAddFile.id, files);
-      search.clearSearch();
+      setSearchQuery("");
       await loadSongs();
       selectSong(updatedSong);
       setScoresBySongId((prev) => ({
@@ -309,39 +320,21 @@ export default function SongsList() {
       <div className="flex items-center justify-between mb-1">
         <h2 className="text-sm font-bold text-[#2f4259]">{getSidebarViewLabel(state.sidebarView)}</h2>
         <span className="text-xs text-[#6b849e]">
-          {state.songs.length} música{state.songs.length !== 1 ? "s" : ""}
+          {displayedSongs.length} música{displayedSongs.length !== 1 ? "s" : ""}
         </span>
       </div>
 
-      <div className="relative flex gap-1.5 h-9" ref={search.suggestionsRef}>
+      <div className="relative flex gap-1.5 h-9">
         <div className="relative flex-1 min-w-0">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#8694a6]" />
           <input
-            value={search.localQuery}
-            onChange={(e) => search.setLocalQuery(e.target.value)}
-            onFocus={search.onFocus}
+            value={state.searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             className="h-9 w-full rounded border border-[#c5cfdb] bg-white pl-9 pr-3 text-sm text-[#4d6075] placeholder-[#8e9fb3] outline-none focus:border-[#7ba0d4] focus:ring-1 focus:ring-[#7ba0d4]/30"
-            placeholder="Buscar músicas..."
-            aria-label="Buscar músicas"
+            placeholder="Filtrar músicas..."
+            aria-label="Filtrar músicas"
             autoComplete="off"
           />
-
-          {search.showSuggestions && search.suggestions.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#c5cfdb] rounded shadow-lg z-10 max-h-48 overflow-y-auto">
-              {search.suggestions.map((song) => (
-                <button
-                  key={song.id}
-                  onClick={() => search.handleSuggestionClick(song)}
-                  className="w-full text-left px-3 py-2 hover:bg-[#f2f5fa] border-b border-[#e8ecf0] last:border-b-0 text-sm text-[#344b61] transition-colors"
-                >
-                  <div className="font-medium">{song.name}</div>
-                  <div className="text-xs text-[#8b9db2]">
-                    {[song.composer, song.arranger].filter(Boolean).join(" / ") || "Sem informações"}
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
         </div>
       </div>
 
@@ -356,7 +349,7 @@ export default function SongsList() {
               </tr>
             </thead>
             <tbody>
-              {state.songs.length === 0 ? (
+              {displayedSongs.length === 0 ? (
                 <tr>
                   <td colSpan={3} className="text-center py-12">
                     <div className="flex flex-col items-center justify-center text-[#8b9db2]">
@@ -367,7 +360,7 @@ export default function SongsList() {
                   </td>
                 </tr>
               ) : (
-                state.songs.map((song) => {
+                displayedSongs.map((song) => {
                   const displayedScores = getDisplayedScoresForSong(song);
                   const shouldShowLoadingRow =
                     state.selectedSong?.id === song.id &&

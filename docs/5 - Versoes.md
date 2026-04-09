@@ -327,13 +327,12 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [x] Quando estou com uma música aberta e clico para abrir outra, as vezes ocorre da música ficar sem partitura (sendo que ela tem), precisando abrir e fechar novamente para aparecer.
 - [x] A aplicação trava ao "importa backup local" e possivelmente da nuvem também.
 - [x] Quando está sendo feito o upload dos arquivos no servidor, o aplicativo é fechado e aberto novamente, não se dá continuidade ao upload. Isso funcionava anteriormente.
+- [ ] Arrumar barra de pesquisa
+	- [ ] Não ir mostrando as possíveis música, deve ir filtrando na página Home a medida que é digitado. Removendo a sugestão que tinha antes.
+	- [ ] A pesquisa deve ser com referência onde o usuário está, na categoria especifica, em todas as música, favoritas e etc.
 
 **Tenho que pensar mais um pouco**
-- [ ] Quando o usuário selecionar para indexar um diretório e no diretório não tem nada, deve aparecer um modal listando tudo que tem dentro e com um botão para o usuário abrir o local.
-	- Foi encontrados músicas que possuem arquivos com esse padrão`{nomeMusica} - {instrumento}.C`, ou que estão em subpastas no diretório.
-	- Não sei ao certo, como resolver esse problema. Ao menos, pretendo colocar alguma orientação ao usuário. Sinceramente não sei.
 - [ ] Aumentar a quantidade de `transfers` no `rclone` sem quebrar o StatusBar.
-- [ ] Arrumar a barra de pesquisa.
 
 ## v1.0
 - [ ] Montar um plano para atualizar o software.

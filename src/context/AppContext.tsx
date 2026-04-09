@@ -38,24 +38,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const loadSongs = useCallback(async () => {
     try {
-      const query = state.searchQuery.trim();
+      const songs = await (async () => {
+        if (state.sidebarView === "favorites") return api.getFavoritedSongSummaries();
+        if (state.sidebarView === "drafts") return api.getSongSummariesWithDrafts();
+        if (state.sidebarView === "not_found") return api.getSongSummariesWithNotFound();
 
-      const songs = query
-        ? await api.searchSongSummaries(query)
-        : await (async () => {
-            if (state.sidebarView === "favorites") return api.getFavoritedSongSummaries();
-            if (state.sidebarView === "drafts") return api.getSongSummariesWithDrafts();
-            if (state.sidebarView === "not_found") return api.getSongSummariesWithNotFound();
+        if (typeof state.sidebarView === "object" && state.sidebarView.type === "category") {
+          return api.getSongSummariesByCategory(state.sidebarView.id);
+        }
 
-            if (
-              typeof state.sidebarView === "object" &&
-              state.sidebarView.type === "category"
-            ) {
-              return api.getSongSummariesByCategory(state.sidebarView.id);
-            }
-
-            return api.getAllSongSummaries();
-          })();
+        return api.getAllSongSummaries();
+      })();
 
       dispatch({
         type: "SET_SONGS",
@@ -64,7 +57,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       console.error("Failed to load songs:", err);
     }
-  }, [state.sidebarView, state.searchQuery]);
+  }, [state.sidebarView]);
 
   const loadCategories = useCallback(async () => {
     try {
