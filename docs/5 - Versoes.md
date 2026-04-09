@@ -332,12 +332,16 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 	- [x] A pesquisa deve ser com referência onde o usuário está, na categoria especifica, em todas as música, favoritas e etc.
 - [x] Aumentar a quantidade de `transfers` no `rclone` sem quebrar o StatusBar.
 
-## v1.0
+## v0.11
 - [x] Atualização do software.
 	- [x] O usuário deve poder adiar a atualização. Para caso ele precise de algo rápido e não queira esperar a atualização.
 	- [x] Nas configurações, deve mostrar a versão e ter um botão para consultar atualizações.
 	- [x] A verificação de atualização deve ser feita ao abrir o aplicativo (cliente e servidor).
 	- [x] Deve ser feito a leitura da chave privada e a senha no `.env` em `src-tauri/.env`.
+! Irei encerrar essa versão precocemente para fins de teste
+
+## v1.0
+- [ ] Implementar um fluxo para atualizar campos automaticamente sem peleja manual.
 - [ ] Montar um manual para o usuário, explicando cada detalhe do software para que ele consiga utilizar com o máximo de tranquilidade.
 - [ ] Criar licença (por organização/computadores)
 - [ ] Criar telemetria (quantas músicas, partituras, tempo de uso, versão atual e etc).
