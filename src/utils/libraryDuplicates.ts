@@ -110,8 +110,22 @@ export function findExistingScoreConflictInSong(
   };
 }
 
-export function describeScoreConflict(conflict: ScoreConflict): string {
-  void conflict;
+export function describeScoreConflict(
+  conflict: ScoreConflict,
+  currentSongName?: string | null
+): string {
+  const normalizedCurrentSongName = currentSongName
+    ? normalizeSongNameForSave(currentSongName)
+    : null;
+  const normalizedConflictSongName = normalizeSongNameForSave(conflict.song.name);
+
+  if (
+    normalizedCurrentSongName &&
+    normalizedConflictSongName !== normalizedCurrentSongName
+  ) {
+    return `Essa partitura já está sendo utilizada na música ${conflict.song.name} e por isso não será salva.`;
+  }
+
   return "Essa partitura já foi adicionada";
 }
 

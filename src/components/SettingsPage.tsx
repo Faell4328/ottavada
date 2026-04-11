@@ -690,7 +690,7 @@ export default function SettingsPage() {
         {/* Backup automático */}
         <Section title="Backup automático">
           <p className="text-xs text-[#8b9db2] mt-1">
-            O servidor verifica automaticamente ao iniciar se já passaram 3 dias desde o último backup na nuvem.
+            O servidor verifica automaticamente ao iniciar se já passou 1 dia desde o último backup na nuvem.
           </p>
           <p className="text-xs text-[#8b9db2] mt-1">
             Último backup automático: {lastBackupLabel}

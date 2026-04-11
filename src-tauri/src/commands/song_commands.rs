@@ -198,6 +198,10 @@ fn import_files_core(
     }
 
     let all_songs = db.get_all_songs()?;
+    let all_score_paths: Vec<String> = all_songs
+        .iter()
+        .flat_map(|song| song.scores.iter().map(|score| score.file_path.clone()))
+        .collect();
     let mut added_count = 0;
 
     for (song_name, group_files) in &groups {
@@ -213,9 +217,8 @@ fn import_files_core(
             .iter()
             .filter_map(|score| score.name.as_ref().map(|name| name.to_lowercase()))
             .collect();
-        let mut known_unnamed_paths: Vec<String> = existing_scores
+        let mut known_paths: Vec<String> = existing_scores
             .iter()
-            .filter(|score| score.name.is_none())
             .map(|score| score.file_path.clone())
             .collect();
         let mut files_to_add = Vec::new();
@@ -224,16 +227,21 @@ fn import_files_core(
             let normalized_instrument =
                 normalize_optional_score_name(indexed_file.instrument.as_deref());
 
-            let score_exists = match &normalized_instrument {
-                Some(instrument) => known_named_instruments
-                    .iter()
-                    .any(|existing| existing.eq_ignore_ascii_case(instrument)),
-                None => known_unnamed_paths
-                    .iter()
-                    .any(|existing_path| paths_match(existing_path, &indexed_file.path)),
-            };
+            let score_exists_in_library = all_score_paths
+                .iter()
+                .any(|existing_path| paths_match(existing_path, &indexed_file.path));
 
-            if score_exists {
+            let score_exists_in_group = known_paths
+                .iter()
+                .any(|existing_path| paths_match(existing_path, &indexed_file.path))
+                || match &normalized_instrument {
+                    Some(instrument) => known_named_instruments
+                        .iter()
+                        .any(|existing| existing.eq_ignore_ascii_case(instrument)),
+                    None => false,
+                };
+
+            if score_exists_in_library || score_exists_in_group {
                 continue;
             }
 
@@ -265,10 +273,10 @@ fn import_files_core(
                 file_modified_at,
             ));
 
+            known_paths.push(indexed_file.path.clone());
+
             if let Some(instrument) = normalized_instrument {
                 known_named_instruments.push(instrument);
-            } else {
-                known_unnamed_paths.push(indexed_file.path.clone());
             }
         }
 

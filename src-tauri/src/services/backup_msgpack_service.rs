@@ -15,7 +15,7 @@ use crate::services::msgpack_zstd::{serialize_msgpack_named, write_atomic};
 
 const BACKUP_FILE_NAME: &str = "backup.msgpack";
 const BACKUP_SCHEMA_VERSION: u32 = 1;
-const AUTO_BACKUP_INTERVAL_SECONDS: i64 = 3 * 24 * 60 * 60;
+const AUTO_BACKUP_INTERVAL_SECONDS: i64 = 24 * 60 * 60;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BackupFileSummary {

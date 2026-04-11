@@ -11,6 +11,8 @@ vi.mock("@tauri-apps/api/core", () => ({
         return false;
       case "get_all_songs":
         return [];
+      case "get_all_song_summaries":
+        return [];
       case "get_categories":
         return [
           { id: "c1", name: "Harpa Cristã" },

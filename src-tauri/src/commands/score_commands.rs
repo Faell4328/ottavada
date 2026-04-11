@@ -67,6 +67,18 @@ fn build_score_from_indexed_file(
     ))
 }
 
+fn find_score_usage_in_library<'a>(
+    songs: &'a [SongListItem],
+    file: &IndexedFile,
+) -> Option<(&'a SongListItem, &'a ScoreListItem)> {
+    songs.iter().find_map(|song| {
+        song.scores
+            .iter()
+            .find(|score| paths_match(&score.file_path, &file.path))
+            .map(|score| (song, score))
+    })
+}
+
 fn ensure_supported_score_file(path: &Path) -> Result<(), AppError> {
     if !path.exists() || !path.is_file() {
         warn!("Arquivo não encontrado: {}", path.display());
@@ -373,6 +385,29 @@ pub fn add_score_to_song(
         song_id, file.path
     );
 
+    let all_songs = db.get_all_songs()?;
+    if let Some((used_song, used_score)) = find_score_usage_in_library(&all_songs, &file) {
+        if used_song.id != song_id {
+            let used_name = used_score
+                .name
+                .clone()
+                .unwrap_or_else(|| "Sem instrumento".to_string());
+
+            warn!(
+                "Arquivo já utilizado em outra música: file_path={}, used_song_id={}, used_song_name={}, score_name={}",
+                file.path,
+                used_song.id,
+                used_song.name,
+                used_name
+            );
+
+            return Err(AppError::Generic(format!(
+                "Essa partitura já está sendo utilizada na música '{}' e por isso não será salva",
+                used_song.name
+            )));
+        }
+    }
+
     let song = db.get_song_list_item_by_id(&song_id)?;
 
     if let Some(existing_score) = find_existing_score_by_file_path(&song.scores, &file) {
@@ -442,9 +477,16 @@ pub fn add_scores_to_song(
 
     let song = db.get_song_list_item_by_id(&song_id)?;
     let existing_scores = song.scores.clone();
+    let all_songs = db.get_all_songs()?;
     let mut added_count = 0;
 
     for file in files {
+        if let Some((used_song, _used_score)) = find_score_usage_in_library(&all_songs, &file) {
+            if used_song.id != song_id {
+                continue;
+            }
+        }
+
         let score_exists = score_exists_for_indexed_file(&existing_scores, &file, false);
 
         if score_exists {

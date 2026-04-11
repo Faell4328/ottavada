@@ -75,10 +75,6 @@ export function AddFilesModal({
   const addableEntries = activeFileEntries.filter(({ idx }) => duplicateMap.get(idx) === null);
   const hasAddableFiles = addableEntries.length > 0;
   const isDuplicateSong = existingSong !== null;
-  const getLiveConflict = (file: IndexedFile) =>
-    existingSong
-      ? findExistingScoreConflict([existingSong], file, existingSong.name)
-      : findExistingScoreConflict(songsForDuplicateCheck, file, normalizedTitle);
   const duplicateSummaryMessage = isDuplicateSong
     ? activeFileEntries.length === 0
       ? ""
@@ -290,9 +286,11 @@ export function AddFilesModal({
             {visibleFiles.map(({ file, idx }) => {
               const fileName = getFileName(file.path) || file.name;
               const directoryPath = getDirectoryPath(file.path);
-              const conflict = getLiveConflict(file);
+              const conflict = duplicateMap.get(idx) ?? null;
               const isLocked = conflict !== null;
-              const conflictMessage = conflict ? describeScoreConflict(conflict) : null;
+              const conflictMessage = conflict
+                ? describeScoreConflict(conflict, normalizedTitle)
+                : null;
               
               return (
                 <div key={idx} className="space-y-1">

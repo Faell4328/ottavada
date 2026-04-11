@@ -343,8 +343,23 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 ! Irei encerrar essa versão precocemente para fins de teste
 
 ## v0.12
-- [ ] Criar licença (por organização/computadores)
-- [ ] Criar telemetria (quantas músicas, partituras, tempo de uso, versão atual e etc).
+- [ ] Correções:
+	- [x] Backup será todo dia e não a cada 3 dias.
+	- [x] Adicionar tratamento melhor de quando uma partitura já está sendo utilizada em outra música. Explicação: Usuário criou a música e clico para "adicionar arquivo(s)", no modal de resumo, deve aparecer um erro avisando que essa partitura está sendo utilizada em outra música e por isso não será salva. Caso só tenha ela ou o restante tenha o mesmo problema, o botão de salvar deve ficar desativado (parecido com que já tem relacionado ao adicionar partitura já existente na mesma música).
+	- [ ] Não permitir partitura com o mesmo nome (ex: editar, adicionar e etc).
+		- [ ] Exemplo: pode acontecer de ao "indexar diretório" tenha duas "flute", o usuário precisa escolher uma (deletando a outra) ou alterando o nome (ex: `flauta - com solo`)
+	- [ ] Adicionar no topo do modal um aviso que tem pendência, as vezes o usuário pode não rolar até o final e não ver que existe pendência (ex: uma partitura já usada em outra música).
+	- [ ] Arrumar contagem de músicas e partituras nas configurações, removendo cache e realizando a consulta em outra thread no rust.
+	- [ ] Corrigir problema: não é para mudar automaticamente uma partitura `not found` para `main` é preciso verificar se o `status` anterior dela era `draft`, com o mesmo método usado para verificar se a partitura é `draft`.
+	- [ ] O "alterar arquivo" por padrão deixa a partitura como `draft`.
+- [ ] Assim que uma música e/ou partitura(s) for adicionada, deve gerar o `.tar.zts` dessa música, fazendo que já se tenha uma versão `main` mesmo que o usuário edite a música depois.
+- [ ] Backup para nuvem deve redirecionar para página home igual o backup local.
+
+
+- [ ] Adicionar no primeiro acesso (junto com o nome do computador) e nas configurações (para futura alteração) o nome da organização ou instituição. Apenas para servidor, cliente não precisa aparecer e nem consultar.
+- [ ] Criar telemetria (quantas músicas, partituras, tempo de uso, versão atual, logs e etc).
+	- Deve ficar armazenado internamente, quando possível enviar para o servidor (não emitindo erro ao usuário).
+- [ ] Criar tela de apresentação no primeiro acesso, objetivo é apresentar o software e mostrar o que ele pode fazer.
 
 ## v1.0
 - [ ] Adicionar instruções nas configurações, informando o que cada um faz.
@@ -363,3 +378,16 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - Possível adição de um novo `type` de computador `semi-server`.
 - Embutir o `rclone` no projeto: `/src-tauri/bin/rclone.exe`.
 - Implementar hash de verificação de arquivos.
+
+## Rascunho (ideia que não são válidas agora ou nunca serão, mas não quero perde totalmente de vista)
+
+- [ ] Licença (por organização/computadores)
+	- As informações sobre chave publica e rotas, deve ficar no `.env` do `src-tauri/`.
+	- O servidor irá receber o ID do usuário e a licença. Ele vai retornar autorizado ou não autorizado, no caso autorizado, vai retornado o token assinado com `openssl_sign($payloadBase64, $signature, $privateKey, OPENSSL_ALGO_SHA256);`.
+	- O cliente deve receber esse token e salvar no `tauri-plugin-store`. Sempre quando iniciar deve verificar se token está válido ou foi modificado. Uma vez por dia, deve consultar o servidor para validar o token.
+		- Caso o token tenha sido alterado, expirado, deletado ou etc. Deve iniciar o protocolo contagem regressiva, o usuário poderá usar ele por mais 7 dias.
+	- [ ] No primeiro acesso, a primeira tela a aparece é a da licença.
+	- [ ] O usuário informa a licença, a licença é enviada para o servidor, o servidor retorna um token com as informações a assinatura dele. O cliente válida a assinatura com a chave pública, ele também precisa validar se o ID do usuário está correto (está batendo o local com o do token).
+		- Token: `BASE64(payload).BASE64(signature)`
+		- Playload: `{ "userId": "xxx", "expiresAt": "yyy" }`
+	- [ ] O aplicativo deve consultar o servidor sempre ao iniciar. Caso o servidor não esteja disponível e a licença está válida, não precisa emitir nada. 

@@ -13,6 +13,8 @@ vi.mock("@tauri-apps/api/core", () => ({
         return false;
       case "get_all_songs":
         return [];
+      case "get_all_song_summaries":
+        return [];
       case "get_categories":
         return [{ id: "c1", name: "Harpa Cristã" }];
       case "get_settings":
@@ -66,6 +68,15 @@ const duplicateSongs: SongListItem[] = [
         status: "main",
       },
     ],
+  },
+];
+
+const otherSongConflictFiles: IndexedFile[] = [
+  {
+    path: "/library/Canon - Flauta.musx",
+    name: "BAVARIAN MARCH",
+    instrument: "Flauta",
+    extension: "musx",
   },
 ];
 
@@ -178,6 +189,25 @@ describe("AddFilesModal", () => {
 
     expect(conflictMessage.nextElementSibling).toBe(scoreName);
     expect(instrumentInput).toHaveAttribute("readonly");
+  });
+
+  it("should show when a score is already used in another song and disable save", () => {
+    renderWithProvider(
+      <AddFilesModal
+        isOpen={true}
+        files={otherSongConflictFiles}
+        existingSongs={duplicateSongs}
+        onClose={mockOnClose}
+        onSuccess={mockOnSuccess}
+      />
+    );
+
+    expect(
+      screen.getByText(
+        "Essa partitura já está sendo utilizada na música CANON e por isso não será salva."
+      )
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Salvar" })).toBeDisabled();
   });
 
   it("should open selected file with default app", async () => {
