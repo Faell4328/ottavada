@@ -618,43 +618,6 @@
 ```
 
 ! Em caso de problema, deve ser feito o rallback das alterações. Ou é feito tudo ou nada.
-
-# Verificar alteração dos arquivos
-
-**Apenas Servidor**
-
-```markdown
-1. Lista todos as músicas no banco de dados "songs"
-
-2. Pega a primeira música da lista
-
-3. Lista todas as partituras desta música
-   
-4. Cria variáveis para listar todas partituras com status "draft" e "not found"
-
-5. Faz a verifica de todas as partituras: compara o timestamp da última alteração e o tamanho, do arquivo local (filesystem) com a do banco de dados:
-	- Caso tenha alteração:
-		- Adiciona na variável "draft" o id do "score"
-	- Caso o arquivo não sejá encontrado:
-		- Adiciona na variável "not found" o id do "score"
-	- Caso não tenha alteração:
-		- Não faz nada
-
-6. Após verificar todas as partituras da música, pega a próxima música e o ciclo se repete até acabar todas as músicas cadastradas
-
-7. Ao verifiar todas as músicas
-	- Atualiza tudo:
-		! Deve ser uma transação as duas
-		- Atualizar todas as músicas para "draft" que estão na variável (único SQL)
-		- Atualizar todas as músicas para "not found" que estão na variável (único SQL)
-
-! Em caso de problema em alguma das etapas:
-	- O fluxo deve ser encerrado (caso esse fluxo esteja em outro, o fluxo pai deve ser encerrado também)
-	- Não é necessário reverter nada
-	- Registra no log
-	- Avisa o usuário que ocorreu um erro (toast)
-```
-
 # Alterar partitura de `draft` para `main` (pelo botão na interface) - Precisa arrumar no código
 
 **Apenas Servidor**

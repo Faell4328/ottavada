@@ -47,7 +47,7 @@
 - Todos os arquivos na nuvem devem ser compactados com `.zst`. Para ocupar menos espaço na Nuvem, maior velocidade de upload e download.
 - Tanto a varredura, quanto o update e download, deve ser feito em thread separada. Para não interferir no funcionamento dos outros componentes.
 - Os logs devem ser deletados depois de 30 dias, para não ficar poluindo o computador do usuário.
-- O rclone não deve usar `checkers`.
+- O rclone não deve usar `checkers`. E `transfers=4`.
 - Uma `snapshot` deve ser gerada sempre quando o `events.msgpack` passar de 2MB.
 - O `zstd` deve ser usado com essas configurações: `-10` (compressão equilibrada) e `-T0` (utilizar todos os núcleos)
 - `VACUUM;` rodar a cada 30 dias para limpar o lixo do DB.

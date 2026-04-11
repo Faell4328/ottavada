@@ -106,7 +106,9 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - v0.8 - Melhorias na usabilidade
 - v0.9 - Backup automático, adição do `rclone` ao sistema, facilidade na troca de provedor (`koofr` ou `google drive`), correção de progresso no `StatusBar`, entre outras melhorias e correções.
 - v0.10 - Melhorias e correções que foram encontradas, durante uso e testes massivos
-- v1.0 - Adição de licença e telemetria.
+- v0.11 - Atualização de software
+- v0.12 - Licença e telemetria
+- v1.0 - Manual e melhorias
 ## v0.4
 - [x] Atualizar bando de dados
 - [x] Atualizar `tauri-plugin-store`
@@ -340,13 +342,14 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 	- [x] Deve ser feito a leitura da chave privada e a senha no `.env` em `src-tauri/.env`.
 ! Irei encerrar essa versão precocemente para fins de teste
 
-## v1.0
-- [ ] Implementar um fluxo para atualizar campos automaticamente sem peleja manual.
-- [ ] Montar um manual para o usuário, explicando cada detalhe do software para que ele consiga utilizar com o máximo de tranquilidade.
+## v0.12
 - [ ] Criar licença (por organização/computadores)
 - [ ] Criar telemetria (quantas músicas, partituras, tempo de uso, versão atual e etc).
+
+## v1.0
 - [ ] Adicionar instruções nas configurações, informando o que cada um faz.
 	- Deve ter uma estilização diferente, para que o usuário entenda que é uma explicação.
+- [ ] Montar um manual para o usuário, explicando cada detalhe do software para que ele consiga utilizar com o máximo de tranquilidade.
 
 ## Funcionalidades para v2 (apenas rascunho/ideias)
 

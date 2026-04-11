@@ -136,3 +136,26 @@ MicroScore
 - Estava insatisfeito com o usuário tendo que escolher entre "rclone do aplicativo" ou "rclone do sistema", tudo isso para "diplar" sistemas x32.
 - Estava muito bagunçado e difícil, agora o aplicativo terá a versão `x32` e `x64`, cada uma com o rclone correto.
 - Também, só será utilizado o "rclone do aplicativo", é mais fácil para o usuário e não é necessário sobrecarregar ele com: instalação e configuração.
+
+**09-04-2026**
+
+Versão apenas para licença e atualização.
+- Tive a ideia, irei distribuir o software enxuto, com apenas a função de licença e atualização.
+- O objetivo é evitar pirataria, evitando que com instalador a pessoa consiga usar tudo.
+- Evidentemente, o usuário é obrigado a ter internet na instalação. Se bem que qualquer forma ele é, porque se não ele não conseguiria configurar e testar o provedor de nuvem.
+- Isso evita que o instalador seja compartilhado sem limites, já que cada licença tem um número limitados de instalação.
+
+**10-04-2026**
+
+Sem `over engineering`
+- Anteriormente decidi fazer a separação, hoje, fiz o teste e cheguei a conclusão que não compensa, complexidade muito alta para pouco frutos.
+- Solução: O usuário irá receber o aplicativo completo. Ao instalar a primeira coisa que será consultado é se tem atualização, caso tenha, já atualiza direto, sem criar nada no (banco de dados, tauri-plugin-store). Caso tenha atualização, deve abrir uma página informando que é necessário atualizar o aplicativo antes de instalar, com uma contagem regressiva.
+- Com a última versão instalada, o usuário informa  o nome da organização e a próxima tela é a da licença.
+
+**11-04-2026**
+
+"bye bye money" (licença)
+- Estava com uma grande dúvida, como iria limitar pirataria, como iria monetizar e etc, mas, acredito que por agora, a melhor solução seja deixar totalmente livre. Acredito que seja mais vantajoso deixar ele 100% vitrine e no máximo ir nas organizações pedi uma "ajuda financeira".
+- Com isso irei implementar telemetria e outras coisas para melhorar na usabilidade e aprender onde e o que melhorar no software, ou se ele realmente está sendo utilizado.
+- Acho que a melhor escolha é usar ele como vitrine e experiência para conseguir uma oportunidade como dev.
+- Então, qual os planos: foca na telemetria, criar uma boa página de boas vindas, avisando meu telefone de contanto, uma boa apresentação do software.
