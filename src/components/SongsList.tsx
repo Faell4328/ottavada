@@ -41,6 +41,7 @@ export default function SongsList() {
   const [songForAddFile, setSongForAddFile] = useState<SongListItem | null>(null);
   const [pendingFilesToAdd, setPendingFilesToAdd] = useState<IndexedFile[]>([]);
   const [existingScoresForAddFile, setExistingScoresForAddFile] = useState<ScoreListItem[]>([]);
+  const [existingSongsForAddFile, setExistingSongsForAddFile] = useState<SongListItem[]>([]);
   const [isAddFileModalOpen, setIsAddFileModalOpen] = useState(false);
   const [scoresBySongId, setScoresBySongId] = useState<Record<string, ScoreListItem[]>>({});
   const [loadingScoresBySongId, setLoadingScoresBySongId] = useState<Record<string, boolean>>({});
@@ -274,8 +275,12 @@ export default function SongsList() {
       }
 
       setSongForAddFile(song);
-      const existingScores = await api.getScoresForSong(song.id);
+      const [existingScores, existingSongs] = await Promise.all([
+        api.getScoresForSong(song.id),
+        api.getAllSongs(),
+      ]);
       setExistingScoresForAddFile(existingScores);
+      setExistingSongsForAddFile(existingSongs);
       setPendingFilesToAdd(indexedFiles.map((file) => ({
         ...file,
         name: song.name,
@@ -315,6 +320,7 @@ export default function SongsList() {
     setSongForAddFile(null);
     setPendingFilesToAdd([]);
     setExistingScoresForAddFile([]);
+    setExistingSongsForAddFile([]);
   };
 
   return (
@@ -466,6 +472,7 @@ export default function SongsList() {
         songName={songForAddFile?.name ?? ""}
         files={pendingFilesToAdd}
         existingScores={existingScoresForAddFile}
+        existingSongs={existingSongsForAddFile}
         onClose={closeAddFileModal}
         onSave={handleSaveFilesToSong}
       />

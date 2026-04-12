@@ -58,23 +58,63 @@ export function AddFilesModal({
     () => findSongByName(songsForDuplicateCheck, normalizedTitle),
     [normalizedTitle, songsForDuplicateCheck]
   );
-  const duplicateMap = useMemo(() => {
-    const map = new Map<number, ReturnType<typeof findExistingScoreConflict>>();
-
-    files.forEach((file, idx) => {
-      map.set(idx, findExistingScoreConflict(songsForDuplicateCheck, file, normalizedTitle));
-    });
-
-    return map;
-  }, [files, normalizedTitle, songsForDuplicateCheck]);
   const activeFileEntries = useMemo(
     () => files.map((file, idx) => ({ file, idx })).filter(({ idx }) => !removedFileIndices.has(idx)),
     [files, removedFileIndices]
   );
-  const duplicateEntries = activeFileEntries.filter(({ idx }) => duplicateMap.get(idx) !== null);
-  const addableEntries = activeFileEntries.filter(({ idx }) => duplicateMap.get(idx) === null);
+  const normalizedInstrumentNames = useMemo(() => {
+    const map = new Map<number, string | null>();
+
+    activeFileEntries.forEach(({ file, idx }) => {
+      map.set(idx, normalizeScoreNameForSave(instrumentNames[idx] ?? file.instrument));
+    });
+
+    return map;
+  }, [activeFileEntries, instrumentNames]);
+  const normalizedInstrumentCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+
+    normalizedInstrumentNames.forEach((normalizedInstrument) => {
+      if (!normalizedInstrument) {
+        return;
+      }
+
+      counts.set(normalizedInstrument, (counts.get(normalizedInstrument) ?? 0) + 1);
+    });
+
+    return counts;
+  }, [normalizedInstrumentNames]);
+  const duplicateMap = useMemo(() => {
+    const map = new Map<number, ReturnType<typeof findExistingScoreConflict> | null>();
+
+    activeFileEntries.forEach(({ file, idx }) => {
+      map.set(idx, findExistingScoreConflict(songsForDuplicateCheck, file, normalizedTitle));
+    });
+
+    return map;
+  }, [activeFileEntries, instrumentNames, normalizedTitle, songsForDuplicateCheck]);
+  const batchDuplicateMap = useMemo(() => {
+    const map = new Map<number, boolean>();
+
+    activeFileEntries.forEach(({ file, idx }) => {
+      const normalizedInstrument = normalizeScoreNameForSave(instrumentNames[idx] ?? file.instrument);
+      map.set(
+        idx,
+        normalizedInstrument !== null && (normalizedInstrumentCounts.get(normalizedInstrument) ?? 0) > 1
+      );
+    });
+
+    return map;
+  }, [activeFileEntries, instrumentNames, normalizedInstrumentCounts]);
+  const duplicateEntries = activeFileEntries.filter(({ file, idx }) => {
+    return duplicateMap.get(idx) !== null || batchDuplicateMap.get(idx) === true;
+  });
+  const addableEntries = activeFileEntries.filter(({ file, idx }) => {
+    return duplicateMap.get(idx) === null && batchDuplicateMap.get(idx) !== true;
+  });
   const hasAddableFiles = addableEntries.length > 0;
   const isDuplicateSong = existingSong !== null;
+  const hasPendingIssues = isDuplicateSong || duplicateEntries.length > 0;
   const duplicateSummaryMessage = isDuplicateSong
     ? activeFileEntries.length === 0
       ? ""
@@ -83,6 +123,13 @@ export function AddFilesModal({
         : `${describeExistingSongWarning()} ${addableEntries.length} partitura(s) nova(s) serão adicionadas.`
     : duplicateEntries.length > 0
       ? `${duplicateEntries.length} partitura(s) já foram adicionadas e serão ignoradas.`
+      : "";
+  const pendingIssuesMessage = isDuplicateSong
+    ? duplicateSummaryMessage
+    : duplicateEntries.length > 0
+      ? duplicateEntries.length === 1
+        ? "Há uma partitura com nome duplicado ou já utilizada em outra música. Renomeie ou remova o arquivo antes de salvar."
+        : `${duplicateEntries.length} partituras com nome duplicado ou já utilizadas em outra música. Renomeie ou remova os arquivos antes de salvar.`
       : "";
 
   useEffect(() => {
@@ -235,6 +282,13 @@ export function AddFilesModal({
         />
       }
     >
+      {hasPendingIssues && pendingIssuesMessage && (
+        <div className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          <p className="font-semibold">Há pendências nas partituras selecionadas.</p>
+          <p>{pendingIssuesMessage}</p>
+        </div>
+      )}
+
       <FormField label="Nome da Música" required>
         {duplicateSummaryMessage && (
           <p className="mb-1.5 text-xs font-semibold text-amber-700">
@@ -287,18 +341,26 @@ export function AddFilesModal({
               const fileName = getFileName(file.path) || file.name;
               const directoryPath = getDirectoryPath(file.path);
               const conflict = duplicateMap.get(idx) ?? null;
+              const normalizedInstrument = normalizedInstrumentNames.get(idx);
+              const isBatchDuplicate =
+                normalizedInstrument !== null &&
+                normalizedInstrument !== undefined &&
+                (normalizedInstrumentCounts.get(normalizedInstrument) ?? 0) > 1;
               const isLocked = conflict !== null;
               const conflictMessage = conflict
                 ? describeScoreConflict(conflict, normalizedTitle)
+                : null;
+              const batchConflictMessage = isBatchDuplicate
+                ? "Essa partitura possui o mesmo nome de outra partitura nesta seleção e não será salva até ser renomeada ou removida."
                 : null;
               
               return (
                 <div key={idx} className="space-y-1">
                   <div className="flex items-center justify-between">
                     <div className="min-w-0 flex-1 pr-2">
-                      {conflictMessage && (
+                      {(conflictMessage || batchConflictMessage) && (
                         <p className="text-xs font-semibold text-amber-700">
-                          {conflictMessage}
+                          {conflictMessage || batchConflictMessage}
                         </p>
                       )}
                       <p className="text-xs text-[#5d738b] font-semibold break-all whitespace-normal">

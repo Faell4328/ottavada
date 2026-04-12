@@ -1,14 +1,16 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { ExternalLink, FolderOpen, Loader2 } from "lucide-react";
 import type { ScoreListItem } from "../types";
 import * as api from "../api/commands";
 import { Modal, ModalFooterButtons, FormField, TextInput, ErrorMessage } from "./ui";
 import { normalizeScoreNameForSave, normalizeScoreNameInput } from "../utils/nameFormat";
+import { findScoreNameConflictInSong } from "../utils/libraryDuplicates";
 
 interface EditInstrumentModalProps {
   isOpen: boolean;
   instrument: ScoreListItem | null;
+  existingScores?: ScoreListItem[];
   onClose: () => void;
   onSave: (
     scoreFileId: string,
@@ -20,6 +22,7 @@ interface EditInstrumentModalProps {
 export function EditInstrumentModal({
   isOpen,
   instrument,
+  existingScores = [],
   onClose,
   onSave,
 }: EditInstrumentModalProps) {
@@ -29,6 +32,32 @@ export function EditInstrumentModal({
   const [error, setError] = useState("");
   const [isOpeningScore, setIsOpeningScore] = useState(false);
   const [isOpeningLocation, setIsOpeningLocation] = useState(false);
+
+  const songWithInstrument = useMemo(() => {
+    if (!instrument) {
+      return null;
+    }
+
+    return {
+      id: "",
+      name: "",
+      composer: null,
+      arranger: null,
+      updated_at: "",
+      is_favorite: false,
+      category_ids: [],
+      scores: existingScores,
+    };
+  }, [existingScores, instrument]);
+
+  const nameConflict = useMemo(() => {
+    if (!songWithInstrument || !instrument) {
+      return null;
+    }
+
+    return findScoreNameConflictInSong(songWithInstrument, instrumentName, instrument.id);
+  }, [instrument, instrumentName, songWithInstrument]);
+  const hasNameConflict = nameConflict !== null;
 
   useEffect(() => {
     if (isOpen && instrument) {
@@ -109,6 +138,11 @@ export function EditInstrumentModal({
       return;
     }
 
+    if (hasNameConflict) {
+      setError("Já existe uma partitura com esse nome");
+      return;
+    }
+
     setIsSaving(true);
     setError("");
 
@@ -139,9 +173,17 @@ export function EditInstrumentModal({
           onCancel={onClose}
           onConfirm={handleSave}
           isSaving={isSaving}
+          confirmDisabled={hasNameConflict}
         />
       }
     >
+      {hasNameConflict && (
+        <div className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          <p className="font-semibold">Há uma pendência nesta partitura.</p>
+          <p>Já existe outra partitura com esse nome. Renomeie antes de salvar.</p>
+        </div>
+      )}
+
       <FormField label="Nome do Instrumento">
         <TextInput
           value={instrumentName}

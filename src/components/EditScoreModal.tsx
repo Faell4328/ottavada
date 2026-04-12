@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { ExternalLink, FolderOpen, Loader2 } from "lucide-react";
 import type { SongListItem, ScoreListItem } from "../types";
 import * as api from "../api/commands";
 import { Modal, ModalFooterButtons, FormField, TextInput, ErrorMessage } from "./ui";
 import { normalizeScoreNameForSave, normalizeScoreNameInput } from "../utils/nameFormat";
+import { findScoreNameConflictInSong } from "../utils/libraryDuplicates";
 
 interface EditScoreModalProps {
   isOpen: boolean;
@@ -32,6 +33,15 @@ export function EditScoreModal({
   const [error, setError] = useState("");
   const [isOpeningScore, setIsOpeningScore] = useState(false);
   const [isOpeningLocation, setIsOpeningLocation] = useState(false);
+
+  const nameConflict = useMemo(() => {
+    if (!score || !instrument) {
+      return null;
+    }
+
+    return findScoreNameConflictInSong(score, instrumentName, instrument.id);
+  }, [instrument, instrumentName, score]);
+  const hasNameConflict = nameConflict !== null;
 
   useEffect(() => {
     if (isOpen && score && instrument) {
@@ -110,6 +120,11 @@ export function EditScoreModal({
       return;
     }
 
+    if (hasNameConflict) {
+      setError("Já existe uma partitura com esse nome nesta música");
+      return;
+    }
+
     setIsSaving(true);
     setError("");
 
@@ -142,9 +157,17 @@ export function EditScoreModal({
           onCancel={onClose}
           onConfirm={handleSave}
           isSaving={isSaving}
+          confirmDisabled={hasNameConflict}
         />
       }
     >
+      {hasNameConflict && (
+        <div className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          <p className="font-semibold">Há uma pendência nesta partitura.</p>
+          <p>Já existe outra partitura com esse nome nesta música. Renomeie antes de salvar.</p>
+        </div>
+      )}
+
       {/* Music Info - Read Only */}
       <FormField label="Música">
         <div className="rounded border border-[#c5cfdb] bg-[#f5f7fa] p-3">

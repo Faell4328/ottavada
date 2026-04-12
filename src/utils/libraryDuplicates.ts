@@ -110,6 +110,31 @@ export function findExistingScoreConflictInSong(
   };
 }
 
+export function findScoreNameConflictInSong(
+  song: SongListItem | null | undefined,
+  scoreName: string,
+  excludedScoreId?: string | null
+): ScoreListItem | null {
+  if (!song) {
+    return null;
+  }
+
+  const normalizedScoreName = normalizeScoreNameForSave(scoreName);
+  if (!normalizedScoreName) {
+    return null;
+  }
+
+  return (
+    song.scores.find((score) => {
+      if (excludedScoreId && score.id === excludedScoreId) {
+        return false;
+      }
+
+      return normalizeScoreNameForSave(score.name ?? "") === normalizedScoreName;
+    }) ?? null
+  );
+}
+
 export function describeScoreConflict(
   conflict: ScoreConflict,
   currentSongName?: string | null

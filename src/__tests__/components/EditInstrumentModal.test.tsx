@@ -17,6 +17,18 @@ const sampleInstrument: ScoreListItem = {
   status: "main",
 };
 
+const existingScores: ScoreListItem[] = [
+  sampleInstrument,
+  {
+    id: "sc2",
+    name: "Violino",
+    file_path: "/music/Canon - Violino.musx",
+    file_extension: "musx",
+    updated_at: "2024-01-01 12:00:00",
+    status: "main",
+  },
+];
+
 describe("EditInstrumentModal", () => {
   const mockOnClose = vi.fn();
   const mockOnSave = vi.fn();
@@ -179,6 +191,25 @@ describe("EditInstrumentModal", () => {
       ).toBeInTheDocument();
     });
     expect(mockOnSave).not.toHaveBeenCalled();
+  });
+
+  it("should warn when renaming to an existing instrument name and disable save", () => {
+    render(
+      <EditInstrumentModal
+        isOpen={true}
+        instrument={sampleInstrument}
+        existingScores={existingScores}
+        onClose={mockOnClose}
+        onSave={mockOnSave}
+      />
+    );
+
+    fireEvent.change(screen.getByDisplayValue("Flauta"), {
+      target: { value: "Violino" },
+    });
+
+    expect(screen.getByText("Há uma pendência nesta partitura.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Salvar" })).toBeDisabled();
   });
 
   it("should open selected file with default app", async () => {

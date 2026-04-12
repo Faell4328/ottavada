@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { AddScoreToSongModal } from "../../components/AddScoreToSongModal";
 import { AppProvider } from "../../context/AppContext";
-import type { IndexedFile, ScoreListItem } from "../../types";
+import type { IndexedFile, ScoreListItem, SongListItem } from "../../types";
 import * as api from "../../api/commands";
 import { normalizeScoreNameForSave } from "../../utils/nameFormat";
 
@@ -40,6 +40,21 @@ const sampleFile: IndexedFile = {
   extension: "musx",
 };
 
+const duplicateBatchFiles: IndexedFile[] = [
+  {
+    path: "/music/HINO NACIONAL - Flauta 1.musx",
+    name: "HINO NACIONAL",
+    instrument: "Flauta",
+    extension: "musx",
+  },
+  {
+    path: "/music/HINO NACIONAL - Flauta 2.musx",
+    name: "HINO NACIONAL",
+    instrument: "Flauta",
+    extension: "musx",
+  },
+];
+
 const existingScores: ScoreListItem[] = [
   {
     id: "score-1",
@@ -48,6 +63,38 @@ const existingScores: ScoreListItem[] = [
     file_extension: "musx",
     updated_at: "2026-04-08T00:00:00.000Z",
     status: "main",
+  },
+];
+
+const existingSongs: SongListItem[] = [
+  {
+    id: "song-1",
+    name: "HINO NACIONAL",
+    composer: null,
+    arranger: null,
+    updated_at: "2026-04-08T00:00:00.000Z",
+    is_favorite: false,
+    category_ids: [],
+    scores: existingScores,
+  },
+  {
+    id: "song-2",
+    name: "OUTRA MÚSICA",
+    composer: null,
+    arranger: null,
+    updated_at: "2026-04-08T00:00:00.000Z",
+    is_favorite: false,
+    category_ids: [],
+    scores: [
+      {
+        id: "score-2",
+        name: "Trompete",
+        file_path: sampleFile.path,
+        file_extension: "musx",
+        updated_at: "2026-04-08T00:00:00.000Z",
+        status: "main",
+      },
+    ],
   },
 ];
 
@@ -110,11 +157,54 @@ describe("AddScoreToSongModal", () => {
       />
     );
 
-    const warning = screen.getByText("Essa partitura já foi adicionada");
+    const warning = screen.getAllByText("Essa partitura já foi adicionada")[0];
 
     expect(warning).toBeInTheDocument();
     expect(screen.getByText("HINO NACIONAL - Flauta.musx")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("Nome do instrumento")).toHaveAttribute("readonly");
+    expect(screen.getByRole("button", { name: "Salvar" })).toBeDisabled();
+  });
+
+  it("should warn when the same instrument is selected twice and keep the inputs editable", () => {
+    renderWithProvider(
+      <AddScoreToSongModal
+        isOpen={true}
+        songName="HINO NACIONAL"
+        files={duplicateBatchFiles}
+        onClose={mockOnClose}
+        onSave={mockOnSave}
+      />
+    );
+
+    expect(
+      screen.getByText("Há pendências nas partituras selecionadas.")
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Salvar" })).toBeDisabled();
+
+    const instrumentInputs = screen.getAllByPlaceholderText("Nome do instrumento");
+    expect(instrumentInputs[0]).not.toHaveAttribute("readonly");
+    expect(instrumentInputs[1]).not.toHaveAttribute("readonly");
+  });
+
+  it("should show feedback before save when the selected file is already used by another song", () => {
+    renderWithProvider(
+      <AddScoreToSongModal
+        isOpen={true}
+        songName="HINO NACIONAL"
+        files={[sampleFile]}
+        existingScores={existingScores}
+        existingSongs={existingSongs}
+        onClose={mockOnClose}
+        onSave={mockOnSave}
+      />
+    );
+
+    expect(screen.getByText("Há pendências nas partituras selecionadas.")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Essa partitura já está sendo utilizada na música OUTRA MÚSICA e por isso não será salva."
+      )
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Salvar" })).toBeDisabled();
   });
 

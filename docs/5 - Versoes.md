@@ -346,9 +346,11 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [ ] Correções:
 	- [x] Backup será todo dia e não a cada 3 dias.
 	- [x] Adicionar tratamento melhor de quando uma partitura já está sendo utilizada em outra música. Explicação: Usuário criou a música e clico para "adicionar arquivo(s)", no modal de resumo, deve aparecer um erro avisando que essa partitura está sendo utilizada em outra música e por isso não será salva. Caso só tenha ela ou o restante tenha o mesmo problema, o botão de salvar deve ficar desativado (parecido com que já tem relacionado ao adicionar partitura já existente na mesma música).
-	- [ ] Não permitir partitura com o mesmo nome (ex: editar, adicionar e etc).
-		- [ ] Exemplo: pode acontecer de ao "indexar diretório" tenha duas "flute", o usuário precisa escolher uma (deletando a outra) ou alterando o nome (ex: `flauta - com solo`)
-	- [ ] Adicionar no topo do modal um aviso que tem pendência, as vezes o usuário pode não rolar até o final e não ver que existe pendência (ex: uma partitura já usada em outra música).
+	- [x] Não permitir partitura com o mesmo nome (ex: editar, adicionar e etc).
+		- [x] Exemplo: pode acontecer de ao "indexar diretório" tenha duas "flute", o usuário precisa escolher uma (deletando a outra) ou alterando o nome (ex: `flauta - com solo`)
+		- O feedback ao usuário deve aparecer antes de aparecer o botão de salvar. Exatamente igual quando se indexar o mesmo diretório.
+	- [x] Adicionar no topo do modal um aviso que tem pendência, as vezes o usuário pode não rolar até o final e não ver que existe pendência (ex: uma partitura já usada em outra música).
+	- O feedback ao usuário deve aparecer antes de aparecer o botão de salvar. Exatamente igual quando se indexar o mesmo diretório.
 	- [ ] Arrumar contagem de músicas e partituras nas configurações, removendo cache e realizando a consulta em outra thread no rust.
 	- [ ] Corrigir problema: não é para mudar automaticamente uma partitura `not found` para `main` é preciso verificar se o `status` anterior dela era `draft`, com o mesmo método usado para verificar se a partitura é `draft`.
 	- [ ] O "alterar arquivo" por padrão deixa a partitura como `draft`.

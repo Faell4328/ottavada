@@ -49,6 +49,11 @@ const sampleFiles: IndexedFile[] = [
   { path: "/music/Canon - Violino.musx", name: "Canon", instrument: "Violino", extension: "musx" },
 ];
 
+const duplicateBatchFiles: IndexedFile[] = [
+  { path: "/music/Canon - Flauta 1.musx", name: "Canon", instrument: "Flauta", extension: "musx" },
+  { path: "/music/Canon - Flauta 2.musx", name: "Canon", instrument: "Flauta", extension: "musx" },
+];
+
 const duplicateSongs: SongListItem[] = [
   {
     id: "song-1",
@@ -189,6 +194,26 @@ describe("AddFilesModal", () => {
 
     expect(conflictMessage.nextElementSibling).toBe(scoreName);
     expect(instrumentInput).toHaveAttribute("readonly");
+  });
+
+  it("should warn when two files have the same instrument name and keep them editable", () => {
+    renderWithProvider(
+      <AddFilesModal
+        isOpen={true}
+        files={duplicateBatchFiles}
+        onClose={mockOnClose}
+        onSuccess={mockOnSuccess}
+      />
+    );
+
+    expect(
+      screen.getByText("Há pendências nas partituras selecionadas.")
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Salvar" })).toBeDisabled();
+
+    const instrumentInputs = screen.getAllByPlaceholderText("Nome do instrumento");
+    expect(instrumentInputs[0]).not.toHaveAttribute("readonly");
+    expect(instrumentInputs[1]).not.toHaveAttribute("readonly");
   });
 
   it("should show when a score is already used in another song and disable save", () => {

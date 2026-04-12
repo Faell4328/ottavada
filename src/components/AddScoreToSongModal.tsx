@@ -1,19 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { ExternalLink, FolderOpen, Loader2 } from "lucide-react";
-import { useAppState } from "../context/AppContext";
 import type { IndexedFile, ScoreListItem, SongListItem } from "../types";
 import * as api from "../api/commands";
 import { Modal, ModalFooterButtons, FormField, TextInput, ErrorMessage } from "./ui";
 import { getDirectoryPath, getFileName } from "../utils/paths";
 import { normalizeScoreNameForSave, normalizeScoreNameInput } from "../utils/nameFormat";
 import { getErrorMessage } from "../utils/errors";
-import { describeScoreConflict, findExistingScoreConflictInSong } from "../utils/libraryDuplicates";
+import { describeScoreConflict, findExistingScoreConflict } from "../utils/libraryDuplicates";
 
 interface AddScoreToSongModalProps {
   isOpen: boolean;
   songName: string;
   files: IndexedFile[];
   existingScores?: ScoreListItem[];
+  existingSongs?: SongListItem[];
   onClose: () => void;
   onSave: (files: IndexedFile[]) => Promise<void>;
 }
@@ -23,11 +23,11 @@ export function AddScoreToSongModal({
   songName,
   files,
   existingScores,
+  existingSongs,
   onClose,
   onSave,
 }: AddScoreToSongModalProps) {
-  const { state } = useAppState();
-  const scoresForDuplicateCheck = existingScores ?? state.selectedSong?.scores ?? [];
+  const scoresForDuplicateCheck = existingScores ?? [];
   const [instrumentNames, setInstrumentNames] = useState<Record<number, string>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
@@ -36,19 +36,22 @@ export function AddScoreToSongModal({
 
   const currentSong = useMemo<SongListItem>(
     () =>
-      state.selectedSong
-        ? { ...state.selectedSong, scores: scoresForDuplicateCheck }
-        : {
-            id: "",
-            name: songName,
-            composer: null,
-            arranger: null,
-            updated_at: "",
-            is_favorite: false,
-            category_ids: [],
-            scores: scoresForDuplicateCheck,
-          },
-    [scoresForDuplicateCheck, songName, state.selectedSong]
+      ({
+        id: "",
+        name: songName,
+        composer: null,
+        arranger: null,
+        updated_at: "",
+        is_favorite: false,
+        category_ids: [],
+        scores: scoresForDuplicateCheck,
+      }),
+    [scoresForDuplicateCheck, songName]
+  );
+
+  const songsForDuplicateCheck = useMemo(
+    () => existingSongs ?? [currentSong],
+    [currentSong, existingSongs]
   );
 
   const activeFileEntries = useMemo(
@@ -56,17 +59,68 @@ export function AddScoreToSongModal({
     [files]
   );
 
-  const duplicateEntries = useMemo(
-    () => activeFileEntries.filter(({ file }) => findExistingScoreConflictInSong(currentSong, file) !== null),
-    [activeFileEntries, currentSong]
-  );
+  const normalizedInstrumentNames = useMemo(() => {
+    const map = new Map<number, string | null>();
 
-  const addableEntries = useMemo(
-    () => activeFileEntries.filter(({ file }) => findExistingScoreConflictInSong(currentSong, file) === null),
-    [activeFileEntries, currentSong]
-  );
+    activeFileEntries.forEach(({ file, idx }) => {
+      map.set(idx, normalizeScoreNameForSave(instrumentNames[idx] ?? file.instrument));
+    });
+
+    return map;
+  }, [activeFileEntries, instrumentNames]);
+
+  const normalizedInstrumentCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+
+    normalizedInstrumentNames.forEach((normalizedInstrument) => {
+      if (!normalizedInstrument) {
+        return;
+      }
+
+      counts.set(normalizedInstrument, (counts.get(normalizedInstrument) ?? 0) + 1);
+    });
+
+    return counts;
+  }, [normalizedInstrumentNames]);
+
+  const duplicateMap = useMemo(() => {
+    const map = new Map<number, ReturnType<typeof findExistingScoreConflict>>();
+
+    activeFileEntries.forEach(({ file, idx }) => {
+      map.set(idx, findExistingScoreConflict(songsForDuplicateCheck, file, songName));
+    });
+
+    return map;
+  }, [activeFileEntries, songName, songsForDuplicateCheck]);
+
+  const batchDuplicateMap = useMemo(() => {
+    const map = new Map<number, boolean>();
+
+    activeFileEntries.forEach(({ file, idx }) => {
+      const normalizedInstrument = normalizeScoreNameForSave(instrumentNames[idx] ?? file.instrument);
+      map.set(
+        idx,
+        normalizedInstrument !== null && (normalizedInstrumentCounts.get(normalizedInstrument) ?? 0) > 1
+      );
+    });
+
+    return map;
+  }, [activeFileEntries, instrumentNames, normalizedInstrumentCounts]);
+
+  const duplicateEntries = activeFileEntries.filter(({ idx }) => {
+    return duplicateMap.get(idx) !== null || batchDuplicateMap.get(idx) === true;
+  });
+
+  const addableEntries = activeFileEntries.filter(({ idx }) => {
+    return duplicateMap.get(idx) === null && batchDuplicateMap.get(idx) !== true;
+  });
 
   const hasAddableFiles = addableEntries.length > 0;
+  const hasPendingIssues = duplicateEntries.length > 0;
+  const pendingIssuesMessage =
+    duplicateEntries.length === 1
+      ? "Há uma partitura com nome duplicado ou já utilizada em outra música. Renomeie ou remova o arquivo antes de salvar."
+      : `${duplicateEntries.length} partituras com nome duplicado ou já utilizadas em outra música. Renomeie ou remova os arquivos antes de salvar.`;
 
   useEffect(() => {
     if (!isOpen || files.length === 0) {
@@ -160,6 +214,13 @@ export function AddScoreToSongModal({
         />
       }
     >
+      {hasPendingIssues && (
+        <div className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          <p className="font-semibold">Há pendências nas partituras selecionadas.</p>
+          <p>{pendingIssuesMessage}</p>
+        </div>
+      )}
+
       <FormField label="Nome da Musica">
         <TextInput value={songName} onChange={() => {}} placeholder="Nome da musica" readOnly />
       </FormField>
@@ -176,16 +237,25 @@ export function AddScoreToSongModal({
           {activeFileEntries.map(({ file, idx }) => {
             const fileName = getFileName(file.path) || file.name;
             const directoryPath = getDirectoryPath(file.path);
-            const conflict = findExistingScoreConflictInSong(currentSong, file);
+            const conflict = duplicateMap.get(idx) ?? null;
+            const normalizedInstrument = normalizedInstrumentNames.get(idx);
+            const isBatchDuplicate =
+              normalizedInstrument !== null &&
+              normalizedInstrument !== undefined &&
+              (normalizedInstrumentCounts.get(normalizedInstrument) ?? 0) > 1;
             const isLocked = conflict !== null;
             const isBusy = openingScorePath === file.path || openingLocationPath === file.path;
+            const conflictMessage = conflict ? describeScoreConflict(conflict, songName) : null;
+            const batchConflictMessage = isBatchDuplicate
+              ? "Essa partitura possui o mesmo nome de outra partitura nesta seleção e não será salva até ser renomeada ou removida."
+              : null;
 
             return (
               <div key={idx} className="space-y-2">
                 <div className="min-w-0">
-                  {conflict && (
+                  {(conflictMessage || batchConflictMessage) && (
                     <p className="mb-1.5 text-xs font-semibold text-amber-700">
-                      {describeScoreConflict(conflict)}
+                      {conflictMessage || batchConflictMessage}
                     </p>
                   )}
                   <p className="text-xs text-[#5d738b] font-semibold break-all whitespace-normal">
