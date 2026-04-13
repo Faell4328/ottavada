@@ -205,13 +205,7 @@ pub async fn apply_server_changes_on_client(
     run_blocking_with_store(
         app_data_dir,
         "Falha interna ao aplicar alterações do servidor no cliente",
-        move |store| {
-            let summary = apply_server_changes_for_client(&db, &store)?;
-            let mut settings = store.get_app_settings()?;
-            settings.library_summary = Some(db.get_library_summary_counts()?);
-            store.save_app_settings(&settings)?;
-            Ok(summary)
-        },
+        move |store| apply_server_changes_for_client(&db, &store),
     )
     .await
 }

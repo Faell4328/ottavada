@@ -3,38 +3,50 @@ use std::sync::Arc;
 use tauri::{AppHandle, State};
 use tracing::{error, info};
 
+use crate::commands::common::run_blocking_with_store;
+use crate::commands::rclone_commands::terminate_running_rclone_processes;
 use crate::domain::errors::AppError;
 use crate::domain::models::{
     AppSettings, ComputerType, GoogleDriveMode, LibrarySummary, RcloneConfig,
 };
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
-use crate::commands::rclone_commands::terminate_running_rclone_processes;
 
 #[tauri::command]
-pub fn get_settings(
+pub async fn get_settings(
     db: State<'_, Database>,
     store: State<'_, SystemStore>,
 ) -> Result<AppSettings, AppError> {
-    info!("Buscando configurações");
-    let mut settings = store.get_app_settings()?;
+    let db = db.inner().clone();
+    let app_data_dir = store.app_data_dir().clone();
 
-    settings.library_summary = Some(db.get_library_summary_counts()?);
-    store.save_app_settings(&settings)?;
-
-    Ok(settings)
+    run_blocking_with_store(
+        app_data_dir,
+        "Falha interna ao buscar configurações",
+        move |store| {
+            info!("Buscando configurações");
+            let mut settings = store.get_app_settings()?;
+            settings.library_summary = Some(db.get_library_summary_counts()?);
+            Ok(settings)
+        },
+    )
+    .await
 }
 
 #[tauri::command]
-pub fn refresh_library_summary_cache(
+pub async fn refresh_library_summary_cache(
     db: State<'_, Database>,
     store: State<'_, SystemStore>,
 ) -> Result<LibrarySummary, AppError> {
-    let mut settings = store.get_app_settings()?;
-    let summary = db.get_library_summary_counts()?;
-    settings.library_summary = Some(summary.clone());
-    store.save_app_settings(&settings)?;
-    Ok(summary)
+    let db = db.inner().clone();
+    let app_data_dir = store.app_data_dir().clone();
+
+    run_blocking_with_store(
+        app_data_dir,
+        "Falha interna ao atualizar resumo da biblioteca",
+        move |_store| db.get_library_summary_counts(),
+    )
+    .await
 }
 
 #[tauri::command]

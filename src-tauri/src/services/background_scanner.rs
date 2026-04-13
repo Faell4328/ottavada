@@ -38,9 +38,7 @@ pub fn run_initial_scan(db: &Database, host_id: &str) {
         }
 
         if let Ok((current_size, current_modified_at)) = get_file_metadata(path) {
-            let stored_modified_at =
-                chrono::NaiveDateTime::parse_from_str(&stored_modified_at_str, "%Y-%m-%d %H:%M:%S")
-                    .unwrap_or_else(|_| chrono::Local::now().naive_local());
+            let stored_modified_at = parse_stored_modified_at(&stored_modified_at_str);
 
             let detector = FileChangeDetector::new(
                 current_size,
@@ -72,7 +70,7 @@ pub fn run_initial_scan(db: &Database, host_id: &str) {
             not_found_scores.len()
         );
 
-        for (score_id, file_path, _stored_size, _stored_modified_at_str) in not_found_scores {
+        for (score_id, file_path, stored_size, stored_modified_at_str) in not_found_scores {
             let path = Path::new(&file_path);
 
             if !path.exists() || !path.is_file() {
@@ -81,19 +79,28 @@ pub fn run_initial_scan(db: &Database, host_id: &str) {
 
             match get_file_metadata(path) {
                 Ok((current_size, current_modified_at)) => {
+                    let recovered_status = resolve_recovered_score_status(
+                        db,
+                        &score_id,
+                        current_size,
+                        current_modified_at,
+                        stored_size,
+                        &stored_modified_at_str,
+                    );
+
                     if db
                         .update_score_status(
                             &score_id,
-                            ScoreStatus::Main,
+                            recovered_status,
                             host_id,
                             Some((current_size, current_modified_at)),
                         )
                         .is_ok()
                     {
                         recovered_count += 1;
-                        info!("✓ Status recuperado para main: {}", file_path);
+                        info!("✓ Status recuperado: {}", file_path);
                     } else {
-                        warn!("Erro ao recuperar status para main: {}", file_path);
+                        warn!("Erro ao recuperar status: {}", file_path);
                     }
                 }
                 Err(e) => {
@@ -110,4 +117,41 @@ pub fn run_initial_scan(db: &Database, host_id: &str) {
         "Verificação inicial concluída: {} alterações, {} não encontrados, {} recuperados",
         changed_count, not_found_count, recovered_count
     );
+}
+
+fn parse_stored_modified_at(stored_modified_at_str: &str) -> chrono::NaiveDateTime {
+    chrono::NaiveDateTime::parse_from_str(stored_modified_at_str, "%Y-%m-%d %H:%M:%S")
+        .unwrap_or_else(|_| chrono::Local::now().naive_local())
+}
+
+fn resolve_recovered_score_status(
+    db: &Database,
+    score_id: &str,
+    current_size: u64,
+    current_modified_at: chrono::NaiveDateTime,
+    stored_size: u64,
+    stored_modified_at_str: &str,
+) -> ScoreStatus {
+    let stored_modified_at = parse_stored_modified_at(stored_modified_at_str);
+    let detector = FileChangeDetector::new(
+        current_size,
+        current_modified_at,
+        stored_size,
+        stored_modified_at,
+    );
+
+    let previous_status = db
+        .get_previous_status_before_latest_not_found(score_id)
+        .ok()
+        .flatten();
+
+    if previous_status == Some(ScoreStatus::Draft) || detector.has_changed() {
+        return ScoreStatus::Draft;
+    }
+
+    match previous_status {
+        Some(ScoreStatus::Pending) => ScoreStatus::Pending,
+        Some(ScoreStatus::Main) => ScoreStatus::Main,
+        _ => ScoreStatus::Main,
+    }
 }

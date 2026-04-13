@@ -318,12 +318,10 @@ fn build_client_extracted_score_name(song_name: &str, score_name: Option<&str>) 
 }
 
 fn refresh_library_summary_cache(
-    db: &Database,
-    store: &SystemStore,
+    _db: &Database,
+    _store: &SystemStore,
 ) -> Result<(), AppError> {
-    let mut settings = store.get_app_settings()?;
-    settings.library_summary = Some(db.get_library_summary_counts()?);
-    store.save_app_settings(&settings)
+    Ok(())
 }
 
 #[tauri::command]

@@ -5,7 +5,7 @@ use tracing::info;
 use crate::domain::errors::AppError;
 use crate::domain::models::{
     AppSettings, BackupDatabaseStep, BackupStatus, ComputerType, GoogleDriveMode,
-    GoogleServiceAccount, LibrarySummary, RcloneConfig, RcloneProvider, SongBackupStatus,
+    GoogleServiceAccount, RcloneConfig, RcloneProvider, SongBackupStatus,
 };
 
 const STORE_FILENAME: &str = "app-store.json";
@@ -158,10 +158,6 @@ impl SystemStore {
                     .collect()
             });
 
-                let library_summary = store
-                    .get("library_summary")
-                    .and_then(|value| serde_json::from_value::<LibrarySummary>(value.clone()).ok());
-
         let settings = AppSettings {
             computer_id,
             computer_name,
@@ -186,7 +182,7 @@ impl SystemStore {
                 .and_then(|v: &serde_json::Value| v.as_u64()),
             backup_database_step,
             backup_songs_step,
-            library_summary,
+            library_summary: None,
             last_snapshot_timestamp,
             last_change_timestamp,
             last_backup_timestamp,
@@ -295,13 +291,7 @@ impl SystemStore {
                 .map(|obj| obj.remove("backup_songs_step"));
         }
 
-        if let Some(ref library_summary) = settings.library_summary {
-            store["library_summary"] = serde_json::to_value(library_summary).map_err(|e| {
-                AppError::Generic(format!("Erro ao serializar library summary: {}", e))
-            })?;
-        } else {
-            store.as_object_mut().map(|obj| obj.remove("library_summary"));
-        }
+        store.as_object_mut().map(|obj| obj.remove("library_summary"));
 
         if let Some(last_snapshot_timestamp) = settings.last_snapshot_timestamp {
             store["cloud"]["lastSnapshotTimestamp"] = serde_json::json!(last_snapshot_timestamp);
@@ -349,8 +339,6 @@ impl SystemStore {
             }
         }
 
-        settings.library_summary = Some(db.get_library_summary_counts()?);
-
         self.save_app_settings(settings)
     }
 
@@ -377,5 +365,51 @@ impl SystemStore {
             .parent()
             .map(|p| p.to_path_buf())
             .unwrap_or_else(|| PathBuf::from("."))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use tempfile::tempdir;
+
+    use super::SystemStore;
+    use crate::domain::models::{
+        AppSettings, ComputerType, LibraryStatusSummary, LibrarySummary,
+    };
+
+    #[test]
+    fn does_not_persist_library_summary_in_store() {
+        let dir = tempdir().expect("temp dir");
+        let store = SystemStore::new(dir.path().to_path_buf());
+
+        let settings = AppSettings {
+            computer_id: "server-1".to_string(),
+            computer_name: Some("Servidor".to_string()),
+            computer_type: ComputerType::Server,
+            first_run_completed: true,
+            library_summary: Some(LibrarySummary {
+                main: LibraryStatusSummary {
+                    songs_count: 2,
+                    scores_count: 4,
+                },
+                pending: LibraryStatusSummary {
+                    songs_count: 1,
+                    scores_count: 1,
+                },
+                not_found: LibraryStatusSummary {
+                    songs_count: 0,
+                    scores_count: 0,
+                },
+            }),
+            ..Default::default()
+        };
+
+        store.save_app_settings(&settings).expect("save settings");
+
+        let raw_store = store.load_store().expect("load store");
+        assert!(raw_store.get("library_summary").is_none());
+
+        let reloaded = store.get_app_settings().expect("reload settings");
+        assert!(reloaded.library_summary.is_none());
     }
 }

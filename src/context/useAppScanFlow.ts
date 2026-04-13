@@ -444,7 +444,6 @@ export function useAppScanFlow({
 
       // Atualiza o marcador de "alterações aplicadas" somente ao concluir com sucesso.
       await api.markLocalChangesAsApplied();
-      await api.refreshLibrarySummaryCache();
       await loadSettings();
       updateStepProgress(changedCount);
 

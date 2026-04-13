@@ -106,10 +106,10 @@ export function AddFilesModal({
 
     return map;
   }, [activeFileEntries, instrumentNames, normalizedInstrumentCounts]);
-  const duplicateEntries = activeFileEntries.filter(({ file, idx }) => {
+  const duplicateEntries = activeFileEntries.filter(({ idx }) => {
     return duplicateMap.get(idx) !== null || batchDuplicateMap.get(idx) === true;
   });
-  const addableEntries = activeFileEntries.filter(({ file, idx }) => {
+  const addableEntries = activeFileEntries.filter(({ idx }) => {
     return duplicateMap.get(idx) === null && batchDuplicateMap.get(idx) !== true;
   });
   const hasAddableFiles = addableEntries.length > 0;

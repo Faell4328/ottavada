@@ -963,13 +963,14 @@ impl Database {
 
         let old_values = conn
             .query_row(
-                "SELECT name, file_path, file_name FROM scores WHERE id = ?1",
+                "SELECT name, file_path, file_name, status FROM scores WHERE id = ?1",
                 params![score_id],
                 |row| {
                     Ok((
                         row.get::<_, Option<String>>(0)?,
                         row.get::<_, String>(1)?,
                         row.get::<_, String>(2)?,
+                        row.get::<_, String>(3)?,
                     ))
                 },
             )
@@ -980,14 +981,24 @@ impl Database {
                 other => AppError::Database(other),
             })?;
 
+        let file_changed = old_values.1 != file_path || old_values.2 != file_name;
+
         conn.execute(
-            "UPDATE scores SET name = ?1, file_path = ?2, file_name = ?3, file_size = ?4, file_modified_at = ?5 WHERE id = ?6",
+            "UPDATE scores
+             SET name = ?1,
+                 file_path = ?2,
+                 file_name = ?3,
+                 file_size = ?4,
+                 file_modified_at = ?5,
+                 status = ?6
+             WHERE id = ?7",
             params![
                 name,
                 file_path,
                 file_name,
                 file_size,
                 datetime_utils::format_datetime(file_modified_at),
+                old_values.3.clone(),
                 score_id,
             ],
         )?;
@@ -1021,7 +1032,7 @@ impl Database {
             )?;
         }
 
-        if old_values.1 != file_path || old_values.2 != file_name {
+        if file_changed {
             Self::insert_changed_field(
                 &conn,
                 "update",
@@ -1043,6 +1054,24 @@ impl Database {
                     Some("extension"),
                     old_extension,
                     new_extension,
+                )?;
+            }
+
+            let affected = conn.execute(
+                "UPDATE backupSongs
+                 SET status = 'processing',
+                     last_backup_at = NULL,
+                     error_message = NULL
+                 WHERE song_id = ?1",
+                params![song_id],
+            )?;
+
+            if affected == 0 {
+                let backup_status_id = uuid::Uuid::new_v4().to_string();
+                conn.execute(
+                    "INSERT INTO backupSongs (id, song_id, status, last_backup_at, error_message)
+                     VALUES (?1, ?2, 'processing', NULL, NULL)",
+                    params![backup_status_id, song_id],
                 )?;
             }
         }
@@ -1634,6 +1663,32 @@ impl Database {
             Ok(timestamp) => Ok(Some(timestamp)),
             Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
             Err(e) => Err(AppError::Database(e)),
+        }
+    }
+
+    pub fn get_previous_status_before_latest_not_found(
+        &self,
+        score_id: &str,
+    ) -> Result<Option<ScoreStatus>, AppError> {
+        let conn = self.conn.lock().unwrap();
+
+        let previous_status = conn.query_row(
+            "SELECT oldValue
+             FROM changedField
+             WHERE entity = 'scores'
+               AND entityId = ?1
+               AND field = 'status'
+               AND newValue = 'not_found'
+             ORDER BY timestamp DESC, id DESC
+             LIMIT 1",
+            params![score_id],
+            |row| row.get::<_, Option<String>>(0),
+        );
+
+        match previous_status {
+            Ok(value) => Ok(value.map(|status| ScoreStatus::from_str(&status))),
+            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+            Err(other) => Err(AppError::Database(other)),
         }
     }
 

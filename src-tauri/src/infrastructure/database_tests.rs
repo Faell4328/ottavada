@@ -424,6 +424,19 @@ mod tests {
         db.insert_score(&make_score(&db, "sc1", "s1", Some("Violino")))
             .unwrap();
 
+        {
+            let conn = db.conn.lock().unwrap();
+            conn.execute(
+                "UPDATE backupSongs
+                 SET status = ?1,
+                     last_backup_at = ?2,
+                     error_message = NULL
+                 WHERE song_id = ?3",
+                rusqlite::params!["ok", 123_i64, "s1"],
+            )
+            .unwrap();
+        }
+
         let new_dir_id = "/new/path".to_string();
         db.update_score(
             "sc1",
@@ -440,6 +453,23 @@ mod tests {
         let songs = db.get_all_songs().unwrap();
         assert_eq!(songs[0].scores[0].name, Some("Violino 1".to_string()));
         assert!(songs[0].scores[0].file_path.contains("score.musx"));
+        assert_eq!(songs[0].scores[0].status, ScoreStatus::Main);
+
+        let conn = db.conn.lock().unwrap();
+        let backup = conn
+            .query_row(
+                "SELECT status, last_backup_at FROM backupSongs WHERE song_id = ?1",
+                ["s1"],
+                |row| {
+                    Ok((
+                        row.get::<_, String>(0)?,
+                        row.get::<_, Option<i64>>(1)?,
+                    ))
+                },
+            )
+            .unwrap();
+        assert_eq!(backup.0, "processing");
+        assert_eq!(backup.1, None);
     }
 
     #[test]
@@ -707,6 +737,25 @@ mod tests {
             .unwrap();
 
         assert_eq!(draft_events, 1);
+    }
+
+    #[test]
+    fn test_get_previous_status_before_latest_not_found() {
+        let db = make_db();
+        db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
+        db.insert_score(&make_score(&db, "sc1", "s1", Some("Violino")))
+            .unwrap();
+
+        db.update_score_status("sc1", ScoreStatus::Draft, "test-computer", None)
+            .unwrap();
+        db.update_score_status("sc1", ScoreStatus::NotFound, "test-computer", None)
+            .unwrap();
+
+        let previous_status = db
+            .get_previous_status_before_latest_not_found("sc1")
+            .unwrap();
+
+        assert_eq!(previous_status, Some(ScoreStatus::Draft));
     }
 
     // ── Score Metadata for Scanning ──

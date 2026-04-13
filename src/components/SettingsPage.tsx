@@ -83,6 +83,10 @@ export default function SettingsPage() {
   }, [state.settings]);
 
   useEffect(() => {
+    void loadSettings();
+  }, [loadSettings]);
+
+  useEffect(() => {
     if (state.settings) {
       setSettings(state.settings);
     }
