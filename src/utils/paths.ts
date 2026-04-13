@@ -24,6 +24,10 @@ export function getFileName(path: string): string {
   return normalized.slice(lastSlash + 1);
 }
 
+export function isSupportedScoreFilePath(path: string): boolean {
+  return /\.(pdf|mus|musx)$/i.test(path.trim());
+}
+
 /**
  * Compares two paths across platforms.
  * On Windows-style paths (drive letter), comparison is case-insensitive.

@@ -7,6 +7,7 @@ import { getDirectoryPath, getFileName } from "../utils/paths";
 import { normalizeScoreNameForSave, normalizeScoreNameInput } from "../utils/nameFormat";
 import { getErrorMessage } from "../utils/errors";
 import { describeScoreConflict, findExistingScoreConflict } from "../utils/libraryDuplicates";
+import { sortIndexedFileEntriesForReview } from "../utils/indexedFileReviewOrder";
 
 interface AddScoreToSongModalProps {
   isOpen: boolean;
@@ -33,6 +34,7 @@ export function AddScoreToSongModal({
   const [error, setError] = useState("");
   const [openingScorePath, setOpeningScorePath] = useState<string | null>(null);
   const [openingLocationPath, setOpeningLocationPath] = useState<string | null>(null);
+  const [editingInstrumentIndex, setEditingInstrumentIndex] = useState<number | null>(null);
 
   const currentSong = useMemo<SongListItem>(
     () =>
@@ -137,6 +139,7 @@ export function AddScoreToSongModal({
     setIsSaving(false);
     setOpeningScorePath(null);
     setOpeningLocationPath(null);
+    setEditingInstrumentIndex(null);
   }, [files, isOpen]);
 
   const handleOpenScore = async (path: string) => {
@@ -199,6 +202,12 @@ export function AddScoreToSongModal({
     return null;
   }
 
+  const visibleFiles = sortIndexedFileEntriesForReview(
+    activeFileEntries,
+    instrumentNames,
+    editingInstrumentIndex
+  );
+
   return (
     <Modal
       isOpen={isOpen}
@@ -234,7 +243,7 @@ export function AddScoreToSongModal({
           </p>
         )}
         <div className="rounded border border-[#c5cfdb] bg-white p-3 space-y-4 max-h-75 overflow-y-auto">
-          {activeFileEntries.map(({ file, idx }) => {
+          {visibleFiles.map(({ file, idx }) => {
             const fileName = getFileName(file.path) || file.name;
             const directoryPath = getDirectoryPath(file.path);
             const conflict = duplicateMap.get(idx) ?? null;
@@ -307,8 +316,10 @@ export function AddScoreToSongModal({
                       [idx]: normalizeScoreNameInput(value),
                     }));
                   }}
+                  onFocus={() => setEditingInstrumentIndex(idx)}
+                  onBlur={() => setEditingInstrumentIndex(null)}
                   placeholder="Nome do instrumento"
-                  autoFocus={idx === 0}
+                  autoFocus={visibleFiles[0]?.idx === idx}
                   readOnly={isLocked}
                 />
               </div>

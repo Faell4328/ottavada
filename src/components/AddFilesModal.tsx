@@ -12,7 +12,7 @@ import {
   normalizeSongNameForSave,
   normalizeSongNameInput,
 } from "../utils/nameFormat";
-import { compareInstrumentNames } from "../utils/instrumentOrder";
+import { sortIndexedFileEntriesForReview } from "../utils/indexedFileReviewOrder";
 import {
   describeExistingSongWarning,
   describeScoreConflict,
@@ -252,20 +252,11 @@ export function AddFilesModal({
   if (files.length === 0) return null;
 
   const instrumentCount = activeFileEntries.length;
-  const visibleFiles = activeFileEntries
-    .slice()
-    .sort((a, b) => {
-      // Keep list stable while the user is actively typing in an input.
-      // After blur, reorder based on edited instrument names.
-      const useEditedNames = editingInstrumentIndex === null;
-      const aName = useEditedNames
-        ? instrumentNames[a.idx] ?? a.file.instrument
-        : a.file.instrument;
-      const bName = useEditedNames
-        ? instrumentNames[b.idx] ?? b.file.instrument
-        : b.file.instrument;
-      return compareInstrumentNames(aName, bName);
-    });
+  const visibleFiles = sortIndexedFileEntriesForReview(
+    activeFileEntries,
+    instrumentNames,
+    editingInstrumentIndex
+  );
 
   return (
     <Modal

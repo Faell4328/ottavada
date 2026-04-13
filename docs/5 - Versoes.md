@@ -353,13 +353,17 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 	- O feedback ao usuário deve aparecer antes de aparecer o botão de salvar. Exatamente igual quando se indexar o mesmo diretório.
 	- [x] Arrumar contagem de músicas e partituras nas configurações, removendo cache e realizando a consulta em outra thread no rust.
 	- [x] Corrigir problema: não é para mudar automaticamente uma partitura `not found` para `main` é preciso verificar se o `status` anterior dela era `draft`, com o mesmo método usado para verificar se a partitura é `draft`.
-- [ ] No "adicionar arquivos" em uma música, os instrumentos deve seguir exatamente a mesma ordem que está definido no "indexar diretório", me refiro ao modal de revisão.
-- [ ] Quando se adicionar uma ou mais partituras a uma música com "adicionar arquivos" e depois vai no overflow menu da partitura "editar", os botões "abrir partitura" e "abrir local" não funcionam, abrindo o explorador de arquivos em documentos (em ambos). Esse problema ocorria em "indexar diretório", mas foi arrumado lá.
+- [x] No "adicionar arquivos" em uma música, os instrumentos deve seguir exatamente a mesma ordem que está definido no "indexar diretório", me refiro ao modal de revisão.
+- [x] Quando se adicionar uma ou mais partituras a uma música com "adicionar arquivos" e depois vai no overflow menu da partitura "editar", os botões "abrir partitura" e "abrir local" não funcionam, abrindo o explorador de arquivos em documentos (em ambos). Esse problema ocorria em "indexar diretório", mas foi arrumado lá.
+- [x] Arrumar também o modal de revisão do "adicionar arquivos", está com o exato mesmo problema da tarefa acima.
+- [x] A opção "abrir local", agora abre e seleciona a partitura especifica.
 - [ ] Assim que uma música e/ou partitura(s) for adicionada, deve gerar o `.tar.zts` dessa música, fazendo que já se tenha uma versão `main` mesmo que o usuário edite a música depois.
 - [ ] Backup para nuvem deve redirecionar para página home igual o backup local.
-- [ ] Adicionar opção "remover partitura do cliente", com isso a partitura é definida como `draft` e é removida do `{songId}.tar.zst`. Para adicionar novamente, basta definir como `main` e clicar em "aplicar alterações".
+- [ ] Remover toast duplicado no "aplicar alterações". Verificar se tem outros duplicados também e remover.
+- [ ] Melhorar os erros no toast ao testar os provedores, podem "bugar" o usuário. Ex melhores: "suas credências estão erradas" e etc.
 
 
+- [ ] Atualiza o `tauri-plugin-store` igual a documentação.
 - [ ] Adicionar no primeiro acesso (junto com o nome do computador) e nas configurações (para futura alteração) o nome da organização ou instituição. Apenas para servidor, cliente não precisa aparecer e nem consultar.
 - [ ] Criar telemetria (quantas músicas, partituras, tempo de uso, versão atual, logs e etc).
 	- Deve ficar armazenado internamente, quando possível enviar para o servidor (não emitindo erro ao usuário).

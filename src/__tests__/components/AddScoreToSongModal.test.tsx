@@ -55,6 +55,27 @@ const duplicateBatchFiles: IndexedFile[] = [
   },
 ];
 
+const unsortedFiles: IndexedFile[] = [
+  {
+    path: "/music/HINO NACIONAL - Violino.musx",
+    name: "HINO NACIONAL",
+    instrument: "Violino",
+    extension: "musx",
+  },
+  {
+    path: "/music/HINO NACIONAL - Oboe.musx",
+    name: "HINO NACIONAL",
+    instrument: "Oboe",
+    extension: "musx",
+  },
+  {
+    path: "/music/HINO NACIONAL - Flauta.musx",
+    name: "HINO NACIONAL",
+    instrument: "Flauta",
+    extension: "musx",
+  },
+];
+
 const existingScores: ScoreListItem[] = [
   {
     id: "score-1",
@@ -184,6 +205,28 @@ describe("AddScoreToSongModal", () => {
     const instrumentInputs = screen.getAllByPlaceholderText("Nome do instrumento");
     expect(instrumentInputs[0]).not.toHaveAttribute("readonly");
     expect(instrumentInputs[1]).not.toHaveAttribute("readonly");
+  });
+
+  it("should render files in the same review order as directory indexing", () => {
+    renderWithProvider(
+      <AddScoreToSongModal
+        isOpen={true}
+        songName="HINO NACIONAL"
+        files={unsortedFiles}
+        onClose={mockOnClose}
+        onSave={mockOnSave}
+      />
+    );
+
+    const renderedFileNames = screen
+      .getAllByText(/HINO NACIONAL - .*\.musx/)
+      .map((element) => element.textContent);
+
+    expect(renderedFileNames).toEqual([
+      "HINO NACIONAL - Flauta.musx",
+      "HINO NACIONAL - Oboe.musx",
+      "HINO NACIONAL - Violino.musx",
+    ]);
   });
 
   it("should show feedback before save when the selected file is already used by another song", () => {

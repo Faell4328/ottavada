@@ -17,6 +17,11 @@ const sampleInstrument: ScoreListItem = {
   status: "main",
 };
 
+const folderInstrument: ScoreListItem = {
+  ...sampleInstrument,
+  file_path: "/music/scores",
+};
+
 const existingScores: ScoreListItem[] = [
   sampleInstrument,
   {
@@ -249,6 +254,32 @@ describe("EditInstrumentModal", () => {
 
     await waitFor(() => {
       expect(openFileLocationSpy).toHaveBeenCalledWith(sampleInstrument.file_path);
+    });
+  });
+
+  it("should fall back to the score id when the stored path is not a file", async () => {
+    const openFileSpy = vi.spyOn(api, "openFile").mockResolvedValue(undefined);
+    const openFileLocationSpy = vi.spyOn(api, "openFileLocation").mockResolvedValue(undefined);
+
+    render(
+      <EditInstrumentModal
+        isOpen={true}
+        instrument={folderInstrument}
+        onClose={mockOnClose}
+        onSave={mockOnSave}
+      />
+    );
+
+    fireEvent.click(screen.getByTitle("Abrir partitura"));
+
+    await waitFor(() => {
+      expect(openFileSpy).toHaveBeenCalledWith(folderInstrument.id);
+    });
+
+    fireEvent.click(screen.getByTitle("Abrir local"));
+
+    await waitFor(() => {
+      expect(openFileLocationSpy).toHaveBeenCalledWith(folderInstrument.id);
     });
   });
 });

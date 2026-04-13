@@ -6,6 +6,8 @@ use tracing::{error, info, warn};
 
 #[cfg(target_os = "windows")]
 use crate::commands::common::configure_no_window_command;
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
 use crate::commands::common::require_server_settings;
 use crate::domain::errors::AppError;
 use crate::domain::models::ComputerType;
@@ -107,10 +109,12 @@ fn read_score_file_metadata(path: &Path) -> Result<(u64, chrono::NaiveDateTime),
 }
 
 fn open_path_on_system(file_path: &str) -> Result<(), AppError> {
+    let normalized_path = file_path.replace('/', "\\");
+
     #[cfg(target_os = "windows")]
     {
-        let mut cmd = configure_no_window_command(std::process::Command::new("explorer"));
-        cmd.arg(file_path)
+        let mut cmd = configure_no_window_command(std::process::Command::new("cmd"));
+        cmd.args(["/C", "start", "", &normalized_path])
             .spawn()
             .map_err(|e| AppError::Generic(format!("Erro ao abrir arquivo: {}", e)))?;
     }
@@ -126,7 +130,7 @@ fn open_path_on_system(file_path: &str) -> Result<(), AppError> {
     #[cfg(target_os = "linux")]
     {
         std::process::Command::new("xdg-open")
-            .arg(file_path)
+            .arg(&normalized_path)
             .spawn()
             .map_err(|e| AppError::Generic(format!("Erro ao abrir arquivo: {}", e)))?;
     }
@@ -135,34 +139,35 @@ fn open_path_on_system(file_path: &str) -> Result<(), AppError> {
 }
 
 fn open_file_location_on_system(file_path: &str) -> Result<(), AppError> {
-    let path = Path::new(file_path);
+    let normalized_path = file_path.replace('/', "\\");
+    let path = Path::new(&normalized_path);
 
     if !path.exists() {
         return Err(AppError::Generic("Arquivo não encontrado".into()));
     }
 
-    let parent = path.parent().ok_or_else(|| {
-        AppError::Generic("Não foi possível identificar o diretório do arquivo".into())
-    })?;
-
     #[cfg(target_os = "windows")]
     {
-        let mut cmd = configure_no_window_command(std::process::Command::new("explorer"));
-        cmd.arg(parent)
-            .spawn()
-            .map_err(|e| AppError::Generic(format!("Erro ao abrir local do arquivo: {}", e)))?;
+        tauri_plugin_opener::reveal_item_in_dir(path).map_err(|e| {
+            AppError::Generic(format!("Erro ao abrir local do arquivo: {}", e))
+        })?;
     }
 
     #[cfg(target_os = "macos")]
     {
         std::process::Command::new("open")
-            .arg(parent)
+            .arg("-R")
+            .arg(path)
             .spawn()
             .map_err(|e| AppError::Generic(format!("Erro ao abrir local do arquivo: {}", e)))?;
     }
 
     #[cfg(target_os = "linux")]
     {
+        let parent = path.parent().ok_or_else(|| {
+            AppError::Generic("Não foi possível identificar o diretório do arquivo".into())
+        })?;
+
         std::process::Command::new("xdg-open")
             .arg(parent)
             .spawn()
@@ -553,10 +558,20 @@ pub fn open_file_path(file_path: String) -> Result<(), AppError> {
 }
 
 #[tauri::command]
-pub fn open_file_location(file_path: String) -> Result<(), AppError> {
+pub fn open_file_location(
+    db: State<'_, Database>,
+    file_path: String,
+) -> Result<(), AppError> {
     let path = Path::new(&file_path);
-    ensure_supported_score_file(path)?;
-    open_file_location_on_system(&file_path)
+    if path.exists() && path.is_file() {
+        ensure_supported_score_file(path)?;
+        return open_file_location_on_system(&file_path);
+    }
+
+    let resolved_path = db.get_score_file_path(&file_path)?;
+    let resolved = Path::new(&resolved_path);
+    ensure_supported_score_file(resolved)?;
+    open_file_location_on_system(&resolved_path)
 }
 
 #[tauri::command]

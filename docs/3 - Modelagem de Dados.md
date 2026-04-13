@@ -317,7 +317,8 @@ Será documentando em JSON, mas na aplicação real é utilizando `MessagePack`.
 ```json
 {
 	"id": "lfajkdçf",
-	"name": "Faell",
+	"computerName": "Faell",
+	"organization": "Sei la",
 	"type": "client",
 	"rclone": {
 		"provider": "drive" || "koofr",

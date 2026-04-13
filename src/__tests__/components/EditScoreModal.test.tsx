@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { EditScoreModal } from "../../components/EditScoreModal";
 import type { ScoreListItem, SongListItem } from "../../types";
+import * as api from "../../api/commands";
 
 vi.mock("@tauri-apps/plugin-dialog", () => ({
   open: vi.fn(),
@@ -42,6 +43,11 @@ const sampleInstrument: ScoreListItem = {
   file_extension: "musx",
   updated_at: "2024-01-01 12:00:00",
   status: "main",
+};
+
+const folderInstrument: ScoreListItem = {
+  ...sampleInstrument,
+  file_path: "/music/scores",
 };
 
 describe("EditScoreModal", () => {
@@ -95,6 +101,33 @@ describe("EditScoreModal", () => {
         instrumentName: "Flauta 2",
         filePath: "/music/HINO NACIONAL - Flauta.musx",
       });
+    });
+  });
+
+  it("should fall back to the score id when the stored path is not a file", async () => {
+    const openFileSpy = vi.spyOn(api, "openFile").mockResolvedValue(undefined);
+    const openFileLocationSpy = vi.spyOn(api, "openFileLocation").mockResolvedValue(undefined);
+
+    render(
+      <EditScoreModal
+        isOpen={true}
+        score={sampleSong}
+        instrument={folderInstrument}
+        onClose={mockOnClose}
+        onSave={mockOnSave}
+      />
+    );
+
+    fireEvent.click(screen.getByTitle("Abrir partitura"));
+
+    await waitFor(() => {
+      expect(openFileSpy).toHaveBeenCalledWith(folderInstrument.id);
+    });
+
+    fireEvent.click(screen.getByTitle("Abrir local"));
+
+    await waitFor(() => {
+      expect(openFileLocationSpy).toHaveBeenCalledWith(folderInstrument.id);
     });
   });
 });

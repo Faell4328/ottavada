@@ -6,6 +6,7 @@ import * as api from "../api/commands";
 import { Modal, ModalFooterButtons, FormField, TextInput, ErrorMessage } from "./ui";
 import { normalizeScoreNameForSave, normalizeScoreNameInput } from "../utils/nameFormat";
 import { findScoreNameConflictInSong } from "../utils/libraryDuplicates";
+import { isSupportedScoreFilePath } from "../utils/paths";
 
 interface EditScoreModalProps {
   isOpen: boolean;
@@ -54,7 +55,9 @@ export function EditScoreModal({
   }, [isOpen, score, instrument]);
 
   const handleOpenScore = async () => {
-    if (!filePath.trim()) {
+    const selectedPath = filePath.trim();
+
+    if (!selectedPath && !instrument) {
       setError("Selecione um arquivo para abrir a partitura");
       return;
     }
@@ -63,7 +66,11 @@ export function EditScoreModal({
     setError("");
 
     try {
-      await api.openFilePath(filePath.trim());
+      if (selectedPath && isSupportedScoreFilePath(selectedPath)) {
+        await api.openFilePath(selectedPath);
+      } else {
+        await api.openFile(instrument?.id ?? "");
+      }
     } catch {
       setError("Não foi possível abrir a partitura selecionada");
     } finally {
@@ -72,7 +79,9 @@ export function EditScoreModal({
   };
 
   const handleOpenLocal = async () => {
-    if (!filePath.trim()) {
+    const selectedPath = filePath.trim();
+
+    if (!selectedPath && !instrument) {
       setError("Selecione um arquivo para abrir o local");
       return;
     }
@@ -81,7 +90,11 @@ export function EditScoreModal({
     setError("");
 
     try {
-      await api.openFileLocation(filePath.trim());
+      if (selectedPath && isSupportedScoreFilePath(selectedPath)) {
+        await api.openFileLocation(selectedPath);
+      } else {
+        await api.openFileLocation(instrument?.id ?? "");
+      }
     } catch {
       setError("Não foi possível abrir o local da partitura selecionada");
     } finally {
