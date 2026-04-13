@@ -980,7 +980,7 @@ pub async fn upload_cloud_paths_with_rclone(
     .await
 }
 
-fn upload_cloud_paths_with_rclone_impl(
+pub fn upload_cloud_paths_with_rclone_impl(
     store: &SystemStore,
     relative_paths: &[String],
 ) -> Result<RcloneSelectiveUploadSummary, AppError> {

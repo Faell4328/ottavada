@@ -735,6 +735,7 @@ fn generate_song_archives_with_prepared_versions(
     app_data_dir: &Path,
     cloud_root_dir: &Path,
     prepared_versions: &PreparedDraftNotFoundMainVersions,
+    song_ids_filter: Option<&HashSet<String>>,
 ) -> Result<SongArchiveSummary, AppError> {
     let songs_dir = cloud_root_dir.join(SONGS_DIR_NAME);
     let temp_root = app_data_dir.join(TMP_DIR_NAME).join(SONGS_DIR_NAME);
@@ -751,6 +752,23 @@ fn generate_song_archives_with_prepared_versions(
             removed_orphans
         );
     }
+
+    let rows = if let Some(song_ids_filter) = song_ids_filter {
+        let filtered_rows: Vec<SongBackupRow> = rows
+            .into_iter()
+            .filter(|row| song_ids_filter.contains(&row.song_id))
+            .collect();
+
+        if filtered_rows.is_empty() {
+            return Err(AppError::Generic(
+                "Nenhuma música encontrada para gerar backup".to_string(),
+            ));
+        }
+
+        filtered_rows
+    } else {
+        rows
+    };
 
     let mut results = Vec::with_capacity(rows.len());
     let mut jobs = Vec::new();
@@ -921,7 +939,42 @@ pub fn generate_song_archives(
 ) -> Result<SongArchiveSummary, AppError> {
     let prepared_versions =
         prepare_draft_not_found_main_versions(db, app_data_dir, cloud_root_dir)?;
-    generate_song_archives_with_prepared_versions(db, app_data_dir, cloud_root_dir, &prepared_versions)
+    generate_song_archives_with_prepared_versions(
+        db,
+        app_data_dir,
+        cloud_root_dir,
+        &prepared_versions,
+        None,
+    )
+}
+
+pub fn generate_song_archives_for_song_ids(
+    db: &Database,
+    app_data_dir: &Path,
+    cloud_root_dir: &Path,
+    song_ids: &[String],
+) -> Result<SongArchiveSummary, AppError> {
+    if song_ids.is_empty() {
+        return Ok(SongArchiveSummary {
+            total: 0,
+            generated: 0,
+            skipped: 0,
+            failed: 0,
+            results: Vec::new(),
+        });
+    }
+
+    let prepared_versions =
+        prepare_draft_not_found_main_versions(db, app_data_dir, cloud_root_dir)?;
+    let song_ids_filter = song_ids.iter().cloned().collect::<HashSet<_>>();
+
+    generate_song_archives_with_prepared_versions(
+        db,
+        app_data_dir,
+        cloud_root_dir,
+        &prepared_versions,
+        Some(&song_ids_filter),
+    )
 }
 
 pub fn regenerate_all_song_archives(
@@ -938,7 +991,13 @@ pub fn regenerate_all_song_archives(
 
     db.mark_all_song_archives_for_regeneration()?;
 
-    generate_song_archives_with_prepared_versions(db, app_data_dir, cloud_root_dir, &prepared_versions)
+    generate_song_archives_with_prepared_versions(
+        db,
+        app_data_dir,
+        cloud_root_dir,
+        &prepared_versions,
+        None,
+    )
 }
 
 #[cfg(test)]

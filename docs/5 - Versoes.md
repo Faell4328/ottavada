@@ -357,14 +357,15 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [x] Quando se adicionar uma ou mais partituras a uma música com "adicionar arquivos" e depois vai no overflow menu da partitura "editar", os botões "abrir partitura" e "abrir local" não funcionam, abrindo o explorador de arquivos em documentos (em ambos). Esse problema ocorria em "indexar diretório", mas foi arrumado lá.
 - [x] Arrumar também o modal de revisão do "adicionar arquivos", está com o exato mesmo problema da tarefa acima.
 - [x] A opção "abrir local", agora abre e seleciona a partitura especifica.
-- [ ] Assim que uma música e/ou partitura(s) for adicionada, deve gerar o `.tar.zts` dessa música, fazendo que já se tenha uma versão `main` mesmo que o usuário edite a música depois.
+- [x] Assim que uma partitura ou mais partituras forem adicionada(s), deve gerar o `{songId}.tar.zts` dá música (não sendo necessário emitir um toast avisando o usuário sobre isso), fazendo que já se tenha uma versão `main` mesmo que o usuário edite a música depois.
 - [ ] Backup para nuvem deve redirecionar para página home igual o backup local.
 - [ ] Remover toast duplicado no "aplicar alterações". Verificar se tem outros duplicados também e remover.
 - [ ] Melhorar os erros no toast ao testar os provedores, podem "bugar" o usuário. Ex melhores: "suas credências estão erradas" e etc.
 
 
+- [ ] Adicionar no ".env" uma chave de API, que é fixa para todos os clientes. Ela será usada para o servidor identificar se é um cliente válido ou um bot. Ela deve ser sempre enviada para o servidor no header `token`.
 - [ ] Atualiza o `tauri-plugin-store` igual a documentação.
-- [ ] Adicionar no primeiro acesso (junto com o nome do computador) e nas configurações (para futura alteração) o nome da organização ou instituição. Apenas para servidor, cliente não precisa aparecer e nem consultar.
+- [ ] Adicionar no primeiro acesso (junto com o nome do computador) e nas configurações (para futura alteração pelo o usuário) o nome da organização ou instituição. Apenas para servidor, cliente não precisa aparecer e nem consultar.
 - [ ] Criar telemetria (quantas músicas, partituras, tempo de uso, versão atual, logs e etc).
 	- Deve ficar armazenado internamente, quando possível enviar para o servidor (não emitindo erro ao usuário).
 - [ ] Criar tela de apresentação no primeiro acesso, objetivo é apresentar o software e mostrar o que ele pode fazer.
