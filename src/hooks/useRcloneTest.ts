@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import toast from "react-hot-toast";
 
 import * as api from "../api/commands";
-import { getErrorMessage } from "../utils/errors";
+import { getFriendlyRcloneErrorMessage } from "../utils/rcloneErrors";
 import type { RcloneProvider } from "../types";
 
 interface UseRcloneTestParams {
@@ -32,7 +32,10 @@ export function useRcloneTest({
       onSuccess?.();
       return true;
     } catch (error) {
-      toast.error(`Erro ao testar rclone: ${getErrorMessage(error)}`);
+      const providerLabel = provider === "google_drive" ? "Google Drive" : "Koofr";
+      toast.error(
+        getFriendlyRcloneErrorMessage(error, `Falha ao testar o ${providerLabel}`)
+      );
       onFailure?.();
       return false;
     } finally {

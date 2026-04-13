@@ -13,6 +13,7 @@ import { UpdateModal } from "./UpdateModal";
 import { formatBackupTimestamp } from "../utils/formatters";
 import type { AppSettings, RcloneProvider, UpdateInfo } from "../types";
 import { isClientComputer } from "../utils/computer";
+import { getFriendlyRcloneErrorMessage } from "../utils/rcloneErrors";
 import packageJson from "../../package.json";
 
 function getRcloneProviderLabel(provider: RcloneProvider) {
@@ -110,7 +111,9 @@ export default function SettingsPage() {
           : "Koofr configurado com sucesso."
       );
     } catch (error) {
-      toast.error(`Erro ao gerar configuração do rclone: ${getErrorMessage(error)}`);
+      toast.error(
+        getFriendlyRcloneErrorMessage(error, "Erro ao gerar configuração do rclone")
+      );
       throw error;
     }
   }
@@ -124,7 +127,14 @@ export default function SettingsPage() {
           : "Teste do Koofr aprovado."
       );
     } catch (error) {
-      toast.error(`Erro ao testar o rclone: ${getErrorMessage(error)}`);
+      toast.error(
+        getFriendlyRcloneErrorMessage(
+          error,
+          provider === "google_drive"
+            ? "Falha ao testar o Google Drive"
+            : "Falha ao testar o Koofr"
+        )
+      );
       throw error;
     }
   }
@@ -257,12 +267,8 @@ export default function SettingsPage() {
     navigate("/");
     const loadingToastId = toast.loading("Gerando snapshot e aplicando alterações...");
     try {
-      const summary = await api.generateSnapshotFile(true);
+      await api.generateSnapshotFile(true);
       await loadSettings();
-
-      toast.success(
-        `Snapshot gerado (${summary.songs_count} música(s), ${summary.scores_count} partitura(s)). Aplicando alterações...`
-      );
 
       await scanFilesForChanges({ forceCloudSync: true });
       await Promise.all([loadSongs(), loadCategories()]);
@@ -424,6 +430,7 @@ export default function SettingsPage() {
       return;
     }
 
+    navigate("/");
     setIsGeneratingBackupCloud(true);
     try {
       const summary = await api.forceGenerateBackupCloudFile();

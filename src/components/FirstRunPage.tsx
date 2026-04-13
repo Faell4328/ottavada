@@ -6,6 +6,7 @@ import * as api from "../api/commands";
 import { useAppState } from "../context/AppContext";
 import { useRcloneTest } from "../hooks/useRcloneTest";
 import { getErrorMessage } from "../utils/errors";
+import { getFriendlyRcloneErrorMessage } from "../utils/rcloneErrors";
 import type { RcloneProvider } from "../types";
 
 type Step = "name" | "type" | "rclone-setup" | "confirm";
@@ -88,7 +89,9 @@ export default function FirstRunPage() {
     } catch (error) {
       setRcloneConfigGenerated(false);
       setRcloneConfigured(false);
-      toast.error(`Erro ao gerar configuração do rclone: ${getErrorMessage(error)}`);
+      toast.error(
+        getFriendlyRcloneErrorMessage(error, "Erro ao gerar configuração do rclone")
+      );
     } finally {
       setIsGeneratingRcloneConfig(false);
     }

@@ -314,10 +314,6 @@ export function useAppScanFlow({
       const hasDetectedFileChanges =
         changedCount > 0 || recoveredCount > 0 || notFoundCount > 0;
 
-      if (!isAutomatic && changedCount > 0) {
-        toast.success("Músicas e partituras atualizadas");
-      }
-
       // Fluxo base do servidor: verificar, compactar, gerar events e subir para a nuvem.
       // Snapshot adiciona uma etapa extra ao total.
       currentTotalSteps = 4;
@@ -446,10 +442,6 @@ export function useAppScanFlow({
       await api.markLocalChangesAsApplied();
       await loadSettings();
       updateStepProgress(changedCount);
-
-      if (!hasPendingChanges && !hasDetectedFileChanges && !forceCloudSync && !isAutomatic) {
-        toast.success("Verificação concluída sem alterações");
-      }
 
       if (failedCount > 0 && !isAutomatic) {
         toast.error(`${failedCount} arquivo(s) falharam durante verificação`);
