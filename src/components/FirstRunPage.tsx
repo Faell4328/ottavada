@@ -5,7 +5,6 @@ import toast from "react-hot-toast";
 import * as api from "../api/commands";
 import { useAppState } from "../context/AppContext";
 import { useRcloneTest } from "../hooks/useRcloneTest";
-import { getErrorMessage } from "../utils/errors";
 import { getFriendlyRcloneErrorMessage } from "../utils/rcloneErrors";
 import type { RcloneProvider } from "../types";
 
@@ -39,7 +38,7 @@ export default function FirstRunPage() {
     void api.generateComputerId()
       .then(setComputerId)
       .catch(() => {
-        toast.error("Erro ao gerar ID do computador");
+        toast.error("Não consegui criar o identificador deste computador.");
       });
   }, []);
 
@@ -54,12 +53,12 @@ export default function FirstRunPage() {
   async function handleGenerateRcloneConfig() {
     if (rcloneProvider === "koofr") {
       if (!rcloneEmail.trim()) {
-        toast.error("Informe o email do Koofr");
+        toast.error("Digite o seu email do Koofr.");
         return;
       }
 
       if (!rcloneAppPassword.trim()) {
-        toast.error("Informe a senha do aplicativo do Koofr");
+        toast.error("Digite a senha de aplicativo do Koofr.");
         return;
       }
     }
@@ -83,14 +82,14 @@ export default function FirstRunPage() {
       setRcloneConfigured(true);
       toast.success(
         rcloneProvider === "google_drive"
-          ? "Google Drive configurado e testado com sucesso."
-          : "Koofr configurado e testado com sucesso."
+          ? "Conexão com o Google Drive pronta para uso."
+          : "Conexão com o Koofr pronta para uso."
       );
     } catch (error) {
       setRcloneConfigGenerated(false);
       setRcloneConfigured(false);
       toast.error(
-        getFriendlyRcloneErrorMessage(error, "Erro ao gerar configuração do rclone")
+        getFriendlyRcloneErrorMessage(error, "Não foi possível configurar a conexão com a nuvem")
       );
     } finally {
       setIsGeneratingRcloneConfig(false);
@@ -99,7 +98,7 @@ export default function FirstRunPage() {
 
   function handleNameSubmit() {
     if (!computerName.trim()) {
-      toast.error("Digite o nome do computador");
+      toast.error("Digite um nome para este computador.");
       return;
     }
 
@@ -108,7 +107,7 @@ export default function FirstRunPage() {
 
   function handleTypeSubmit() {
     if (!computerType) {
-      toast.error("Selecione o tipo de computador");
+      toast.error("Escolha o tipo deste computador.");
       return;
     }
 
@@ -117,12 +116,12 @@ export default function FirstRunPage() {
 
   async function handleWithRclone() {
     if (!rcloneConfigGenerated) {
-      toast.error("Gere e teste a configuração do rclone antes de continuar");
+      toast.error("Configure e teste a conexão com a nuvem antes de continuar.");
       return;
     }
 
     if (!rcloneConfigured) {
-      toast.error("A configuração do rclone precisa estar aprovada antes de continuar");
+      toast.error("Teste a conexão com a nuvem antes de continuar.");
       return;
     }
 
@@ -145,7 +144,7 @@ export default function FirstRunPage() {
         JSON.stringify({ provider: rcloneProvider })
       );
     } catch (error) {
-      toast.error(`Erro: ${getErrorMessage(error)}`);
+      toast.error("Não foi possível concluir a configuração inicial.");
       setIsLoading(false);
     }
   }

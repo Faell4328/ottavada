@@ -26,8 +26,8 @@ export default function Sidebar() {
   const isSyncLocked = state.isScanningFiles || state.rcloneProgress.direction !== null;
   const isCategoryLocked = isClient || isSyncLocked;
   const categoryLockedTitle = isClient
-    ? "Operação não permitida para cliente"
-    : "Operação bloqueada durante sincronização";
+    ? "Esse recurso só está disponível no computador principal."
+    : "Espere a sincronização terminar para continuar.";
   const libraryViews: Array<{ view: SidebarView; label: string; icon: ReactNode }> = [
     {
       view: "all",

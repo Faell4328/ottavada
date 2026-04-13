@@ -7,27 +7,27 @@ const FRIENDLY_MESSAGES: Array<{
   {
     patterns: ["invalid_grant", "authentication failed", "unauthorized", "401", "wrong password"],
     message:
-      "Suas credenciais parecem estar incorretas ou expiraram. Gere a configuração do rclone novamente e teste outra vez.",
+      "Não consegui acessar sua conta. Confira o email e a senha de aplicativo e tente de novo.",
   },
   {
     patterns: ["not found", "remote not found", "couldn't find remote", "didn't find section in config file"],
     message:
-      "O remote do rclone não foi encontrado. Gere a configuração novamente e tente outra vez.",
+      "Não encontrei a pasta da nuvem configurada. Gere a configuração novamente e tente outra vez.",
   },
   {
     patterns: ["permission denied", "forbidden", "403"],
     message:
-      "O rclone não conseguiu acesso a essa conta ou pasta. Verifique as permissões e tente novamente.",
+      "Essa conta não tem acesso a esse local da nuvem. Verifique a permissão e tente novamente.",
   },
   {
     patterns: ["timeout", "no such host", "network is unreachable", "connection refused", "dial tcp"],
     message:
-      "Não foi possível acessar a nuvem. Verifique a conexão com a internet e tente novamente.",
+      "Não consegui falar com a nuvem. Verifique sua internet e tente novamente.",
   },
   {
     patterns: ["quota", "rate limit", "insufficient storage", "storage full"],
     message:
-      "A conta da nuvem atingiu um limite de uso. Libere espaço ou escolha outro destino.",
+      "A conta da nuvem está sem espaço suficiente. Libere espaço e tente novamente.",
   },
 ];
 

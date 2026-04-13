@@ -56,8 +56,8 @@ export function useAppCrudActions({
     if (state.settings?.computer_type === "Client" || state.isScanningFiles || state.rcloneProgress.direction !== null) {
       toast.error(
         state.settings?.computer_type === "Client"
-          ? "Operação não permitida para cliente"
-          : "Operação bloqueada durante sincronização"
+          ? "Esse recurso só está disponível no computador principal."
+          : "Espere a sincronização terminar para continuar."
       );
       return;
     }
@@ -74,8 +74,8 @@ export function useAppCrudActions({
     if (state.settings?.computer_type === "Client" || state.isScanningFiles || state.rcloneProgress.direction !== null) {
       toast.error(
         state.settings?.computer_type === "Client"
-          ? "Operação não permitida para cliente"
-          : "Operação bloqueada durante sincronização"
+          ? "Esse recurso só está disponível no computador principal."
+          : "Espere a sincronização terminar para continuar."
       );
       return;
     }
@@ -115,10 +115,10 @@ export function useAppCrudActions({
       await Promise.all([loadSongs(), loadCategories()]);
       await refreshSelectedSong();
       await loadSettings();
-      toast.success("Música atualizada com sucesso!");
+      toast.success("Música salva.");
     } catch (err) {
       console.error("Failed to update song:", err);
-      toast.error(getErrorMessage(err, "Erro ao atualizar música"));
+      toast.error("Não foi possível salvar a música.");
       throw err;
     }
   }, [dispatch, getErrorMessage, loadCategories, loadSettings, loadSongs, refreshSelectedSong]);
@@ -136,10 +136,10 @@ export function useAppCrudActions({
       await loadSongs();
       await refreshSelectedSong();
       await loadSettings();
-      toast.success("Partitura atualizada com sucesso!");
+      toast.success("Partitura salva.");
     } catch (err) {
       console.error("Failed to update score:", err);
-      toast.error(getErrorMessage(err, "Erro ao atualizar partitura"));
+      toast.error("Não foi possível salvar a partitura.");
       throw err;
     }
   }, [dispatch, getErrorMessage, loadSettings, loadSongs, refreshSelectedSong, state.selectedScore]);
@@ -160,10 +160,10 @@ export function useAppCrudActions({
       await refreshSelectedSong();
       await loadSettings();
 
-      toast.success("Partitura definida como Principal!");
+      toast.success("Partitura marcada como principal.");
     } catch (err) {
       console.error("Failed to update score status:", err);
-      toast.error(getErrorMessage(err, "Erro ao atualizar status da partitura"));
+      toast.error("Não foi possível mudar o status da partitura.");
       throw err;
     }
   }, [dispatch, getErrorMessage, loadSettings, refreshSelectedSong, state.songs]);
@@ -177,10 +177,10 @@ export function useAppCrudActions({
       await loadSongs();
       await refreshSelectedSong();
       await loadSettings();
-      toast.success("Partitura deletada com sucesso!");
+      toast.success("Partitura removida.");
     } catch (err) {
       console.error("Failed to delete score:", err);
-      toast.error(getErrorMessage(err, "Erro ao deletar partitura"));
+      toast.error("Não foi possível remover a partitura.");
       throw err;
     }
   }, [dispatch, getErrorMessage, loadSettings, loadSongs, refreshSelectedSong, state.selectedScore]);
@@ -197,10 +197,10 @@ export function useAppCrudActions({
       await loadSongs();
       await refreshSelectedSong();
       await loadSettings();
-      toast.success("Música deletada com sucesso!");
+      toast.success("Música removida.");
     } catch (err) {
       console.error("Failed to delete song:", err);
-      toast.error(getErrorMessage(err, "Erro ao deletar música"));
+      toast.error("Não foi possível remover a música.");
       throw err;
     }
   }, [dispatch, getErrorMessage, loadSettings, loadSongs, refreshSelectedSong, state.selectedSong]);
@@ -211,7 +211,7 @@ export function useAppCrudActions({
       dispatch({ type: "SET_SETTINGS", payload: settings });
     } catch (err) {
       console.error("Failed to save settings:", err);
-      toast.error("Erro ao salvar configurações");
+      toast.error("Não foi possível salvar as configurações.");
       throw err;
     }
   }, [dispatch]);
@@ -226,10 +226,10 @@ export function useAppCrudActions({
       await api.completeFirstRun(computerId, computerName, computerType, rcloneConfigJson);
       dispatch({ type: "SET_FIRST_RUN", payload: false });
       await Promise.all([loadSongs(), loadCategories(), loadSettings()]);
-      toast.success("Configuração inicial concluída!");
+      toast.success("Configuração inicial concluída.");
     } catch (err) {
       console.error("Failed to complete first run:", err);
-      toast.error("Erro ao completar configuração inicial");
+      toast.error("Não foi possível concluir a configuração inicial.");
     }
   }, [dispatch, loadCategories, loadSettings, loadSongs, refreshSelectedSong]);
 

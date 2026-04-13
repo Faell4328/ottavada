@@ -27,7 +27,7 @@ export function useRcloneTest({
     try {
       await api.testRcloneUpload(provider);
       if (!options.silent) {
-        toast.success("Teste realizado com sucesso! Arquivo enviado para o rclone.");
+        toast.success("Conexão com a nuvem testada com sucesso.");
       }
       onSuccess?.();
       return true;

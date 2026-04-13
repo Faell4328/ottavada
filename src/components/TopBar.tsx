@@ -6,7 +6,6 @@ import { useAppState } from "../context/AppContext";
 import * as api from "../api/commands";
 import toast from "react-hot-toast";
 import type { IndexedFile, SongListItem } from "../types";
-import { getErrorMessage } from "../utils/errors";
 import { isClientComputer } from "../utils/computer";
 import { AddFilesModal } from "./AddFilesModal.tsx";
 import { AddMusicModal } from "./AddMusicModal";
@@ -28,8 +27,8 @@ export default function TopBar({
   const navigate = useNavigate();
   const isClient = isClientComputer(state.settings?.computer_type);
   const isSyncLocked = state.isScanningFiles || state.rcloneProgress.direction !== null;
-  const clientBlockedTitle = "Operação não permitida para cliente";
-  const syncBlockedTitle = "Operação bloqueada durante sincronização";
+  const clientBlockedTitle = "Esse recurso só está disponível no computador principal.";
+  const syncBlockedTitle = "Espere a sincronização terminar para continuar.";
   const [showAddMusicModal, setShowAddMusicModal] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<IndexedFile[]>([]);
   const [existingSongsForAddFiles, setExistingSongsForAddFiles] = useState<SongListItem[]>([]);
@@ -63,7 +62,7 @@ export default function TopBar({
       if (selected) {
         const files = await api.scanDirectory(selected as string);
         if (files.length === 0) {
-          toast.error("Nenhuma música encontrada no diretório selecionado");
+          toast.error("Não encontrei nenhuma música nessa pasta.");
           return;
         }
         const existingSongs = await api.getAllSongs();
@@ -73,7 +72,7 @@ export default function TopBar({
       }
     } catch (err) {
       console.error("Failed to scan directory:", err);
-      toast.error(`Erro ao escanear diretório: ${getErrorMessage(err)}`);
+      toast.error("Não consegui ler essa pasta.");
     }
   }
 
@@ -100,10 +99,10 @@ export default function TopBar({
         data.categoryIds
       );
       await loadSongs();
-      toast.success("Música criada com sucesso!");
+      toast.success("Música adicionada.");
     } catch (err) {
       console.error("Failed to create music:", err);
-      toast.error(`Erro ao adicionar música: ${getErrorMessage(err)}`);
+      toast.error("Não foi possível adicionar a música.");
       throw err;
     }
   }
@@ -115,7 +114,7 @@ export default function TopBar({
   }
 
   async function handleAddFilesModalSuccess(addedCount: number) {
-    toast.success(`${addedCount} arquivo(s) adicionado(s) com sucesso`);
+    toast.success(`${addedCount} partitura(s) adicionada(s).`);
     handleCloseAddFilesModal();
     await handleScoresChange();
   }

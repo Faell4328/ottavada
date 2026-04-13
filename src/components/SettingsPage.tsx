@@ -107,12 +107,12 @@ export default function SettingsPage() {
 
       toast.success(
         setup.provider === "google_drive"
-          ? "Google Drive autenticado com sucesso."
-          : "Koofr configurado com sucesso."
+          ? "Conexão com o Google Drive concluída."
+          : "Conexão com o Koofr concluída."
       );
     } catch (error) {
       toast.error(
-        getFriendlyRcloneErrorMessage(error, "Erro ao gerar configuração do rclone")
+        getFriendlyRcloneErrorMessage(error, "Não consegui configurar a conexão com a nuvem")
       );
       throw error;
     }
@@ -123,16 +123,16 @@ export default function SettingsPage() {
       await api.testRcloneUpload(provider);
       toast.success(
         provider === "google_drive"
-          ? "Teste do Google Drive aprovado."
-          : "Teste do Koofr aprovado."
+          ? "Conexão com o Google Drive validada."
+          : "Conexão com o Koofr validada."
       );
     } catch (error) {
       toast.error(
         getFriendlyRcloneErrorMessage(
           error,
           provider === "google_drive"
-            ? "Falha ao testar o Google Drive"
-            : "Falha ao testar o Koofr"
+            ? "Não consegui testar o Google Drive"
+            : "Não consegui testar o Koofr"
         )
       );
       throw error;
@@ -145,7 +145,7 @@ export default function SettingsPage() {
     setHasRcloneConfigChange(true);
 
     if (isSyncLocked) {
-      toast.error("Operação bloqueada durante sincronização");
+      toast.error("Espere a sincronização terminar para continuar.");
       throw new Error("SYNC_LOCKED");
     }
 
@@ -170,14 +170,14 @@ export default function SettingsPage() {
 
       setHasRcloneConfigChange(false);
     } catch (error) {
-      toast.error(`Erro ao aplicar troca de provedor/conta: ${getErrorMessage(error)}`);
+      toast.error("Não foi possível trocar a conexão com a nuvem.");
       throw error;
     }
   }
 
   function handleBackNavigation() {
     if (isSettingsOperationInProgress) {
-      toast.error("Aguarde a operação atual terminar antes de sair das configurações");
+      toast.error("Espere a operação terminar antes de sair das configurações.");
       return;
     }
 
@@ -196,11 +196,15 @@ export default function SettingsPage() {
         ...prev,
         computer_type: result as "Server" | "Client",
       }));
-      toast.success(`Tipo de computador alterado para ${result}`);
+      toast.success(
+        result === "Server"
+          ? "Este computador agora é o principal."
+          : "Este computador agora é secundário."
+      );
       await loadSettings();
     } catch (err) {
       console.error("Failed to toggle computer type:", err);
-      toast.error("Erro ao alternar tipo de computador");
+      toast.error("Não foi possível mudar o tipo deste computador.");
     } finally {
       setIsTogglingType(false);
     }
@@ -208,12 +212,12 @@ export default function SettingsPage() {
 
   async function handleSave() {
     if (isSyncLocked) {
-      toast.error("Operação bloqueada durante sincronização");
+      toast.error("Espere a sincronização terminar para continuar.");
       return;
     }
 
     if (!rcloneConfigGenerated) {
-      toast.error("Gere a configuração do rclone antes de salvar");
+      toast.error("Configure a conexão com a nuvem antes de salvar.");
       return;
     }
 
@@ -228,7 +232,7 @@ export default function SettingsPage() {
     try {
       const previousProvider = state.settings?.rclone_config?.provider ?? null;
       await saveSettings(updatedSettings);
-      toast.success("Configurações salvas com sucesso!");
+      toast.success("Configurações salvas.");
 
       const shouldForceSnapshot =
         updatedSettings.computer_type === "Server" &&
@@ -246,7 +250,7 @@ export default function SettingsPage() {
       navigate("/");
     } catch (error) {
       console.error("Failed to save settings:", error);
-      toast.error("Erro ao salvar configurações");
+      toast.error("Não foi possível salvar as configurações.");
     }
   }
 
@@ -254,18 +258,18 @@ export default function SettingsPage() {
     const currentSettings = settingsOverride ?? state.settings ?? settings;
 
     if (currentSettings.computer_type !== "Server") {
-      toast.error("A geração de snapshot é permitida apenas no servidor");
+      toast.error("Esse recurso só pode ser usado no computador principal.");
       return false;
     }
 
     if (isSyncLocked) {
-      toast.error("Operação bloqueada durante sincronização");
+      toast.error("Espere a sincronização terminar para continuar.");
       return false;
     }
 
     setIsGeneratingSnapshot(true);
     navigate("/");
-    const loadingToastId = toast.loading("Gerando snapshot e aplicando alterações...");
+    const loadingToastId = toast.loading("Estou organizando os dados e aplicando as mudanças...");
     try {
       await api.generateSnapshotFile(true);
       await loadSettings();
@@ -274,7 +278,7 @@ export default function SettingsPage() {
       await Promise.all([loadSongs(), loadCategories()]);
       return true;
     } catch (error) {
-      toast.error(`Erro ao gerar snapshot/aplicar alterações: ${getErrorMessage(error)}`);
+      toast.error("Não foi possível concluir a atualização.");
       return false;
     } finally {
       toast.dismiss(loadingToastId);
@@ -284,12 +288,12 @@ export default function SettingsPage() {
 
   async function handleExportBackup() {
     if (settings.computer_type !== "Server") {
-      toast.error("A exportacao de backup e permitida apenas no servidor");
+      toast.error("Esse recurso só pode ser usado no computador principal.");
       return;
     }
 
     if (isSyncLocked) {
-      toast.error("Operação bloqueada durante sincronização");
+      toast.error("Espere a sincronização terminar para continuar.");
       return;
     }
 
@@ -307,10 +311,10 @@ export default function SettingsPage() {
     try {
       const summary = await api.exportBackupFile(String(selectedPath));
       toast.success(
-        `Backup local exportado (${summary.songs_count} musica(s), ${summary.scores_count} partitura(s))`
+        `Backup salvo com sucesso. Incluí ${summary.songs_count} música(s) e ${summary.scores_count} partitura(s).`
       );
     } catch (error) {
-      toast.error(`Erro ao exportar backup local: ${getErrorMessage(error)}`);
+      toast.error("Não foi possível salvar o backup local.");
     } finally {
       setIsExportingBackup(false);
     }
@@ -318,12 +322,12 @@ export default function SettingsPage() {
 
   async function handleImportBackup() {
     if (settings.computer_type !== "Server") {
-      toast.error("A importacao de backup e permitida apenas no servidor");
+      toast.error("Esse recurso só pode ser usado no computador principal.");
       return;
     }
 
     if (isSyncLocked) {
-      toast.error("Operação bloqueada durante sincronização");
+      toast.error("Espere a sincronização terminar para continuar.");
       return;
     }
 
@@ -340,7 +344,7 @@ export default function SettingsPage() {
 
     setIsImportingBackup(true);
     navigate("/");
-    const loadingToastId = toast.loading("Importando backup local...");
+    const loadingToastId = toast.loading("Estou importando o backup local...");
 
     void (async () => {
       let shouldRunForcedSnapshot = false;
@@ -348,7 +352,7 @@ export default function SettingsPage() {
       try {
         const summary = await api.importBackupFile(selectedPath);
         toast.success(
-          `Backup local importado com sucesso. O backup é de ${formatBackupTimestamp(summary.generated_at)}; alterações posteriores não estão incluídas.`,
+          `Backup importado com sucesso. Ele é de ${formatBackupTimestamp(summary.generated_at)}; mudanças feitas depois disso não entram nesse backup.`,
           { duration: 8000 }
         );
         refreshedSettings = await api.getSettings();
@@ -356,7 +360,7 @@ export default function SettingsPage() {
         await Promise.all([loadSettings(), loadSongs(), loadCategories()]);
         shouldRunForcedSnapshot = true;
       } catch (error) {
-        toast.error(`Erro ao importar backup local: ${getErrorMessage(error)}`);
+        toast.error("Não foi possível importar o backup local.");
       } finally {
         toast.dismiss(loadingToastId);
         setIsImportingBackup(false);
@@ -370,23 +374,23 @@ export default function SettingsPage() {
 
   async function handleImportBackupCloud() {
     if (settings.computer_type !== "Server") {
-      toast.error("A importacao de backup da nuvem e permitida apenas no servidor");
+      toast.error("Esse recurso só pode ser usado no computador principal.");
       return;
     }
 
     if (isSyncLocked) {
-      toast.error("Operação bloqueada durante sincronização");
+      toast.error("Espere a sincronização terminar para continuar.");
       return;
     }
 
     if (!settings.rclone_config) {
-      toast.error("Configure o rclone antes de importar o backup da nuvem");
+      toast.error("Configure a conexão com a nuvem antes de importar o backup.");
       return;
     }
 
     setIsImportingBackupCloud(true);
     navigate("/");
-    const loadingToastId = toast.loading("Importando backup da nuvem...");
+    const loadingToastId = toast.loading("Estou importando o backup da nuvem...");
 
     void (async () => {
       let shouldRunForcedSnapshot = false;
@@ -394,7 +398,7 @@ export default function SettingsPage() {
       try {
         const summary = await api.importBackupCloudFile();
         toast.success(
-          `Backup da nuvem importado com sucesso. O backup é de ${formatBackupTimestamp(summary.generated_at)}; alterações posteriores não estão incluídas.`,
+          `Backup da nuvem importado com sucesso. Ele é de ${formatBackupTimestamp(summary.generated_at)}; mudanças feitas depois disso não entram nesse backup.`,
           { duration: 8000 }
         );
         refreshedSettings = await api.getSettings();
@@ -402,7 +406,7 @@ export default function SettingsPage() {
         await Promise.all([loadSettings(), loadSongs(), loadCategories()]);
         shouldRunForcedSnapshot = true;
       } catch (error) {
-        toast.error(`Erro ao importar backup da nuvem: ${getErrorMessage(error)}`);
+        toast.error("Não foi possível importar o backup da nuvem.");
       } finally {
         toast.dismiss(loadingToastId);
         setIsImportingBackupCloud(false);
@@ -416,17 +420,17 @@ export default function SettingsPage() {
 
   async function handleGenerateBackupCloud() {
     if (settings.computer_type !== "Server") {
-      toast.error("A geração de backup na nuvem é permitida apenas no servidor");
+      toast.error("Esse recurso só pode ser usado no computador principal.");
       return;
     }
 
     if (isSyncLocked) {
-      toast.error("Operação bloqueada durante sincronização");
+      toast.error("Espere a sincronização terminar para continuar.");
       return;
     }
 
     if (!settings.rclone_config) {
-      toast.error("Configure o rclone antes de gerar o backup na nuvem");
+      toast.error("Configure a conexão com a nuvem antes de salvar o backup.");
       return;
     }
 
@@ -436,13 +440,13 @@ export default function SettingsPage() {
       const summary = await api.forceGenerateBackupCloudFile();
       await loadSettings();
       toast.success(
-        `Backup na nuvem gerado com sucesso em ${formatBackupTimestamp(summary.generated_at)}.`,
+        `Backup da nuvem pronto em ${formatBackupTimestamp(summary.generated_at)}.`,
         {
           duration: 8000,
         }
       );
     } catch (error) {
-      toast.error(`Erro ao gerar backup na nuvem: ${getErrorMessage(error)}`);
+      toast.error("Não foi possível salvar o backup na nuvem.");
     } finally {
       setIsGeneratingBackupCloud(false);
     }
@@ -450,7 +454,7 @@ export default function SettingsPage() {
 
   async function handleCheckUpdate() {
     if (isSyncLocked) {
-      toast.error("Operação bloqueada durante sincronização");
+      toast.error("Espere a sincronização terminar para continuar.");
       return;
     }
 
@@ -464,7 +468,7 @@ export default function SettingsPage() {
       const result = await api.checkForUpdates();
 
       if (!result.configured) {
-        toast.error("Atualização não configurada no aplicativo");
+        toast.error("A verificação de atualização ainda não foi configurada.");
         return;
       }
 
@@ -474,9 +478,9 @@ export default function SettingsPage() {
         return;
       }
 
-      toast.success("Nenhuma atualização disponível no momento");
+      toast.success("Seu aplicativo já está atualizado.");
     } catch (error) {
-      toast.error(`Falha ao verificar atualização: ${getErrorMessage(error)}`);
+      toast.error("Não foi possível verificar atualizações.");
     } finally {
       setIsCheckingUpdate(false);
     }
@@ -493,9 +497,9 @@ export default function SettingsPage() {
       await api.installUpdate();
       setIsUpdateModalOpen(false);
       setAvailableUpdate(null);
-      toast.success("Atualização instalada com sucesso");
+      toast.success("Atualização instalada com sucesso.");
     } catch (error) {
-      toast.error(`Erro ao instalar atualização: ${getErrorMessage(error)}`);
+      toast.error("Não foi possível instalar a atualização.");
     } finally {
       setIsInstallingUpdate(false);
     }

@@ -183,7 +183,7 @@ export function useAppScanFlow({
       const hasInternet = await api.hasInternetConnection();
       if (!hasInternet) {
         if (!isAutomatic) {
-          toast.error("Sem conexão com a internet");
+          toast.error("Não encontrei internet. Verifique sua conexão e tente novamente.");
         }
         return;
       }
@@ -271,7 +271,7 @@ export function useAppScanFlow({
         });
 
         if (!isAutomatic) {
-          toast.success("Músicas e partituras atualizadas");
+          toast.success("As mudanças foram aplicadas com sucesso.");
         }
 
         scheduleScanReset(1500);
@@ -366,7 +366,7 @@ export function useAppScanFlow({
         updateStepProgress(changedCount);
 
         if (!isAutomatic) {
-          toast("Snapshot forçado: events.msgpack atingiu 2MB", {
+          toast("Criei uma cópia de segurança para manter tudo organizado.", {
             icon: "📦",
           });
         }
@@ -402,7 +402,7 @@ export function useAppScanFlow({
             } catch (error) {
               uploadError = error;
               if (attempt === 1 && !isAutomatic) {
-                toast("Falha no upload do snapshot. Tentando novamente...", {
+                toast("Não consegui enviar a cópia de segurança. Vou tentar de novo.", {
                   icon: "⚠️",
                 });
               }
@@ -444,11 +444,11 @@ export function useAppScanFlow({
       updateStepProgress(changedCount);
 
       if (failedCount > 0 && !isAutomatic) {
-        toast.error(`${failedCount} arquivo(s) falharam durante verificação`);
+        toast.error(`${failedCount} arquivo(s) não puderam ser verificados.`);
       }
 
       if (!isAutomatic && failedArchives > 0) {
-        toast.error(`${failedArchives} arquivo(s) .tar.zst falharam ao gerar`);
+        toast.error(`${failedArchives} partitura(s) não puderam ser compactadas.`);
       }
 
       if (!isAutomatic) {
@@ -467,10 +467,10 @@ export function useAppScanFlow({
         const summaryText =
           summaryParts.length > 0
             ? `Verificação concluída: ${summaryParts.join(", ")}`
-            : "Verificação concluída sem alterações";
+            : "Verificação concluída sem mudanças.";
 
         if (hasFailures) {
-          toast.error(`${summaryText}. Houve falhas durante o processo.`);
+          toast.error(`${summaryText} Mas algumas partes falharam.`);
         } else {
           toast.success(summaryText);
         }
@@ -487,7 +487,7 @@ export function useAppScanFlow({
     } catch (err) {
       console.error("Failed to scan files for changes:", err);
       if (!isAutomatic) {
-        toast.error(getErrorMessage(err, "Erro ao verificar alterações nos arquivos"));
+        toast.error("Não foi possível verificar as mudanças.");
       }
       clearScanTimer();
       resetScanState();
