@@ -23,7 +23,10 @@ export default function Sidebar() {
 
   const currentView = state.sidebarView;
   const isClient = isClientComputer(state.settings?.computer_type);
-  const isSyncLocked = state.isScanningFiles || state.rcloneProgress.direction !== null;
+  const isSyncLocked =
+    state.isScanningFiles ||
+    state.rcloneProgress.direction !== null ||
+    state.operationStatus.stepCurrent !== null;
   const isCategoryLocked = isClient || isSyncLocked;
   const categoryLockedTitle = isClient
     ? "Esse recurso só está disponível no computador principal."

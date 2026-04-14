@@ -7,6 +7,13 @@ export interface AppContextValue {
   loadCategories: () => Promise<void>;
   loadSettings: () => Promise<void>;
   refreshSelectedSong: () => Promise<void>;
+  setOperationStatus: (payload: {
+    title: string;
+    detail?: string | null;
+    stepCurrent?: number | null;
+    stepTotal?: number | null;
+  }) => void;
+  resetOperationStatus: () => void;
   setSidebarView: (view: SidebarView) => void;
   selectSong: (song: SongListItem | null) => void;
   selectScore: (score: ScoreListItem | null) => void;

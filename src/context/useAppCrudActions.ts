@@ -53,7 +53,12 @@ export function useAppCrudActions({
   }, [dispatch]);
 
   const createCategory = useCallback(async (name: string) => {
-    if (state.settings?.computer_type === "Client" || state.isScanningFiles || state.rcloneProgress.direction !== null) {
+    if (
+      state.settings?.computer_type === "Client" ||
+      state.isScanningFiles ||
+      state.rcloneProgress.direction !== null ||
+      state.operationStatus.stepCurrent !== null
+    ) {
       toast.error(
         state.settings?.computer_type === "Client"
           ? "Esse recurso só está disponível no computador principal."
@@ -68,10 +73,21 @@ export function useAppCrudActions({
     } catch (err) {
       console.error("Failed to create category:", err);
     }
-  }, [loadCategories, state.isScanningFiles, state.rcloneProgress.direction, state.settings?.computer_type]);
+  }, [
+    loadCategories,
+    state.isScanningFiles,
+    state.operationStatus.stepCurrent,
+    state.rcloneProgress.direction,
+    state.settings?.computer_type,
+  ]);
 
   const deleteCategory = useCallback(async (categoryId: string) => {
-    if (state.settings?.computer_type === "Client" || state.isScanningFiles || state.rcloneProgress.direction !== null) {
+    if (
+      state.settings?.computer_type === "Client" ||
+      state.isScanningFiles ||
+      state.rcloneProgress.direction !== null ||
+      state.operationStatus.stepCurrent !== null
+    ) {
       toast.error(
         state.settings?.computer_type === "Client"
           ? "Esse recurso só está disponível no computador principal."
@@ -94,7 +110,15 @@ export function useAppCrudActions({
     } catch (err) {
       console.error("Failed to delete category:", err);
     }
-  }, [dispatch, loadCategories, state.isScanningFiles, state.rcloneProgress.direction, state.settings?.computer_type, state.sidebarView]);
+  }, [
+    dispatch,
+    loadCategories,
+    state.isScanningFiles,
+    state.operationStatus.stepCurrent,
+    state.rcloneProgress.direction,
+    state.settings?.computer_type,
+    state.sidebarView,
+  ]);
 
   const updateSong = useCallback(async (
     songId: string,

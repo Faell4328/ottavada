@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import { open, save } from "@tauri-apps/plugin-dialog";
@@ -27,10 +27,15 @@ export default function SettingsPage() {
     loadSongs,
     loadCategories,
     scanFilesForChanges,
+    setOperationStatus,
+    resetOperationStatus,
   } = useAppState();
   const navigate = useNavigate();
   const isClient = isClientComputer(state.settings?.computer_type);
-  const isSyncLocked = state.isScanningFiles || state.rcloneProgress.direction !== null;
+  const isSyncLocked =
+    state.isScanningFiles ||
+    state.rcloneProgress.direction !== null ||
+    state.operationStatus.stepCurrent !== null;
   const [settings, setSettings] = useState<AppSettings>(
     state.settings ?? {
       computer_id: "",
@@ -59,6 +64,7 @@ export default function SettingsPage() {
   const [hasRcloneConfigChange, setHasRcloneConfigChange] = useState(false);
   const [isRcloneProviderModalOpen, setIsRcloneProviderModalOpen] = useState(false);
   const [isRcloneLicenseModalOpen, setIsRcloneLicenseModalOpen] = useState(false);
+  const isMountedRef = useRef(true);
 
   const isSettingsOperationInProgress =
     isTogglingType ||
@@ -70,6 +76,12 @@ export default function SettingsPage() {
     isCheckingUpdate ||
     isInstallingUpdate ||
     isSyncLocked;
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   // Carregar dados do rclone da store quando o componente monta ou settings muda
   useEffect(() => {
@@ -267,6 +279,12 @@ export default function SettingsPage() {
     }
 
     setIsGeneratingSnapshot(true);
+    setOperationStatus({
+      title: "Etapa 1 - Preparando snapshot",
+      detail: "Bloqueando ações enquanto o backup é reorganizado",
+      stepCurrent: 1,
+      stepTotal: 1,
+    });
     navigate("/");
     const loadingToastId = toast.loading("Estou organizando os dados e aplicando as mudanças...");
     try {
@@ -281,7 +299,10 @@ export default function SettingsPage() {
       return false;
     } finally {
       toast.dismiss(loadingToastId);
-      setIsGeneratingSnapshot(false);
+      resetOperationStatus();
+      if (isMountedRef.current) {
+        setIsGeneratingSnapshot(false);
+      }
     }
   }
 
@@ -346,7 +367,6 @@ export default function SettingsPage() {
     const loadingToastId = toast.loading("Estou importando o backup local...");
 
     void (async () => {
-      let shouldRunForcedSnapshot = false;
       let refreshedSettings: AppSettings | null = null;
       try {
         const summary = await api.importBackupFile(selectedPath);
@@ -357,16 +377,12 @@ export default function SettingsPage() {
         refreshedSettings = await api.getSettings();
         setSettings(refreshedSettings);
         await Promise.all([loadSettings(), loadSongs(), loadCategories()]);
-        shouldRunForcedSnapshot = true;
+        await handleForceSnapshot(refreshedSettings ?? undefined);
       } catch (error) {
         toast.error("Não foi possível importar o backup local.");
       } finally {
         toast.dismiss(loadingToastId);
         setIsImportingBackup(false);
-      }
-
-      if (shouldRunForcedSnapshot) {
-        void handleForceSnapshot(refreshedSettings ?? undefined);
       }
     })();
   }

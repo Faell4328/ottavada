@@ -95,6 +95,19 @@ export function AppProvider({ children, disableBootstrap = false }: AppProviderP
     }
   }, [dispatch, state.selectedSong]);
 
+  const setOperationStatus = useCallback((payload: {
+    title: string;
+    detail?: string | null;
+    stepCurrent?: number | null;
+    stepTotal?: number | null;
+  }) => {
+    dispatch({ type: "SET_OPERATION_STATUS", payload });
+  }, [dispatch]);
+
+  const resetOperationStatus = useCallback(() => {
+    dispatch({ type: "RESET_OPERATION_STATUS" });
+  }, [dispatch]);
+
   useAppBootstrap({
     state,
     dispatch,
@@ -163,6 +176,8 @@ export function AppProvider({ children, disableBootstrap = false }: AppProviderP
       loadCategories,
       loadSettings,
       refreshSelectedSong,
+      setOperationStatus,
+      resetOperationStatus,
       setSidebarView,
       selectSong,
       selectScore,
@@ -185,6 +200,8 @@ export function AppProvider({ children, disableBootstrap = false }: AppProviderP
       loadCategories,
       loadSettings,
       refreshSelectedSong,
+      setOperationStatus,
+      resetOperationStatus,
       setSidebarView,
       selectSong,
       selectScore,

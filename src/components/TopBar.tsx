@@ -26,7 +26,10 @@ export default function TopBar({
   const { loadSongs, loadCategories, state, scanFilesForChanges } = useAppState();
   const navigate = useNavigate();
   const isClient = isClientComputer(state.settings?.computer_type);
-  const isSyncLocked = state.isScanningFiles || state.rcloneProgress.direction !== null;
+  const isSyncLocked =
+    state.isScanningFiles ||
+    state.rcloneProgress.direction !== null ||
+    state.operationStatus.stepCurrent !== null;
   const clientBlockedTitle = "Esse recurso só está disponível no computador principal.";
   const syncBlockedTitle = "Espere a sincronização terminar para continuar.";
   const [showAddMusicModal, setShowAddMusicModal] = useState(false);

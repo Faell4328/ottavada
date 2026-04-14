@@ -366,7 +366,8 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 
 ## v0.13
 - [x] Corrigindo problema: Quando o usuário adiciona uma música e rapidamente clica em "aplicar alterações" estava dando erro para sincronizar com a nuvem.
-- [ ] Corrigir problema do "importar backup local", não está "forçando geração de snapshot" corretamente.
+- [x] Corrigir problema do "importar backup local", não está "forçando geração de snapshot" corretamente. Está gerando os arquivos `{songId}.tar.zst`, mas não está sendo enviado para a nuvem com o `rclone`.
+- [x] Assim que redirecionar o usuário para home, travar ele, para não voltar para configurações ou acionar outro evento (ex: "força geração de snapshot" e outros fluxos).
 - [x] Refatoração
 	- [x] Refatorar front
 	- [x] Atualizar e implementar testes (front)

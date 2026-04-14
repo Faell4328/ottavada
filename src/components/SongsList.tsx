@@ -45,7 +45,10 @@ export default function SongsList() {
   const [isAddFileModalOpen, setIsAddFileModalOpen] = useState(false);
   const [scoresBySongId, setScoresBySongId] = useState<Record<string, ScoreListItem[]>>({});
   const [loadingScoresBySongId, setLoadingScoresBySongId] = useState<Record<string, boolean>>({});
-  const isSyncLocked = state.isScanningFiles || state.rcloneProgress.direction !== null;
+  const isSyncLocked =
+    state.isScanningFiles ||
+    state.rcloneProgress.direction !== null ||
+    state.operationStatus.stepCurrent !== null;
   const normalizedSearchQuery = useMemo(
     () => normalizeSearchText(state.searchQuery),
     [state.searchQuery]

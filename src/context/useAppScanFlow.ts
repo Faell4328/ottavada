@@ -23,6 +23,29 @@ type ScanFilesForChangesOptions =
 
 const SNAPSHOT_AUTO_THRESHOLD_BYTES = 2 * 1024 * 1024;
 
+export function shouldUseFullCloudSync(params: {
+  forceCloudSync: boolean;
+  snapshotGenerated: boolean;
+  eventsCount: number;
+  hasPendingChanges: boolean;
+  hasDetectedFileChanges: boolean;
+}) {
+  const {
+    forceCloudSync,
+    snapshotGenerated,
+    eventsCount,
+    hasPendingChanges,
+    hasDetectedFileChanges,
+  } = params;
+
+  return (
+    forceCloudSync ||
+    snapshotGenerated ||
+    eventsCount === 0 ||
+    (!hasPendingChanges && !hasDetectedFileChanges)
+  );
+}
+
 export function useAppScanFlow({
   dispatch,
   computerType,
@@ -399,8 +422,13 @@ export function useAppScanFlow({
         },
       });
 
-      const shouldUseFullSync =
-        snapshotGenerated || eventsSummary.events_count === 0 || (!hasPendingChanges && !hasDetectedFileChanges);
+      const shouldUseFullSync = shouldUseFullCloudSync({
+        forceCloudSync,
+        snapshotGenerated,
+        eventsCount: eventsSummary.events_count,
+        hasPendingChanges,
+        hasDetectedFileChanges,
+      });
 
       if (shouldUseFullSync) {
         // Full sync garante que a etapa de upload sempre exista no fluxo do servidor.
