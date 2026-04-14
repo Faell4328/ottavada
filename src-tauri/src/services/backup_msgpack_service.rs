@@ -696,7 +696,7 @@ mod tests {
 
         assert_eq!(import_summary.songs_count, 1);
         assert_eq!(import_summary.scores_count, 1);
-        assert_eq!(import_summary.categories_count, 1);
+        assert_eq!(import_summary.categories_count, 2);
 
         let songs = target_db.get_all_songs().expect("query songs");
         let categories = target_db.get_all_categories().expect("query categories");
@@ -705,7 +705,14 @@ mod tests {
             .expect("query changed fields");
 
         assert_eq!(songs.len(), 1);
-        assert_eq!(categories.len(), 1);
+        assert_eq!(categories.len(), 2);
+        assert!(categories
+            .iter()
+            .any(|category| category.id == "cat-1" && category.name == "Classica"));
+        assert!(categories
+            .iter()
+            .any(|category| category.id == "default-category" && category.name == "Sem categoria"));
+        assert_eq!(songs[0].category_ids, vec!["cat-1".to_string()]);
         assert!(!changed_fields.is_empty());
 
         let imported_settings = target_store

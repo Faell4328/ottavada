@@ -1,5 +1,5 @@
 use rusqlite::{params, Connection};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 
@@ -29,6 +29,30 @@ pub struct Database {
 }
 
 impl Database {
+    fn normalize_category_ids(category_ids: &[String]) -> Vec<String> {
+        let mut seen = HashSet::new();
+        let mut normalized = Vec::new();
+
+        for category_id in category_ids {
+            let category_id = category_id.trim();
+
+            if category_id.is_empty() {
+                continue;
+            }
+
+            let category_id = category_id.to_string();
+            if seen.insert(category_id.clone()) {
+                normalized.push(category_id);
+            }
+        }
+
+        if normalized.is_empty() {
+            vec![DEFAULT_CATEGORY_ID.to_string()]
+        } else {
+            normalized
+        }
+    }
+
     fn build_score_full_path(file_path: &str, file_name: &str) -> String {
         let trimmed_dir = file_path.trim();
         let trimmed_name = file_name.trim();
@@ -253,11 +277,7 @@ impl Database {
     pub fn insert_song(&self, song: &Song, category_ids: &[String]) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
         let now_ts = chrono::Local::now().timestamp();
-        let category_ids = if category_ids.is_empty() {
-            vec![DEFAULT_CATEGORY_ID.to_string()]
-        } else {
-            category_ids.to_vec()
-        };
+        let category_ids = Self::normalize_category_ids(category_ids);
 
         conn.execute(
             "INSERT INTO songs (id, name, composer, arranger, is_favorite, last_score_file_modified_at)
@@ -332,11 +352,7 @@ impl Database {
 
     pub fn update_song(&self, song: &Song, category_ids: &[String]) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
-        let category_ids = if category_ids.is_empty() {
-            vec![DEFAULT_CATEGORY_ID.to_string()]
-        } else {
-            category_ids.to_vec()
-        };
+        let category_ids = Self::normalize_category_ids(category_ids);
 
         let original_song = conn
             .query_row(

@@ -209,6 +209,74 @@ mod tests {
         assert!(relation_events > 0);
     }
 
+    #[test]
+    fn test_insert_song_category_ids_are_trimmed_deduplicated_and_blank_filtered() {
+        let db = make_db();
+        db.insert_category(&make_category("c1", "Hinos")).unwrap();
+        db.insert_category(&make_category("c2", "Clássicas")).unwrap();
+
+        let relation_events_before = count_changed_field_for_entity(&db, "categoriesSongs");
+        db.insert_song(
+            &make_song("s1", "Canon"),
+            &[
+                "c1".to_string(),
+                " c1 ".to_string(),
+                "c2".to_string(),
+                "c2".to_string(),
+                "   ".to_string(),
+            ],
+        )
+        .unwrap();
+
+        let song = db.get_song_list_item_by_id("s1").unwrap();
+        assert_eq!(song.category_ids, vec!["c1".to_string(), "c2".to_string()]);
+
+        let relation_events_after = count_changed_field_for_entity(&db, "categoriesSongs");
+        assert_eq!(relation_events_after - relation_events_before, 4);
+    }
+
+    #[test]
+    fn test_insert_song_uses_default_category_when_only_blank_categories_are_sent() {
+        let db = make_db();
+
+        db.insert_song(
+            &make_song("s1", "Canon"),
+            &["".to_string(), "   ".to_string()],
+        )
+        .unwrap();
+
+        let song = db.get_song_list_item_by_id("s1").unwrap();
+        assert_eq!(song.category_ids, vec!["default-category".to_string()]);
+    }
+
+    #[test]
+    fn test_update_song_category_ids_are_deduplicated_for_changed_field_generation() {
+        let db = make_db();
+        db.insert_category(&make_category("c1", "Hinos")).unwrap();
+        db.insert_category(&make_category("c2", "Clássicas")).unwrap();
+        db.insert_song(&make_song("s1", "Canon"), &["c1".to_string()])
+            .unwrap();
+
+        let relation_events_before = count_changed_field_for_entity(&db, "categoriesSongs");
+        db.update_song(
+            &make_song("s1", "Canon"),
+            &[
+                "c1".to_string(),
+                "c1".to_string(),
+                "c2".to_string(),
+                " c2 ".to_string(),
+                "".to_string(),
+            ],
+        )
+        .unwrap();
+
+        let song = db.get_song_list_item_by_id("s1").unwrap();
+        assert_eq!(song.category_ids, vec!["c1".to_string(), "c2".to_string()]);
+
+        let relation_events_after = count_changed_field_for_entity(&db, "categoriesSongs");
+        assert_eq!(relation_events_after - relation_events_before, 2);
+    }
+
     // ── Search ──
 
     #[test]
@@ -924,12 +992,17 @@ mod tests {
         db.insert_category(&cat).unwrap();
 
         let categories = db.get_all_categories().unwrap();
-        assert_eq!(categories.len(), 1);
-        assert_eq!(categories[0].name, "Harpa Cristã");
+        assert_eq!(categories.len(), 2);
+        assert!(categories.iter().any(|c| c.id == "c1" && c.name == "Harpa Cristã"));
+        assert!(categories
+            .iter()
+            .any(|c| c.id == "default-category" && c.name == "Sem categoria"));
 
         db.delete_category("c1").unwrap();
         let categories = db.get_all_categories().unwrap();
-        assert!(categories.is_empty());
+        assert_eq!(categories.len(), 1);
+        assert_eq!(categories[0].id, "default-category");
+        assert_eq!(categories[0].name, "Sem categoria");
     }
 
     #[test]

@@ -367,11 +367,11 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 ## v0.13
 - [x] Corrigindo problema: Quando o usuário adiciona uma música e rapidamente clica em "aplicar alterações" estava dando erro para sincronizar com a nuvem.
 - [ ] Corrigir problema do "importar backup local", não está "forçando geração de snapshot" corretamente.
-- [ ] Refatoração
+- [x] Refatoração
 	- [x] Refatorar front
 	- [x] Atualizar e implementar testes (front)
-	- [ ] Refatorar back
-	- [ ] Atualizar e implementar teste (back)
+	- [x] Refatorar back
+	- [x] Atualizar e implementar teste (back)
 - [ ] Atualiza o `tauri-plugin-store` igual a documentação.
 - [ ] Adicionar o bando de dados na documentação do "Servidor", chamado: "Banco de Dados Cliente".
 	- Não é para fazer nenhuma migration, o produto não está em produção ainda, não existe pendências.
