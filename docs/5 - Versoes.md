@@ -107,7 +107,8 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - v0.9 - Backup automático, adição do `rclone` ao sistema, facilidade na troca de provedor (`koofr` ou `google drive`), correção de progresso no `StatusBar`, entre outras melhorias e correções.
 - v0.10 - Melhorias e correções que foram encontradas, durante uso e testes massivos
 - v0.11 - Atualização de software
-- v0.12 - Licença e telemetria
+- v0.12 - Corrigindo atualização e outras correções
+- v0.13 - Telemeria
 - v1.0 - Manual e melhorias
 ## v0.4
 - [x] Atualizar bando de dados
@@ -343,7 +344,7 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 ! Irei encerrar essa versão precocemente para fins de teste
 
 ## v0.12
-- [ ] Correções:
+- [x] Correções:
 	- [x] Backup será todo dia e não a cada 3 dias.
 	- [x] Adicionar tratamento melhor de quando uma partitura já está sendo utilizada em outra música. Explicação: Usuário criou a música e clico para "adicionar arquivo(s)", no modal de resumo, deve aparecer um erro avisando que essa partitura está sendo utilizada em outra música e por isso não será salva. Caso só tenha ela ou o restante tenha o mesmo problema, o botão de salvar deve ficar desativado (parecido com que já tem relacionado ao adicionar partitura já existente na mesma música).
 	- [x] Não permitir partitura com o mesmo nome (ex: editar, adicionar e etc).
@@ -363,8 +364,12 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [x] Melhorar os erros no toast ao testar os provedores, podem "bugar" o usuário. Ex melhores: "suas credências estão erradas" e etc.
 
 
-- [ ] Adicionar no ".env" uma chave de API, que é fixa para todos os clientes. Ela será usada para o servidor identificar se é um cliente válido ou um bot. Ela deve ser sempre enviada para o servidor no header `token`.
+## v0.13
+- [ ] Adicionar no ".env" o campo da chave de API que deve ser enviada para o servidor, na rota `POST /v1/tmp`. Ela deve ficar no `header` chamado `Token`.
 - [ ] Atualiza o `tauri-plugin-store` igual a documentação.
+- [ ] Atualiza a verificação de atualizações, primeiro: faz a requisição da rota `/v1/tmp`, segundo: salva no `"server"` no `tauri-plugin-store`, terceiro: faz a requisição com a rota enviando o `query`. 
+
+
 - [ ] Adicionar no primeiro acesso (junto com o nome do computador) e nas configurações (para futura alteração pelo o usuário) o nome da organização ou instituição. Apenas para servidor, cliente não precisa aparecer e nem consultar.
 - [ ] Criar telemetria (quantas músicas, partituras, tempo de uso, versão atual, logs e etc).
 	- Deve ficar armazenado internamente, quando possível enviar para o servidor (não emitindo erro ao usuário).

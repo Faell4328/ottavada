@@ -1,6 +1,6 @@
 [package]
 name = "score-maestro"
-version = "0.11.0"
+version = "0.12.0"
 description = "A Tauri App"
 authors = ["Rhafaell"]
 edition = "2021"

@@ -5,7 +5,6 @@ import { open, save } from "@tauri-apps/plugin-dialog";
 import toast from "react-hot-toast";
 import { useAppState } from "../context/AppContext";
 import * as api from "../api/commands";
-import { getErrorMessage } from "../utils/errors";
 import { ChangeComputerTypeModal } from "./ChangeComputerTypeModal";
 import { RcloneProviderModal } from "./RcloneProviderModal.tsx";
 import { RcloneLicenseModal } from "./RcloneLicenseModal";
@@ -527,7 +526,7 @@ export default function SettingsPage() {
         >
           <ArrowLeft className="h-4 w-4 text-[#344b61]" />
         </button>
-        <h1 className="text-lg font-bold text-[#2f4259]">Configurações</h1>
+        <h1 className="text-lg font-bold text-[#2f4259]">Configurações (Teste)</h1>
       </div>
 
       <div className="flex-1 p-6 max-w-2xl mx-auto w-full">
