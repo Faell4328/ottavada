@@ -373,10 +373,10 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 	- [x] Atualizar e implementar testes (front)
 	- [x] Refatorar back
 	- [x] Atualizar e implementar teste (back)
-- [ ] Atualiza o `tauri-plugin-store` igual a documentação.
-- [ ] Adicionar o bando de dados na documentação do "Servidor", chamado: "Banco de Dados Cliente".
+- [x] Atualiza o `tauri-plugin-store` igual a documentação.
+- [x] Adicionar o bando de dados na documentação do "Servidor", chamado: "Banco de Dados Cliente".
 	- Não é para fazer nenhuma migration, o produto não está em produção ainda, não existe pendências.
-- [ ] Adicionar no ".env" o campo da chave de API que deve ser enviada para o servidor, na rota `POST /v1/telemetry`. Ela deve ficar no `header` chamado `Token`.
+- [x] Adicionar no ".env" o campo da chave de API que deve ser enviada para o servidor, na rota `POST /v1/telemetry`. Ela deve ficar no `header` chamado `Token`.
 
 
 - [ ] Mudar a ordem do primeiro acesso: colocar na frente do nome, a tela de selecionar o tipo do computador (cliente ou servidor).

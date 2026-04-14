@@ -196,6 +196,83 @@ impl Database {
         ",
         )?;
 
+        conn.execute_batch(
+            "
+            CREATE TABLE IF NOT EXISTS computerInformation (
+                computerId TEXT PRIMARY KEY,
+                organizationName TEXT NOT NULL DEFAULT '',
+                computerName TEXT NOT NULL DEFAULT '',
+                type TEXT NOT NULL CHECK(type IN ('server', 'client')),
+                appVersion TEXT NOT NULL DEFAULT '',
+                os TEXT NOT NULL DEFAULT '',
+                arch TEXT NOT NULL DEFAULT '',
+                date TEXT NOT NULL,
+                report INTEGER NOT NULL DEFAULT 0
+            );
+
+            CREATE TABLE IF NOT EXISTS usage (
+                id TEXT PRIMARY KEY,
+                computerId TEXT NOT NULL REFERENCES computerInformation(computerId) ON DELETE CASCADE,
+                date TEXT NOT NULL,
+                lastAccessedAt INTEGER,
+                totalTimeSpentMinutes INTEGER NOT NULL DEFAULT 0,
+                openScoreCount INTEGER NOT NULL DEFAULT 0,
+                searchCount INTEGER NOT NULL DEFAULT 0,
+                favoriteCount INTEGER NOT NULL DEFAULT 0,
+                addMusicCount INTEGER NOT NULL DEFAULT 0,
+                editMusicCount INTEGER NOT NULL DEFAULT 0,
+                deleteMusicCount INTEGER NOT NULL DEFAULT 0,
+                applyChangesCount INTEGER NOT NULL DEFAULT 0,
+                report INTEGER NOT NULL DEFAULT 0
+            );
+
+            CREATE TABLE IF NOT EXISTS library (
+                id TEXT PRIMARY KEY,
+                computerId TEXT NOT NULL REFERENCES computerInformation(computerId) ON DELETE CASCADE,
+                date TEXT NOT NULL,
+                musicCount INTEGER NOT NULL DEFAULT 0,
+                musicMain INTEGER NOT NULL DEFAULT 0,
+                musicDraft INTEGER NOT NULL DEFAULT 0,
+                musicNotFound INTEGER NOT NULL DEFAULT 0,
+                scoresCount INTEGER NOT NULL DEFAULT 0,
+                scoresMain INTEGER NOT NULL DEFAULT 0,
+                scoresDraft INTEGER NOT NULL DEFAULT 0,
+                scoresNotFound INTEGER NOT NULL DEFAULT 0,
+                report INTEGER NOT NULL DEFAULT 0
+            );
+
+            CREATE TABLE IF NOT EXISTS sync (
+                id TEXT PRIMARY KEY,
+                computerId TEXT NOT NULL REFERENCES computerInformation(computerId) ON DELETE CASCADE,
+                date TEXT NOT NULL,
+                lastSyncAt INTEGER,
+                uploadCount INTEGER NOT NULL DEFAULT 0,
+                uploadTotalBytes INTEGER NOT NULL DEFAULT 0,
+                downloadCount INTEGER NOT NULL DEFAULT 0,
+                downloadTotalBytes INTEGER NOT NULL DEFAULT 0,
+                errors INTEGER NOT NULL DEFAULT 0,
+                report INTEGER NOT NULL DEFAULT 0
+            );
+
+            CREATE TABLE IF NOT EXISTS errors (
+                id TEXT PRIMARY KEY,
+                computerId TEXT NOT NULL REFERENCES computerInformation(computerId) ON DELETE CASCADE,
+                message TEXT NOT NULL DEFAULT '',
+                timestamp INTEGER NOT NULL,
+                report INTEGER NOT NULL DEFAULT 0
+            );
+
+            CREATE TABLE IF NOT EXISTS dailyUsage (
+                id TEXT PRIMARY KEY,
+                computerId TEXT NOT NULL REFERENCES computerInformation(computerId) ON DELETE CASCADE,
+                date TEXT NOT NULL,
+                timeSpentMinutes INTEGER NOT NULL DEFAULT 0,
+                openedScores INTEGER NOT NULL DEFAULT 0,
+                report INTEGER NOT NULL DEFAULT 0
+            );
+        ",
+        )?;
+
         // Índices
         conn.execute_batch("
             CREATE INDEX IF NOT EXISTS idx_scores_song_id ON scores(song_id);
@@ -205,6 +282,17 @@ impl Database {
             CREATE INDEX IF NOT EXISTS idx_songs_is_favorite ON songs(is_favorite);
             CREATE INDEX IF NOT EXISTS idx_backupSongs_song_id ON backupSongs(song_id);
             CREATE INDEX IF NOT EXISTS idx_backupSongs_status ON backupSongs(status);
+            CREATE INDEX IF NOT EXISTS idx_computerInformation_report ON computerInformation(report);
+            CREATE INDEX IF NOT EXISTS idx_usage_computerId ON usage(computerId);
+            CREATE INDEX IF NOT EXISTS idx_usage_report ON usage(report);
+            CREATE INDEX IF NOT EXISTS idx_library_computerId ON library(computerId);
+            CREATE INDEX IF NOT EXISTS idx_library_report ON library(report);
+            CREATE INDEX IF NOT EXISTS idx_sync_computerId ON sync(computerId);
+            CREATE INDEX IF NOT EXISTS idx_sync_report ON sync(report);
+            CREATE INDEX IF NOT EXISTS idx_errors_computerId ON errors(computerId);
+            CREATE INDEX IF NOT EXISTS idx_errors_report ON errors(report);
+            CREATE INDEX IF NOT EXISTS idx_dailyUsage_computerId ON dailyUsage(computerId);
+            CREATE INDEX IF NOT EXISTS idx_dailyUsage_report ON dailyUsage(report);
         ")?;
 
         Self::ensure_default_category_with_conn(conn)?;

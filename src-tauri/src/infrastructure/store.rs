@@ -10,6 +10,15 @@ use crate::domain::models::{
 
 const STORE_FILENAME: &str = "app-store.json";
 
+fn read_string(store: &serde_json::Value, keys: &[&str]) -> Option<String> {
+    keys.iter().find_map(|key| {
+        store
+            .get(*key)
+            .and_then(|value| value.as_str())
+            .map(|value| value.to_string())
+    })
+}
+
 /// Gerencia o armazenamento de configurações do sistema usando um arquivo JSON
 pub struct SystemStore {
     app_data_dir: PathBuf,
@@ -88,24 +97,15 @@ impl SystemStore {
     pub fn get_app_settings(&self) -> Result<AppSettings, AppError> {
         let store = self.load_store()?;
 
-        let computer_id = store
-            .get("computer_id")
-            .or_else(|| store.get("id"))
-            .and_then(|v| v.as_str().map(|s| s.to_string()))
+        let computer_id = read_string(&store, &["computer_id", "computerId", "id"])
             .unwrap_or_default();
 
-        let computer_name = store
-            .get("computer_name")
-            .or_else(|| store.get("name"))
-            .and_then(|v| v.as_str().map(|s| s.to_string()));
+        let computer_name = read_string(&store, &["computer_name", "computerName", "name"]);
 
-        let computer_type_raw = store
-            .get("computer_type")
-            .and_then(|v| v.as_str())
-            .or_else(|| store.get("type").and_then(|v| v.as_str()))
-            .unwrap_or("server");
+        let computer_type_raw = read_string(&store, &["computer_type", "computerType", "type"])
+            .unwrap_or_else(|| "server".to_string());
 
-        let computer_type = ComputerType::from_store_str(computer_type_raw);
+        let computer_type = ComputerType::from_store_str(&computer_type_raw);
 
         let rclone_config = store
             .get("rclone_config")
@@ -195,17 +195,28 @@ impl SystemStore {
     pub fn save_app_settings(&self, settings: &AppSettings) -> Result<(), AppError> {
         let mut store = self.load_store()?;
 
-        // Estrutura canônica (documentação): id, name, type, rclone_config, cloud
+        // Estrutura canônica do store: campos modernos e chaves legadas convivem
         store["id"] = serde_json::json!(settings.computer_id);
+        store["computer_id"] = serde_json::json!(settings.computer_id);
         store["name"] = serde_json::json!(settings.computer_name.clone().unwrap_or_default());
+        store["computer_name"] = serde_json::json!(settings.computer_name.clone().unwrap_or_default());
+        store["computerName"] = serde_json::json!(settings.computer_name.clone().unwrap_or_default());
         store["type"] = serde_json::json!(settings.computer_type.as_store_str());
+        store["computer_type"] = serde_json::json!(settings.computer_type.as_store_str());
+
+        let organization = store
+            .get("organization")
+            .and_then(|value| value.as_str())
+            .unwrap_or_default()
+            .to_string();
+        store["organization"] = serde_json::json!(organization);
 
         if let Some(ref rclone_cfg) = settings.rclone_config {
             let rclone_json = serde_json::to_value(rclone_cfg).map_err(|e| {
                 AppError::Generic(format!("Erro ao serializar rclone config: {}", e))
             })?;
+            store["rclone"] = rclone_json.clone();
             store["rclone_config"] = rclone_json;
-            store.as_object_mut().map(|obj| obj.remove("rclone"));
         } else {
             store.as_object_mut().map(|obj| obj.remove("rclone_config"));
             store.as_object_mut().map(|obj| obj.remove("rclone"));
@@ -218,17 +229,6 @@ impl SystemStore {
         });
 
         // Chaves legadas mantidas por compatibilidade enquanto o frontend migra completamente.
-        store["computer_id"] = serde_json::json!(settings.computer_id);
-
-        if let Some(ref name) = settings.computer_name {
-            store["computer_name"] = serde_json::json!(name);
-        } else {
-            store.as_object_mut().map(|obj| obj.remove("computer_name"));
-        }
-
-        let computer_type_str = settings.computer_type.as_str();
-        store["computer_type"] = serde_json::json!(computer_type_str);
-
         let mode_str = match settings.google_drive_mode {
             GoogleDriveMode::Local => "local",
             GoogleDriveMode::Api => "api",
@@ -411,5 +411,44 @@ mod tests {
 
         let reloaded = store.get_app_settings().expect("reload settings");
         assert!(reloaded.library_summary.is_none());
+    }
+
+    #[test]
+    fn persists_documented_store_shape_and_reads_legacy_keys() {
+        let dir = tempdir().expect("temp dir");
+        let store = SystemStore::new(dir.path().to_path_buf());
+
+        let settings = AppSettings {
+            computer_id: "server-2".to_string(),
+            computer_name: Some("Servidor".to_string()),
+            computer_type: ComputerType::Server,
+            rclone_config: Some(crate::domain::models::RcloneConfig {
+                provider: crate::domain::models::RcloneProvider::Koofr,
+            }),
+            first_run_completed: true,
+            ..Default::default()
+        };
+
+        store.save_app_settings(&settings).expect("save settings");
+
+        let raw_store = store.load_store().expect("load store");
+        assert_eq!(raw_store.get("id").and_then(|v| v.as_str()), Some("server-2"));
+        assert_eq!(
+            raw_store.get("computerName").and_then(|v| v.as_str()),
+            Some("Servidor")
+        );
+        assert_eq!(
+            raw_store.get("organization").and_then(|v| v.as_str()),
+            Some("")
+        );
+        assert_eq!(raw_store.get("type").and_then(|v| v.as_str()), Some("server"));
+        assert!(raw_store.get("rclone").is_some());
+        assert!(raw_store.get("cloud").is_some());
+
+        let loaded = store.get_app_settings().expect("reload settings");
+        assert_eq!(loaded.computer_id, "server-2");
+        assert_eq!(loaded.computer_name.as_deref(), Some("Servidor"));
+        assert_eq!(loaded.computer_type, ComputerType::Server);
+        assert!(loaded.rclone_config.is_some());
     }
 }
