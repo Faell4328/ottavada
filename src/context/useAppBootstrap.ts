@@ -11,6 +11,7 @@ interface UseAppBootstrapParams {
   loadSongs: () => Promise<void>;
   loadCategories: () => Promise<void>;
   loadSettings: () => Promise<void>;
+  enabled?: boolean;
 }
 
 let automaticBackupStarted = false;
@@ -21,10 +22,16 @@ export function useAppBootstrap({
   loadSongs,
   loadCategories,
   loadSettings,
+  enabled = true,
 }: UseAppBootstrapParams) {
   const skipNextAutoSongReloadRef = useRef(false);
 
   useEffect(() => {
+    if (!enabled) {
+      dispatch({ type: "SET_LOADING", payload: false });
+      return;
+    }
+
     void (async () => {
       try {
         const firstRun = await api.isFirstRun();
@@ -75,9 +82,13 @@ export function useAppBootstrap({
         dispatch({ type: "SET_LOADING", payload: false });
       }
     })();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [dispatch, enabled]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
     if (!state.isFirstRun && !state.isLoading) {
       if (skipNextAutoSongReloadRef.current) {
         skipNextAutoSongReloadRef.current = false;
@@ -86,5 +97,5 @@ export function useAppBootstrap({
 
       void loadSongs();
     }
-  }, [state.sidebarView, state.isFirstRun, state.isLoading]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [enabled, state.sidebarView, state.isFirstRun, state.isLoading]); // eslint-disable-line react-hooks/exhaustive-deps
 }

@@ -365,10 +365,11 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 
 
 ## v0.13
-- [ ] Corrigindo problema: Quando o usuário adiciona uma música e rapidamente clica em "aplicar alterações" estava dando erro para sincronizar com a nuvem.
+- [x] Corrigindo problema: Quando o usuário adiciona uma música e rapidamente clica em "aplicar alterações" estava dando erro para sincronizar com a nuvem.
+- [ ] Corrigir problema do "importar backup local", não está "forçando geração de snapshot" corretamente.
 - [ ] Refatoração
-	- [ ] Refatorar front
-	- [ ] Atualizar e implementar testes (front)
+	- [x] Refatorar front
+	- [x] Atualizar e implementar testes (front)
 	- [ ] Refatorar back
 	- [ ] Atualizar e implementar teste (back)
 - [ ] Atualiza o `tauri-plugin-store` igual a documentação.

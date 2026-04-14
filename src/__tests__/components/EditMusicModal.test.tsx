@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { EditMusicModal } from "../../components/EditMusicModal";
-import { AppProvider } from "../../context/AppContext";
 import type { SongListItem } from "../../types";
+import { renderWithAppProvider } from "../utils/renderWithAppProvider";
 
 // Mock Tauri APIs
 vi.mock("@tauri-apps/api/core", () => ({
@@ -57,10 +57,6 @@ const sampleSong: SongListItem = {
   scores: [],
 };
 
-function renderWithProvider(ui: React.ReactElement) {
-  return render(<AppProvider>{ui}</AppProvider>);
-}
-
 describe("EditMusicModal", () => {
   const mockOnClose = vi.fn();
   const mockOnSave = vi.fn();
@@ -71,21 +67,21 @@ describe("EditMusicModal", () => {
   });
 
   it("should not render when isOpen is false", () => {
-    renderWithProvider(
+    renderWithAppProvider(
       <EditMusicModal isOpen={false} score={sampleSong} onClose={mockOnClose} onSave={mockOnSave} />
     );
     expect(screen.queryByText("Editar Música")).not.toBeInTheDocument();
   });
 
   it("should not render when score is null", () => {
-    renderWithProvider(
+    renderWithAppProvider(
       <EditMusicModal isOpen={true} score={null} onClose={mockOnClose} onSave={mockOnSave} />
     );
     expect(screen.queryByText("Editar Música")).not.toBeInTheDocument();
   });
 
   it("should render with song data pre-filled", () => {
-    renderWithProvider(
+    renderWithAppProvider(
       <EditMusicModal isOpen={true} score={sampleSong} onClose={mockOnClose} onSave={mockOnSave} />
     );
 
@@ -96,7 +92,7 @@ describe("EditMusicModal", () => {
   });
 
   it("should show error when title is empty", async () => {
-    renderWithProvider(
+    renderWithAppProvider(
       <EditMusicModal isOpen={true} score={sampleSong} onClose={mockOnClose} onSave={mockOnSave} />
     );
 
@@ -111,7 +107,7 @@ describe("EditMusicModal", () => {
   });
 
   it("should call onSave with updated data", async () => {
-    renderWithProvider(
+    renderWithAppProvider(
       <EditMusicModal isOpen={true} score={sampleSong} onClose={mockOnClose} onSave={mockOnSave} />
     );
 
@@ -131,7 +127,7 @@ describe("EditMusicModal", () => {
   });
 
   it("should call onClose when cancel is clicked", () => {
-    renderWithProvider(
+    renderWithAppProvider(
       <EditMusicModal isOpen={true} score={sampleSong} onClose={mockOnClose} onSave={mockOnSave} />
     );
 
@@ -142,7 +138,7 @@ describe("EditMusicModal", () => {
   it("should show error when onSave rejects", async () => {
     mockOnSave.mockRejectedValueOnce(new Error("Falha na atualização"));
 
-    renderWithProvider(
+    renderWithAppProvider(
       <EditMusicModal isOpen={true} score={sampleSong} onClose={mockOnClose} onSave={mockOnSave} />
     );
 
@@ -156,7 +152,7 @@ describe("EditMusicModal", () => {
   it("should send null for empty composer", async () => {
     const songNoComposer = { ...sampleSong, composer: null, arranger: null };
 
-    renderWithProvider(
+    renderWithAppProvider(
       <EditMusicModal isOpen={true} score={songNoComposer} onClose={mockOnClose} onSave={mockOnSave} />
     );
 

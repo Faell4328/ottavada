@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { AddScoreToSongModal } from "../../components/AddScoreToSongModal";
-import { AppProvider } from "../../context/AppContext";
 import type { IndexedFile, ScoreListItem, SongListItem } from "../../types";
 import * as api from "../../api/commands";
 import { normalizeScoreNameForSave } from "../../utils/nameFormat";
+import { renderWithAppProvider } from "../utils/renderWithAppProvider";
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(async (cmd: string) => {
@@ -123,17 +123,13 @@ describe("AddScoreToSongModal", () => {
   const mockOnClose = vi.fn();
   const mockOnSave = vi.fn();
 
-  function renderWithProvider(ui: React.ReactElement) {
-    return render(<AppProvider>{ui}</AppProvider>);
-  }
-
   beforeEach(() => {
     vi.clearAllMocks();
     mockOnSave.mockResolvedValue(undefined);
   });
 
   it("should not render when isOpen is false", () => {
-    renderWithProvider(
+    renderWithAppProvider(
       <AddScoreToSongModal
         isOpen={false}
         songName="HINO NACIONAL"
@@ -147,7 +143,7 @@ describe("AddScoreToSongModal", () => {
   });
 
   it("should render song name as readonly and allow instrument editing", () => {
-    renderWithProvider(
+    renderWithAppProvider(
       <AddScoreToSongModal
         isOpen={true}
         songName="HINO NACIONAL"
@@ -167,7 +163,7 @@ describe("AddScoreToSongModal", () => {
   });
 
   it("should show duplicate score warning above the score name and disable save", () => {
-    renderWithProvider(
+    renderWithAppProvider(
       <AddScoreToSongModal
         isOpen={true}
         songName="HINO NACIONAL"
@@ -187,7 +183,7 @@ describe("AddScoreToSongModal", () => {
   });
 
   it("should warn when the same instrument is selected twice and keep the inputs editable", () => {
-    renderWithProvider(
+    renderWithAppProvider(
       <AddScoreToSongModal
         isOpen={true}
         songName="HINO NACIONAL"
@@ -208,7 +204,7 @@ describe("AddScoreToSongModal", () => {
   });
 
   it("should render files in the same review order as directory indexing", () => {
-    renderWithProvider(
+    renderWithAppProvider(
       <AddScoreToSongModal
         isOpen={true}
         songName="HINO NACIONAL"
@@ -230,7 +226,7 @@ describe("AddScoreToSongModal", () => {
   });
 
   it("should show feedback before save when the selected file is already used by another song", () => {
-    renderWithProvider(
+    renderWithAppProvider(
       <AddScoreToSongModal
         isOpen={true}
         songName="HINO NACIONAL"
@@ -257,7 +253,7 @@ describe("AddScoreToSongModal", () => {
       .spyOn(api, "openFileLocation")
       .mockResolvedValue(undefined);
 
-    renderWithProvider(
+    renderWithAppProvider(
       <AddScoreToSongModal
         isOpen={true}
         songName="HINO NACIONAL"
@@ -281,7 +277,7 @@ describe("AddScoreToSongModal", () => {
   });
 
   it("should save with edited instrument and close modal", async () => {
-    renderWithProvider(
+    renderWithAppProvider(
       <AddScoreToSongModal
         isOpen={true}
         songName="HINO NACIONAL"
@@ -311,7 +307,7 @@ describe("AddScoreToSongModal", () => {
   it("should show error when save fails", async () => {
     mockOnSave.mockRejectedValue(new Error("Falha ao adicionar"));
 
-    renderWithProvider(
+    renderWithAppProvider(
       <AddScoreToSongModal
         isOpen={true}
         songName="HINO NACIONAL"

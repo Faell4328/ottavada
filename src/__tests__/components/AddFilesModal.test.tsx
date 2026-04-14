@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { AddFilesModal } from "../../components/AddFilesModal";
-import { AppProvider } from "../../context/AppContext";
 import type { IndexedFile, SongListItem } from "../../types";
 import * as api from "../../api/commands";
+import { renderWithAppProvider } from "../utils/renderWithAppProvider";
 
 // Mock Tauri APIs
 vi.mock("@tauri-apps/api/core", () => ({
@@ -85,10 +85,6 @@ const otherSongConflictFiles: IndexedFile[] = [
   },
 ];
 
-function renderWithProvider(ui: React.ReactElement) {
-  return render(<AppProvider>{ui}</AppProvider>);
-}
-
 describe("AddFilesModal", () => {
   const mockOnClose = vi.fn();
   const mockOnSuccess = vi.fn();
@@ -99,21 +95,21 @@ describe("AddFilesModal", () => {
   });
 
   it("should not render when isOpen is false", () => {
-    renderWithProvider(
+    renderWithAppProvider(
       <AddFilesModal isOpen={false} files={sampleFiles} onClose={mockOnClose} onSuccess={mockOnSuccess} />
     );
     expect(screen.queryByText("Adicionar Partitura(s)")).not.toBeInTheDocument();
   });
 
   it("should not render when files are empty", () => {
-    renderWithProvider(
+    renderWithAppProvider(
       <AddFilesModal isOpen={true} files={[]} onClose={mockOnClose} onSuccess={mockOnSuccess} />
     );
     expect(screen.queryByText("Adicionar Partitura(s)")).not.toBeInTheDocument();
   });
 
   it("should render with file data pre-filled", () => {
-    renderWithProvider(
+    renderWithAppProvider(
       <AddFilesModal isOpen={true} files={sampleFiles} onClose={mockOnClose} onSuccess={mockOnSuccess} />
     );
 
@@ -125,7 +121,7 @@ describe("AddFilesModal", () => {
   });
 
   it("should show error when title is empty", async () => {
-    renderWithProvider(
+    renderWithAppProvider(
       <AddFilesModal isOpen={true} files={sampleFiles} onClose={mockOnClose} onSuccess={mockOnSuccess} />
     );
 
@@ -141,7 +137,7 @@ describe("AddFilesModal", () => {
   });
 
   it("should call onClose when cancel is clicked", () => {
-    renderWithProvider(
+    renderWithAppProvider(
       <AddFilesModal isOpen={true} files={sampleFiles} onClose={mockOnClose} onSuccess={mockOnSuccess} />
     );
 
@@ -150,7 +146,7 @@ describe("AddFilesModal", () => {
   });
 
   it("should allow removing files", () => {
-    renderWithProvider(
+    renderWithAppProvider(
       <AddFilesModal isOpen={true} files={sampleFiles} onClose={mockOnClose} onSuccess={mockOnSuccess} />
     );
 
@@ -166,7 +162,7 @@ describe("AddFilesModal", () => {
   });
 
   it("should allow editing instrument names", () => {
-    renderWithProvider(
+    renderWithAppProvider(
       <AddFilesModal isOpen={true} files={sampleFiles} onClose={mockOnClose} onSuccess={mockOnSuccess} />
     );
 
@@ -178,7 +174,7 @@ describe("AddFilesModal", () => {
   });
 
   it("should show duplicate score feedback above the score file name and keep the input readonly", () => {
-    renderWithProvider(
+    renderWithAppProvider(
       <AddFilesModal
         isOpen={true}
         files={sampleFiles}
@@ -197,7 +193,7 @@ describe("AddFilesModal", () => {
   });
 
   it("should warn when two files have the same instrument name and keep them editable", () => {
-    renderWithProvider(
+    renderWithAppProvider(
       <AddFilesModal
         isOpen={true}
         files={duplicateBatchFiles}
@@ -217,7 +213,7 @@ describe("AddFilesModal", () => {
   });
 
   it("should show when a score is already used in another song and disable save", () => {
-    renderWithProvider(
+    renderWithAppProvider(
       <AddFilesModal
         isOpen={true}
         files={otherSongConflictFiles}
@@ -238,7 +234,7 @@ describe("AddFilesModal", () => {
   it("should open selected file with default app", async () => {
     const openFilePathSpy = vi.spyOn(api, "openFilePath").mockResolvedValue(undefined);
 
-    renderWithProvider(
+    renderWithAppProvider(
       <AddFilesModal isOpen={true} files={sampleFiles} onClose={mockOnClose} onSuccess={mockOnSuccess} />
     );
 
@@ -255,7 +251,7 @@ describe("AddFilesModal", () => {
       .spyOn(api, "openFileLocation")
       .mockResolvedValue(undefined);
 
-    renderWithProvider(
+    renderWithAppProvider(
       <AddFilesModal isOpen={true} files={sampleFiles} onClose={mockOnClose} onSuccess={mockOnSuccess} />
     );
 
@@ -265,5 +261,41 @@ describe("AddFilesModal", () => {
     await waitFor(() => {
       expect(openFileLocationSpy).toHaveBeenCalledWith(sampleFiles[0].path);
     });
+  });
+
+  it("should save only addable files when selection mixes duplicates and new files", async () => {
+    const importSpy = vi.spyOn(api, "importIndexedFilesWithMetadata").mockResolvedValue({
+      songs: [],
+      added_count: 1,
+    });
+
+    renderWithAppProvider(
+      <AddFilesModal
+        isOpen={true}
+        files={sampleFiles}
+        existingSongs={duplicateSongs}
+        onClose={mockOnClose}
+        onSuccess={mockOnSuccess}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
+
+    await waitFor(() => {
+      expect(importSpy).toHaveBeenCalledWith(
+        [
+          expect.objectContaining({
+            path: sampleFiles[1].path,
+            name: "CANON",
+          }),
+        ],
+        [],
+        null,
+        null
+      );
+    });
+
+    expect(mockOnSuccess).toHaveBeenCalledWith(1);
+    expect(mockOnClose).toHaveBeenCalled();
   });
 });

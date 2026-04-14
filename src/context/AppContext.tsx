@@ -27,7 +27,12 @@ export function useAppState() {
 
 // ── Provider ──
 
-export function AppProvider({ children }: { children: ReactNode }) {
+interface AppProviderProps {
+  children: ReactNode;
+  disableBootstrap?: boolean;
+}
+
+export function AppProvider({ children, disableBootstrap = false }: AppProviderProps) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const startupScanTriggeredRef = useRef(false);
 
@@ -96,6 +101,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     loadSongs,
     loadCategories,
     loadSettings,
+    enabled: !disableBootstrap,
   });
 
   const {

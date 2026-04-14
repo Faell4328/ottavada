@@ -16,9 +16,9 @@ import { sortIndexedFileEntriesForReview } from "../utils/indexedFileReviewOrder
 import {
   describeExistingSongWarning,
   describeScoreConflict,
-  findExistingScoreConflict,
   findSongByName,
 } from "../utils/libraryDuplicates";
+import { analyzeAddFilesReview } from "../utils/addFilesReview";
 
 interface AddFilesModalProps {
   isOpen: boolean;
@@ -29,13 +29,15 @@ interface AddFilesModalProps {
   defaultCategoryIds?: string[];
 }
 
+const EMPTY_CATEGORY_IDS: string[] = [];
+
 export function AddFilesModal({
   isOpen,
   files,
   existingSongs,
   onClose,
   onSuccess,
-  defaultCategoryIds = [],
+  defaultCategoryIds = EMPTY_CATEGORY_IDS,
 }: AddFilesModalProps) {
   const { state } = useAppState();
   const visibleCategories = state.categories.filter(
@@ -62,56 +64,22 @@ export function AddFilesModal({
     () => files.map((file, idx) => ({ file, idx })).filter(({ idx }) => !removedFileIndices.has(idx)),
     [files, removedFileIndices]
   );
-  const normalizedInstrumentNames = useMemo(() => {
-    const map = new Map<number, string | null>();
-
-    activeFileEntries.forEach(({ file, idx }) => {
-      map.set(idx, normalizeScoreNameForSave(instrumentNames[idx] ?? file.instrument));
-    });
-
-    return map;
-  }, [activeFileEntries, instrumentNames]);
-  const normalizedInstrumentCounts = useMemo(() => {
-    const counts = new Map<string, number>();
-
-    normalizedInstrumentNames.forEach((normalizedInstrument) => {
-      if (!normalizedInstrument) {
-        return;
-      }
-
-      counts.set(normalizedInstrument, (counts.get(normalizedInstrument) ?? 0) + 1);
-    });
-
-    return counts;
-  }, [normalizedInstrumentNames]);
-  const duplicateMap = useMemo(() => {
-    const map = new Map<number, ReturnType<typeof findExistingScoreConflict> | null>();
-
-    activeFileEntries.forEach(({ file, idx }) => {
-      map.set(idx, findExistingScoreConflict(songsForDuplicateCheck, file, normalizedTitle));
-    });
-
-    return map;
-  }, [activeFileEntries, instrumentNames, normalizedTitle, songsForDuplicateCheck]);
-  const batchDuplicateMap = useMemo(() => {
-    const map = new Map<number, boolean>();
-
-    activeFileEntries.forEach(({ file, idx }) => {
-      const normalizedInstrument = normalizeScoreNameForSave(instrumentNames[idx] ?? file.instrument);
-      map.set(
-        idx,
-        normalizedInstrument !== null && (normalizedInstrumentCounts.get(normalizedInstrument) ?? 0) > 1
-      );
-    });
-
-    return map;
-  }, [activeFileEntries, instrumentNames, normalizedInstrumentCounts]);
-  const duplicateEntries = activeFileEntries.filter(({ idx }) => {
-    return duplicateMap.get(idx) !== null || batchDuplicateMap.get(idx) === true;
-  });
-  const addableEntries = activeFileEntries.filter(({ idx }) => {
-    return duplicateMap.get(idx) === null && batchDuplicateMap.get(idx) !== true;
-  });
+  const {
+    normalizedInstrumentNames,
+    normalizedInstrumentCounts,
+    duplicateMap,
+    duplicateEntries,
+    addableEntries,
+  } = useMemo(
+    () =>
+      analyzeAddFilesReview(
+        activeFileEntries,
+        instrumentNames,
+        songsForDuplicateCheck,
+        normalizedTitle
+      ),
+    [activeFileEntries, instrumentNames, normalizedTitle, songsForDuplicateCheck]
+  );
   const hasAddableFiles = addableEntries.length > 0;
   const isDuplicateSong = existingSong !== null;
   const hasPendingIssues = isDuplicateSong || duplicateEntries.length > 0;
@@ -137,7 +105,7 @@ export function AddFilesModal({
       setTitle(normalizeSongNameInput(files[0].name || ""));
       setComposer("");
       setArranger("");
-      setSelectedCategories(defaultCategoryIds);
+      setSelectedCategories([...defaultCategoryIds]);
       setError("");
       setRemovedFileIndices(new Set());
       setEditingInstrumentIndex(null);
@@ -221,7 +189,7 @@ export function AddFilesModal({
     setError("");
 
     try {
-      const filteredFiles = activeFileEntries.map(({ file, idx }) => {
+      const filteredFiles = addableEntries.map(({ file, idx }) => {
         return {
           path: file.path,
           name: normalizedTitle,
