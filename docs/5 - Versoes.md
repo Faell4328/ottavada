@@ -365,14 +365,15 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 
 
 ## v0.13
-- [ ] Adicionar no ".env" o campo da chave de API que deve ser enviada para o servidor, na rota `POST /v1/tmp`. Ela deve ficar no `header` chamado `Token`.
 - [ ] Atualiza o `tauri-plugin-store` igual a documentação.
-- [ ] Atualiza a verificação de atualizações, primeiro: faz a requisição da rota `/v1/tmp`, segundo: salva no `"server"` no `tauri-plugin-store`, terceiro: faz a requisição com a rota enviando o `query`. 
+- [ ] Adicionar o bando de dados na documentação do "Servidor", chamado: "Banco de Dados Cliente".
+	- Não é para fazer nenhuma migration, o produto não está em produção ainda, não existe pendências.
+- [ ] Adicionar no ".env" o campo da chave de API que deve ser enviada para o servidor, na rota `POST /v1/telemetry`. Ela deve ficar no `header` chamado `Token`.
 
 
-- [ ] Adicionar no primeiro acesso (junto com o nome do computador) e nas configurações (para futura alteração pelo o usuário) o nome da organização ou instituição. Apenas para servidor, cliente não precisa aparecer e nem consultar.
-- [ ] Criar telemetria (quantas músicas, partituras, tempo de uso, versão atual, logs e etc).
-	- Deve ficar armazenado internamente, quando possível enviar para o servidor (não emitindo erro ao usuário).
+- [ ] Mudar a ordem do primeiro acesso: colocar na frente do nome, a tela de selecionar o tipo do computador (cliente ou servidor).
+- [ ] Adicionar no primeiro acesso (junto com o nome do computador) e nas configurações (para futura alteração pelo o usuário) o nome da organização ou instituição. Apenas para servidor, no cliente vai aparecer apenas o nome do comptaudor.
+- [ ] Implementar telemetria
 - [ ] Criar tela de apresentação no primeiro acesso, objetivo é apresentar o software e mostrar o que ele pode fazer.
 
 ## v1.0
