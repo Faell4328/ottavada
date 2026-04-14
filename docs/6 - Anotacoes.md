@@ -159,3 +159,11 @@ Sem `over engineering`
 - Com isso irei implementar telemetria e outras coisas para melhorar na usabilidade e aprender onde e o que melhorar no software, ou se ele realmente está sendo utilizado.
 - Acho que a melhor escolha é usar ele como vitrine e experiência para conseguir uma oportunidade como dev.
 - Então, qual os planos: foca na telemetria, criar uma boa página de boas vindas, avisando meu telefone de contanto, uma boa apresentação do software.
+
+**14-04-2026**
+
+Arrumando o caminho
+- A documentação está bem desatualizada, principalmente em relação aos fluxos. Eu irei lançar o software como está, ele está suficientemente estável para uso normal, ou seja, a `v1.0`.
+- Como eu fiz o código com vibe coding, acredito que tem muitas lacunas, então eu irei tirar um bom tempo para estudar o código, arrumar e aprender.
+- Além de mudar onde a documentação é feita e atualizada (obsidian, não sei qual ferramenta irei realmente usar), agora já tenho uma visão melhor do software, a documentação foi feita em uma epoca que não tinha uma visão completa do software e da enorme quantidade de fluxos existentes.
+- Então para manter o software funcionando bem, a melhor escolha é atualizar e melhorar a documentação.

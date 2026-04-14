@@ -365,6 +365,12 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 
 
 ## v0.13
+- [ ] Corrigindo problema: Quando o usuário adiciona uma música e rapidamente clica em "aplicar alterações" estava dando erro para sincronizar com a nuvem.
+- [ ] Refatoração
+	- [ ] Refatorar front
+	- [ ] Atualizar e implementar testes (front)
+	- [ ] Refatorar back
+	- [ ] Atualizar e implementar teste (back)
 - [ ] Atualiza o `tauri-plugin-store` igual a documentação.
 - [ ] Adicionar o bando de dados na documentação do "Servidor", chamado: "Banco de Dados Cliente".
 	- Não é para fazer nenhuma migration, o produto não está em produção ainda, não existe pendências.
@@ -372,11 +378,13 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 
 
 - [ ] Mudar a ordem do primeiro acesso: colocar na frente do nome, a tela de selecionar o tipo do computador (cliente ou servidor).
-- [ ] Adicionar no primeiro acesso (junto com o nome do computador) e nas configurações (para futura alteração pelo o usuário) o nome da organização ou instituição. Apenas para servidor, no cliente vai aparecer apenas o nome do comptaudor.
+- [ ] Adicionar no primeiro acesso (junto com o nome do computador) e nas configurações (para futura alteração pelo o usuário) o nome da organização ou instituição. Apenas para servidor, no cliente vai aparecer apenas o nome do computador.
 - [ ] Implementar telemetria
+	- A telemetria não deve emitir erros em `toast` quando der erro ao enviar ao servidor.
 - [ ] Criar tela de apresentação no primeiro acesso, objetivo é apresentar o software e mostrar o que ele pode fazer.
 
 ## v1.0
+- [ ] Adicionar uma forma para os usuários entrarem em contato (email e telefone).
 - [ ] Adicionar instruções nas configurações, informando o que cada um faz.
 	- Deve ter uma estilização diferente, para que o usuário entenda que é uma explicação.
 - [ ] Montar um manual para o usuário, explicando cada detalhe do software para que ele consiga utilizar com o máximo de tranquilidade.

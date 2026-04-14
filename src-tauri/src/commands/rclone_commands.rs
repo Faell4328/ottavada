@@ -24,6 +24,7 @@ pub struct RcloneSetupRequest {
 
 static RCLONE_EXECUTABLE_PATH: OnceLock<PathBuf> = OnceLock::new();
 static RCLONE_CONFIG_PATH: OnceLock<PathBuf> = OnceLock::new();
+static RCLONE_OPERATION_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
 
 pub fn set_rclone_paths(executable_path: Option<PathBuf>, config_path: PathBuf) {
     if let Some(path) = executable_path {
@@ -52,6 +53,24 @@ fn new_rclone_command() -> Command {
     }
 
     cmd
+}
+
+fn normalize_path_for_rclone(path: &str) -> String {
+    path.replace('\\', "/")
+}
+
+fn rclone_operation_lock() -> &'static Mutex<()> {
+    RCLONE_OPERATION_LOCK.get_or_init(|| Mutex::new(()))
+}
+
+fn with_rclone_operation_lock<T, F>(task: F) -> Result<T, AppError>
+where
+    F: FnOnce() -> Result<T, AppError>,
+{
+    let _guard = rclone_operation_lock()
+        .lock()
+        .map_err(|_| AppError::Generic("Erro ao bloquear operação do rclone".to_string()))?;
+    task()
 }
 
 fn ensure_cloud_dir(app_data_dir: &Path) -> Result<PathBuf, AppError> {
@@ -184,7 +203,10 @@ fn terminate_process_pid(pid: u32) -> Result<(), AppError> {
     )))
 }
 
-fn run_rclone_once(args: &[&str], operation_label: &str) -> Result<std::process::Output, AppError> {
+fn run_rclone_once_impl(
+    args: &[&str],
+    operation_label: &str,
+) -> Result<std::process::Output, AppError> {
     let mut cmd = new_rclone_command();
     cmd.args(args);
     cmd.stdout(Stdio::piped());
@@ -207,6 +229,10 @@ fn run_rclone_once(args: &[&str], operation_label: &str) -> Result<std::process:
 
     unregister_rclone_pid(pid);
     output
+}
+
+fn run_rclone_once(args: &[&str], operation_label: &str) -> Result<std::process::Output, AppError> {
+    with_rclone_operation_lock(|| run_rclone_once_impl(args, operation_label))
 }
 
 fn rclone_config_path() -> Result<PathBuf, AppError> {
@@ -401,8 +427,11 @@ pub fn terminate_stale_rclone_rc_processes() {
     }
 }
 
-fn run_rclone_with_retry(args: &[&str], operation_label: &str) -> Result<std::process::Output, AppError> {
-    let mut output = run_rclone_once(args, operation_label)?;
+fn run_rclone_with_retry_impl(
+    args: &[&str],
+    operation_label: &str,
+) -> Result<std::process::Output, AppError> {
+    let mut output = run_rclone_once_impl(args, operation_label)?;
     if output.status.success() {
         return Ok(output);
     }
@@ -430,8 +459,12 @@ fn run_rclone_with_retry(args: &[&str], operation_label: &str) -> Result<std::pr
     );
 
     thread::sleep(Duration::from_millis(350));
-    output = run_rclone_once(args, operation_label)?;
+    output = run_rclone_once_impl(args, operation_label)?;
     Ok(output)
+}
+
+fn run_rclone_with_retry(args: &[&str], operation_label: &str) -> Result<std::process::Output, AppError> {
+    with_rclone_operation_lock(|| run_rclone_with_retry_impl(args, operation_label))
 }
 
 fn append_common_copy_flags(args: &mut Vec<&str>) {
@@ -503,7 +536,7 @@ fn resolve_sync_targets(
         })?;
     }
 
-    Ok((local_target.to_string_lossy().to_string(), remote_target))
+    Ok((normalize_path_for_rclone(&local_target.to_string_lossy()), remote_target))
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -873,7 +906,8 @@ pub fn upload_with_rclone(
 
     // Executar upload
     let destination = format!("{}:{}", remote, path);
-    let mut args = vec!["copy", file_path.as_str(), destination.as_str()];
+    let normalized_file_path = normalize_path_for_rclone(&file_path);
+    let mut args = vec!["copy", normalized_file_path.as_str(), destination.as_str()];
     append_common_copy_flags(&mut args);
     let output = run_rclone_with_retry(&args, "upload")?;
 
@@ -1000,6 +1034,7 @@ pub fn upload_cloud_paths_with_rclone_impl(
             cloud_local_dir.display()
         ))
     })?;
+    let cloud_local_dir_str = normalize_path_for_rclone(cloud_local_dir_str);
 
     let started_at = Instant::now();
     let mut skipped_count: usize = 0;
@@ -1118,13 +1153,14 @@ pub fn upload_cloud_paths_with_rclone_impl(
             files_from_path.display()
         ))
     })?;
+    let files_from_str = normalize_path_for_rclone(files_from_str);
 
     let mut args = vec![
         "copy",
-        cloud_local_dir_str,
+        cloud_local_dir_str.as_str(),
         remote_target.as_str(),
         "--files-from",
-        files_from_str,
+        files_from_str.as_str(),
         "--no-traverse",
         "--rc",
         "--rc-addr=127.0.0.1:5572",
@@ -1262,8 +1298,9 @@ fn test_rclone_upload_impl(
     let test_file_str = test_file_path.to_str().ok_or_else(|| {
         AppError::Generic("Caminho local de teste inválido para upload rclone".to_string())
     })?;
+    let test_file_str = normalize_path_for_rclone(test_file_str);
 
-    let mut args = vec!["copy", test_file_str, remote_path.as_str(), "--no-traverse"];
+    let mut args = vec!["copy", test_file_str.as_str(), remote_path.as_str(), "--no-traverse"];
     append_common_copy_flags(&mut args);
     let output = run_rclone_once(&args, "test-upload")?;
 

@@ -33,6 +33,7 @@ export function useAppScanFlow({
   getErrorMessage,
 }: UseAppScanFlowParams) {
   const scanResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scanInProgressRef = useRef(false);
 
   const clearScanTimer = useCallback(() => {
     if (scanResetTimerRef.current !== null) {
@@ -176,6 +177,15 @@ export function useAppScanFlow({
       typeof options === "boolean" ? options : (options.isAutomatic ?? false);
     const forceCloudSync =
       typeof options === "boolean" ? false : (options.forceCloudSync ?? false);
+
+    if (scanInProgressRef.current) {
+      if (!isAutomatic) {
+        toast.error("Já existe uma operação em andamento. Aguarde concluir.");
+      }
+      return;
+    }
+
+    scanInProgressRef.current = true;
 
     try {
       clearScanTimer();
@@ -322,7 +332,7 @@ export function useAppScanFlow({
       dispatch({
         type: "SET_OPERATION_STATUS",
         payload: {
-          title: "Etapa 2 - Junção e compressão",
+          title: "Salvando alterações",
           detail: "Gerando .tar.zst das músicas",
           stepCurrent: 2,
           stepTotal: currentTotalSteps,
@@ -373,13 +383,16 @@ export function useAppScanFlow({
       }
 
       const uploadStep = snapshotGenerated ? 5 : 4;
+      const hasDatabaseChanges = eventsSummary.events_count > 0;
 
       dispatch({
         type: "SET_OPERATION_STATUS",
         payload: {
           title: `Etapa ${uploadStep} - Upload para nuvem`,
           detail: hasPendingChanges || hasDetectedFileChanges || forceCloudSync
-            ? "Enviando arquivos alterados para a nuvem"
+            ? hasDatabaseChanges && !hasDetectedFileChanges
+              ? "Enviando alterações do banco para a nuvem"
+              : "Enviando arquivos alterados para a nuvem"
             : "Sem alterações locais, validando sincronização da nuvem",
           stepCurrent: uploadStep,
           stepTotal: currentTotalSteps,
@@ -462,6 +475,9 @@ export function useAppScanFlow({
         if (generatedArchives > 0) {
           summaryParts.push(`${generatedArchives} arquivo(s) compactado(s)`);
         }
+        if (hasDatabaseChanges) {
+          summaryParts.push(`${eventsSummary.events_count} alteração(ões) de banco`);
+        }
 
         const hasFailures = failedCount > 0 || failedArchives > 0;
         const summaryText =
@@ -491,6 +507,8 @@ export function useAppScanFlow({
       }
       clearScanTimer();
       resetScanState();
+    } finally {
+      scanInProgressRef.current = false;
     }
   }, [
     clearScanTimer,
