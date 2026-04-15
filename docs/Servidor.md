@@ -7,11 +7,15 @@ Para proteger contra bots, irei implementar uma proteção "fezes", mas melhor q
 
 Para consultar, irei criar uma automação no `n8n`, que irá acessar diretamente o `database.db` e extrair as informações e enviar via bot telegram, que vai enviar um relatório diário.
 
-## Anotações
+O site atual é `shttps://scoremaestro.rhafaell.com.br`.
 
-! Na hora de inserir deve usar `INSERT OR IGNORE`, isso evita que tenha dados duplicados.
+## Anotações sobre a telemetria
 
-! Para simplificar, o cliente irá enviar em lote, com tudo que tem pendente em uma única request.
+! Caso o envido tenha um "uuid" já existente, deve retorna como tivesse salvo, mas o valor deve ser descartado internamento.
+
+! O servidor não precisa retornar mensagem, apenas o status deve informar o usuário se deu certo ou não.
+
+! A lógica do servidor será muito simplificada, irá apenas incrementa, não tem que atualizada nada. Mantendo uma timeline das alterações (sei que terá muita coisa repetida, mas não tem problema).
 
 ## Rotas
 
@@ -62,76 +66,21 @@ Para consultar, irei criar uma automação no `n8n`, que irá acessar diretament
 	
 	"arch": "x64", // Arquitetura do sistema (x32 ou x64)
 	
-	"usage": [
-		{
-			"id": "uuid",
-			
-			"date": "2026-04-12",
-		
-			"lastAccessedAt": 1710684000, // Última vez que o usuário abriu/utilizou o app
-			
-			"totalTimeSpentMinutes": 300, // Tempo total de uso acumulado (em minutos)
-			
-			"openScoreCount": 120, // Quantidade total de vezes que uma partitura foi aberta
-			
-			"searchCount": 45, // Quantidade total de buscas realizadas
-			
-			"favoriteCount": 30, // Quantidade total de ações de favoritar/desfavoritar
-			
-			// server only
-			"addMusicCount": 10, // Quantidade total de músicas adicionadas (apenas servidor)
-			
-			"editMusicCount": 8, // Quantidade total de edições feitas em músicas (apenas servidor)
-			
-			"deleteMusicCount": 2, // Quantidade total de músicas removidas (apenas servidor)
-			
-			"applyChangesCount": 15 // Quantidade total de vezes que o usuário aplicou alterações (sync servidor → nuvem)
-		}
-	],
+	"musicCount": 120, // Total de músicas cadastradas no banco local
 	
-	"library": [
-		{
-			"id": "uuid",
+	"musicMain": 100, // Quantidade de músicas com status "main" (válidas e sincronizadas)
 			
-			"date": "2026-04-12",
+	"musicDraft": 15, // Quantidade de músicas em rascunho (não sincronizadas)
 			
-			"musicCount": 120, // Total de músicas cadastradas no banco local
+	"musicNotFound": 5, // Quantidade de músicas não encontradas no sistema de arquivos
 			
-			"musicMain": 100, // Quantidade de músicas com status "main" (válidas e sincronizadas)
+	"scoresCount": 980, // Total de partituras cadastradas
 			
-			"musicDraft": 15, // Quantidade de músicas em rascunho (não sincronizadas)
+	"scoresMain": 850, // Quantidade de partituras com status "main" (válidas e sincronizadas)
 			
-			"musicNotFound": 5, // Quantidade de músicas não encontradas no sistema de arquivos
+	"scoresDraft": 80, // Quantidade de partituras em rascunho (não sincronizadas)
 			
-			"scoresCount": 980, // Total de partituras cadastradas
-			
-			"scoresMain": 850, // Quantidade de partituras com status "main" (válidas e sincronizadas)
-			
-			"scoresDraft": 80, // Quantidade de partituras em rascunho (não sincronizadas)
-			
-			"scoresNotFound": 50 // Quantidade de partituras não encontradas no sistema de arquivos
-		}
-	],
-	
-	"sync": [
-		{
-			"id": "uuid",
-			
-			"date": "2026-04-12",
-			
-			"lastSyncAt": 1710684000, // Última vez que houve sincronização com a nuvem
-			
-			"uploadCount": 20, // Quantidade total de uploads realizados
-			
-			"uploadTotalBytes": 104857600, // Total de dados enviados (em bytes)
-			
-			"downloadCount": 50, // Quantidade total de downloads realizados
-			
-			"downloadTotalBytes": 209715200, // Total de dados baixados (em bytes)
-			
-			"errors": 3 // Quantidade total de erros ocorridos durante operações de sync
-		}
-	],
+	"scoresNotFound": 50, // Quantidade de partituras não encontradas no sistema de arquivos
 	
 	"errors": [
 		{
@@ -143,25 +92,14 @@ Para consultar, irei criar uma automação no `n8n`, que irá acessar diretament
 			
 			"timestamp": 1710684000 // Quando o erro aconteceu (epoch)
 		}
-	],
-	
-	"dailyUsage": [
-		{
-			"id": "uuid",
-		
-			"date": "2026-04-10",
-			
-			"timeSpentMinutes": 120, // Tempo de uso no dia (em minutos)
-			
-			"openedScores": 25 // Quantidade de partituras abertas nesse dia
-		}
 	]
 }
 ```
-
 # Banco de Dados Servidor
 
 ## computerInformation
+- `id` - auto incremental
+- `timestamp` - Quando foi
 - `computerId` - ID único do computador (persistido no tauri-plugin-store).
 - `organizationName` - Nome da organização/licença vinculada ao uso do software
 - `computerName` - Nome amigável definido pelo usuário
@@ -169,28 +107,12 @@ Para consultar, irei criar uma automação no `n8n`, que irá acessar diretament
 - `appVersion` - Versão do aplicativo em execução
 - `os` - Sistema operacional (windows, linux, etc)
 - `arch` - Arquitetura do sistema (x32 ou x64)
-- `date` - Data do snapshot (YYYY-MM-DD)
 - `report` - Booleano, informando se já foi enviado ou não no relatório diário do bot.
 
 ## usage
-- `id` - o `uuid` enviado pelo cliente. Deve ser único.
+- `id` - auto incremental
+- `timestamp` - Quando foi
 - `computerId` - ID único do computador (persistido no tauri-plugin-store).
-- `date` - Quando foi
-- `lastAccessedAt` - Última vez que o usuário abriu/utilizou o app
-- `totalTimeSpentMinutes` - Tempo total de uso acumulado (em minutos)
-- `openScoreCount` - Quantidade de vezes que uma partitura foi aberta
-- `searchCount` - Quantidade de buscas realizadas
-- `favoriteCount` - Quantidade de ações de favoritar/desfavoritar
-- `addMusicCount` - Quantidade de músicas adicionadas (apenas servidor)
-- `editMusicCount` - Quantidade de edições feitas em músicas (apenas servidor)
-- `deleteMusicCount` - Quantidade de músicas removidas (apenas servidor)
-- `applyChangesCount` - Quantidade de vezes que o usuário aplicou alterações (sync servidor → nuvem)
-- `report` - Booleano, informando se já foi enviado ou não no relatório diário do bot.
-
-## library
-- `id` - o `uuid` enviado pelo cliente. Deve ser único.
-- `computerId` - ID único do computador (persistido no tauri-plugin-store).
-- `date` - Quando foi
 - `musicCount` - Total de músicas cadastradas no banco local
 - `musicMain` - Quantidade de músicas com status "main" (válidas e sincronizadas)
 - `musicDraft` - Quantidade de músicas em rascunho (não sincronizadas)
@@ -200,17 +122,6 @@ Para consultar, irei criar uma automação no `n8n`, que irá acessar diretament
 - `scoresDraft` - Quantidade de partituras em rascunho (não sincronizadas)
 - `scoresNotFound` - Quantidade de partituras não encontradas no sistema de arquivos
 - `report` - Booleano, informando se já foi enviado ou não no relatório diário do bot.
-## sync
-- `id` - o `uuid` enviado pelo cliente. Deve ser único.
-- `computerId` - ID único do computador (persistido no tauri-plugin-store).
-- `date` - Quando foi (id)
-- `lastSyncAt` - Última vez que houve sincronização com a nuvem
-- `uploadCount` - Quantidade de uploads realizados
-- `uploadTotalBytes` - Total de dados enviados (em bytes)
-- `downloadCount` - Quantidade de downloads realizados
-- `downloadTotalBytes` - Total de dados baixados (em bytes)
-- `errors` - Quantidade de erros ocorridos durante operações de sync
-- `report` - Booleano, informando se já foi enviado ou não no relatório diário do bot.
 
 ## errors
 - `id` - o `uuid` enviado pelo cliente. Deve ser único.
@@ -219,111 +130,52 @@ Para consultar, irei criar uma automação no `n8n`, que irá acessar diretament
 - `timestamp` - Quando o erro aconteceu
 - `report` - Booleano, informando se já foi enviado ou não no relatório diário do bot.
 
-## dailyUsage
-- `id` - o `uuid` enviado pelo cliente. Deve ser único.
-- `computerId` - ID único do computador (persistido no tauri-plugin-store).
-- `date` - Data da coleta diária
-- `timeSpentMinutes` - Tempo de uso no dia (em minutos)
-- `openedScores` - Quantidade de partituras abertas nesse dia
-- `report` - Booleano, informando se já foi enviado ou não no relatório diário do bot.
-
 Pode acontecer de o computador ficar sem internet e enviar de vários dias, por isso o campo `report`, enviando no relatório outros dias, porque não tinha sido enviado (está atrasado).
 
-## Query do banco de dados
+## SQL
 
 ```sql
-CREATE TABLE computerInformation (  
-computerId TEXT PRIMARY KEY,  
-organizationName TEXT,  
-computerName TEXT,  
-type TEXT CHECK(type IN ('server', 'client')) NOT NULL,  
-appVersion TEXT,  
-os TEXT,  
-arch TEXT,  
-date DATE NOT NULL,  
-report BOOLEAN DEFAULT FALSE  
-);  
+CREATE TABLE computerInformation (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp DATETIME NOT NULL,
+    computerId TEXT NOT NULL,
+    organizationName TEXT,
+    computerName TEXT,
+    type TEXT CHECK(type IN ('server', 'client')) NOT NULL,
+    appVersion TEXT,
+    os TEXT,
+    arch TEXT,
+    report BOOLEAN DEFAULT FALSE
+);
 
+CREATE TABLE usage (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp DATETIME NOT NULL,
+    computerId TEXT NOT NULL,
+    musicCount INTEGER DEFAULT 0,
+    musicMain INTEGER DEFAULT 0,
+    musicDraft INTEGER DEFAULT 0,
+    musicNotFound INTEGER DEFAULT 0,
+    scoresCount INTEGER DEFAULT 0,
+    scoresMain INTEGER DEFAULT 0,
+    scoresDraft INTEGER DEFAULT 0,
+    scoresNotFound INTEGER DEFAULT 0,
+    report BOOLEAN DEFAULT FALSE
+);
 
-CREATE TABLE usage (  
-id TEXT PRIMARY KEY, -- UUID do cliente  
-computerId TEXT NOT NULL,  
-date DATETIME NOT NULL,  
-lastAccessedAt DATETIME,  
-totalTimeSpentMinutes INTEGER DEFAULT 0,  
-openScoreCount INTEGER DEFAULT 0,  
-searchCount INTEGER DEFAULT 0,  
-favoriteCount INTEGER DEFAULT 0,  
-addMusicCount INTEGER DEFAULT 0,  
-editMusicCount INTEGER DEFAULT 0,  
-deleteMusicCount INTEGER DEFAULT 0,  
-applyChangesCount INTEGER DEFAULT 0,  
-report BOOLEAN DEFAULT FALSE,  
-  
-FOREIGN KEY (computerId) REFERENCES computerInformation(computerId)  
-);  
+CREATE TABLE errors (
+    id TEXT PRIMARY KEY,
+    computerId TEXT NOT NULL,
+    date TEXT,
+    message TEXT NOT NULL,
+    timestamp DATETIME NOT NULL,
+    report BOOLEAN DEFAULT FALSE
+);
 
-
-CREATE TABLE library (  
-id TEXT PRIMARY KEY, -- UUID do cliente  
-computerId TEXT NOT NULL,  
-date DATETIME NOT NULL,  
-musicCount INTEGER DEFAULT 0,  
-musicMain INTEGER DEFAULT 0,  
-musicDraft INTEGER DEFAULT 0,  
-musicNotFound INTEGER DEFAULT 0,  
-scoresCount INTEGER DEFAULT 0,  
-scoresMain INTEGER DEFAULT 0,  
-scoresDraft INTEGER DEFAULT 0,  
-scoresNotFound INTEGER DEFAULT 0,  
-report BOOLEAN DEFAULT FALSE,  
-  
-FOREIGN KEY (computerId) REFERENCES computerInformation(computerId)  
-);  
-
-
-CREATE TABLE sync (  
-id TEXT PRIMARY KEY, -- UUID do cliente  
-computerId TEXT NOT NULL,  
-date DATETIME NOT NULL,  
-lastSyncAt DATETIME,  
-uploadCount INTEGER DEFAULT 0,  
-uploadTotalBytes BIGINT DEFAULT 0,  
-downloadCount INTEGER DEFAULT 0,  
-downloadTotalBytes BIGINT DEFAULT 0,  
-errors INTEGER DEFAULT 0,  
-report BOOLEAN DEFAULT FALSE,  
-  
-FOREIGN KEY (computerId) REFERENCES computerInformation(computerId)  
-);  
-
-
-CREATE TABLE errors (  
-id TEXT PRIMARY KEY, -- UUID do cliente  
-computerId TEXT NOT NULL,  
-message TEXT,  
-timestamp DATETIME NOT NULL,  
-report BOOLEAN DEFAULT FALSE,  
-  
-FOREIGN KEY (computerId) REFERENCES computerInformation(computerId)  
-);  
-  
-
-CREATE TABLE dailyUsage (  
-id TEXT PRIMARY KEY, -- UUID do cliente  
-computerId TEXT NOT NULL,  
-date DATE NOT NULL,  
-timeSpentMinutes INTEGER DEFAULT 0,  
-openedScores INTEGER DEFAULT 0,  
-report BOOLEAN DEFAULT FALSE,  
-  
-FOREIGN KEY (computerId) REFERENCES computerInformation(computerId)  
-);  
-
-
-CREATE INDEX idx_usage_computerId ON usage(computerId);  
-CREATE INDEX idx_library_computerId ON library(computerId);  
-CREATE INDEX idx_sync_computerId ON sync(computerId);  
-CREATE INDEX idx_errors_computerId ON errors(computerId);  
-CREATE INDEX idx_dailyUsage_computerId ON dailyUsage(computerId);
+CREATE INDEX idx_computerInformation_computerId ON computerInformation(computerId);
+CREATE INDEX idx_computerInformation_timestamp ON computerInformation(timestamp);
+CREATE INDEX idx_usage_computerId ON usage(computerId);
+CREATE INDEX idx_usage_timestamp ON usage(timestamp);
+CREATE INDEX idx_errors_computerId ON errors(computerId);
+CREATE INDEX idx_errors_timestamp ON errors(timestamp);
 ```

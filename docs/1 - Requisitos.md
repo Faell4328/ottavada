@@ -26,6 +26,16 @@
 - O usuário pode alterar o nome do computador
 - O usuário pode alterar o tipo de computador dele (entre cliente e servidor).
 
+
+## Telemetria
+
+- A telemetria deve ser simples, sendo enviada a cada 5 minutos. Após o envio com sucesso, a tabela de erro deve ser limpa.
+- Caso ocorra algum erro no envio ou recebimento da telemetria pelo servidor, a tabela de erro não deve ser limpa e deve ser tentado envia novamente em 5 minutos.
+	- As outras informações não tem problema.
+- Não é preciso emitir toast para usuário sobre isso.
+- Antes de preparar para enviar, deve verificar se tem erros mais velhos que 1 semana, se tive é para remover todos esses.
+- Cada requisição deve ter um `uuid` como `id`, como está no exemplo do `Servidor.md`.
+
 ---
 # Requisitos Não Funcionais
 

@@ -167,3 +167,8 @@ Arrumando o caminho
 - Como eu fiz o código com vibe coding, acredito que tem muitas lacunas, então eu irei tirar um bom tempo para estudar o código, arrumar e aprender.
 - Além de mudar onde a documentação é feita e atualizada (obsidian, não sei qual ferramenta irei realmente usar), agora já tenho uma visão melhor do software, a documentação foi feita em uma epoca que não tinha uma visão completa do software e da enorme quantidade de fluxos existentes.
 - Então para manter o software funcionando bem, a melhor escolha é atualizar e melhorar a documentação.
+
+**15-04-2026**
+
+Simplificando a telemetria
+- Está sendo bem chato implementar a telemetria, devido a muitos eventos e possibilidades, então para `v1` o que importa mesmo é: o software está sendo usado, quais problemas os usuários estão tendo e algumas informações a mais.
