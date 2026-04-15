@@ -40,6 +40,7 @@ export interface AppContextValue {
   completeFirstRun: (
     computerId: string,
     computerName: string,
+    organizationName: string | null,
     computerType: string,
     rcloneConfigJson: string
   ) => Promise<void>;

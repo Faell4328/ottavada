@@ -243,11 +243,18 @@ export function useAppCrudActions({
   const completeFirstRun = useCallback(async (
     computerId: string,
     computerName: string,
+    organizationName: string | null,
     computerType: string,
     rcloneConfigJson: string
   ) => {
     try {
-      await api.completeFirstRun(computerId, computerName, computerType, rcloneConfigJson);
+      await api.completeFirstRun(
+        computerId,
+        computerName,
+        organizationName,
+        computerType,
+        rcloneConfigJson
+      );
       dispatch({ type: "SET_FIRST_RUN", payload: false });
       await Promise.all([loadSongs(), loadCategories(), loadSettings()]);
       toast.success("Configuração inicial concluída.");

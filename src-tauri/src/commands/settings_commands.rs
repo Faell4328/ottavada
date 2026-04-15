@@ -87,6 +87,7 @@ pub fn complete_first_run(
     store: State<'_, SystemStore>,
     computer_id: String,
     computer_name: String,
+    organization_name: Option<String>,
     computer_type: String,
     rclone_config_json: String,
 ) -> Result<(), AppError> {
@@ -98,6 +99,7 @@ pub fn complete_first_run(
 
     settings.computer_id = computer_id;
     settings.computer_name = Some(computer_name);
+    settings.organization_name = organization_name;
     settings.computer_type = ComputerType::from_str(&computer_type);
 
     info!("Configurando Rclone");

@@ -72,6 +72,7 @@ describe("TypeScript Types", () => {
       const settings: AppSettings = {
         computer_id: "550e8400-e29b-41d4-a716-446655440000",
         computer_name: null,
+        organization_name: null,
         computer_type: "Server",
         google_drive_mode: "Local",
         first_run_completed: false,
@@ -85,6 +86,7 @@ describe("TypeScript Types", () => {
       const settings: AppSettings = {
         computer_id: "550e8400-e29b-41d4-a716-446655440000",
         computer_name: "Computador Teste",
+        organization_name: "Orquestra Teste",
         computer_type: "Server",
         google_drive_mode: "Api",
         first_run_completed: true,
@@ -92,6 +94,7 @@ describe("TypeScript Types", () => {
         rclone_config: null,
       };
       expect(settings.google_drive_mode).toBe("Api");
+      expect(settings.organization_name).toBe("Orquestra Teste");
     });
   });
 

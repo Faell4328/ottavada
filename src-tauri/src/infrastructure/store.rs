@@ -102,6 +102,12 @@ impl SystemStore {
 
         let computer_name = read_string(&store, &["computer_name", "computerName", "name"]);
 
+        let organization_name = read_string(
+            &store,
+            &["organization_name", "organizationName", "organization"],
+        )
+        .and_then(|value| if value.trim().is_empty() { None } else { Some(value) });
+
         let computer_type_raw = read_string(&store, &["computer_type", "computerType", "type"])
             .unwrap_or_else(|| "server".to_string());
 
@@ -161,6 +167,7 @@ impl SystemStore {
         let settings = AppSettings {
             computer_id,
             computer_name,
+            organization_name,
             computer_type,
             google_drive_mode: match store
                 .get("google_drive_mode")
@@ -204,12 +211,22 @@ impl SystemStore {
         store["type"] = serde_json::json!(settings.computer_type.as_store_str());
         store["computer_type"] = serde_json::json!(settings.computer_type.as_store_str());
 
-        let organization = store
-            .get("organization")
-            .and_then(|value| value.as_str())
-            .unwrap_or_default()
-            .to_string();
-        store["organization"] = serde_json::json!(organization);
+        if let Some(organization_name) = settings.organization_name.as_ref() {
+            let organization_name = organization_name.trim();
+            if !organization_name.is_empty() {
+                store["organization"] = serde_json::json!(organization_name);
+                store["organizationName"] = serde_json::json!(organization_name);
+                store["organization_name"] = serde_json::json!(organization_name);
+            } else {
+                store.as_object_mut().map(|obj| obj.remove("organization"));
+                store.as_object_mut().map(|obj| obj.remove("organizationName"));
+                store.as_object_mut().map(|obj| obj.remove("organization_name"));
+            }
+        } else {
+            store.as_object_mut().map(|obj| obj.remove("organization"));
+            store.as_object_mut().map(|obj| obj.remove("organizationName"));
+            store.as_object_mut().map(|obj| obj.remove("organization_name"));
+        }
 
         if let Some(ref rclone_cfg) = settings.rclone_config {
             let rclone_json = serde_json::to_value(rclone_cfg).map_err(|e| {
@@ -385,6 +402,7 @@ mod tests {
         let settings = AppSettings {
             computer_id: "server-1".to_string(),
             computer_name: Some("Servidor".to_string()),
+            organization_name: Some("Orquestra".to_string()),
             computer_type: ComputerType::Server,
             first_run_completed: true,
             library_summary: Some(LibrarySummary {
@@ -421,6 +439,7 @@ mod tests {
         let settings = AppSettings {
             computer_id: "server-2".to_string(),
             computer_name: Some("Servidor".to_string()),
+            organization_name: Some("Orquestra".to_string()),
             computer_type: ComputerType::Server,
             rclone_config: Some(crate::domain::models::RcloneConfig {
                 provider: crate::domain::models::RcloneProvider::Koofr,
@@ -439,7 +458,11 @@ mod tests {
         );
         assert_eq!(
             raw_store.get("organization").and_then(|v| v.as_str()),
-            Some("")
+            Some("Orquestra")
+        );
+        assert_eq!(
+            raw_store.get("organizationName").and_then(|v| v.as_str()),
+            Some("Orquestra")
         );
         assert_eq!(raw_store.get("type").and_then(|v| v.as_str()), Some("server"));
         assert!(raw_store.get("rclone").is_some());
@@ -448,6 +471,7 @@ mod tests {
         let loaded = store.get_app_settings().expect("reload settings");
         assert_eq!(loaded.computer_id, "server-2");
         assert_eq!(loaded.computer_name.as_deref(), Some("Servidor"));
+        assert_eq!(loaded.organization_name.as_deref(), Some("Orquestra"));
         assert_eq!(loaded.computer_type, ComputerType::Server);
         assert!(loaded.rclone_config.is_some());
     }

@@ -101,6 +101,7 @@ pub struct Category {
 pub struct AppSettings {
     pub computer_id: String,
     pub computer_name: Option<String>,
+    pub organization_name: Option<String>,
     pub computer_type: ComputerType,
     pub google_drive_mode: GoogleDriveMode,
     pub first_run_completed: bool,
@@ -120,6 +121,7 @@ impl Default for AppSettings {
         Self {
             computer_id: String::new(),
             computer_name: None,
+            organization_name: None,
             computer_type: ComputerType::Server,
             google_drive_mode: GoogleDriveMode::Local,
             first_run_completed: false,

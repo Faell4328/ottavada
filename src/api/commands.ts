@@ -221,12 +221,14 @@ export async function isFirstRun(): Promise<boolean> {
 export async function completeFirstRun(
   computerId: string,
   computerName: string,
+  organizationName: string | null,
   computerType: string,
   rcloneConfigJson: string
 ): Promise<void> {
   return invoke("complete_first_run", {
     computerId,
     computerName,
+    organizationName,
     computerType,
     rcloneConfigJson,
   });

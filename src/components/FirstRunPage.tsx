@@ -17,9 +17,10 @@ function getRcloneProviderLabel(provider: RcloneProvider) {
 export default function FirstRunPage() {
   const { completeFirstRun } = useAppState();
   const [computerId, setComputerId] = useState("");
+  const [organizationName, setOrganizationName] = useState("");
   const [computerName, setComputerName] = useState("");
-  const [computerType, setComputerType] = useState<"Server" | "Client" | "">("Server");
-  const [step, setStep] = useState<Step>("name");
+  const [computerType, setComputerType] = useState<"Server" | "Client" | "">("");
+  const [step, setStep] = useState<Step>("type");
   const [rcloneProvider, setRcloneProvider] = useState<RcloneProvider>("koofr");
   const [rcloneEmail, setRcloneEmail] = useState("");
   const [rcloneAppPassword, setRcloneAppPassword] = useState("");
@@ -102,7 +103,12 @@ export default function FirstRunPage() {
       return;
     }
 
-    setStep("type");
+    if (computerType === "Server" && !organizationName.trim()) {
+      toast.error("Digite o nome da organização ou instituição.");
+      return;
+    }
+
+    setStep("rclone-setup");
   }
 
   function handleTypeSubmit() {
@@ -111,7 +117,7 @@ export default function FirstRunPage() {
       return;
     }
 
-    setStep("rclone-setup");
+    setStep("name");
   }
 
   async function handleWithRclone() {
@@ -140,6 +146,7 @@ export default function FirstRunPage() {
       await completeFirstRun(
         computerId,
         computerName.trim(),
+        computerType === "Server" ? organizationName.trim() || null : null,
         computerType,
         JSON.stringify({ provider: rcloneProvider })
       );
@@ -161,49 +168,6 @@ export default function FirstRunPage() {
             Organize suas partituras com versionamento e backups automáticos
           </p>
         </div>
-
-        {step === "name" && (
-          <>
-            <h2 className="mb-4 text-lg font-semibold text-[#34485d]">Configure seu computador</h2>
-
-            <div className="mb-6">
-              <label className="mb-1.5 block text-sm font-semibold text-[#34485d]">
-                ID do computador
-              </label>
-              <input
-                value={computerId}
-                disabled
-                className="h-10 w-full cursor-not-allowed rounded-lg border border-[#c5cfdb] bg-[#f0f3f8] px-3 font-mono text-sm text-[#4d6075] outline-none"
-              />
-              <p className="mt-1 text-xs text-[#8b9db2]">
-                Identificador único gerado automaticamente. Será usado para sincronizar dados entre computadores.
-              </p>
-            </div>
-
-            <div className="mb-6">
-              <label className="mb-1.5 block text-sm font-semibold text-[#34485d]">
-                Nome do computador
-              </label>
-              <input
-                value={computerName}
-                onChange={(e) => setComputerName(e.target.value)}
-                className="h-10 w-full rounded-lg border border-[#c5cfdb] bg-[#f8fafd] px-3 text-sm text-[#4d6075] outline-none focus:border-[#7ba0d4] focus:ring-2 focus:ring-[#7ba0d4]/20"
-                placeholder="Ex: Estúdio, Home, Sala Ensaio..."
-              />
-              <p className="mt-1 text-xs text-[#8b9db2]">
-                Nome descritivo para este computador. Você pode alterá-lo depois nas configurações.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleNameSubmit}
-              className="h-11 w-full rounded-lg border-0 bg-[#4f84d7] text-sm font-bold text-white transition-colors hover:bg-[#3d6fb8] cursor-pointer"
-            >
-              Próximo
-            </button>
-          </>
-        )}
 
         {step === "type" && (
           <>
@@ -276,10 +240,70 @@ export default function FirstRunPage() {
             >
               Próximo
             </button>
+          </>
+        )}
+
+        {step === "name" && (
+          <>
+            <h2 className="mb-4 text-lg font-semibold text-[#34485d]">Configure seu computador</h2>
+
+            <div className="mb-6">
+              <label className="mb-1.5 block text-sm font-semibold text-[#34485d]">
+                ID do computador
+              </label>
+              <input
+                value={computerId}
+                disabled
+                className="h-10 w-full cursor-not-allowed rounded-lg border border-[#c5cfdb] bg-[#f0f3f8] px-3 font-mono text-sm text-[#4d6075] outline-none"
+              />
+              <p className="mt-1 text-xs text-[#8b9db2]">
+                Identificador único gerado automaticamente. Será usado para sincronizar dados entre computadores.
+              </p>
+            </div>
+
+            <div className="mb-6">
+              <label className="mb-1.5 block text-sm font-semibold text-[#34485d]">
+                Nome do computador
+              </label>
+              <input
+                value={computerName}
+                onChange={(e) => setComputerName(e.target.value)}
+                className="h-10 w-full rounded-lg border border-[#c5cfdb] bg-[#f8fafd] px-3 text-sm text-[#4d6075] outline-none focus:border-[#7ba0d4] focus:ring-2 focus:ring-[#7ba0d4]/20"
+                placeholder="Ex: Estúdio, Home, Sala Ensaio..."
+              />
+              <p className="mt-1 text-xs text-[#8b9db2]">
+                Nome descritivo para este computador. Você pode alterá-lo depois nas configurações.
+              </p>
+            </div>
+
+            {computerType === "Server" && (
+              <div className="mb-6">
+                <label className="mb-1.5 block text-sm font-semibold text-[#34485d]">
+                  Nome da organização ou instituição
+                </label>
+                <input
+                  value={organizationName}
+                  onChange={(e) => setOrganizationName(e.target.value)}
+                  className="h-10 w-full rounded-lg border border-[#c5cfdb] bg-[#f8fafd] px-3 text-sm text-[#4d6075] outline-none focus:border-[#7ba0d4] focus:ring-2 focus:ring-[#7ba0d4]/20"
+                  placeholder="Ex: Orquestra, Igreja, Ministério..."
+                />
+                <p className="mt-1 text-xs text-[#8b9db2]">
+                  Usado apenas no computador principal. Você pode alterá-lo depois nas configurações.
+                </p>
+              </div>
+            )}
 
             <button
               type="button"
-              onClick={() => setStep("name")}
+              onClick={handleNameSubmit}
+              className="h-11 w-full rounded-lg border-0 bg-[#4f84d7] text-sm font-bold text-white transition-colors hover:bg-[#3d6fb8] cursor-pointer"
+            >
+              Próximo
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setStep("type")}
               className="mt-2 h-10 w-full rounded-lg border border-[#7ba0d4] bg-white text-sm font-semibold text-[#4f84d7] transition-colors hover:bg-[#f8fafd] cursor-pointer"
             >
               Voltar
@@ -473,6 +497,15 @@ export default function FirstRunPage() {
                   {computerName || "(não preenchido)"}
                 </p>
               </div>
+
+              {computerType === "Server" && (
+                <div className="rounded-lg border border-[#c5cfdb] bg-[#f8fafd] p-4">
+                  <p className="mb-1 text-xs text-[#8b9db2]">Nome da organização ou instituição</p>
+                  <p className="text-sm font-semibold text-[#34485d]">
+                    {organizationName || "(não preenchido)"}
+                  </p>
+                </div>
+              )}
 
               <div className="rounded-lg border border-[#c5cfdb] bg-[#f8fafd] p-4">
                 <p className="mb-1 text-xs text-[#8b9db2]">Tipo de computador</p>

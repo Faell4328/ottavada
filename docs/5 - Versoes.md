@@ -379,8 +379,8 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [x] Adicionar no ".env" o campo da chave de API que deve ser enviada para o servidor, na rota `POST /v1/telemetry`. Ela deve ficar no `header` chamado `Token`.
 
 
-- [ ] Mudar a ordem do primeiro acesso: colocar na frente do nome, a tela de selecionar o tipo do computador (cliente ou servidor).
-- [ ] Adicionar no primeiro acesso (junto com o nome do computador) e nas configurações (para futura alteração pelo o usuário) o nome da organização ou instituição. Apenas para servidor, no cliente vai aparecer apenas o nome do computador.
+- [x] Mudar a ordem do primeiro acesso: colocar na frente do nome, a tela de selecionar o tipo do computador (cliente ou servidor).
+- [x] Adicionar no primeiro acesso (junto com o nome do computador) e nas configurações (para futura alteração pelo o usuário) o nome da organização ou instituição. Apenas para servidor, no cliente vai aparecer apenas o nome do computador.
 - [ ] Implementar telemetria
 	- A telemetria não deve emitir erros em `toast` quando der erro ao enviar ao servidor.
 - [ ] Criar tela de apresentação no primeiro acesso, objetivo é apresentar o software e mostrar o que ele pode fazer.

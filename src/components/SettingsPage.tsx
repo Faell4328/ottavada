@@ -40,6 +40,7 @@ export default function SettingsPage() {
     state.settings ?? {
       computer_id: "",
       computer_name: null,
+      organization_name: null,
       computer_type: "Server",
       google_drive_mode: "Local",
       first_run_completed: true,
@@ -224,6 +225,11 @@ export default function SettingsPage() {
   async function handleSave() {
     if (isSyncLocked) {
       toast.error("Espere a sincronização terminar para continuar.");
+      return;
+    }
+
+    if (settings.computer_type === "Server" && !settings.organization_name?.trim()) {
+      toast.error("Digite o nome da organização ou instituição.");
       return;
     }
 
@@ -542,7 +548,7 @@ export default function SettingsPage() {
         >
           <ArrowLeft className="h-4 w-4 text-[#344b61]" />
         </button>
-        <h1 className="text-lg font-bold text-[#2f4259]">Configurações (Teste)</h1>
+        <h1 className="text-lg font-bold text-[#2f4259]">Configurações</h1>
       </div>
 
       <div className="flex-1 p-6 max-w-2xl mx-auto w-full">
@@ -561,6 +567,22 @@ export default function SettingsPage() {
               placeholder="Ex: Estúdio, Home, Sala Ensaio..."
             />
           </Field>
+
+          {settings.computer_type === "Server" && (
+            <Field label="Nome da organização ou instituição">
+              <input
+                value={settings.organization_name ?? ""}
+                onChange={(e) =>
+                  update({
+                    organization_name: e.target.value || null,
+                  })
+                }
+                disabled={isSyncLocked}
+                className="w-full h-9 rounded border border-[#c5cfdb] bg-white px-3 text-sm text-[#4d6075] outline-none focus:border-[#7ba0d4]"
+                placeholder="Ex: Orquestra, Igreja, Ministério..."
+              />
+            </Field>
+          )}
 
           <Field label="Tipo de computador">
             <div className="flex items-center gap-2">
