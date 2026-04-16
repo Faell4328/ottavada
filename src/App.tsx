@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router";
 import { Toaster } from "react-hot-toast";
 import toast from "react-hot-toast";
@@ -18,6 +18,11 @@ import { ConfirmationModal } from "./components/ui/ConfirmationModal";
 import { getErrorMessage } from "./utils/errors";
 import { isUpdateActionLocked as getIsUpdateActionLocked } from "./utils/updateLock";
 import type { UpdateInfo } from "./types";
+import {
+  initialStartupUpdateState,
+  resolveStartupUpdateState,
+  type StartupUpdateState,
+} from "./utils/startupUpdate";
 
 function LoadingScreen() {
   return (
@@ -26,6 +31,91 @@ function LoadingScreen() {
         Carregando...
       </div>
     </div>
+  );
+}
+
+function StartupUpdateGate({ onReady }: { onReady: () => void }) {
+  const [startupState, setStartupState] = useState<StartupUpdateState>(initialStartupUpdateState);
+  const [availableUpdate, setAvailableUpdate] = useState<UpdateInfo | null>(null);
+  const [isInstallingUpdate, setIsInstallingUpdate] = useState(false);
+
+  const finishStartup = useCallback(() => {
+    setStartupState({ status: "ready", update: null });
+    onReady();
+  }, [onReady]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const run = async () => {
+      try {
+        const result = await api.checkForUpdates();
+
+        if (cancelled) {
+          return;
+        }
+
+        const nextState = resolveStartupUpdateState(result);
+
+        if (nextState.status === "ready") {
+          finishStartup();
+          return;
+        }
+
+        setAvailableUpdate(nextState.update);
+        setStartupState(nextState);
+      } catch (error) {
+        console.error("Failed to check startup updates:", error);
+        if (!cancelled) {
+          toast.error(`Falha ao verificar atualização: ${getErrorMessage(error)}`);
+          finishStartup();
+        }
+      }
+    };
+
+    void run();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [finishStartup]);
+
+  const handlePostpone = useCallback(() => {
+    setAvailableUpdate(null);
+    finishStartup();
+  }, [finishStartup]);
+
+  const handleInstall = useCallback(async () => {
+    if (!availableUpdate || isInstallingUpdate) {
+      return;
+    }
+
+    setIsInstallingUpdate(true);
+
+    try {
+      await api.installUpdate();
+      finishStartup();
+    } catch (error) {
+      console.error("Failed to install startup update:", error);
+      toast.error(`Erro ao instalar atualização: ${getErrorMessage(error)}`);
+    } finally {
+      setIsInstallingUpdate(false);
+    }
+  }, [availableUpdate, finishStartup, isInstallingUpdate]);
+
+  return (
+    <>
+      <LoadingScreen />
+      <UpdateModal
+        isOpen={startupState.status === "update-available" && availableUpdate !== null}
+        update={availableUpdate}
+        isInstalling={isInstallingUpdate}
+        onCancel={handlePostpone}
+        onConfirm={() => {
+          void handleInstall();
+        }}
+      />
+    </>
   );
 }
 
@@ -68,7 +158,6 @@ function AppContent() {
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const [isInstallingUpdate, setIsInstallingUpdate] = useState(false);
-  const updateCheckStartedRef = useRef(false);
 
   const isAppBusy =
     state.isLoading ||
@@ -202,19 +291,6 @@ function AppContent() {
     };
   }, [isAppBusy]);
 
-  useEffect(() => {
-    if (updateCheckStartedRef.current) {
-      return;
-    }
-
-    if (state.isLoading || state.isFirstRun || isAppBusy) {
-      return;
-    }
-
-    updateCheckStartedRef.current = true;
-    void checkForUpdates(false);
-  }, [checkForUpdates, isAppBusy, state.isFirstRun, state.isLoading]);
-
   async function handleConfirmExit() {
     setIsExitProcessing(true);
 
@@ -295,11 +371,19 @@ function AppContent() {
 }
 
 function App() {
+  const [startupReady, setStartupReady] = useState(false);
+
   return (
-    <AppProvider>
-      <AppContent />
+    <>
+      {startupReady ? (
+        <AppProvider>
+          <AppContent />
+        </AppProvider>
+      ) : (
+        <StartupUpdateGate onReady={() => setStartupReady(true)} />
+      )}
       <Toaster position="bottom-right" toastOptions={{ duration: 8000 }} />
-    </AppProvider>
+    </>
   );
 }
 

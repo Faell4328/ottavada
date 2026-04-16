@@ -388,11 +388,11 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 ## v1.0
 - [x] A consulta de atualização e caso tenha, deve travar o "aplicar alterações" e "consultar alterações", para não dar problema. Caso o usuário clique em "adiar", ai deve aplicar ou consultar.
 - [x] No windows ele está dando "tilte", fica meio que piscando e fica sumindo e aparecendo na barra de trabalho. Quando clicar em "aplicar alterações", aparentemente é só no servidor.
+- [ ] Adicionar no campo "title" das atualizações, renderização de tags de escrita, listagem e quebra de linha (apenas). Não adicionar tags de imagens, script e etc, apenas conteúdo de texto, sem atributos adicionais também.
 - [ ] Adicionar nome da organização no cliente
 - [ ] Rolagem não está funcionando no windows (ao abrir uma música)
 - [ ] Partituras não está sendo mostradas corretamente ao expandir a música
-- [ ] Refatorar o front
-- [ ] Refatorar o back
+- [ ] Corrigir inconsistências no front.
 - [ ] Criar diretório especifico para os testes (para não limpar a nuvem no teste).
 - [ ] Verificar se todos os erros estão sendo enviados para a telemetria (isso inclui o erro de não conseguir enviar a telemetria).
 - [ ] Criar tela de apresentação no primeiro acesso, objetivo é apresentar o software e mostrar o que ele pode fazer.
