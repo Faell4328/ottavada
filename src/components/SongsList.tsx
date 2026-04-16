@@ -194,10 +194,10 @@ export default function SongsList() {
       selectScore(null);
       selectSong(song);
       closeAllMenus();
-      scrollSongIntoView(song.id);
       void (async () => {
         try {
           await loadSongScores(song.id);
+          scrollSongIntoView(song.id);
         } catch {
           // loadSongScores já exibe o toast de erro.
         }

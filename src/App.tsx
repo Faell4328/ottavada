@@ -67,7 +67,7 @@ function StartupUpdateGate({ onReady }: { onReady: () => void }) {
       } catch (error) {
         console.error("Failed to check startup updates:", error);
         if (!cancelled) {
-          toast.error(`Falha ao verificar atualização: ${getErrorMessage(error)}`);
+          //toast.error(`Falha ao verificar atualização: ${getErrorMessage(error)}`);
           finishStartup();
         }
       }
@@ -198,7 +198,7 @@ function AppContent() {
     } catch (error) {
       console.error("Failed to check updates:", error);
       if (manual) {
-        toast.error(`Falha ao verificar atualização: ${getErrorMessage(error)}`);
+        //toast.error(`Falha ao verificar atualização: ${getErrorMessage(error)}`);
       }
     } finally {
       setIsCheckingUpdate(false);
