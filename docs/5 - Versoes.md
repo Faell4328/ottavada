@@ -384,9 +384,12 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [x] Corrigir as tabelas de telemetria.
 - [x] Implementar a telemetria
 	- [x] Adicionar a rota da telemetria no `.env` e `.env.exemple`.
-- [ ] Criar tela de apresentação no primeiro acesso, objetivo é apresentar o software e mostrar o que ele pode fazer.
 
 ## v1.0
+- [ ] Refatorar o front
+- [ ] Refatorar o back
+- [ ] Verificar se todos os erros estão sendo enviados para a telemetria (isso inclui o erro de não conseguir enviar a telemetria).
+- [ ] Criar tela de apresentação no primeiro acesso, objetivo é apresentar o software e mostrar o que ele pode fazer.
 - [ ] Adicionar uma forma para os usuários entrarem em contato (email e telefone).
 - [ ] Adicionar instruções nas configurações, informando o que cada um faz.
 	- Deve ter uma estilização diferente, para que o usuário entenda que é uma explicação.
