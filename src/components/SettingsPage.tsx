@@ -9,6 +9,7 @@ import { ChangeComputerTypeModal } from "./ChangeComputerTypeModal";
 import { RcloneProviderModal } from "./RcloneProviderModal.tsx";
 import { RcloneLicenseModal } from "./RcloneLicenseModal";
 import { UpdateModal } from "./UpdateModal";
+import { OrganizationNameField } from "./OrganizationNameField";
 import { formatBackupTimestamp } from "../utils/formatters";
 import type { AppSettings, RcloneProvider, UpdateInfo } from "../types";
 import { isClientComputer } from "../utils/computer";
@@ -568,21 +569,16 @@ export default function SettingsPage() {
             />
           </Field>
 
-          {settings.computer_type === "Server" && (
-            <Field label="Nome da organização ou instituição">
-              <input
-                value={settings.organization_name ?? ""}
-                onChange={(e) =>
-                  update({
-                    organization_name: e.target.value || null,
-                  })
-                }
-                disabled={isSyncLocked}
-                className="w-full h-9 rounded border border-[#c5cfdb] bg-white px-3 text-sm text-[#4d6075] outline-none focus:border-[#7ba0d4]"
-                placeholder="Ex: Orquestra, Igreja, Ministério..."
-              />
-            </Field>
-          )}
+          <OrganizationNameField
+            computerType={settings.computer_type}
+            value={settings.organization_name}
+            disabled={isSyncLocked}
+            onChange={(value) =>
+              update({
+                organization_name: value || null,
+              })
+            }
+          />
 
           <Field label="Tipo de computador">
             <div className="flex items-center gap-2">

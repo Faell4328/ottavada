@@ -28,6 +28,21 @@ fn updater_builder() -> tauri_plugin_updater::Builder {
     tauri_plugin_updater::Builder::new()
 }
 
+fn restore_main_window(app: &tauri::App) {
+    let Some(window) = app.get_webview_window("main") else {
+        warn!("Janela principal não encontrada ao restaurar estado inicial");
+        return;
+    };
+
+    if let Ok(true) = window.is_minimized() {
+        let _ = window.unminimize();
+    }
+
+    let _ = window.show();
+    let _ = window.maximize();
+    let _ = window.set_focus();
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -117,6 +132,9 @@ pub fn run() {
             // Inicializar store de configurações
             let store = SystemStore::new(app_data_dir.clone());
             app.manage(store);
+
+            #[cfg(target_os = "windows")]
+            restore_main_window(app);
 
             if let Ok(settings) = SystemStore::new(app_data_dir.clone()).get_app_settings() {
                 if settings.first_run_completed {

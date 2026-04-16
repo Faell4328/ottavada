@@ -44,7 +44,7 @@ describe("FirstRunPage", () => {
     expect(screen.getByPlaceholderText("Ex: Orquestra, Igreja, Ministério...")).toBeInTheDocument();
   });
 
-  it("hides organization for client", async () => {
+  it("shows organization for client", async () => {
     renderWithAppProvider(<FirstRunPage />);
 
     fireEvent.click(screen.getByText("Cliente"));
@@ -54,6 +54,6 @@ describe("FirstRunPage", () => {
       expect(screen.getByPlaceholderText("Ex: Estúdio, Home, Sala Ensaio...")).toBeInTheDocument();
     });
 
-    expect(screen.queryByPlaceholderText("Ex: Orquestra, Igreja, Ministério...")).not.toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Ex: Orquestra, Igreja, Ministério...")).toBeInTheDocument();
   });
 });

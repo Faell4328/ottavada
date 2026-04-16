@@ -1,6 +1,7 @@
 import { Clock3, Download, Sparkles } from "lucide-react";
 import { Modal, ModalFooterButtons } from "./ui";
 import type { UpdateInfo } from "../types";
+import { renderUpdateBody } from "../utils/updateBody";
 
 interface UpdateModalProps {
   isOpen: boolean;
@@ -38,6 +39,7 @@ export function UpdateModal({
   }
 
   const formattedDate = formatUpdateDate(update.date);
+  const renderedBody = renderUpdateBody(update.body);
 
   return (
     <Modal
@@ -94,9 +96,13 @@ export function UpdateModal({
             <Download className="h-4 w-4 text-[#4f84d7]" />
             Notas da versão
           </div>
-          <p className="whitespace-pre-line text-sm leading-6 text-[#4a6278]">
-            {update.body?.trim() || "Sem notas adicionais para esta atualização."}
-          </p>
+          {renderedBody.length > 0 ? (
+            <div className="space-y-3 text-sm leading-6 text-[#4a6278]">{renderedBody}</div>
+          ) : (
+            <p className="text-sm leading-6 text-[#4a6278]">
+              Sem notas adicionais para esta atualização.
+            </p>
+          )}
         </div>
       </div>
     </Modal>

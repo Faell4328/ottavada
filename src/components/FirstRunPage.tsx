@@ -146,7 +146,7 @@ export default function FirstRunPage() {
       await completeFirstRun(
         computerId,
         computerName.trim(),
-        computerType === "Server" ? organizationName.trim() || null : null,
+        organizationName.trim() || null,
         computerType,
         JSON.stringify({ provider: rcloneProvider })
       );
@@ -276,22 +276,22 @@ export default function FirstRunPage() {
               </p>
             </div>
 
-            {computerType === "Server" && (
-              <div className="mb-6">
-                <label className="mb-1.5 block text-sm font-semibold text-[#34485d]">
-                  Nome da organização ou instituição
-                </label>
-                <input
-                  value={organizationName}
-                  onChange={(e) => setOrganizationName(e.target.value)}
-                  className="h-10 w-full rounded-lg border border-[#c5cfdb] bg-[#f8fafd] px-3 text-sm text-[#4d6075] outline-none focus:border-[#7ba0d4] focus:ring-2 focus:ring-[#7ba0d4]/20"
-                  placeholder="Ex: Orquestra, Igreja, Ministério..."
-                />
-                <p className="mt-1 text-xs text-[#8b9db2]">
-                  Usado apenas no computador principal. Você pode alterá-lo depois nas configurações.
-                </p>
-              </div>
-            )}
+            <div className="mb-6">
+              <label className="mb-1.5 block text-sm font-semibold text-[#34485d]">
+                Nome da organização ou instituição
+              </label>
+              <input
+                value={organizationName}
+                onChange={(e) => setOrganizationName(e.target.value)}
+                className="h-10 w-full rounded-lg border border-[#c5cfdb] bg-[#f8fafd] px-3 text-sm text-[#4d6075] outline-none focus:border-[#7ba0d4] focus:ring-2 focus:ring-[#7ba0d4]/20"
+                placeholder="Ex: Orquestra, Igreja, Ministério..."
+              />
+              <p className="mt-1 text-xs text-[#8b9db2]">
+                {computerType === "Server"
+                  ? "Usado no computador principal e pode ser alterado depois nas configurações."
+                  : "Opcional no cliente, mas útil para identificar a organização."}
+              </p>
+            </div>
 
             <button
               type="button"
@@ -498,14 +498,12 @@ export default function FirstRunPage() {
                 </p>
               </div>
 
-              {computerType === "Server" && (
-                <div className="rounded-lg border border-[#c5cfdb] bg-[#f8fafd] p-4">
-                  <p className="mb-1 text-xs text-[#8b9db2]">Nome da organização ou instituição</p>
-                  <p className="text-sm font-semibold text-[#34485d]">
-                    {organizationName || "(não preenchido)"}
-                  </p>
-                </div>
-              )}
+              <div className="rounded-lg border border-[#c5cfdb] bg-[#f8fafd] p-4">
+                <p className="mb-1 text-xs text-[#8b9db2]">Nome da organização ou instituição</p>
+                <p className="text-sm font-semibold text-[#34485d]">
+                  {organizationName || "(não preenchido)"}
+                </p>
+              </div>
 
               <div className="rounded-lg border border-[#c5cfdb] bg-[#f8fafd] p-4">
                 <p className="mb-1 text-xs text-[#8b9db2]">Tipo de computador</p>
