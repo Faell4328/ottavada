@@ -211,23 +211,7 @@ impl Database {
             );
 
             CREATE TABLE IF NOT EXISTS usage (
-                id TEXT PRIMARY KEY,
-                computerId TEXT NOT NULL REFERENCES computerInformation(computerId) ON DELETE CASCADE,
-                date TEXT NOT NULL,
-                lastAccessedAt INTEGER,
-                totalTimeSpentMinutes INTEGER NOT NULL DEFAULT 0,
-                openScoreCount INTEGER NOT NULL DEFAULT 0,
-                searchCount INTEGER NOT NULL DEFAULT 0,
-                favoriteCount INTEGER NOT NULL DEFAULT 0,
-                addMusicCount INTEGER NOT NULL DEFAULT 0,
-                editMusicCount INTEGER NOT NULL DEFAULT 0,
-                deleteMusicCount INTEGER NOT NULL DEFAULT 0,
-                applyChangesCount INTEGER NOT NULL DEFAULT 0,
-                report INTEGER NOT NULL DEFAULT 0
-            );
-
-            CREATE TABLE IF NOT EXISTS library (
-                id TEXT PRIMARY KEY,
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
                 computerId TEXT NOT NULL REFERENCES computerInformation(computerId) ON DELETE CASCADE,
                 date TEXT NOT NULL,
                 musicCount INTEGER NOT NULL DEFAULT 0,
@@ -241,33 +225,12 @@ impl Database {
                 report INTEGER NOT NULL DEFAULT 0
             );
 
-            CREATE TABLE IF NOT EXISTS sync (
-                id TEXT PRIMARY KEY,
-                computerId TEXT NOT NULL REFERENCES computerInformation(computerId) ON DELETE CASCADE,
-                date TEXT NOT NULL,
-                lastSyncAt INTEGER,
-                uploadCount INTEGER NOT NULL DEFAULT 0,
-                uploadTotalBytes INTEGER NOT NULL DEFAULT 0,
-                downloadCount INTEGER NOT NULL DEFAULT 0,
-                downloadTotalBytes INTEGER NOT NULL DEFAULT 0,
-                errors INTEGER NOT NULL DEFAULT 0,
-                report INTEGER NOT NULL DEFAULT 0
-            );
-
             CREATE TABLE IF NOT EXISTS errors (
                 id TEXT PRIMARY KEY,
                 computerId TEXT NOT NULL REFERENCES computerInformation(computerId) ON DELETE CASCADE,
+                date TEXT NOT NULL,
                 message TEXT NOT NULL DEFAULT '',
                 timestamp INTEGER NOT NULL,
-                report INTEGER NOT NULL DEFAULT 0
-            );
-
-            CREATE TABLE IF NOT EXISTS dailyUsage (
-                id TEXT PRIMARY KEY,
-                computerId TEXT NOT NULL REFERENCES computerInformation(computerId) ON DELETE CASCADE,
-                date TEXT NOT NULL,
-                timeSpentMinutes INTEGER NOT NULL DEFAULT 0,
-                openedScores INTEGER NOT NULL DEFAULT 0,
                 report INTEGER NOT NULL DEFAULT 0
             );
         ",
@@ -285,14 +248,8 @@ impl Database {
             CREATE INDEX IF NOT EXISTS idx_computerInformation_report ON computerInformation(report);
             CREATE INDEX IF NOT EXISTS idx_usage_computerId ON usage(computerId);
             CREATE INDEX IF NOT EXISTS idx_usage_report ON usage(report);
-            CREATE INDEX IF NOT EXISTS idx_library_computerId ON library(computerId);
-            CREATE INDEX IF NOT EXISTS idx_library_report ON library(report);
-            CREATE INDEX IF NOT EXISTS idx_sync_computerId ON sync(computerId);
-            CREATE INDEX IF NOT EXISTS idx_sync_report ON sync(report);
             CREATE INDEX IF NOT EXISTS idx_errors_computerId ON errors(computerId);
             CREATE INDEX IF NOT EXISTS idx_errors_report ON errors(report);
-            CREATE INDEX IF NOT EXISTS idx_dailyUsage_computerId ON dailyUsage(computerId);
-            CREATE INDEX IF NOT EXISTS idx_dailyUsage_report ON dailyUsage(report);
         ")?;
 
         Self::ensure_default_category_with_conn(conn)?;
@@ -1843,6 +1800,95 @@ impl Database {
             row.get::<_, Option<i64>>(0)
         })?;
         Ok(latest)
+    }
+
+    pub fn get_telemetry_summary_counts(
+        &self,
+    ) -> Result<crate::services::telemetry_service::TelemetrySummaryCounts, AppError> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "WITH score_status_by_song AS (
+                SELECT
+                    song_id,
+                    MAX(CASE WHEN status = 'main' THEN 1 ELSE 0 END) AS has_main,
+                    MAX(CASE WHEN status = 'draft' THEN 1 ELSE 0 END) AS has_draft,
+                    MAX(CASE WHEN status = 'not found' THEN 1 ELSE 0 END) AS has_not_found,
+                    COUNT(*) AS scores_count,
+                    SUM(CASE WHEN status = 'main' THEN 1 ELSE 0 END) AS scores_main,
+                    SUM(CASE WHEN status = 'draft' THEN 1 ELSE 0 END) AS scores_draft,
+                    SUM(CASE WHEN status = 'not found' THEN 1 ELSE 0 END) AS scores_not_found
+                FROM scores
+                GROUP BY song_id
+            )
+            SELECT
+                COUNT(s.id) AS music_count,
+                SUM(CASE WHEN COALESCE(ss.has_main, 0) = 1 THEN 1 ELSE 0 END) AS music_main,
+                SUM(CASE WHEN COALESCE(ss.has_main, 0) = 0 AND COALESCE(ss.has_draft, 0) = 1 THEN 1 ELSE 0 END) AS music_draft,
+                SUM(CASE WHEN COALESCE(ss.has_main, 0) = 0 AND COALESCE(ss.has_draft, 0) = 0 AND COALESCE(ss.has_not_found, 0) = 1 THEN 1 ELSE 0 END) AS music_not_found,
+                COALESCE(SUM(ss.scores_count), 0) AS scores_count,
+                COALESCE(SUM(ss.scores_main), 0) AS scores_main,
+                COALESCE(SUM(ss.scores_draft), 0) AS scores_draft,
+                COALESCE(SUM(ss.scores_not_found), 0) AS scores_not_found
+            FROM songs s
+            LEFT JOIN score_status_by_song ss ON ss.song_id = s.id",
+        )?;
+
+        let counts = stmt.query_row([], |row| {
+            Ok(crate::services::telemetry_service::TelemetrySummaryCounts {
+                music_count: row.get::<_, i64>(0)? as u64,
+                music_main: row.get::<_, i64>(1)? as u64,
+                music_draft: row.get::<_, i64>(2)? as u64,
+                music_not_found: row.get::<_, i64>(3)? as u64,
+                scores_count: row.get::<_, i64>(4)? as u64,
+                scores_main: row.get::<_, i64>(5)? as u64,
+                scores_draft: row.get::<_, i64>(6)? as u64,
+                scores_not_found: row.get::<_, i64>(7)? as u64,
+            })
+        })?;
+
+        Ok(counts)
+    }
+
+    pub fn list_telemetry_errors(
+        &self,
+    ) -> Result<Vec<crate::services::telemetry_service::TelemetryErrorPayload>, AppError> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare("SELECT id, message, timestamp FROM errors ORDER BY timestamp ASC")?;
+
+        let errors = stmt
+            .query_map([], |row| {
+                let timestamp: i64 = row.get(2)?;
+                let date = chrono::DateTime::from_timestamp(timestamp, 0)
+                    .map(|value| value.format("%Y-%m-%d").to_string())
+                    .unwrap_or_else(|| chrono::Local::now().format("%Y-%m-%d").to_string());
+
+                Ok(crate::services::telemetry_service::TelemetryErrorPayload {
+                    id: row.get(0)?,
+                    date,
+                    message: row.get(1)?,
+                    timestamp,
+                })
+            })?
+            .filter_map(Result::ok)
+            .collect();
+
+        Ok(errors)
+    }
+
+    pub fn prune_telemetry_errors_older_than_week(
+        &self,
+        now_timestamp: i64,
+    ) -> Result<(), AppError> {
+        let conn = self.conn.lock().unwrap();
+        let cutoff = now_timestamp - 7 * 24 * 60 * 60;
+        conn.execute("DELETE FROM errors WHERE timestamp < ?1", params![cutoff])?;
+        Ok(())
+    }
+
+    pub fn clear_telemetry_errors(&self) -> Result<(), AppError> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute("DELETE FROM errors", [])?;
+        Ok(())
     }
 }
 

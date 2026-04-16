@@ -1,3 +1,5 @@
+Essa é a documentação para o servidor que vai gerenciar upload e telemetria.
+
 O servidor será simples, feito em PHP e SQLite. Com único objetivo de gerenciar atualizações e coleta de telemetria. O cliente (quando aberto) irá enviar a cada 5 minutos para o servidor, apenas os campos com `send = false`.
 
 Ele irá rodar em meu servidor local ZimaOS no contêiner `phpfpm-nginx` com o túnel cloudflare, para expor ele a internet. Ficando ligado de dia, tarde e parte da noite (horário que o aplicativo é usado).

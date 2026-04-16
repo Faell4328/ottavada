@@ -6,4 +6,5 @@ pub mod events_service;
 pub mod indexer;
 pub mod msgpack_zstd;
 pub mod name_formatter;
+pub mod telemetry_service;
 pub mod snapshot_service;

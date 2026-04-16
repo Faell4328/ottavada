@@ -381,8 +381,9 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 
 - [x] Mudar a ordem do primeiro acesso: colocar na frente do nome, a tela de selecionar o tipo do computador (cliente ou servidor).
 - [x] Adicionar no primeiro acesso (junto com o nome do computador) e nas configurações (para futura alteração pelo o usuário) o nome da organização ou instituição. Apenas para servidor, no cliente vai aparecer apenas o nome do computador.
-- [ ] Corrigir as tabelas de telemetria.
-- [ ] Implementar a telemetria
+- [x] Corrigir as tabelas de telemetria.
+- [x] Implementar a telemetria
+	- [x] Adicionar a rota da telemetria no `.env` e `.env.exemple`.
 - [ ] Criar tela de apresentação no primeiro acesso, objetivo é apresentar o software e mostrar o que ele pode fazer.
 
 ## v1.0

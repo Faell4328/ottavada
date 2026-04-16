@@ -109,9 +109,30 @@ pub fn run() {
             app.manage(db.clone());
             app.manage(initial_scan_completed.clone());
 
+            services::telemetry_service::spawn_telemetry_worker(
+                db.clone(),
+                app_data_dir.clone(),
+            );
+
             // Inicializar store de configurações
             let store = SystemStore::new(app_data_dir.clone());
             app.manage(store);
+
+            if let Ok(settings) = SystemStore::new(app_data_dir.clone()).get_app_settings() {
+                if settings.first_run_completed {
+                    let db_for_telemetry = db.clone();
+                    let store_for_telemetry = app_data_dir.clone();
+                    std::thread::spawn(move || {
+                        let store = SystemStore::new(store_for_telemetry);
+                        if let Err(error) = services::telemetry_service::send_telemetry_once(
+                            &db_for_telemetry,
+                            &store,
+                        ) {
+                            tracing::warn!("Falha ao enviar telemetria na abertura: {}", error);
+                        }
+                    });
+                }
+            }
 
             // Executar scan inicial em thread separada
             let db_clone = db.clone();
