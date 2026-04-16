@@ -14,10 +14,8 @@ use crate::domain::models::ComputerType;
 use crate::domain::models::*;
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
-use crate::services::backup_songs_service::generate_song_archives_for_song_ids;
 use crate::services::indexer::{get_file_metadata, paths_match, split_file_path};
 use crate::services::name_formatter::normalize_optional_score_name;
-use crate::commands::rclone_commands::upload_cloud_paths_with_rclone_impl;
 
 const VALID_SCORE_EXTENSIONS: [&str; 3] = ["pdf", "mus", "musx"];
 
@@ -37,39 +35,6 @@ fn score_exists_for_indexed_file(
             }
             _ => false,
         })
-}
-
-fn schedule_song_archive_refresh(db: &Database, app_data_dir: &Path, song_id: String) {
-    let db = db.clone();
-    let app_data_dir = app_data_dir.to_path_buf();
-
-    tauri::async_runtime::spawn_blocking(move || {
-        let cloud_root_dir = app_data_dir.join("cloud");
-
-        if let Err(err) = generate_song_archives_for_song_ids(
-            &db,
-            app_data_dir.as_path(),
-            cloud_root_dir.as_path(),
-            std::slice::from_ref(&song_id),
-        ) {
-            warn!(
-                "Falha ao gerar arquivo compactado da música {} em background: {}",
-                song_id, err
-            );
-            return;
-        }
-
-        let archive_relative_path = format!("songs/{}.tar.zst", song_id);
-        if let Err(err) = upload_cloud_paths_with_rclone_impl(
-            &SystemStore::new(app_data_dir.clone()),
-            &[archive_relative_path],
-        ) {
-            warn!(
-                "Falha ao enviar arquivo compactado da música {} em background: {}",
-                song_id, err
-            );
-        }
-    });
 }
 
 fn find_existing_score_by_file_path<'a>(
@@ -493,8 +458,6 @@ pub fn add_score_to_song(
         e
     })?;
 
-    schedule_song_archive_refresh(&db, store.app_data_dir(), song_id.clone());
-
     let _ = refresh_library_summary_cache(&db, &store);
 
     db.get_song_list_item_by_id(&song_id).map(|updated_song| {
@@ -537,10 +500,6 @@ pub fn add_scores_to_song(
 
         db.insert_score(&score)?;
         added_count += 1;
-    }
-
-    if added_count > 0 {
-        schedule_song_archive_refresh(&db, store.app_data_dir(), song_id.clone());
     }
 
     if added_count > 0 {

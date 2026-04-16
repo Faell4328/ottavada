@@ -393,6 +393,7 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [x] Adicionar no campo "title" das atualizações, renderização de tags de escrita, listagem e quebra de linha (apenas). Não adicionar tags de imagens, script e etc, apenas conteúdo de texto, sem atributos adicionais também.
 - [x] Adicionar nome da organização no cliente
 - [x] Ao atualizar o aplicativo está ficando minimizado, mas mostra na barra de tarefa que está maximizado (no windows). Sendo necessário clicar nele duas vezes.
+- [x] Ao adicionar uma música, adicionar partitura, editar partitura, remover partitura e etc, é apenas para gerar o `{songId}.taz.zts` e não enviar para a nuvem com rclone. Remova a parte que enviar para o provedor de nuvem.
 - [ ] Corrigir inconsistências no front.
 - [ ] Criar diretório especifico para os testes (para não limpar a nuvem no teste).
 - [ ] Verificar se todos os erros estão sendo enviados para a telemetria (isso inclui o erro de não conseguir enviar a telemetria).

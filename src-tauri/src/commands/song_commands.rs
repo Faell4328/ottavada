@@ -5,12 +5,10 @@ use tracing::{error, info, warn};
 use serde::Serialize;
 
 use crate::commands::common::require_server_settings;
-use crate::commands::rclone_commands::upload_cloud_paths_with_rclone_impl;
 use crate::domain::errors::AppError;
 use crate::domain::models::*;
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
-use crate::services::backup_songs_service::generate_song_archives_for_song_ids;
 use crate::services::indexer::{self, get_file_metadata, paths_match};
 use crate::services::name_formatter::{normalize_optional_score_name, normalize_song_name};
 
@@ -70,39 +68,6 @@ fn refresh_library_summary_cache(
     _store: &SystemStore,
 ) -> Result<(), AppError> {
     Ok(())
-}
-
-fn schedule_song_archive_refresh(db: &Database, app_data_dir: &Path, song_id: String) {
-    let db = db.clone();
-    let app_data_dir = app_data_dir.to_path_buf();
-
-    tauri::async_runtime::spawn_blocking(move || {
-        let cloud_root_dir = app_data_dir.join("cloud");
-
-        if let Err(err) = generate_song_archives_for_song_ids(
-            &db,
-            app_data_dir.as_path(),
-            cloud_root_dir.as_path(),
-            std::slice::from_ref(&song_id),
-        ) {
-            warn!(
-                "Falha ao gerar arquivo compactado da música {} em background: {}",
-                song_id, err
-            );
-            return;
-        }
-
-        let archive_relative_path = format!("songs/{}.tar.zst", song_id);
-        if let Err(err) = upload_cloud_paths_with_rclone_impl(
-            &SystemStore::new(app_data_dir.clone()),
-            &[archive_relative_path],
-        ) {
-            warn!(
-                "Falha ao enviar arquivo compactado da música {} em background: {}",
-                song_id, err
-            );
-        }
-    });
 }
 
 #[tauri::command]
@@ -215,7 +180,6 @@ fn import_files_core(
     category_ids: &[String],
     composer: Option<&str>,
     arranger: Option<&str>,
-    app_data_dir: &Path,
 ) -> Result<ImportIndexedFilesResult, AppError> {
     let now = Local::now().naive_local();
 
@@ -350,7 +314,6 @@ fn import_files_core(
             added_count += 1;
         }
 
-        schedule_song_archive_refresh(db, app_data_dir, song_id.clone());
     }
 
     Ok(ImportIndexedFilesResult {
@@ -373,8 +336,6 @@ pub fn import_indexed_files(
     category_ids: Vec<String>,
 ) -> Result<Vec<SongListItem>, AppError> {
     let settings = require_server_settings(&store)?;
-    let app_data_dir = store.app_data_dir().clone();
-
     import_files_core(
         &db,
         &settings.computer_id,
@@ -382,7 +343,6 @@ pub fn import_indexed_files(
         &category_ids,
         None,
         None,
-        app_data_dir.as_path(),
     )
     .map(|result| {
         let _ = refresh_library_summary_cache(&db, &store);
@@ -400,7 +360,6 @@ pub fn import_indexed_files_with_metadata(
     arranger: Option<String>,
 ) -> Result<ImportIndexedFilesResult, AppError> {
     let settings = require_server_settings(&store)?;
-    let app_data_dir = store.app_data_dir().clone();
     info!(
         "Importando arquivos indexados com metadados: files={}, categories={}, composer_set={}, arranger_set={}",
         files.len(),
@@ -416,7 +375,6 @@ pub fn import_indexed_files_with_metadata(
         &category_ids,
         composer.as_deref(),
         arranger.as_deref(),
-        app_data_dir.as_path(),
     )
     .map(|result| {
         let _ = refresh_library_summary_cache(&db, &store);
