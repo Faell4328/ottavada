@@ -16,6 +16,7 @@ import { AppProvider, useAppState } from "./context/AppContext";
 import * as api from "./api/commands";
 import { ConfirmationModal } from "./components/ui/ConfirmationModal";
 import { getErrorMessage } from "./utils/errors";
+import { isUpdateActionLocked as getIsUpdateActionLocked } from "./utils/updateLock";
 import type { UpdateInfo } from "./types";
 
 function LoadingScreen() {
@@ -32,15 +33,22 @@ interface MainPageProps {
   onUpdateClick: () => void;
   isUpdateBusy: boolean;
   hasAvailableUpdate: boolean;
+  isUpdateActionLocked: boolean;
 }
 
-function MainPage({ onUpdateClick, isUpdateBusy, hasAvailableUpdate }: MainPageProps) {
+function MainPage({
+  onUpdateClick,
+  isUpdateBusy,
+  hasAvailableUpdate,
+  isUpdateActionLocked,
+}: MainPageProps) {
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-b from-[#5d6d82] via-[#73849a] to-[#d8dee8] select-none pt-[70px]">
       <TopBar
         onUpdateClick={onUpdateClick}
         isUpdateBusy={isUpdateBusy}
         hasAvailableUpdate={hasAvailableUpdate}
+        isUpdateActionLocked={isUpdateActionLocked}
       />
       <div className="flex flex-1 min-h-0">
         <Sidebar />
@@ -69,6 +77,11 @@ function AppContent() {
     state.operationStatus.stepCurrent !== null;
 
   const isUpdateBusy = isCheckingUpdate || isInstallingUpdate;
+  const isUpdateActionLocked = getIsUpdateActionLocked({
+    isCheckingUpdate,
+    isInstallingUpdate,
+    isUpdateModalOpen,
+  });
 
   const checkForUpdates = useCallback(async (manual = false) => {
     if (isCheckingUpdate || isInstallingUpdate) {
@@ -251,6 +264,7 @@ function AppContent() {
                     onUpdateClick={handleUpdateButtonClick}
                     isUpdateBusy={isUpdateBusy}
                     hasAvailableUpdate={availableUpdate !== null}
+                    isUpdateActionLocked={isUpdateActionLocked}
                   />
                 )}
               />

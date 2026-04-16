@@ -9,12 +9,14 @@ import type { IndexedFile, SongListItem } from "../types";
 import { isClientComputer } from "../utils/computer";
 import { AddFilesModal } from "./AddFilesModal.tsx";
 import { AddMusicModal } from "./AddMusicModal";
+import { getUpdateActionBlockedMessage } from "../utils/updateLock";
 
 interface TopBarProps {
   title?: string;
   onUpdateClick: () => void;
   isUpdateBusy: boolean;
   hasAvailableUpdate: boolean;
+  isUpdateActionLocked: boolean;
 }
 
 export default function TopBar({
@@ -22,6 +24,7 @@ export default function TopBar({
   onUpdateClick,
   isUpdateBusy,
   hasAvailableUpdate,
+  isUpdateActionLocked,
 }: TopBarProps) {
   const { loadSongs, loadCategories, state, scanFilesForChanges } = useAppState();
   const navigate = useNavigate();
@@ -32,6 +35,7 @@ export default function TopBar({
     state.operationStatus.stepCurrent !== null;
   const clientBlockedTitle = "Esse recurso só está disponível no computador principal.";
   const syncBlockedTitle = "Espere a sincronização terminar para continuar.";
+  const updateBlockedTitle = getUpdateActionBlockedMessage();
   const [showAddMusicModal, setShowAddMusicModal] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<IndexedFile[]>([]);
   const [existingSongsForAddFiles, setExistingSongsForAddFiles] = useState<SongListItem[]>([]);
@@ -157,8 +161,21 @@ export default function TopBar({
           />
           <ActionButton
             icon={<RefreshCw className={`h-4 w-4 ${state.isScanningFiles ? 'animate-spin' : ''}`} />}
-            title={isSyncLocked ? syncBlockedTitle : isClient ? "Consultar alterações" : "Aplicar alterações"}
+            title={
+              isUpdateActionLocked
+                ? updateBlockedTitle
+                : isSyncLocked
+                  ? syncBlockedTitle
+                  : isClient
+                    ? "Consultar alterações"
+                    : "Aplicar alterações"
+            }
             onClick={() => {
+              if (isUpdateActionLocked) {
+                toast.error(updateBlockedTitle);
+                return;
+              }
+
               if (isSyncLocked) {
                 toast.error(syncBlockedTitle);
                 return;
@@ -166,7 +183,7 @@ export default function TopBar({
 
               void scanFilesForChanges();
             }}
-            disabled={isSyncLocked}
+            disabled={isSyncLocked || isUpdateActionLocked}
           />
           <ActionButton
             icon={<Settings className="h-4 w-4" />}

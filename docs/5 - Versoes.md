@@ -386,8 +386,14 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 	- [x] Adicionar a rota da telemetria no `.env` e `.env.exemple`.
 
 ## v1.0
+- [x] A consulta de atualização e caso tenha, deve travar o "aplicar alterações" e "consultar alterações", para não dar problema. Caso o usuário clique em "adiar", ai deve aplicar ou consultar.
+- [x] No windows ele está dando "tilte", fica meio que piscando e fica sumindo e aparecendo na barra de trabalho. Quando clicar em "aplicar alterações", aparentemente é só no servidor.
+- [ ] Adicionar nome da organização no cliente
+- [ ] Rolagem não está funcionando no windows (ao abrir uma música)
+- [ ] Partituras não está sendo mostradas corretamente ao expandir a música
 - [ ] Refatorar o front
 - [ ] Refatorar o back
+- [ ] Criar diretório especifico para os testes (para não limpar a nuvem no teste).
 - [ ] Verificar se todos os erros estão sendo enviados para a telemetria (isso inclui o erro de não conseguir enviar a telemetria).
 - [ ] Criar tela de apresentação no primeiro acesso, objetivo é apresentar o software e mostrar o que ele pode fazer.
 - [ ] Adicionar uma forma para os usuários entrarem em contato (email e telefone).

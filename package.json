@@ -1,23 +1,28 @@
 {
   "name": "score-maestro",
   "private": true,
-  "version": "0.13.0",
+  "version": "0.13.3",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "sh -lc 'set -a; . src-tauri/.env; set +a; APPIMAGE_EXTRACT_AND_RUN=1 tauri'",
-    "tauri:build:win:x64": "sh -lc 'set -a; . src-tauri/.env; set +a; rustup target add x86_64-pc-windows-gnu && APPIMAGE_EXTRACT_AND_RUN=1 tauri build --target x86_64-pc-windows-gnu'",
-    "tauri:build:win:x32": "sh -lc 'set -a; . src-tauri/.env; set +a; (mv src-tauri/rclone/rclone.exe src-tauri/rclone/rclone64.exe && mv src-tauri/rclone/rclone32.exe src-tauri/rclone/rclone.exe && rustup target add i686-pc-windows-gnu && APPIMAGE_EXTRACT_AND_RUN=1 tauri build --target i686-pc-windows-gnu && mv src-tauri/rclone/rclone.exe src-tauri/rclone/rclone32.exe && mv src-tauri/rclone/rclone64.exe src-tauri/rclone/rclone.exe) || (mv src-tauri/rclone/rclone.exe src-tauri/rclone/rclone32.exe && mv src-tauri/rclone/rclone64.exe src-tauri/rclone/rclone.exe)'",
-    "tauri:build:all": "npm run tauri:build:win:x64 && npm run tauri:build:win:x32",
+    "tauri:win:x64": "rustup target add x86_64-pc-windows-gnu && tauri build --target x86_64-pc-windows-gnu",
+    "tauri:win:x32": "sh -lc 'set -a; . src-tauri/.env; set +a; mv src-tauri/rclone/rclone.exe src-tauri/rclone/rclone64.exe && mv src-tauri/rclone/rclone32.exe src-tauri/rclone/rclone.exe && (rustup target add i686-pc-windows-gnu && tauri build --target i686-pc-windows-gnu); status=$?; mv src-tauri/rclone/rclone.exe src-tauri/rclone/rclone32.exe && mv src-tauri/rclone/rclone64.exe src-tauri/rclone/rclone.exe; exit $status'",
+    "tauri:all": "npm run tauri:win:x64 && npm run tauri:win:x32",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:ui": "vitest --ui"
+    "test:ui": "vitest --ui",
+
+    "tauri:build:win:x64": "dotenv -e src-tauri/.env -- tauri build --target x86_64-pc-windows-msvc",
+    "tauri:build:win:x32": "dotenv -e src-tauri/.env -- tauri build --target i686-pc-windows-msvc",
+    "tauri:build:all": "npm run tauri:build:win:x64 && npm run tauri:build:win:x32"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-dialog": "^2.7.0",
+    "dotenv-cli": "^11.0.0",
     "lucide-react": "^0.575.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
