@@ -293,7 +293,7 @@ export default function SettingsPage() {
       stepTotal: 1,
     });
     navigate("/");
-    const loadingToastId = toast.loading("Estou organizando os dados e aplicando as mudanças...");
+    const loadingToastId = toast.loading("Organizando os dados e aplicando as alterações...");
     try {
       await api.generateSnapshotFile(true);
       await loadSettings();
@@ -371,7 +371,7 @@ export default function SettingsPage() {
 
     setIsImportingBackup(true);
     navigate("/");
-    const loadingToastId = toast.loading("Estou importando o backup local...");
+    const loadingToastId = toast.loading("Importando o backup local...");
 
     void (async () => {
       let refreshedSettings: AppSettings | null = null;
@@ -412,7 +412,7 @@ export default function SettingsPage() {
 
     setIsImportingBackupCloud(true);
     navigate("/");
-    const loadingToastId = toast.loading("Estou importando o backup da nuvem...");
+    const loadingToastId = toast.loading("Importando o backup da nuvem...");
 
     void (async () => {
       let shouldRunForcedSnapshot = false;
@@ -500,7 +500,7 @@ export default function SettingsPage() {
         return;
       }
 
-      toast.success("Seu aplicativo já está atualizado.");
+      toast.success("O aplicativo já está atualizado.");
     } catch (error) {
       toast.error("Não foi possível verificar atualizações.");
     } finally {

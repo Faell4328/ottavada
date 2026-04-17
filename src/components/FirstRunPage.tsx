@@ -39,7 +39,7 @@ export default function FirstRunPage() {
     void api.generateComputerId()
       .then(setComputerId)
       .catch(() => {
-        toast.error("Não consegui criar o identificador deste computador.");
+        toast.error("Não foi possível criar o identificador deste computador.");
       });
   }, []);
 

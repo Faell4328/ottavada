@@ -139,7 +139,7 @@ export function useAppCrudActions({
       await Promise.all([loadSongs(), loadCategories()]);
       await refreshSelectedSong();
       await loadSettings();
-      toast.success("Música salva.");
+      toast.success("Música atualizada.");
     } catch (err) {
       console.error("Failed to update song:", err);
       toast.error("Não foi possível salvar a música.");
@@ -160,7 +160,7 @@ export function useAppCrudActions({
       await loadSongs();
       await refreshSelectedSong();
       await loadSettings();
-      toast.success("Partitura salva.");
+      toast.success("Partitura atualizada.");
     } catch (err) {
       console.error("Failed to update score:", err);
       toast.error("Não foi possível salvar a partitura.");

@@ -398,6 +398,8 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [x] Melhore as mensagens do modal de revisão (a que vai ficar), a que fica acima do "Nome da Musica".
 - [x] Na mensagem "Essa partitura possui o mesmo nome de outra partitura..." coloca ambas em uma div com uma borda (mostrando quais sãos)
 - [x] Arrumar bug: ao editar algo no meio do texto com minúsculo, o marcado do texto vai para o final. Isso não ocorre se tiver digitando em maiúsculo.
+- [x] Melhorar as mensagens de toast, estão muitos estranhas ou como o sistema fosse uma pessoa fazendo algo, é preciso melhorar.
+- [x] "Consultar alterações" (cliente) está dando 'tiltes', subindo e aparendo na barra de tarefas do windows, tando também uma leve trava (como se fechase e abrise novamente.)
 - [ ] Corrigir inconsistências no front.
 - [ ] Criar diretório especifico para os testes (para não limpar a nuvem no teste).
 - [ ] Verificar se todos os erros estão sendo enviados para a telemetria (isso inclui o erro de não conseguir enviar a telemetria).

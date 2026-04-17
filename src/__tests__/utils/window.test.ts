@@ -7,7 +7,6 @@ const windowMocks = vi.hoisted(() => ({
   unminimize: vi.fn(async () => undefined),
   unmaximize: vi.fn(async () => undefined),
   maximize: vi.fn(async () => undefined),
-  setFocus: vi.fn(async () => undefined),
 }));
 
 vi.mock("@tauri-apps/api/window", () => ({
@@ -26,6 +25,5 @@ describe("restoreMainWindow", () => {
     expect(windowMocks.unminimize).toHaveBeenCalledTimes(1);
     expect(windowMocks.unmaximize).toHaveBeenCalledTimes(1);
     expect(windowMocks.maximize).toHaveBeenCalledTimes(1);
-    expect(windowMocks.setFocus).toHaveBeenCalledTimes(1);
   });
 });

@@ -79,7 +79,7 @@ export default function TopBar({
       }
     } catch (err) {
       console.error("Failed to scan directory:", err);
-      toast.error("Não consegui ler essa pasta.");
+      toast.error("Não foi possível ler essa pasta.");
     }
   }
 

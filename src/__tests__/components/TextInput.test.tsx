@@ -20,7 +20,7 @@ describe("TextInput", () => {
   it("keeps the caret position when the value is normalized during editing", () => {
     render(<UppercaseInput />);
 
-    const input = screen.getByPlaceholderText("Nome");
+    const input = screen.getByPlaceholderText("Nome") as HTMLInputElement;
     input.focus();
     input.setSelectionRange(5, 5);
 

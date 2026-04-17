@@ -249,7 +249,7 @@ export function useAppScanFlow({
 
     if (scanInProgressRef.current) {
       if (!isAutomatic) {
-        toast.error("Já existe uma operação em andamento. Aguarde concluir.");
+        toast.error("Já existe uma operação em andamento. Aguarde ela terminar.");
       }
       return;
     }
@@ -262,7 +262,7 @@ export function useAppScanFlow({
       const hasInternet = await api.hasInternetConnection();
       if (!hasInternet) {
         if (!isAutomatic) {
-          toast.error("Não encontrei internet. Verifique sua conexão e tente novamente.");
+          toast.error("Não foi possível acessar a internet. Verifique sua conexão e tente novamente.");
         }
         return;
       }
@@ -350,7 +350,7 @@ export function useAppScanFlow({
         });
 
         if (!isAutomatic) {
-          toast.success("As mudanças foram aplicadas com sucesso.");
+          toast.success("Alterações aplicadas com sucesso.");
         }
 
         scheduleScanReset(1500);
@@ -445,7 +445,7 @@ export function useAppScanFlow({
         updateStepProgress(changedCount);
 
         if (!isAutomatic) {
-          toast("Criei uma cópia de segurança para manter tudo organizado.", {
+          toast("Cópia de segurança gerada para manter o histórico organizado.", {
             icon: "📦",
           });
         }
@@ -489,7 +489,7 @@ export function useAppScanFlow({
             } catch (error) {
               uploadError = error;
               if (attempt === 1 && !isAutomatic) {
-                toast("Não consegui enviar a cópia de segurança. Vou tentar de novo.", {
+                toast("Falha ao enviar a cópia de segurança. Nova tentativa em instantes.", {
                   icon: "⚠️",
                 });
               }
@@ -577,7 +577,7 @@ export function useAppScanFlow({
     } catch (err) {
       console.error("Failed to scan files for changes:", err);
       if (!isAutomatic) {
-        toast.error("Não foi possível verificar as mudanças.");
+        toast.error("Não foi possível concluir a verificação.");
       }
       clearScanTimer();
       resetScanState();

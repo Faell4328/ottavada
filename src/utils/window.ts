@@ -17,6 +17,4 @@ export async function restoreMainWindow() {
     await window.unmaximize();
     await window.maximize();
   }
-
-  await window.setFocus();
 }
