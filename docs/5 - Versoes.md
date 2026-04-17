@@ -414,6 +414,9 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 ## 1.1
 - [x] Corrigir problema de perda de backup. Situação: O usuário ter seu aplicativo bugado e precisa reinstalar, ao acessar pela primeira vez o provedor de nuvem é totalmentel limpa, ja que ele "aplica alterações" automaticamente ao acessar.
 	- [x] Mudar diretórios: os arquivos de events, snapshot e songs vão ficar em `/cloud/sync` já o do backup vai ficar em `/cloud/backup`. Com isso na hora de "aplicar alterações" ou "consultar alterações" será no diretório `/cloud/sync` (respetivamente na nuvem também.)
+- [x] Quando mudar de provedor, deve "fazer backup a nuvem"
+- [x] Contato nas configurações não é para ser clicável.
+- [ ] Mudar de backup a cada 1 dia para backup a cada 1 hora (backup automático para nuvem)
 
 ## Funcionalidades para v2 (apenas rascunho/ideias)
 

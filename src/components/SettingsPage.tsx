@@ -12,6 +12,7 @@ import { UpdateModal } from "./UpdateModal";
 import { OrganizationNameField } from "./OrganizationNameField";
 import { SupportContactsCard } from "./SupportContactsCard";
 import { formatBackupTimestamp } from "../utils/formatters";
+import { shouldRunCloudBackupOnProviderChange } from "../utils/rcloneProviderChange";
 import type { AppContacts, AppSettings, RcloneProvider, UpdateInfo } from "../types";
 import { isClientComputer } from "../utils/computer";
 import { getFriendlyRcloneErrorMessage } from "../utils/rcloneErrors";
@@ -180,6 +181,7 @@ export default function SettingsPage() {
     };
 
     try {
+      const previousProvider = state.settings?.rclone_config?.provider ?? null;
       await saveSettings(updatedSettings);
       await loadSettings();
 
@@ -187,6 +189,10 @@ export default function SettingsPage() {
         const snapshotCreated = await handleForceSnapshot(updatedSettings);
         if (!snapshotCreated) {
           throw new Error("SNAPSHOT_FAILED");
+        }
+
+        if (shouldRunCloudBackupOnProviderChange(previousProvider, provider)) {
+          await handleGenerateBackupCloud(updatedSettings);
         }
       }
 
@@ -470,8 +476,10 @@ export default function SettingsPage() {
     })();
   }
 
-  async function handleGenerateBackupCloud() {
-    if (settings.computer_type !== "Server") {
+  async function handleGenerateBackupCloud(settingsOverride?: AppSettings) {
+    const currentSettings = settingsOverride ?? settings;
+
+    if (currentSettings.computer_type !== "Server") {
       toast.error("Esse recurso só pode ser usado no computador principal.");
       return;
     }
@@ -481,7 +489,7 @@ export default function SettingsPage() {
       return;
     }
 
-    if (!settings.rclone_config) {
+    if (!currentSettings.rclone_config) {
       toast.error("Configure a conexão com a nuvem antes de salvar o backup.");
       return;
     }
