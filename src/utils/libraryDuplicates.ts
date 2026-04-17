@@ -139,19 +139,47 @@ export function describeScoreConflict(
   conflict: ScoreConflict,
   currentSongName?: string | null
 ): string {
-  const normalizedCurrentSongName = currentSongName
-    ? normalizeSongNameForSave(currentSongName)
-    : null;
   const normalizedConflictSongName = normalizeSongNameForSave(conflict.song.name);
 
-  if (
-    normalizedCurrentSongName &&
-    normalizedConflictSongName !== normalizedCurrentSongName
-  ) {
-    return `Essa partitura já está sendo utilizada na música ${conflict.song.name} e por isso não será salva.`;
+  if (currentSongName && normalizedConflictSongName === normalizeSongNameForSave(currentSongName)) {
+    return `Essa partitura já está sendo usada na música ${conflict.song.name} e por isso não será salva.`;
   }
 
-  return "Essa partitura já foi adicionada nesta música";
+  return `Essa partitura já está sendo utilizada na música ${conflict.song.name} e por isso não será salva.`;
+}
+
+export interface ScoreConflictSummary {
+  songName: string;
+  count: number;
+}
+
+export function summarizeScoreConflictsBySong(
+  conflicts: ScoreConflict[]
+): ScoreConflictSummary[] {
+  const grouped = new Map<string, ScoreConflictSummary>();
+
+  conflicts.forEach((conflict) => {
+    const key = normalizeSongNameForSave(conflict.song.name) ?? conflict.song.name;
+    const current = grouped.get(key);
+
+    if (current) {
+      current.count += 1;
+      return;
+    }
+
+    grouped.set(key, {
+      songName: conflict.song.name,
+      count: 1,
+    });
+  });
+
+  return Array.from(grouped.values());
+}
+
+export function formatScoreConflictSummary(summary: ScoreConflictSummary): string {
+  return summary.count === 1
+    ? `1 partitura está sendo usada na música ${summary.songName}.`
+    : `${summary.count} partituras estão sendo usadas na música ${summary.songName}.`;
 }
 
 export function describeExistingSongWarning(): string {

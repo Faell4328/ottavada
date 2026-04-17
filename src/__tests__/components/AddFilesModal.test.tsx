@@ -184,11 +184,11 @@ describe("AddFilesModal", () => {
       />
     );
 
-    const messages = screen.getAllByRole("listitem").map((element) => element.textContent?.replace(/\s+/g, " ").trim());
     const instrumentInput = screen.getAllByPlaceholderText("Nome do instrumento")[0];
 
-    expect(messages).toContain("A música CANON já existe. Altere o nome da música para continuar.");
-    expect(messages).toContain("Essa partitura já foi adicionada nesta música");
+    expect(screen.getByText("A música CANON já existe. Altere o nome da música para continuar.")).toBeInTheDocument();
+    expect(screen.getByText("1 partitura está sendo usada na música CANON.")).toBeInTheDocument();
+    expect(screen.getByText("Essa partitura já está sendo usada na música CANON e por isso não será salva.")).toBeInTheDocument();
     expect(screen.getByText("Canon - Flauta.musx")).toBeInTheDocument();
     expect(instrumentInput).toHaveAttribute("readonly");
   });
@@ -223,8 +223,8 @@ describe("AddFilesModal", () => {
       />
     );
 
-    const messages = screen.getAllByRole("listitem").map((element) => element.textContent?.replace(/\s+/g, " ").trim());
-    expect(messages).toContain("Essa partitura já está sendo utilizada na música CANON e por isso não será salva.");
+    expect(screen.getByText("1 partitura está sendo usada na música CANON.")).toBeInTheDocument();
+    expect(screen.getByText("Essa partitura já está sendo utilizada na música CANON e por isso não será salva.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Salvar" })).toBeDisabled();
   });
 

@@ -40,6 +40,13 @@ const sampleFile: IndexedFile = {
   extension: "musx",
 };
 
+const externalConflictFile: IndexedFile = {
+  path: "/music/OUTRA MUSICA - Trompete.musx",
+  name: "HINO NACIONAL",
+  instrument: "Trompete",
+  extension: "musx",
+};
+
 const duplicateBatchFiles: IndexedFile[] = [
   {
     path: "/music/HINO NACIONAL - Flauta 1.musx",
@@ -110,7 +117,7 @@ const existingSongs: SongListItem[] = [
       {
         id: "score-2",
         name: "Trompete",
-        file_path: sampleFile.path,
+        file_path: externalConflictFile.path,
         file_extension: "musx",
         updated_at: "2026-04-08T00:00:00.000Z",
         status: "main",
@@ -176,6 +183,8 @@ describe("AddScoreToSongModal", () => {
 
     expect(screen.getByText("Revise as pendências abaixo antes de salvar.")).toBeInTheDocument();
     expect(screen.queryByText(/já foram adicionadas/)).not.toBeInTheDocument();
+    expect(screen.getByText("1 partitura está sendo usada na música HINO NACIONAL.")).toBeInTheDocument();
+    expect(screen.getByText("Essa partitura já está sendo usada na música HINO NACIONAL e por isso não será salva.")).toBeInTheDocument();
     expect(screen.getByText("HINO NACIONAL - Flauta.musx")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("Nome do instrumento")).toHaveAttribute("readonly");
     expect(screen.getByRole("button", { name: "Salvar" })).toBeDisabled();
@@ -227,16 +236,17 @@ describe("AddScoreToSongModal", () => {
       <AddScoreToSongModal
         isOpen={true}
         songName="HINO NACIONAL"
-        files={[sampleFile]}
+        files={[externalConflictFile]}
         existingScores={existingScores}
         existingSongs={existingSongs}
         onClose={mockOnClose}
         onSave={mockOnSave}
       />
     );
-
-      expect(screen.getByText("Revise as pendências abaixo antes de salvar.")).toBeInTheDocument();
-      expect(screen.getByText("HINO NACIONAL - Flauta.musx")).toBeInTheDocument();
+    expect(screen.getByText("Revise as pendências abaixo antes de salvar.")).toBeInTheDocument();
+    expect(screen.getByText("1 partitura está sendo usada na música OUTRA MÚSICA.")).toBeInTheDocument();
+    expect(screen.getByText("Essa partitura já está sendo utilizada na música OUTRA MÚSICA e por isso não será salva.")).toBeInTheDocument();
+    expect(screen.getByText("OUTRA MUSICA - Trompete.musx")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Salvar" })).toBeDisabled();
   });
 

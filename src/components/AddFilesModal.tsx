@@ -14,9 +14,11 @@ import {
 } from "../utils/nameFormat";
 import { sortIndexedFileEntriesForReview } from "../utils/indexedFileReviewOrder";
 import {
-  describeExistingSongWarning,
   describeScoreConflict,
   findSongByName,
+  type ScoreConflict,
+  formatScoreConflictSummary,
+  summarizeScoreConflictsBySong,
 } from "../utils/libraryDuplicates";
 import { analyzeAddFilesReview } from "../utils/addFilesReview";
 
@@ -219,6 +221,7 @@ export function AddFilesModal({
           kind: "single";
           file: IndexedFile;
           idx: number;
+          conflict: ScoreConflict | null;
           conflictMessage: string | null;
           isLocked: boolean;
         }
@@ -258,6 +261,7 @@ export function AddFilesModal({
         kind: "single",
         file,
         idx,
+        conflict,
         conflictMessage: conflict ? describeScoreConflict(conflict, normalizedTitle) : null,
         isLocked: conflict !== null,
       });
@@ -268,6 +272,7 @@ export function AddFilesModal({
 
   const pendingIssueMessages = useMemo(() => {
     const messages: string[] = [];
+    const scoreConflicts: ScoreConflict[] = [];
 
     if (isDuplicateSong) {
       messages.push(
@@ -288,13 +293,17 @@ export function AddFilesModal({
         return;
       }
 
-      if (item.conflictMessage) {
-        messages.push(item.conflictMessage);
+      if (item.conflict) {
+        scoreConflicts.push(item.conflict);
       }
     });
 
+    summarizeScoreConflictsBySong(scoreConflicts).forEach((summary) => {
+      messages.push(formatScoreConflictSummary(summary));
+    });
+
     return messages;
-  }, [existingSong?.name, isDuplicateSong, instrumentNames, normalizedTitle, reviewItems]);
+  }, [existingSong?.name, isDuplicateSong, instrumentNames, reviewItems]);
 
   if (files.length === 0) return null;
 
@@ -366,14 +375,9 @@ export function AddFilesModal({
 
       {instrumentCount > 0 && (
         <FormField label={`Instrumentos a adicionar (${instrumentCount})`}>
-          <div className="rounded border border-[#c5cfdb] bg-white p-3 space-y-4 max-h-75 overflow-y-auto">
+          <div className="rounded border border-[#c5cfdb] bg-white p-3 space-y-4 max-h-120 overflow-y-auto">
             {reviewItems.map((item) => {
               if (item.kind === "group") {
-                const firstEntry = item.entries[0];
-                const instrumentName = firstEntry
-                  ? instrumentNames[firstEntry.idx] || firstEntry.file.instrument || item.normalizedInstrument
-                  : item.normalizedInstrument;
-
                 return (
                   <div key={item.normalizedInstrument} className="rounded border border-amber-200 bg-amber-50 p-2 space-y-3">
                     {item.entries.map(({ file, idx }, index) => {
@@ -457,6 +461,12 @@ export function AddFilesModal({
                   key={item.idx}
                   className={item.conflictMessage ? "rounded border border-amber-200 bg-amber-50 p-2 space-y-2" : "space-y-2"}
                 >
+                  {item.conflictMessage && (
+                    <p className="text-xs font-semibold text-amber-700">
+                      {item.conflictMessage}
+                    </p>
+                  )}
+
                   <div className="flex items-center justify-between">
                     <div className="min-w-0 flex-1 pr-2">
                       <p className="text-xs text-[#5d738b] font-semibold break-all whitespace-normal">
