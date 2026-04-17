@@ -1,4 +1,6 @@
 use crate::commands::common::{configure_no_window_command, run_blocking_with_store};
+#[cfg(target_os = "windows")]
+use crate::commands::common::configure_windows_command;
 use crate::domain::errors::AppError;
 use crate::infrastructure::store::SystemStore;
 use serde_json::Value;
@@ -48,6 +50,14 @@ fn get_rclone_command() -> PathBuf {
 fn new_rclone_command() -> Command {
     let mut cmd = configure_no_window_command(Command::new(get_rclone_command()));
 
+    #[cfg(target_os = "windows")]
+    {
+        cmd = configure_windows_command(
+            cmd,
+            0x0800_0000 | WINDOWS_ABOVE_NORMAL_PRIORITY_CLASS,
+        );
+    }
+
     if let Some(config_path) = RCLONE_CONFIG_PATH.get() {
         cmd.arg("--config").arg(config_path);
     }
@@ -88,6 +98,9 @@ const RCLONE_LOW_LEVEL_RETRIES: &str = "10";
 const RCLONE_CONNECT_TIMEOUT: &str = "10s";
 const RCLONE_IO_TIMEOUT: &str = "180s";
 const RCLONE_RC_TIMEOUT_MS: u64 = 3000;
+
+#[cfg(target_os = "windows")]
+const WINDOWS_ABOVE_NORMAL_PRIORITY_CLASS: u32 = 0x0000_8000;
 
 fn active_rclone_pids() -> &'static Mutex<HashSet<u32>> {
     static ACTIVE_RCLONE_PIDS: OnceLock<Mutex<HashSet<u32>>> = OnceLock::new();

@@ -35,13 +35,18 @@ where
     .map_err(|e| AppError::Generic(format!("{}: {}", error_context, e)))?
 }
 
+#[cfg(target_os = "windows")]
+pub fn configure_windows_command(cmd: Command, creation_flags: u32) -> Command {
+    let mut cmd = cmd;
+    cmd.creation_flags(creation_flags);
+    cmd
+}
+
 pub fn configure_no_window_command(cmd: Command) -> Command {
     #[cfg(target_os = "windows")]
     {
-        let mut cmd = cmd;
         // CREATE_NO_WINDOW = 0x08000000
-        cmd.creation_flags(0x08000000);
-        return cmd;
+        return configure_windows_command(cmd, 0x08000000);
     }
 
     #[cfg(not(target_os = "windows"))]
