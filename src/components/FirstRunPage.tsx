@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CheckCircle, Loader2, Music } from "lucide-react";
+import { CheckCircle, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 
 import * as api from "../api/commands";
@@ -8,7 +8,7 @@ import { useRcloneTest } from "../hooks/useRcloneTest";
 import { getFriendlyRcloneErrorMessage } from "../utils/rcloneErrors";
 import type { RcloneProvider } from "../types";
 
-type Step = "name" | "type" | "rclone-setup" | "confirm";
+type Step = "intro" | "name" | "type" | "rclone-setup" | "confirm";
 
 function getRcloneProviderLabel(provider: RcloneProvider) {
   return provider === "koofr" ? "Koofr" : "Google Drive";
@@ -20,7 +20,7 @@ export default function FirstRunPage() {
   const [organizationName, setOrganizationName] = useState("");
   const [computerName, setComputerName] = useState("");
   const [computerType, setComputerType] = useState<"Server" | "Client" | "">("");
-  const [step, setStep] = useState<Step>("type");
+  const [step, setStep] = useState<Step>("intro");
   const [rcloneProvider, setRcloneProvider] = useState<RcloneProvider>("koofr");
   const [rcloneEmail, setRcloneEmail] = useState("");
   const [rcloneAppPassword, setRcloneAppPassword] = useState("");
@@ -159,24 +159,51 @@ export default function FirstRunPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-[#33465d] to-[#5d6d82]">
       <div className="w-full max-w-2xl rounded-xl bg-white p-8 shadow-2xl">
-        <div className="mb-8 flex flex-col items-center">
-          <div className="mb-2 flex items-center gap-3">
-            <Music className="h-10 w-10 text-[#4f84d7]" />
+        {step !== "intro" && (
+          <div className="mb-8 flex flex-col items-center">
+            <img
+              src="/icon.png"
+              alt="Score Maestro"
+              className="mb-3 h-16 w-16 rounded-2xl object-cover"
+            />
             <h1 className="text-2xl font-bold text-[#2f4259]">Score Maestro</h1>
+            <p className="text-center text-sm text-[#6b849e]">
+              Organize suas partituras com segurança, clareza e menos retrabalho.
+            </p>
           </div>
-          <p className="text-center text-sm text-[#6b849e]">
-            Organize suas partituras com versionamento e backups automáticos
-          </p>
-        </div>
+        )}
+
+        {step === "intro" && (
+          <>
+            <div className="mb-6 overflow-hidden rounded-xl border border-[#c5cfdb] bg-[#f8fafd]">
+              <video
+                src="/intro.mp4"
+                autoPlay
+                muted
+                playsInline
+                controls={false}
+                className="h-auto w-full bg-black"
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setStep("type")}
+              className="h-11 w-full rounded-lg border-0 bg-[#4f84d7] text-sm font-bold text-white transition-colors hover:bg-[#3d6fb8] cursor-pointer"
+            >
+              Avançar
+            </button>
+          </>
+        )}
 
         {step === "type" && (
           <>
             <h2 className="mb-4 text-lg font-semibold text-[#34485d]">
-              Qual é o tipo de computador?
+              Qual tipo de computador você está configurando?
             </h2>
 
             <p className="mb-6 text-sm text-[#6b849e]">
-              Escolha o tipo que se aplica ao seu computador:
+              Isso define como este computador vai funcionar dentro do Score Maestro.
             </p>
 
             <div
@@ -200,7 +227,7 @@ export default function FirstRunPage() {
                 <div>
                   <h3 className="mb-1 font-semibold text-[#34485d]">Servidor</h3>
                   <p className="text-xs text-[#6b849e]">
-                    Computador mestre. Mantém todas as partituras indexadas localmente, detecta mudanças e é referência para sincronização com outros computadores.
+                    Use no computador principal, onde você organiza, revisa e confirma as alterações. Só pode existir um servidor.
                   </p>
                 </div>
               </div>
@@ -227,7 +254,7 @@ export default function FirstRunPage() {
                 <div>
                   <h3 className="mb-1 font-semibold text-[#34485d]">Cliente</h3>
                   <p className="text-xs text-[#6b849e]">
-                    Computador secundário. Não indexa o diretório local, consulta partituras na versão principal e pode propor mudanças (que requerem aprovação do servidor).
+                    Use em computadores de consulta, para visualizar e copiar partituras com menos responsabilidades. Pode existir mais de um cliente.
                   </p>
                 </div>
               </div>
@@ -245,21 +272,11 @@ export default function FirstRunPage() {
 
         {step === "name" && (
           <>
-            <h2 className="mb-4 text-lg font-semibold text-[#34485d]">Configure seu computador</h2>
+            <h2 className="mb-4 text-lg font-semibold text-[#34485d]">Configure este computador</h2>
 
-            <div className="mb-6">
-              <label className="mb-1.5 block text-sm font-semibold text-[#34485d]">
-                ID do computador
-              </label>
-              <input
-                value={computerId}
-                disabled
-                className="h-10 w-full cursor-not-allowed rounded-lg border border-[#c5cfdb] bg-[#f0f3f8] px-3 font-mono text-sm text-[#4d6075] outline-none"
-              />
-              <p className="mt-1 text-xs text-[#8b9db2]">
-                Identificador único gerado automaticamente. Será usado para sincronizar dados entre computadores.
-              </p>
-            </div>
+            <p className="mb-6 text-sm text-[#6b849e]">
+              Dê nomes simples e fáceis de reconhecer. Você pode mudar isso depois nas configurações.
+            </p>
 
             <div className="mb-6">
               <label className="mb-1.5 block text-sm font-semibold text-[#34485d]">
@@ -269,28 +286,21 @@ export default function FirstRunPage() {
                 value={computerName}
                 onChange={(e) => setComputerName(e.target.value)}
                 className="h-10 w-full rounded-lg border border-[#c5cfdb] bg-[#f8fafd] px-3 text-sm text-[#4d6075] outline-none focus:border-[#7ba0d4] focus:ring-2 focus:ring-[#7ba0d4]/20"
-                placeholder="Ex: Estúdio, Home, Sala Ensaio..."
+                placeholder="Ex: Mesa do maestro, sala de ensaio, igreja..."
               />
-              <p className="mt-1 text-xs text-[#8b9db2]">
-                Nome descritivo para este computador. Você pode alterá-lo depois nas configurações.
-              </p>
             </div>
 
             <div className="mb-6">
               <label className="mb-1.5 block text-sm font-semibold text-[#34485d]">
-                Nome da organização ou instituição
+                Organização ou instituição
               </label>
               <input
                 value={organizationName}
                 onChange={(e) => setOrganizationName(e.target.value)}
                 className="h-10 w-full rounded-lg border border-[#c5cfdb] bg-[#f8fafd] px-3 text-sm text-[#4d6075] outline-none focus:border-[#7ba0d4] focus:ring-2 focus:ring-[#7ba0d4]/20"
-                placeholder="Ex: Orquestra, Igreja, Ministério..."
+                placeholder="Ex: Orquestra, igreja, ministério..."
               />
-              <p className="mt-1 text-xs text-[#8b9db2]">
-                {computerType === "Server"
-                  ? "Usado no computador principal e pode ser alterado depois nas configurações."
-                  : "Opcional no cliente, mas útil para identificar a organização."}
-              </p>
+
             </div>
 
             <button
@@ -323,9 +333,6 @@ export default function FirstRunPage() {
               <div className="mb-3">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8b9db2]">
                   Provedor de nuvem
-                </p>
-                <p className="mt-1 text-xs text-[#6b849e]">
-                  Koofr é o recomendado para este fluxo inicial. Google Drive abre o navegador para autenticação.
                 </p>
               </div>
 
@@ -487,11 +494,6 @@ export default function FirstRunPage() {
 
             <div className="mb-6 space-y-4">
               <div className="rounded-lg border border-[#c5cfdb] bg-[#f8fafd] p-4">
-                <p className="mb-1 text-xs text-[#8b9db2]">ID do computador</p>
-                <p className="text-sm font-mono text-[#34485d]">{computerId}</p>
-              </div>
-
-              <div className="rounded-lg border border-[#c5cfdb] bg-[#f8fafd] p-4">
                 <p className="mb-1 text-xs text-[#8b9db2]">Nome do computador</p>
                 <p className="text-sm font-semibold text-[#34485d]">
                   {computerName || "(não preenchido)"}
@@ -499,7 +501,7 @@ export default function FirstRunPage() {
               </div>
 
               <div className="rounded-lg border border-[#c5cfdb] bg-[#f8fafd] p-4">
-                <p className="mb-1 text-xs text-[#8b9db2]">Nome da organização ou instituição</p>
+                <p className="mb-1 text-xs text-[#8b9db2]">Organização ou instituição</p>
                 <p className="text-sm font-semibold text-[#34485d]">
                   {organizationName || "(não preenchido)"}
                 </p>

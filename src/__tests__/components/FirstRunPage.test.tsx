@@ -28,32 +28,48 @@ vi.mock("react-hot-toast", () => ({
 }));
 
 describe("FirstRunPage", () => {
-  it("shows computer type before the name and organization for server", async () => {
+  it("starts with the intro video and moves to computer type", async () => {
     renderWithAppProvider(<FirstRunPage />);
 
-    expect(screen.getByText("Qual é o tipo de computador?")).toBeInTheDocument();
-    expect(screen.queryByPlaceholderText("Ex: Estúdio, Home, Sala Ensaio...")).not.toBeInTheDocument();
+    expect(screen.getByText("Antes de começar")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Score Maestro" })).toBeInTheDocument();
+    expect(screen.getByText("Avançar")).toBeInTheDocument();
 
+    fireEvent.click(screen.getByText("Avançar"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Qual tipo de computador você está configurando?")).toBeInTheDocument();
+    });
+  });
+
+  it("shows the name and organization fields for server without exposing the computer id", async () => {
+    renderWithAppProvider(<FirstRunPage />);
+
+    fireEvent.click(screen.getByText("Avançar"));
     fireEvent.click(screen.getByText("Servidor"));
     fireEvent.click(screen.getByText("Próximo"));
 
     await waitFor(() => {
-      expect(screen.getByPlaceholderText("Ex: Estúdio, Home, Sala Ensaio...")).toBeInTheDocument();
+      expect(screen.getByText("Configure este computador")).toBeInTheDocument();
     });
 
-    expect(screen.getByPlaceholderText("Ex: Orquestra, Igreja, Ministério...")).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText("Ex: Estúdio, Home, Sala Ensaio...")).not.toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Ex: Mesa do maestro, sala de ensaio, igreja...")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Ex: Orquestra, igreja, ministério...")).toBeInTheDocument();
+    expect(screen.queryByText("ID do computador")).not.toBeInTheDocument();
   });
 
-  it("shows organization for client", async () => {
+  it("shows the client copy and organization field", async () => {
     renderWithAppProvider(<FirstRunPage />);
 
+    fireEvent.click(screen.getByText("Avançar"));
     fireEvent.click(screen.getByText("Cliente"));
     fireEvent.click(screen.getByText("Próximo"));
 
     await waitFor(() => {
-      expect(screen.getByPlaceholderText("Ex: Estúdio, Home, Sala Ensaio...")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("Ex: Mesa do maestro, sala de ensaio, igreja...")).toBeInTheDocument();
     });
 
-    expect(screen.getByPlaceholderText("Ex: Orquestra, Igreja, Ministério...")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Ex: Orquestra, igreja, ministério...")).toBeInTheDocument();
   });
 });

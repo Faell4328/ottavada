@@ -401,7 +401,13 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [x] Melhorar as mensagens de toast, estão muitos estranhas ou como o sistema fosse uma pessoa fazendo algo, é preciso melhorar.
 - [x] "Consultar alterações" (cliente) está dando 'tiltes', subindo e aparendo na barra de tarefas do windows, tando também uma leve trava (como se fechase e abrise novamente.)
 - [x] Adicionar um feedback visual, mostrando ao usuário que está sendo processado (ex: ao clicar em "forçar geração de snapshot", "importar backup local", "importa backup da nuvem"). Atualmente, fica muito tempo sem feedback.
-- [ ] Corrigir inconsistências no front.
+- [x] Corrigir inconsistências no front
+	- [x] Melhore todos os textos do "primeiro acesso", tenha em mente que será pessoas leigas que irá utilizar.
+	- [x] Atualizar o texto do "Qual tipo de computador?", está desatualizado.
+	- [x] Trocar o "Score Maestro" e a nota genérica pelo "public/icon.png".
+	- [x] No "Configure seu computador" não é necessário mostrar ao usuário o ID do computador.
+	- [x] Também no "Configure seu computador" as descrições do campos estão ruins (label abaixo do input), melhore.
+- [x] Adicione o vídeo "intro.mp4" (antes dos modal de primeiro acesso), com um botão de "Avançar", para ir ao primerio acesso. Esse vídeo deve aparecer apenas antes das configurações de primeiro acesso, como autoplay, mutado, sem menu do player visível.
 - [ ] Criar diretório especifico para os testes (para não limpar a nuvem no teste).
 - [ ] Verificar se todos os erros estão sendo enviados para a telemetria (isso inclui o erro de não conseguir enviar a telemetria).
 - [ ] Criar tela de apresentação no primeiro acesso, objetivo é apresentar o software e mostrar o que ele pode fazer.
