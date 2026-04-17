@@ -78,7 +78,11 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(function Son
           }
         }}
         id={`song-row-${song.id}`}
-        style={{ scrollMarginTop: "4.75rem" }}
+        style={{
+          scrollMarginTop: "4.75rem",
+          contentVisibility: "auto",
+          containIntrinsicSize: "44px",
+        }}
         className={`border-b border-[#d8e0ea] text-sm text-[#344b61] ${
           isExpanded ? "bg-[#eef3f9] font-bold" : "hover:bg-[#f2f5fa]"
         } cursor-pointer transition-colors`}

@@ -1,4 +1,12 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { Search, FileMusic } from "lucide-react";
 import { open } from "@tauri-apps/plugin-dialog";
 import toast from "react-hot-toast";
@@ -45,6 +53,7 @@ export default function SongsList() {
   const [isAddFileModalOpen, setIsAddFileModalOpen] = useState(false);
   const [scoresBySongId, setScoresBySongId] = useState<Record<string, ScoreListItem[]>>({});
   const [loadingScoresBySongId, setLoadingScoresBySongId] = useState<Record<string, boolean>>({});
+  const [isSearchPending, startSearchTransition] = useTransition();
   const isSyncLocked =
     state.isScanningFiles ||
     state.rcloneProgress.direction !== null ||
@@ -53,14 +62,15 @@ export default function SongsList() {
     () => normalizeSearchText(state.searchQuery),
     [state.searchQuery]
   );
+  const deferredSearchQuery = useDeferredValue(normalizedSearchQuery);
 
   const displayedSongs = useMemo(() => {
-    if (!normalizedSearchQuery) {
+    if (!deferredSearchQuery) {
       return state.songs;
     }
 
-    return state.songs.filter((song) => songMatchesSearchQuery(song, normalizedSearchQuery));
-  }, [normalizedSearchQuery, state.songs]);
+    return state.songs.filter((song) => songMatchesSearchQuery(song, deferredSearchQuery));
+  }, [deferredSearchQuery, state.songs]);
 
   const closeAllMenus = useCallback(() => setOpenMenuId(null), []);
 
@@ -295,19 +305,9 @@ export default function SongsList() {
     }
   }
 
-  const sortedScoresBySongId = useMemo(() => {
-    const map = new Map<string, ScoreListItem[]>();
-
-    for (const [songId, scores] of Object.entries(scoresBySongId)) {
-      map.set(songId, [...scores]);
-    }
-
-    return map;
-  }, [scoresBySongId]);
-
   const getDisplayedScoresForSong = useCallback(
     (song: SongListItem) => {
-      const cachedScores = sortedScoresBySongId.get(song.id);
+      const cachedScores = scoresBySongId[song.id];
 
       if (cachedScores) {
         return cachedScores;
@@ -315,7 +315,7 @@ export default function SongsList() {
 
       return [...song.scores].sort((a, b) => compareInstrumentNames(a.name, b.name));
     },
-    [sortedScoresBySongId]
+    [scoresBySongId]
   );
 
   const closeAddFileModal = () => {
@@ -340,12 +340,22 @@ export default function SongsList() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#8694a6]" />
           <input
             value={state.searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              const nextValue = e.target.value;
+              startSearchTransition(() => {
+                setSearchQuery(nextValue);
+              });
+            }}
             className="h-9 w-full rounded border border-[#c5cfdb] bg-white pl-9 pr-3 text-sm text-[#4d6075] placeholder-[#8e9fb3] outline-none focus:border-[#7ba0d4] focus:ring-1 focus:ring-[#7ba0d4]/30"
             placeholder="Filtrar músicas..."
             aria-label="Filtrar músicas"
             autoComplete="off"
           />
+          {isSearchPending && (
+            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-[#8e9fb3]">
+              filtrando
+            </span>
+          )}
         </div>
       </div>
 
@@ -376,7 +386,7 @@ export default function SongsList() {
                   const shouldShowLoadingRow =
                     state.selectedSong?.id === song.id &&
                     loadingScoresBySongId[song.id] &&
-                    !sortedScoresBySongId.has(song.id) &&
+                    !scoresBySongId[song.id] &&
                     song.scores.length === 0;
 
                   return (

@@ -114,6 +114,10 @@ function ScoreRow({
             ? "Arquivo não encontrado"
             : "Duplo clique para abrir"
         }
+        style={{
+          contentVisibility: "auto",
+          containIntrinsicSize: "34px",
+        }}
         className={`border-b border-[#d8e0ea] text-sm text-[#4a6278] cursor-pointer transition-colors ${isOpening ? "opacity-60" : ""}`}
       >
         <td className="px-3.5 py-1.5 pl-9">

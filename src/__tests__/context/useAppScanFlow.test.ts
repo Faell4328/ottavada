@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest";
 
-import { shouldUseFullCloudSync } from "../../context/useAppScanFlow";
+import {
+  shouldDispatchRcloneProgressUpdate,
+  shouldUseFullCloudSync,
+} from "../../context/useAppScanFlow";
 
 describe("shouldUseFullCloudSync", () => {
   it("forces a full sync when requested manually", () => {
@@ -36,6 +39,72 @@ describe("shouldUseFullCloudSync", () => {
         hasPendingChanges: false,
         hasDetectedFileChanges: false,
       })
+    ).toBe(true);
+  });
+});
+
+describe("shouldDispatchRcloneProgressUpdate", () => {
+  it("dispatches the first snapshot", () => {
+    expect(
+      shouldDispatchRcloneProgressUpdate(null, {
+        active: true,
+        direction: "upload",
+        bytes: 1024,
+        totalBytes: 10_000,
+        percentage: 10,
+        speedBytesPerSec: 1000,
+        etaSeconds: 20,
+      })
+    ).toBe(true);
+  });
+
+  it("skips tiny changes that do not affect the UI meaningfully", () => {
+    expect(
+      shouldDispatchRcloneProgressUpdate(
+        {
+          active: true,
+          direction: "upload",
+          bytes: 100_000,
+          totalBytes: 10_000,
+          percentage: 10,
+          speedBytesPerSec: 63_000,
+          etaSeconds: 20,
+        },
+        {
+          active: true,
+          direction: "upload",
+          bytes: 120_000,
+          totalBytes: 10_000,
+          percentage: 10.4,
+          speedBytesPerSec: 63_500,
+          etaSeconds: 20,
+        }
+      )
+    ).toBe(false);
+  });
+
+  it("dispatches when visible progress changes", () => {
+    expect(
+      shouldDispatchRcloneProgressUpdate(
+        {
+          active: true,
+          direction: "download",
+          bytes: 1_000_000,
+          totalBytes: 10_000_000,
+          percentage: 10,
+          speedBytesPerSec: 128_000,
+          etaSeconds: 30,
+        },
+        {
+          active: true,
+          direction: "download",
+          bytes: 1_500_000,
+          totalBytes: 10_000_000,
+          percentage: 15,
+          speedBytesPerSec: 256_000,
+          etaSeconds: 25,
+        }
+      )
     ).toBe(true);
   });
 });

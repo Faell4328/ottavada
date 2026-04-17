@@ -15,7 +15,12 @@
         "title": "Score Maestro",
         "width": 800,
         "height": 600,
-        "maximized": true
+        "maximized": true,
+        "backgroundColor": "#d8dee8",
+        "scrollBarStyle": "fluentOverlay",
+        "zoomHotkeysEnabled": false,
+        "devtools": false,
+        "browserExtensionsEnabled": false
       }
     ],
     "security": {

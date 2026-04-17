@@ -13,7 +13,7 @@ vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(async (command: string) => {
     switch (command) {
       case "get_all_song_summaries":
-        return [sampleSong];
+        return [sampleSong, sampleSong2];
       case "get_scores_for_song":
         return new Promise<ScoreListItem[]>((resolve) => {
           resolveScores = resolve;
@@ -38,6 +38,17 @@ vi.mock("react-hot-toast", () => ({
 const sampleSong: SongListItem = {
   id: "song-1",
   name: "CANON",
+  composer: null,
+  arranger: null,
+  updated_at: "2026-04-16T00:00:00.000Z",
+  is_favorite: false,
+  category_ids: [],
+  scores: [],
+};
+
+const sampleSong2: SongListItem = {
+  id: "song-2",
+  name: "AMAZING GRACE",
   composer: null,
   arranger: null,
   updated_at: "2026-04-16T00:00:00.000Z",
@@ -118,5 +129,18 @@ describe("SongsList", () => {
       block: "start",
       inline: "nearest",
     });
+  });
+
+  it("filters the list while typing", async () => {
+    renderWithAppProvider(<SongsListHarness />);
+
+    expect(await screen.findByText("CANON")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Filtrar músicas"), {
+      target: { value: "amazing" },
+    });
+
+    expect(await screen.findByText("AMAZING GRACE")).toBeInTheDocument();
+    expect(screen.queryByText("CANON")).not.toBeInTheDocument();
   });
 });

@@ -21,7 +21,45 @@ type ScanFilesForChangesOptions =
       forceCloudSync?: boolean;
     };
 
+export interface RcloneProgressSnapshot {
+  active: boolean;
+  direction: "upload" | "download" | null;
+  bytes: number;
+  totalBytes: number | null;
+  percentage: number | null;
+  speedBytesPerSec: number;
+  etaSeconds: number | null;
+}
+
 const SNAPSHOT_AUTO_THRESHOLD_BYTES = 2 * 1024 * 1024;
+
+function normalizeRcloneProgressForUi(progress: RcloneProgressSnapshot) {
+  return {
+    active: progress.active,
+    direction: progress.direction,
+    bytesBucket: Math.floor(Math.max(progress.bytes, 0) / 256_000),
+    totalBytes: progress.totalBytes,
+    percentageBucket: progress.percentage === null ? null : Math.floor(progress.percentage),
+    speedBucket: Math.floor(Math.max(progress.speedBytesPerSec, 0) / 64_000),
+    etaSeconds: progress.etaSeconds,
+  };
+}
+
+export function shouldDispatchRcloneProgressUpdate(
+  previous: RcloneProgressSnapshot | null,
+  next: RcloneProgressSnapshot
+) {
+  if (previous === null) {
+    return true;
+  }
+
+  const normalizedPrevious = normalizeRcloneProgressForUi(previous);
+  const normalizedNext = normalizeRcloneProgressForUi(next);
+
+  return Object.entries(normalizedPrevious).some(
+    ([key, value]) => normalizedNext[key as keyof typeof normalizedNext] !== value
+  );
+}
 
 export function shouldUseFullCloudSync(params: {
   forceCloudSync: boolean;
@@ -57,6 +95,7 @@ export function useAppScanFlow({
 }: UseAppScanFlowParams) {
   const scanResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scanInProgressRef = useRef(false);
+  const lastRcloneProgressRef = useRef<RcloneProgressSnapshot | null>(null);
 
   const clearScanTimer = useCallback(() => {
     if (scanResetTimerRef.current !== null) {
@@ -89,8 +128,18 @@ export function useAppScanFlow({
     };
   }, [clearScanTimer]);
 
+  const dispatchRcloneProgress = useCallback((progress: RcloneProgressSnapshot) => {
+    if (!shouldDispatchRcloneProgressUpdate(lastRcloneProgressRef.current, progress)) {
+      return;
+    }
+
+    lastRcloneProgressRef.current = progress;
+    dispatch({ type: "SET_RCLONE_PROGRESS", payload: progress });
+  }, [dispatch]);
+
   const runSyncWithProgress = useCallback(async (direction: "upload" | "download") => {
     let stopPolling = false;
+    lastRcloneProgressRef.current = null;
 
     dispatch({
       type: "SET_RCLONE_PROGRESS",
@@ -112,17 +161,14 @@ export function useAppScanFlow({
         try {
           const stats = await api.getRcloneRcStats();
           if (stats) {
-            dispatch({
-              type: "SET_RCLONE_PROGRESS",
-              payload: {
-                active: stats.active,
-                direction,
-                bytes: Math.max(stats.bytes, 0),
-                totalBytes: stats.total_bytes,
-                percentage: stats.percentage !== null ? Math.round(stats.percentage) : null,
-                speedBytesPerSec: stats.speed_bytes_per_sec,
-                etaSeconds: stats.eta_seconds,
-              },
+            dispatchRcloneProgress({
+              active: stats.active,
+              direction,
+              bytes: Math.max(stats.bytes, 0),
+              totalBytes: stats.total_bytes,
+              percentage: stats.percentage !== null ? Math.round(stats.percentage) : null,
+              speedBytesPerSec: stats.speed_bytes_per_sec,
+              etaSeconds: stats.eta_seconds,
             });
           }
         } catch {
@@ -137,13 +183,15 @@ export function useAppScanFlow({
       return await syncPromise;
     } finally {
       stopPolling = true;
+      lastRcloneProgressRef.current = null;
       dispatch({ type: "RESET_RCLONE_PROGRESS" });
       void pollingPromise.catch(() => undefined);
     }
-  }, [dispatch]);
+  }, [dispatch, dispatchRcloneProgress]);
 
   const runSelectiveUploadWithProgress = useCallback(async (relativePaths: string[]) => {
     let stopPolling = false;
+    lastRcloneProgressRef.current = null;
 
     dispatch({
       type: "SET_RCLONE_PROGRESS",
@@ -165,17 +213,14 @@ export function useAppScanFlow({
         try {
           const stats = await api.getRcloneRcStats();
           if (stats) {
-            dispatch({
-              type: "SET_RCLONE_PROGRESS",
-              payload: {
-                active: stats.active,
-                direction: "upload",
-                bytes: Math.max(stats.bytes, 0),
-                totalBytes: stats.total_bytes,
-                percentage: stats.percentage !== null ? Math.round(stats.percentage) : null,
-                speedBytesPerSec: stats.speed_bytes_per_sec,
-                etaSeconds: stats.eta_seconds,
-              },
+            dispatchRcloneProgress({
+              active: stats.active,
+              direction: "upload",
+              bytes: Math.max(stats.bytes, 0),
+              totalBytes: stats.total_bytes,
+              percentage: stats.percentage !== null ? Math.round(stats.percentage) : null,
+              speedBytesPerSec: stats.speed_bytes_per_sec,
+              etaSeconds: stats.eta_seconds,
             });
           }
         } catch {
@@ -190,10 +235,11 @@ export function useAppScanFlow({
       return await uploadPromise;
     } finally {
       stopPolling = true;
+      lastRcloneProgressRef.current = null;
       dispatch({ type: "RESET_RCLONE_PROGRESS" });
       void pollingPromise.catch(() => undefined);
     }
-  }, [dispatch]);
+  }, [dispatch, dispatchRcloneProgress]);
 
   const scanFilesForChanges = useCallback(async (options: ScanFilesForChangesOptions = false) => {
     const isAutomatic =
