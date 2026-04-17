@@ -397,6 +397,7 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [x] Remover mensagem no modal de revisão (ao indexar diretório ou adicionar arquivo(s)). A mensagem é "x partitura(s) já foram adicionadas".
 - [x] Melhore as mensagens do modal de revisão (a que vai ficar), a que fica acima do "Nome da Musica".
 - [x] Na mensagem "Essa partitura possui o mesmo nome de outra partitura..." coloca ambas em uma div com uma borda (mostrando quais sãos)
+- [x] Arrumar bug: ao editar algo no meio do texto com minúsculo, o marcado do texto vai para o final. Isso não ocorre se tiver digitando em maiúsculo.
 - [ ] Corrigir inconsistências no front.
 - [ ] Criar diretório especifico para os testes (para não limpar a nuvem no teste).
 - [ ] Verificar se todos os erros estão sendo enviados para a telemetria (isso inclui o erro de não conseguir enviar a telemetria).

@@ -1,3 +1,5 @@
+import { useLayoutEffect, useRef } from "react";
+
 interface FormFieldProps {
   label: string;
   required?: boolean;
@@ -39,11 +41,61 @@ export function TextInput({
   onFocus,
   onBlur,
 }: TextInputProps) {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const selectionRef = useRef<{ start: number; end: number; value: string } | null>(null);
+
+  const rememberSelection = () => {
+    const input = inputRef.current;
+
+    if (!input) {
+      return;
+    }
+
+    selectionRef.current = {
+      start: input.selectionStart ?? input.value.length,
+      end: input.selectionEnd ?? input.value.length,
+      value: input.value,
+    };
+  };
+
+  useLayoutEffect(() => {
+    const input = inputRef.current;
+    const selection = selectionRef.current;
+
+    if (!input || !selection) {
+      return;
+    }
+
+    if (document.activeElement !== input) {
+      selectionRef.current = null;
+      return;
+    }
+
+    const previousSelectionLength = Math.max(selection.end - selection.start, 0);
+    const insertedTextLength = Math.max(
+      input.value.length - (selection.value.length - previousSelectionLength),
+      0
+    );
+    const nextCaretPosition = selection.start + insertedTextLength;
+
+    input.setSelectionRange(nextCaretPosition, nextCaretPosition);
+    selectionRef.current = null;
+  }, [value]);
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    rememberSelection();
+    onKeyDown?.(event);
+  };
+
   return (
     <input
+      ref={inputRef}
       type="text"
       value={value}
-      onChange={(e) => onChange(e.target.value)}
+      onChange={(e) => {
+        onChange(e.target.value);
+      }}
+      onKeyDown={handleKeyDown}
       className={`w-full rounded border border-[#c5cfdb] px-3 py-2 text-sm text-[#344b61] placeholder-[#a3b5c7] outline-none focus:border-[#7ba0d4] focus:ring-1 focus:ring-[#7ba0d4]/30 ${
         readOnly ? "bg-[#f2f5fa] text-[#5d738b]" : "bg-white"
       }`}
@@ -51,7 +103,6 @@ export function TextInput({
       disabled={disabled}
       readOnly={readOnly}
       autoFocus={autoFocus}
-      onKeyDown={onKeyDown}
       onFocus={onFocus}
       onBlur={onBlur}
     />
