@@ -410,9 +410,6 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [x] Adicione o vídeo "intro.mp4" (antes dos modal de primeiro acesso), com um botão de "Avançar", para ir ao primerio acesso. Esse vídeo deve aparecer apenas antes das configurações de primeiro acesso, como autoplay, mutado, sem menu do player visível.
 - [x] Verificar se todos os erros estão sendo enviados para a telemetria (isso inclui o erro de não conseguir enviar a telemetria).
 - [x] Adicionar uma forma para os usuários entrarem em contato (email e telefone).
-- [ ] Adicionar instruções nas configurações, informando o que cada um faz.
-	- Deve ter uma estilização diferente, para que o usuário entenda que é uma explicação.
-- [ ] Montar um manual para o usuário, explicando cada detalhe do software para que ele consiga utilizar com o máximo de tranquilidade.
 
 ## Funcionalidades para v2 (apenas rascunho/ideias)
 

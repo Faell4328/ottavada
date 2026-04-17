@@ -1,7 +1,7 @@
 {
   "name": "score-maestro",
   "private": true,
-  "version": "0.13.16",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
