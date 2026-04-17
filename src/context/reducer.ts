@@ -38,6 +38,8 @@ export interface State {
     detail: string | null;
     stepCurrent: number | null;
     stepTotal: number | null;
+    itemCurrent: number | null;
+    itemTotal: number | null;
   };
 }
 
@@ -71,6 +73,8 @@ export const initialState: State = {
     detail: null,
     stepCurrent: null,
     stepTotal: null,
+    itemCurrent: null,
+    itemTotal: null,
   },
 };
 
@@ -113,6 +117,8 @@ export type Action =
         detail?: string | null;
         stepCurrent?: number | null;
         stepTotal?: number | null;
+        itemCurrent?: number | null;
+        itemTotal?: number | null;
       };
     }
   | { type: "RESET_OPERATION_STATUS" };
@@ -203,6 +209,8 @@ export function reducer(state: State, action: Action): State {
           detail: action.payload.detail ?? null,
           stepCurrent: action.payload.stepCurrent ?? null,
           stepTotal: action.payload.stepTotal ?? null,
+          itemCurrent: action.payload.itemCurrent ?? null,
+          itemTotal: action.payload.itemTotal ?? null,
         },
       };
     case "RESET_OPERATION_STATUS":
@@ -213,6 +221,8 @@ export function reducer(state: State, action: Action): State {
           detail: null,
           stepCurrent: null,
           stepTotal: null,
+          itemCurrent: null,
+          itemTotal: null,
         },
       };
     default:

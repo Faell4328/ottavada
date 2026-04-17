@@ -12,6 +12,8 @@ export interface AppContextValue {
     detail?: string | null;
     stepCurrent?: number | null;
     stepTotal?: number | null;
+    itemCurrent?: number | null;
+    itemTotal?: number | null;
   }) => void;
   resetOperationStatus: () => void;
   setSidebarView: (view: SidebarView) => void;

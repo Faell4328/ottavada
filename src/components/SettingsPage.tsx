@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, LoaderCircle } from "lucide-react";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import toast from "react-hot-toast";
 import { useAppState } from "../context/AppContext";
@@ -335,6 +335,12 @@ export default function SettingsPage() {
     }
 
     setIsExportingBackup(true);
+    setOperationStatus({
+      title: "Exportando backup local",
+      detail: "Gerando o arquivo de backup para salvar no computador",
+      stepCurrent: 1,
+      stepTotal: 1,
+    });
     try {
       const summary = await api.exportBackupFile(String(selectedPath));
       toast.success(
@@ -344,6 +350,7 @@ export default function SettingsPage() {
       toast.error("Não foi possível salvar o backup local.");
     } finally {
       setIsExportingBackup(false);
+      resetOperationStatus();
     }
   }
 
@@ -370,6 +377,12 @@ export default function SettingsPage() {
     }
 
     setIsImportingBackup(true);
+    setOperationStatus({
+      title: "Importando backup local",
+      detail: "Lendo o arquivo e restaurando o banco de dados",
+      stepCurrent: 1,
+      stepTotal: 1,
+    });
     navigate("/");
     const loadingToastId = toast.loading("Importando o backup local...");
 
@@ -390,6 +403,7 @@ export default function SettingsPage() {
       } finally {
         toast.dismiss(loadingToastId);
         setIsImportingBackup(false);
+        resetOperationStatus();
       }
     })();
   }
@@ -411,6 +425,12 @@ export default function SettingsPage() {
     }
 
     setIsImportingBackupCloud(true);
+    setOperationStatus({
+      title: "Importando backup da nuvem",
+      detail: "Baixando e aplicando o backup mais recente",
+      stepCurrent: 1,
+      stepTotal: 1,
+    });
     navigate("/");
     const loadingToastId = toast.loading("Importando o backup da nuvem...");
 
@@ -432,6 +452,7 @@ export default function SettingsPage() {
       } finally {
         toast.dismiss(loadingToastId);
         setIsImportingBackupCloud(false);
+        resetOperationStatus();
       }
 
       if (shouldRunForcedSnapshot) {
@@ -458,6 +479,12 @@ export default function SettingsPage() {
 
     navigate("/");
     setIsGeneratingBackupCloud(true);
+    setOperationStatus({
+      title: "Gerando backup na nuvem",
+      detail: "Compactando e enviando o arquivo de backup",
+      stepCurrent: 1,
+      stepTotal: 1,
+    });
     try {
       const summary = await api.forceGenerateBackupCloudFile();
       await loadSettings();
@@ -471,6 +498,7 @@ export default function SettingsPage() {
       toast.error("Não foi possível salvar o backup na nuvem.");
     } finally {
       setIsGeneratingBackupCloud(false);
+      resetOperationStatus();
     }
   }
 
@@ -553,6 +581,22 @@ export default function SettingsPage() {
       </div>
 
       <div className="flex-1 p-6 max-w-2xl mx-auto w-full">
+        {isSettingsOperationInProgress && (
+          <div className="mb-6 rounded-xl border border-[#b7d1f0] bg-[#eef6ff] px-4 py-3 shadow-sm">
+            <div className="flex items-start gap-3">
+              <LoaderCircle className="mt-0.5 h-4 w-4 animate-spin text-[#2f7fd1]" />
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-[#21476c]">
+                  {state.operationStatus.title || "Processando..."}
+                </p>
+                <p className="mt-1 text-xs text-[#5e7390]">
+                  {state.operationStatus.detail || "Aguarde enquanto o aplicativo conclui a operação."}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Computador */}
         <Section title="Computador">
           <Field label="Nome do computador">

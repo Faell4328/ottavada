@@ -10,17 +10,23 @@ export default function StatusBar() {
       ? Math.round(state.rcloneProgress.percentage)
       : null;
 
-  const isRcloneActive =
-    state.isScanningFiles && state.rcloneProgress.direction !== null;
+  const hasOperationStatus = state.operationStatus.stepCurrent !== null;
+  const isRcloneActive = state.rcloneProgress.direction !== null;
+  const isVisible = state.isScanningFiles || hasOperationStatus;
 
   const etaText = formatEta(state.rcloneProgress.etaSeconds);
 
-  if (!state.isScanningFiles) {
+  if (!isVisible) {
     return null;
   }
 
-  const title = state.operationStatus.title || "Verificando alteracoes";
+  const title =
+    state.operationStatus.title || (state.isScanningFiles ? "Verificando alteracoes" : "Processando");
   const detail = state.operationStatus.detail;
+  const itemProgressText =
+    state.operationStatus.itemCurrent !== null && state.operationStatus.itemTotal !== null
+      ? `${state.operationStatus.itemCurrent} de ${state.operationStatus.itemTotal}`
+      : null;
   const totalSteps = Math.max(
     state.operationStatus.stepTotal ?? state.scanProgress.total,
     1
@@ -30,9 +36,12 @@ export default function StatusBar() {
     (state.scanProgress.completed >= totalSteps
       ? totalSteps
       : Math.min(state.scanProgress.completed + 1, totalSteps));
-  const workflowPercentage =
-    totalSteps > 0
+  const workflowPercentage = state.isScanningFiles
+    ? totalSteps > 0
       ? Math.round((state.scanProgress.completed / totalSteps) * 100)
+      : 0
+    : hasOperationStatus
+      ? 0
       : 0;
   const totalBytes = state.rcloneProgress.totalBytes;
   const bytesTransferred = state.rcloneProgress.bytes;
@@ -47,6 +56,8 @@ export default function StatusBar() {
   const barPercentage = isRcloneActive
     ? Math.max(0, Math.min(100, transferPercentage ?? 0))
     : Math.max(0, Math.min(100, workflowPercentage));
+  const shouldShowIndeterminateBar = hasOperationStatus && !state.isScanningFiles && !isRcloneActive;
+  const isIndeterminateProgress = shouldShowIndeterminateBar || (isRcloneActive && !hasTransferPercentage);
 
   return (
     <footer className="fixed bottom-4 left-1/2 z-50 w-[min(680px,calc(100%-1.5rem))] -translate-x-1/2">
@@ -67,12 +78,12 @@ export default function StatusBar() {
             {detail && <p className="truncate text-[11px] text-[#5e7390]">{detail}</p>}
           </div>
           <span className="shrink-0 text-[12px] font-bold text-[#2464a8]">
-            {isRcloneActive && !hasTransferPercentage ? "..." : `${barPercentage}%`}
+            {isIndeterminateProgress ? "..." : `${barPercentage}%`}
           </span>
         </div>
 
         <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-[#e8f0fa]">
-          {isRcloneActive && !hasTransferPercentage ? (
+          {isIndeterminateProgress ? (
             <div className="h-full w-full animate-pulse rounded-full bg-gradient-to-r from-[#2f7fd1] to-[#40b0ff]" />
           ) : (
             <div
@@ -98,6 +109,7 @@ export default function StatusBar() {
               {etaText && <span>ETA {etaText}</span>}
             </>
           ) : null}
+          {!isRcloneActive && itemProgressText && <span>{itemProgressText}</span>}
         </div>
       </div>
     </footer>

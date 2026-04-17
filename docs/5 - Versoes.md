@@ -400,6 +400,7 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [x] Arrumar bug: ao editar algo no meio do texto com minúsculo, o marcado do texto vai para o final. Isso não ocorre se tiver digitando em maiúsculo.
 - [x] Melhorar as mensagens de toast, estão muitos estranhas ou como o sistema fosse uma pessoa fazendo algo, é preciso melhorar.
 - [x] "Consultar alterações" (cliente) está dando 'tiltes', subindo e aparendo na barra de tarefas do windows, tando também uma leve trava (como se fechase e abrise novamente.)
+- [x] Adicionar um feedback visual, mostrando ao usuário que está sendo processado (ex: ao clicar em "forçar geração de snapshot", "importar backup local", "importa backup da nuvem"). Atualmente, fica muito tempo sem feedback.
 - [ ] Corrigir inconsistências no front.
 - [ ] Criar diretório especifico para os testes (para não limpar a nuvem no teste).
 - [ ] Verificar se todos os erros estão sendo enviados para a telemetria (isso inclui o erro de não conseguir enviar a telemetria).
