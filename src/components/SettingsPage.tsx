@@ -762,7 +762,9 @@ export default function SettingsPage() {
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={handleGenerateBackupCloud}
+              onClick={() => {
+                void handleGenerateBackupCloud();
+              }}
               disabled={
                 isGeneratingBackupCloud ||
                 settings.computer_type !== "Server" ||
