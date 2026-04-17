@@ -8,16 +8,23 @@ import { renderWithAppProvider } from "../utils/renderWithAppProvider";
 import type { ScoreListItem, SongListItem } from "../../types";
 
 let resolveScores: ((scores: ScoreListItem[]) => void) | null = null;
+let nextSongSummaries: SongListItem[][] = [];
+let triggerUpdateScore: ((scoreId: string, instrumentName: string | null, filePath: string) => Promise<void>) | null = null;
+let nextSelectedSong: SongListItem | null = null;
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(async (command: string) => {
     switch (command) {
       case "get_all_song_summaries":
-        return [sampleSong, sampleSong2];
+        return nextSongSummaries.shift() ?? [sampleSong, sampleSong2];
       case "get_scores_for_song":
         return new Promise<ScoreListItem[]>((resolve) => {
           resolveScores = resolve;
         });
+      case "get_song_list_item_by_id":
+        return nextSelectedSong ?? updatedSampleSong;
+      case "update_score":
+        return undefined;
       default:
         return null;
     }
@@ -46,6 +53,20 @@ const sampleSong: SongListItem = {
   scores: [],
 };
 
+const updatedSampleSong: SongListItem = {
+  ...sampleSong,
+  scores: [
+    {
+      id: "score-1",
+      name: "Violino",
+      file_path: "/music/Canon - Violino.musx",
+      file_extension: "musx",
+      updated_at: "2026-04-16T00:10:00.000Z",
+      status: "main",
+    },
+  ],
+};
+
 const sampleSong2: SongListItem = {
   id: "song-2",
   name: "AMAZING GRACE",
@@ -69,11 +90,15 @@ const sampleScores: ScoreListItem[] = [
 ];
 
 function SongsListHarness() {
-  const { loadSongs } = useAppState();
+  const { loadSongs, updateScore } = useAppState();
 
   useEffect(() => {
     void loadSongs();
-  }, [loadSongs]);
+    triggerUpdateScore = updateScore;
+    return () => {
+      triggerUpdateScore = null;
+    };
+  }, [loadSongs, updateScore]);
 
   return <SongsList />;
 }
@@ -85,6 +110,9 @@ describe("SongsList", () => {
 
   beforeEach(() => {
     resolveScores = null;
+    nextSongSummaries = [[sampleSong, sampleSong2], [updatedSampleSong, sampleSong2]];
+    nextSelectedSong = updatedSampleSong;
+    triggerUpdateScore = null;
     requestAnimationFrameCallbacks.length = 0;
 
     Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
@@ -129,6 +157,41 @@ describe("SongsList", () => {
       block: "start",
       inline: "nearest",
     });
+  });
+
+  it("keeps the old scores visible until the edited score refreshes", async () => {
+    const summaryWithoutScores: SongListItem = {
+      ...sampleSong,
+      scores: [],
+    };
+
+    renderWithAppProvider(<SongsListHarness />);
+
+    expect(await screen.findByText("CANON")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("CANON"));
+
+    resolveScores?.(sampleScores);
+
+    expect(await screen.findByText("Flauta")).toBeInTheDocument();
+
+    nextSongSummaries = [[sampleSong, sampleSong2], [summaryWithoutScores, sampleSong2]];
+    nextSelectedSong = {
+      ...updatedSampleSong,
+      scores: [
+        {
+          ...updatedSampleSong.scores[0],
+          name: "Violino",
+        },
+      ],
+    };
+
+    await act(async () => {
+      await triggerUpdateScore?.("score-1", "Violino", "/music/Canon - Violino.musx");
+    });
+
+    expect(await screen.findByText("Violino")).toBeInTheDocument();
+    expect(screen.queryByText("Flauta")).not.toBeInTheDocument();
   });
 
   it("filters the list while typing", async () => {

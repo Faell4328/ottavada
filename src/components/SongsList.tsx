@@ -123,6 +123,10 @@ export default function SongsList() {
     [scoresBySongId]
   );
 
+  const sortScoresForDisplay = useCallback((scores: ScoreListItem[]) => {
+    return [...scores].sort((a, b) => compareInstrumentNames(a.name, b.name));
+  }, []);
+
   const refreshScoresForSong = useCallback(
     async (songId: string | null) => {
       if (!songId || expandedSongIdRef.current !== songId) {
@@ -151,9 +155,7 @@ export default function SongsList() {
       if (selectedSong.scores.length > 0) {
         setScoresBySongId((prev) => ({
           ...prev,
-          [selectedSong.id]: [...selectedSong.scores].sort((a, b) =>
-            compareInstrumentNames(a.name, b.name)
-          ),
+          [selectedSong.id]: sortScoresForDisplay(selectedSong.scores),
         }));
       }
       return;
@@ -162,7 +164,7 @@ export default function SongsList() {
     expandedSongIdRef.current = null;
     setScoresBySongId({});
     setLoadingScoresBySongId({});
-  }, [state.selectedSong]);
+  }, [sortScoresForDisplay, state.selectedSong]);
 
   const handleSaveMusic = async (data: {
     songId: string;

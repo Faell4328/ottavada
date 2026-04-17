@@ -30,8 +30,8 @@ fn updater_builder() -> tauri_plugin_updater::Builder {
     tauri_plugin_updater::Builder::new()
 }
 
-fn restore_main_window(app: &tauri::App) {
-    let Some(window) = app.get_webview_window("main") else {
+fn restore_main_window<R: tauri::Runtime, M: tauri::Manager<R>>(manager: &M) {
+    let Some(window) = manager.get_webview_window("main") else {
         warn!("Janela principal não encontrada ao restaurar estado inicial");
         return;
     };
@@ -49,6 +49,9 @@ fn restore_main_window(app: &tauri::App) {
 pub fn run() {
     tauri::Builder::default()
         .plugin(updater_builder().build())
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            restore_main_window(app);
+        }))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())

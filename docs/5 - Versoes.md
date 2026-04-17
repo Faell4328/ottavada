@@ -417,6 +417,8 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [x] Quando mudar de provedor, deve "fazer backup a nuvem"
 - [x] Contato nas configurações não é para ser clicável.
 - [x] Mudar de backup a cada 1 dia para backup a cada 1 hora (backup automático para nuvem)
+- [x] Atualizando lista de partituras ao adicionar, editar e deletar partituras, quando a música estiver aberta.
+- [x] Não permitir que o aplicativo seja aberto várias vezes.
 
 ## Funcionalidades para v2 (apenas rascunho/ideias)
 
