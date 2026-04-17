@@ -11,6 +11,7 @@ use crate::domain::errors::AppError;
 use crate::domain::models::{AppSettings, OperationGuard};
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
+use crate::services::cloud_paths::ensure_backup_cloud_dir;
 use crate::services::msgpack_zstd::{serialize_msgpack_named, write_atomic};
 
 const BACKUP_FILE_NAME: &str = "backup.msgpack";
@@ -236,11 +237,7 @@ fn generate_backup_msgpack_in_cloud(
         return Ok(None);
     }
 
-    let backup_path = store
-        .app_data_dir()
-        .join("cloud")
-        .join("backup")
-        .join(BACKUP_FILE_NAME);
+    let backup_path = ensure_backup_cloud_dir(store.app_data_dir())?.join(BACKUP_FILE_NAME);
 
     let summary = export_backup_msgpack(db, store, Some(backup_path.to_string_lossy().to_string()))?;
 
@@ -262,11 +259,7 @@ pub fn import_backup_msgpack_from_cloud(
 
     sync_cloud_directory_with_rclone_impl(store, "download", Some("backup"))?;
 
-    let backup_path = store
-        .app_data_dir()
-        .join("cloud")
-        .join("backup")
-        .join(BACKUP_FILE_NAME);
+    let backup_path = ensure_backup_cloud_dir(store.app_data_dir())?.join(BACKUP_FILE_NAME);
 
     if !backup_path.exists() {
         return Err(AppError::Generic(

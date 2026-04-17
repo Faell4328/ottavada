@@ -242,7 +242,7 @@ fn apply_snapshot(db: &Database, payload: &SnapshotMessagePack) -> Result<(), Ap
                         song.id,
                         score.name,
                         "server",
-                        format!("/cloud/songs/{}", song.id),
+                        format!("/cloud/sync/songs/{}", song.id),
                         format!("{}.{}", score.id, file_extension),
                         score.updated_at,
                         score.status,
@@ -399,7 +399,7 @@ fn apply_upsert_field_event(
 
                 tx.execute(
                     "UPDATE scores SET song_id = ?1, file_path = ?2 WHERE id = ?3",
-                    params![song_id, format!("/cloud/songs/{}", song_id), event.entity_id],
+                    params![song_id, format!("/cloud/sync/songs/{}", song_id), event.entity_id],
                 )?;
 
                 if let Some(pending) = pending_scores.remove(&event.entity_id) {
@@ -535,7 +535,7 @@ fn ensure_score_exists(
         params![
             score_id,
             song_id,
-            format!("/cloud/songs/{}", song_id),
+            format!("/cloud/sync/songs/{}", song_id),
             format!("{}.score", score_id),
             timestamp,
         ],

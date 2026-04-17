@@ -507,12 +507,12 @@ export function useAppScanFlow({
 
         for (const archiveResult of archiveSummary.results ?? []) {
           if (archiveResult.generated && archiveResult.song_id) {
-            uploadPaths.add(`songs/${archiveResult.song_id}.tar.zst`);
+            uploadPaths.add(`sync/songs/${archiveResult.song_id}.tar.zst`);
           }
         }
 
         if (eventsSummary.events_count > 0) {
-          uploadPaths.add("events/events.msgpack.zst");
+          uploadPaths.add("sync/events/events.msgpack.zst");
         }
 
         if (uploadPaths.size === 0) {

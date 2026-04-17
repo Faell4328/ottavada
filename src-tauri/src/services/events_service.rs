@@ -6,12 +6,12 @@ use crate::domain::errors::AppError;
 use crate::domain::models::OperationGuard;
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
+use crate::services::cloud_paths::ensure_sync_cloud_dir;
 use crate::services::backup_songs_service::list_draft_not_found_scores_with_previous_main;
 use crate::services::msgpack_zstd::{
     compress_zstd_with_threads, serialize_msgpack_named, write_atomic, ZSTD_LEVEL_BALANCED,
 };
 
-const CLOUD_DIR_NAME: &str = "cloud";
 const EVENTS_DIR_NAME: &str = "events";
 const EVENTS_FILE_NAME: &str = "events.msgpack.zst";
 
@@ -62,7 +62,7 @@ pub fn generate_events_msgpack(
     settings.require_server_only()?;
 
     let changed_fields = db.get_changed_fields_ordered()?;
-    let cloud_dir = store.app_data_dir().join(CLOUD_DIR_NAME);
+    let cloud_dir = ensure_sync_cloud_dir(store.app_data_dir())?;
     let previous_main_versions =
         list_draft_not_found_scores_with_previous_main(db, store.app_data_dir(), &cloud_dir)?;
 
@@ -242,7 +242,7 @@ mod tests {
         assert!(summary.events_count > 0);
         assert!(summary.file_size > 0);
         assert!(std::path::Path::new(&summary.output_path).ends_with(
-            std::path::Path::new("cloud").join("events").join("events.msgpack.zst")
+            std::path::Path::new("cloud").join("sync").join("events").join("events.msgpack.zst")
         ));
     }
 
@@ -341,7 +341,7 @@ mod tests {
 
         // Simula versão main anterior no arquivo de nuvem.
         create_tar_zst_with_entry(
-            &dir.path().join("cloud").join("songs").join("song-1.tar.zst"),
+            &dir.path().join("cloud").join("sync").join("songs").join("song-1.tar.zst"),
             "score-1.musx",
             b"v1",
         );
@@ -415,7 +415,7 @@ mod tests {
         let summary = generate_events_msgpack(&db, &store).expect("generate events");
         assert_eq!(summary.events_count, 1);
 
-        let raw = fs::read(dir.path().join("cloud").join("events").join("events.msgpack.zst"))
+        let raw = fs::read(dir.path().join("cloud").join("sync").join("events").join("events.msgpack.zst"))
             .expect("read events file");
         let mut decoder = zstd::stream::read::Decoder::new(raw.as_slice()).expect("decoder");
         let payload: serde_json::Value = rmp_serde::from_read(&mut decoder).expect("decode msgpack");
@@ -457,7 +457,7 @@ mod tests {
         };
         store.save_app_settings(&settings).expect("save settings");
 
-        let events_dir = dir.path().join("cloud").join("events");
+        let events_dir = dir.path().join("cloud").join("sync").join("events");
         std::fs::create_dir_all(&events_dir).expect("create events dir");
         let events_file = events_dir.join("events.msgpack.zst");
         std::fs::write(&events_file, b"stale").expect("write stale events");

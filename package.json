@@ -17,8 +17,7 @@
     "test:ui": "vitest --ui",
 
     "tauri:build:win:x64": "dotenv -e src-tauri/.env -- tauri build --target x86_64-pc-windows-msvc",
-    "tauri:build:win:x32": "dotenv -e src-tauri/.env -- tauri build --target i686-pc-windows-msvc",
-    "tauri:build:all": "npm run tauri:build:win:x64 && npm run tauri:build:win:x32"
+    "tauri:build:win:x32": "dotenv -e src-tauri/.env -- tauri build --target i686-pc-windows-msvc"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",

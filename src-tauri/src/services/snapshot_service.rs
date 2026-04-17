@@ -8,15 +8,14 @@ use crate::domain::models::ScoreStatus;
 use crate::domain::models::OperationGuard;
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
+use crate::services::cloud_paths::ensure_sync_cloud_dir;
 use crate::services::backup_songs_service::list_draft_not_found_scores_with_previous_main;
 use crate::services::msgpack_zstd::{
     compress_zstd_with_threads, serialize_msgpack_named, write_atomic, ZSTD_LEVEL_BALANCED,
 };
 
-const CLOUD_DIR_NAME: &str = "cloud";
 const EVENTS_DIR_NAME: &str = "events";
 const SNAPSHOT_FILE_NAME: &str = "snapshot.msgpack.zst";
-const LEGACY_EVENTS_FILE_NAME: &str = "events.msgpack.zst";
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct SnapshotFileSummary {
@@ -76,9 +75,7 @@ pub fn generate_snapshot_msgpack(
 
     let generated_at = chrono::Local::now().timestamp();
 
-    let cloud_dir = store.app_data_dir().join(CLOUD_DIR_NAME);
-    fs::create_dir_all(&cloud_dir)
-        .map_err(|e| AppError::Generic(format!("Erro ao criar diretório de nuvem: {}", e)))?;
+    let cloud_dir = ensure_sync_cloud_dir(store.app_data_dir())?;
 
     let previous_main_versions =
         list_draft_not_found_scores_with_previous_main(db, store.app_data_dir(), &cloud_dir)?;
@@ -206,8 +203,10 @@ fn clear_events_artifacts(cloud_dir: &std::path::Path) -> Result<(), AppError> {
         })?;
     }
 
-    // Compatibilidade com versões antigas que escreviam events na raiz de /cloud.
-    let legacy_events_path = cloud_dir.join(LEGACY_EVENTS_FILE_NAME);
+    let legacy_events_path = cloud_dir
+        .parent()
+        .map(|parent| parent.join("events.msgpack.zst"))
+        .unwrap_or_else(|| cloud_dir.join("events.msgpack.zst"));
     if legacy_events_path.exists() {
         fs::remove_file(&legacy_events_path).map_err(|e| {
             AppError::Generic(format!(
@@ -268,7 +267,7 @@ mod tests {
         db.insert_song(&song, &[category.id.clone()])
             .expect("insert song");
 
-        let events_dir = dir.path().join("cloud").join("events");
+        let events_dir = dir.path().join("cloud").join("sync").join("events");
         fs::create_dir_all(&events_dir).expect("create events dir");
         let events_file = events_dir.join("events.msgpack.zst");
         fs::write(&events_file, b"events").expect("write events file");
@@ -284,7 +283,7 @@ mod tests {
         assert!(summary.file_size > 0);
         assert!(summary.generated_at > 0);
         assert!(std::path::Path::new(&summary.output_path).ends_with(
-            std::path::Path::new("cloud").join("snapshot.msgpack.zst")
+            std::path::Path::new("cloud").join("sync").join("snapshot.msgpack.zst")
         ));
         assert!(!events_file.exists());
         assert!(!stale_events_file.exists());

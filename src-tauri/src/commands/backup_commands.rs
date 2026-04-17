@@ -4,6 +4,7 @@ use crate::commands::common::{require_server_settings, run_blocking_with_store};
 use crate::domain::errors::AppError;
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
+use crate::services::cloud_paths::ensure_sync_cloud_dir;
 use crate::services::backup_msgpack_service::{
     export_backup_msgpack, force_generate_backup_msgpack_in_cloud,
     generate_automatic_backup_msgpack, import_backup_msgpack, import_backup_msgpack_from_cloud,
@@ -30,10 +31,7 @@ pub async fn generate_song_archives_files(
         move |store| {
             require_server_settings(&store)?;
 
-            let cloud_root = store.app_data_dir().join("cloud");
-            std::fs::create_dir_all(&cloud_root).map_err(|e| {
-                AppError::Generic(format!("Erro ao preparar diretório cloud: {}", e))
-            })?;
+            let cloud_root = ensure_sync_cloud_dir(store.app_data_dir())?;
 
             generate_song_archives(&db, store.app_data_dir(), &cloud_root)
         },
@@ -78,10 +76,7 @@ pub async fn generate_snapshot_file(
             require_server_settings(&store)?;
 
             if force_regenerate_song_archives {
-                let cloud_root = store.app_data_dir().join("cloud");
-                std::fs::create_dir_all(&cloud_root).map_err(|e| {
-                    AppError::Generic(format!("Erro ao preparar diretório cloud: {}", e))
-                })?;
+                let cloud_root = ensure_sync_cloud_dir(store.app_data_dir())?;
                 regenerate_all_song_archives(&db, store.app_data_dir(), &cloud_root)?;
             }
 

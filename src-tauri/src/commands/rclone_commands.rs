@@ -75,22 +75,6 @@ where
 
 fn ensure_cloud_dir(app_data_dir: &Path) -> Result<PathBuf, AppError> {
     let cloud_dir = app_data_dir.join("cloud");
-    let legacy_dir = app_data_dir.join("nuvem");
-
-    if cloud_dir.exists() {
-        return Ok(cloud_dir);
-    }
-
-    if legacy_dir.exists() {
-        std::fs::rename(&legacy_dir, &cloud_dir).map_err(|e| {
-            AppError::Generic(format!(
-                "Erro ao migrar diretório legado '{}' para '{}': {}",
-                legacy_dir.display(),
-                cloud_dir.display(),
-                e
-            ))
-        })?;
-    }
 
     std::fs::create_dir_all(&cloud_dir)
         .map_err(|e| AppError::Generic(format!("Erro ao preparar pasta local cloud: {}", e)))?;
@@ -938,7 +922,7 @@ pub async fn sync_cloud_with_rclone(
     run_blocking_with_store(
         app_data_dir,
         "Falha interna ao sincronizar com rclone",
-        move |store| sync_cloud_directory_with_rclone_impl(&store, &direction, None),
+        move |store| sync_cloud_directory_with_rclone_impl(&store, &direction, Some("sync")),
     )
     .await
 }

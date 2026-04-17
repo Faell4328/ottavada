@@ -1,4 +1,5 @@
 pub mod background_scanner;
+pub mod cloud_paths;
 pub mod backup_msgpack_service;
 pub mod backup_songs_service;
 pub mod client_sync_service;

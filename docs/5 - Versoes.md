@@ -411,6 +411,10 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [x] Verificar se todos os erros estão sendo enviados para a telemetria (isso inclui o erro de não conseguir enviar a telemetria).
 - [x] Adicionar uma forma para os usuários entrarem em contato (email e telefone).
 
+## 1.1
+- [x] Corrigir problema de perda de backup. Situação: O usuário ter seu aplicativo bugado e precisa reinstalar, ao acessar pela primeira vez o provedor de nuvem é totalmentel limpa, ja que ele "aplica alterações" automaticamente ao acessar.
+	- [x] Mudar diretórios: os arquivos de events, snapshot e songs vão ficar em `/cloud/sync` já o do backup vai ficar em `/cloud/backup`. Com isso na hora de "aplicar alterações" ou "consultar alterações" será no diretório `/cloud/sync` (respetivamente na nuvem também.)
+
 ## Funcionalidades para v2 (apenas rascunho/ideias)
 
 - Tirar o cliente de `read-only`.
