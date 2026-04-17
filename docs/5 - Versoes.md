@@ -416,7 +416,7 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 	- [x] Mudar diretórios: os arquivos de events, snapshot e songs vão ficar em `/cloud/sync` já o do backup vai ficar em `/cloud/backup`. Com isso na hora de "aplicar alterações" ou "consultar alterações" será no diretório `/cloud/sync` (respetivamente na nuvem também.)
 - [x] Quando mudar de provedor, deve "fazer backup a nuvem"
 - [x] Contato nas configurações não é para ser clicável.
-- [ ] Mudar de backup a cada 1 dia para backup a cada 1 hora (backup automático para nuvem)
+- [x] Mudar de backup a cada 1 dia para backup a cada 1 hora (backup automático para nuvem)
 
 ## Funcionalidades para v2 (apenas rascunho/ideias)
 
