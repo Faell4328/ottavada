@@ -7,7 +7,7 @@ use crate::commands::common::run_blocking_with_store;
 use crate::commands::rclone_commands::terminate_running_rclone_processes;
 use crate::domain::errors::AppError;
 use crate::domain::models::{
-    AppSettings, ComputerType, GoogleDriveMode, LibrarySummary, RcloneConfig,
+    AppContacts, AppSettings, ComputerType, GoogleDriveMode, LibrarySummary, RcloneConfig,
 };
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
@@ -31,6 +31,14 @@ pub async fn get_settings(
         },
     )
     .await
+}
+
+#[tauri::command]
+pub fn get_app_contacts() -> AppContacts {
+    AppContacts::from_env_values(
+        option_env!("APP_CONTACT_EMAIL"),
+        option_env!("APP_CONTACT_PHONE"),
+    )
 }
 
 #[tauri::command]

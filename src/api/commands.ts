@@ -4,6 +4,7 @@ import type {
   ScoreListItem,
   Category,
   AppSettings,
+  AppContacts,
   LibrarySummary,
   IndexedFile,
   RcloneSetupInput,
@@ -208,6 +209,10 @@ export async function deleteCategory(categoryId: string): Promise<void> {
 
 export async function getSettings(): Promise<AppSettings> {
   return invoke("get_settings");
+}
+
+export async function getAppContacts(): Promise<AppContacts> {
+  return invoke("get_app_contacts");
 }
 
 export async function saveSettings(settings: AppSettings): Promise<void> {

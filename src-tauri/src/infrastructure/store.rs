@@ -387,8 +387,7 @@ impl SystemStore {
 
 #[cfg(test)]
 mod tests {
-    use tempfile::tempdir;
-
+    use crate::test_support::create_test_app_data_dir;
     use super::SystemStore;
     use crate::domain::models::{
         AppSettings, ComputerType, LibraryStatusSummary, LibrarySummary,
@@ -396,7 +395,7 @@ mod tests {
 
     #[test]
     fn does_not_persist_library_summary_in_store() {
-        let dir = tempdir().expect("temp dir");
+        let dir = create_test_app_data_dir("store-library-summary");
         let store = SystemStore::new(dir.path().to_path_buf());
 
         let settings = AppSettings {
@@ -433,7 +432,7 @@ mod tests {
 
     #[test]
     fn persists_documented_store_shape_and_reads_legacy_keys() {
-        let dir = tempdir().expect("temp dir");
+        let dir = create_test_app_data_dir("store-shape");
         let store = SystemStore::new(dir.path().to_path_buf());
 
         let settings = AppSettings {

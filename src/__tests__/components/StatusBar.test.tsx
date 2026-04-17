@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import { describe, it, expect } from "vitest";
 
 import StatusBar from "../../components/StatusBar";

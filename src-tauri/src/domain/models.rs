@@ -116,6 +116,28 @@ pub struct AppSettings {
     pub last_backup_timestamp: Option<i64>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
+pub struct AppContacts {
+    pub email: Option<String>,
+    pub phone: Option<String>,
+}
+
+impl AppContacts {
+    pub fn from_env_values(email: Option<&str>, phone: Option<&str>) -> Self {
+        fn normalize(value: Option<&str>) -> Option<String> {
+            value
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+                .map(|value| value.to_string())
+        }
+
+        Self {
+            email: normalize(email),
+            phone: normalize(phone),
+        }
+    }
+}
+
 impl Default for AppSettings {
     fn default() -> Self {
         Self {

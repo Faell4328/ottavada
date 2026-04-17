@@ -283,7 +283,9 @@ mod tests {
 
         assert!(summary.file_size > 0);
         assert!(summary.generated_at > 0);
-        assert!(summary.output_path.ends_with("/cloud/snapshot.msgpack.zst"));
+        assert!(std::path::Path::new(&summary.output_path).ends_with(
+            std::path::Path::new("cloud").join("snapshot.msgpack.zst")
+        ));
         assert!(!events_file.exists());
         assert!(!stale_events_file.exists());
         assert!(!legacy_events_file.exists());

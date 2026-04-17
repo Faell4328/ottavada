@@ -3,6 +3,8 @@ mod domain;
 mod infrastructure;
 mod logger;
 mod services;
+#[cfg(test)]
+pub mod test_support;
 
 use infrastructure::database::Database;
 use infrastructure::store::SystemStore;
@@ -235,6 +237,7 @@ pub fn run() {
             commands::settings_commands::has_pending_changes,
             commands::settings_commands::exit_application,
             commands::settings_commands::mark_local_changes_as_applied,
+            commands::settings_commands::get_app_contacts,
             // Updates
             commands::update_commands::check_for_updates,
             commands::update_commands::install_update,

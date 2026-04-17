@@ -17,7 +17,11 @@ fn main() {
                 let key = key.trim();
                 let value = value.trim().trim_matches('"');
 
-                if key == "TELEMETRY_ENDPOINT" || key == "TELEMETRY_API_TOKEN" {
+                if key == "TELEMETRY_ENDPOINT"
+                    || key == "TELEMETRY_API_TOKEN"
+                    || key == "APP_CONTACT_EMAIL"
+                    || key == "APP_CONTACT_PHONE"
+                {
                     println!("cargo:rustc-env={}={}", key, value);
                 }
             }

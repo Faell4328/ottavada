@@ -24,9 +24,9 @@ import {
   type StartupUpdateState,
 } from "./utils/startupUpdate";
 
-function LoadingScreen() {
+export function LoadingScreen() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-[#33465d] to-[#5d6d82]">
+    <div className="flex min-h-screen items-center justify-center bg-[#5d6d82]">
       <div className="text-white text-lg font-semibold animate-pulse">
         Carregando...
       </div>
@@ -34,7 +34,7 @@ function LoadingScreen() {
   );
 }
 
-function StartupUpdateGate({ onReady }: { onReady: () => void }) {
+export function StartupUpdateGate({ onReady }: { onReady: () => void }) {
   const [startupState, setStartupState] = useState<StartupUpdateState>(initialStartupUpdateState);
   const [availableUpdate, setAvailableUpdate] = useState<UpdateInfo | null>(null);
   const [isInstallingUpdate, setIsInstallingUpdate] = useState(false);

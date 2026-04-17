@@ -241,9 +241,9 @@ mod tests {
 
         assert!(summary.events_count > 0);
         assert!(summary.file_size > 0);
-        assert!(summary
-            .output_path
-            .ends_with("/cloud/events/events.msgpack.zst"));
+        assert!(std::path::Path::new(&summary.output_path).ends_with(
+            std::path::Path::new("cloud").join("events").join("events.msgpack.zst")
+        ));
     }
 
     #[test]

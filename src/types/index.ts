@@ -45,6 +45,11 @@ export interface AppSettings {
   last_backup_timestamp?: number | null;
 }
 
+export interface AppContacts {
+  email: string | null;
+  phone: string | null;
+}
+
 export interface LibraryStatusSummary {
   songs_count: number;
   scores_count: number;

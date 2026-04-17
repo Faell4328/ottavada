@@ -1890,6 +1890,34 @@ impl Database {
         conn.execute("DELETE FROM errors", [])?;
         Ok(())
     }
+
+    pub fn record_telemetry_error(
+        &self,
+        computer_id: &str,
+        message: &str,
+        timestamp: i64,
+    ) -> Result<(), AppError> {
+        let conn = self.conn.lock().unwrap();
+        let id = uuid::Uuid::new_v4().to_string();
+        let date = chrono::DateTime::from_timestamp(timestamp, 0)
+            .map(|value| value.format("%Y-%m-%d").to_string())
+            .unwrap_or_else(|| chrono::Local::now().format("%Y-%m-%d").to_string());
+
+        conn.execute(
+            "INSERT OR IGNORE INTO computerInformation (
+                computerId, organizationName, computerName, type, appVersion, os, arch, date, report
+             ) VALUES (?1, '', '', 'server', '', '', '', ?2, 0)",
+            params![computer_id, date],
+        )?;
+
+        conn.execute(
+            "INSERT INTO errors (id, computerId, date, message, timestamp, report)
+             VALUES (?1, ?2, ?3, ?4, ?5, 0)",
+            params![id, computer_id, date, message, timestamp],
+        )?;
+
+        Ok(())
+    }
 }
 
 fn parse_datetime(s: &str) -> chrono::NaiveDateTime {

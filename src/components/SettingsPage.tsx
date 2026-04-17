@@ -10,8 +10,9 @@ import { RcloneProviderModal } from "./RcloneProviderModal.tsx";
 import { RcloneLicenseModal } from "./RcloneLicenseModal";
 import { UpdateModal } from "./UpdateModal";
 import { OrganizationNameField } from "./OrganizationNameField";
+import { SupportContactsCard } from "./SupportContactsCard";
 import { formatBackupTimestamp } from "../utils/formatters";
-import type { AppSettings, RcloneProvider, UpdateInfo } from "../types";
+import type { AppContacts, AppSettings, RcloneProvider, UpdateInfo } from "../types";
 import { isClientComputer } from "../utils/computer";
 import { getFriendlyRcloneErrorMessage } from "../utils/rcloneErrors";
 import packageJson from "../../package.json";
@@ -61,6 +62,7 @@ export default function SettingsPage() {
   const [isInstallingUpdate, setIsInstallingUpdate] = useState(false);
   const [availableUpdate, setAvailableUpdate] = useState<UpdateInfo | null>(null);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+  const [supportContacts, setSupportContacts] = useState<AppContacts>({ email: null, phone: null });
   const [rcloneProvider, setRcloneProvider] = useState<RcloneProvider>("koofr");
   const [rcloneConfigGenerated, setRcloneConfigGenerated] = useState(false);
   const [hasRcloneConfigChange, setHasRcloneConfigChange] = useState(false);
@@ -99,6 +101,13 @@ export default function SettingsPage() {
   useEffect(() => {
     void loadSettings();
   }, [loadSettings]);
+
+  useEffect(() => {
+    void api
+      .getAppContacts()
+      .then(setSupportContacts)
+      .catch(() => setSupportContacts({ email: null, phone: null }));
+  }, []);
 
   useEffect(() => {
     if (state.settings) {
@@ -840,6 +849,10 @@ export default function SettingsPage() {
           >
             <span>Este software utiliza rclone (licença MIT)</span>
           </button>
+        </Section>
+
+        <Section title="Contato">
+          <SupportContactsCard email={supportContacts.email} phone={supportContacts.phone} />
         </Section>
 
         {/* Save */}

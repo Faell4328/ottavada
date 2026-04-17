@@ -102,35 +102,58 @@ fn build_payload(
     }
 }
 
+fn record_telemetry_failure(db: &Database, computer_id: &str, now: i64, error: &AppError) {
+    let _ = db.record_telemetry_error(computer_id, &error.to_string(), now);
+}
+
 pub fn send_telemetry_once(db: &Database, store: &SystemStore) -> Result<(), AppError> {
     let settings = store.get_app_settings()?;
+    let now = Utc::now().timestamp();
+    db.prune_telemetry_errors_older_than_week(now).map_err(|error| {
+        record_telemetry_failure(db, &settings.computer_id, now, &error);
+        error
+    })?;
+
     let endpoint = telemetry_endpoint().ok_or_else(|| {
-        AppError::Generic("TELEMETRY_ENDPOINT não configurado".to_string())
+        let error = AppError::Generic("TELEMETRY_ENDPOINT não configurado".to_string());
+        record_telemetry_failure(db, &settings.computer_id, now, &error);
+        error
     })?;
     let token = telemetry_token().ok_or_else(|| {
-        AppError::Generic("TELEMETRY_API_TOKEN não configurado".to_string())
+        let error = AppError::Generic("TELEMETRY_API_TOKEN não configurado".to_string());
+        record_telemetry_failure(db, &settings.computer_id, now, &error);
+        error
     })?;
 
-    let now = Utc::now().timestamp();
-    db.prune_telemetry_errors_older_than_week(now)?;
-
-    let counts = db.get_telemetry_summary_counts()?;
-    let errors = db.list_telemetry_errors()?;
+    let counts = db.get_telemetry_summary_counts().map_err(|error| {
+        record_telemetry_failure(db, &settings.computer_id, now, &error);
+        error
+    })?;
+    let errors = db.list_telemetry_errors().map_err(|error| {
+        record_telemetry_failure(db, &settings.computer_id, now, &error);
+        error
+    })?;
     let payload = build_payload(&settings, counts, errors);
 
     let client = reqwest::blocking::Client::new();
-    let response = client
-        .post(endpoint)
-        .header("Token", token)
-        .json(&payload)
-        .send()
-        .map_err(|e| AppError::Generic(format!("Erro ao enviar telemetria: {}", e)))?;
+    let response = client.post(endpoint).header("Token", token).json(&payload).send();
+
+    let response = match response {
+        Ok(response) => response,
+        Err(error) => {
+            let error = AppError::Generic(format!("Erro ao enviar telemetria: {}", error));
+            record_telemetry_failure(db, &settings.computer_id, now, &error);
+            return Err(error);
+        }
+    };
 
     if !response.status().is_success() {
-        return Err(AppError::Generic(format!(
+        let error = AppError::Generic(format!(
             "Servidor de telemetria respondeu com status {}",
             response.status()
-        )));
+        ));
+        record_telemetry_failure(db, &settings.computer_id, now, &error);
+        return Err(error);
     }
 
     db.clear_telemetry_errors()?;
