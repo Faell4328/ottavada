@@ -174,9 +174,8 @@ describe("AddScoreToSongModal", () => {
       />
     );
 
-    const warning = screen.getAllByText("Essa partitura já foi adicionada")[0];
-
-    expect(warning).toBeInTheDocument();
+    expect(screen.getByText("Revise as pendências abaixo antes de salvar.")).toBeInTheDocument();
+    expect(screen.queryByText(/já foram adicionadas/)).not.toBeInTheDocument();
     expect(screen.getByText("HINO NACIONAL - Flauta.musx")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("Nome do instrumento")).toHaveAttribute("readonly");
     expect(screen.getByRole("button", { name: "Salvar" })).toBeDisabled();
@@ -193,9 +192,7 @@ describe("AddScoreToSongModal", () => {
       />
     );
 
-    expect(
-      screen.getByText("Há pendências nas partituras selecionadas.")
-    ).toBeInTheDocument();
+    expect(screen.getByText("Revise as pendências abaixo antes de salvar.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Salvar" })).toBeDisabled();
 
     const instrumentInputs = screen.getAllByPlaceholderText("Nome do instrumento");
@@ -238,12 +235,8 @@ describe("AddScoreToSongModal", () => {
       />
     );
 
-    expect(screen.getByText("Há pendências nas partituras selecionadas.")).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        "Essa partitura já está sendo utilizada na música OUTRA MÚSICA e por isso não será salva."
-      )
-    ).toBeInTheDocument();
+      expect(screen.getByText("Revise as pendências abaixo antes de salvar.")).toBeInTheDocument();
+      expect(screen.getByText("HINO NACIONAL - Flauta.musx")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Salvar" })).toBeDisabled();
   });
 

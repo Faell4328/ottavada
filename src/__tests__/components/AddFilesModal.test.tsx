@@ -184,11 +184,12 @@ describe("AddFilesModal", () => {
       />
     );
 
-    const conflictMessage = screen.getAllByText("Essa partitura já foi adicionada")[0];
-    const scoreName = screen.getAllByText("Canon - Flauta.musx")[0];
+    const messages = screen.getAllByRole("listitem").map((element) => element.textContent?.replace(/\s+/g, " ").trim());
     const instrumentInput = screen.getAllByPlaceholderText("Nome do instrumento")[0];
 
-    expect(conflictMessage.nextElementSibling).toBe(scoreName);
+    expect(messages).toContain("A música CANON já existe. Altere o nome da música para continuar.");
+    expect(messages).toContain("Essa partitura já foi adicionada nesta música");
+    expect(screen.getByText("Canon - Flauta.musx")).toBeInTheDocument();
     expect(instrumentInput).toHaveAttribute("readonly");
   });
 
@@ -202,9 +203,8 @@ describe("AddFilesModal", () => {
       />
     );
 
-    expect(
-      screen.getByText("Há pendências nas partituras selecionadas.")
-    ).toBeInTheDocument();
+    const messages = screen.getAllByRole("listitem").map((element) => element.textContent?.replace(/\s+/g, " ").trim());
+    expect(messages).toContain("2 partituras usam o mesmo instrumento (Flauta). Renomeie ou delete uma delas para continuar.");
     expect(screen.getByRole("button", { name: "Salvar" })).toBeDisabled();
 
     const instrumentInputs = screen.getAllByPlaceholderText("Nome do instrumento");
@@ -223,11 +223,8 @@ describe("AddFilesModal", () => {
       />
     );
 
-    expect(
-      screen.getByText(
-        "Essa partitura já está sendo utilizada na música CANON e por isso não será salva."
-      )
-    ).toBeInTheDocument();
+    const messages = screen.getAllByRole("listitem").map((element) => element.textContent?.replace(/\s+/g, " ").trim());
+    expect(messages).toContain("Essa partitura já está sendo utilizada na música CANON e por isso não será salva.");
     expect(screen.getByRole("button", { name: "Salvar" })).toBeDisabled();
   });
 
@@ -263,7 +260,7 @@ describe("AddFilesModal", () => {
     });
   });
 
-  it("should save only addable files when selection mixes duplicates and new files", async () => {
+  it("should not save when selection mixes duplicates and new files", async () => {
     const importSpy = vi.spyOn(api, "importIndexedFilesWithMetadata").mockResolvedValue({
       songs: [],
       added_count: 1,
@@ -279,23 +276,14 @@ describe("AddFilesModal", () => {
       />
     );
 
+    expect(screen.getByRole("button", { name: "Salvar" })).toBeDisabled();
     fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
 
     await waitFor(() => {
-      expect(importSpy).toHaveBeenCalledWith(
-        [
-          expect.objectContaining({
-            path: sampleFiles[1].path,
-            name: "CANON",
-          }),
-        ],
-        [],
-        null,
-        null
-      );
+      expect(importSpy).not.toHaveBeenCalled();
     });
 
-    expect(mockOnSuccess).toHaveBeenCalledWith(1);
-    expect(mockOnClose).toHaveBeenCalled();
+    expect(mockOnSuccess).not.toHaveBeenCalled();
+    expect(mockOnClose).not.toHaveBeenCalled();
   });
 });

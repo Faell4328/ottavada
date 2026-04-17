@@ -151,7 +151,7 @@ export function describeScoreConflict(
     return `Essa partitura já está sendo utilizada na música ${conflict.song.name} e por isso não será salva.`;
   }
 
-  return "Essa partitura já foi adicionada";
+  return "Essa partitura já foi adicionada nesta música";
 }
 
 export function describeExistingSongWarning(): string {

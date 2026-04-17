@@ -394,6 +394,9 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [x] Adicionar nome da organização no cliente
 - [x] Ao atualizar o aplicativo está ficando minimizado, mas mostra na barra de tarefa que está maximizado (no windows). Sendo necessário clicar nele duas vezes.
 - [x] Ao adicionar uma música, adicionar partitura, editar partitura, remover partitura e etc, é apenas para gerar o `{songId}.taz.zts` e não enviar para a nuvem com rclone. Remova a parte que enviar para o provedor de nuvem.
+- [x] Remover mensagem no modal de revisão (ao indexar diretório ou adicionar arquivo(s)). A mensagem é "x partitura(s) já foram adicionadas".
+- [x] Melhore as mensagens do modal de revisão (a que vai ficar), a que fica acima do "Nome da Musica".
+- [x] Na mensagem "Essa partitura possui o mesmo nome de outra partitura..." coloca ambas em uma div com uma borda (mostrando quais sãos)
 - [ ] Corrigir inconsistências no front.
 - [ ] Criar diretório especifico para os testes (para não limpar a nuvem no teste).
 - [ ] Verificar se todos os erros estão sendo enviados para a telemetria (isso inclui o erro de não conseguir enviar a telemetria).

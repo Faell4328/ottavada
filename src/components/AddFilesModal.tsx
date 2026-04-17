@@ -83,22 +83,6 @@ export function AddFilesModal({
   const hasAddableFiles = addableEntries.length > 0;
   const isDuplicateSong = existingSong !== null;
   const hasPendingIssues = isDuplicateSong || duplicateEntries.length > 0;
-  const duplicateSummaryMessage = isDuplicateSong
-    ? activeFileEntries.length === 0
-      ? ""
-      : duplicateEntries.length === 0
-        ? "Essa música já existe em seu repertorio."
-        : `${describeExistingSongWarning()} ${addableEntries.length} partitura(s) nova(s) serão adicionadas.`
-    : duplicateEntries.length > 0
-      ? `${duplicateEntries.length} partitura(s) já foram adicionadas e serão ignoradas.`
-      : "";
-  const pendingIssuesMessage = isDuplicateSong
-    ? duplicateSummaryMessage
-    : duplicateEntries.length > 0
-      ? duplicateEntries.length === 1
-        ? "Há uma partitura com nome duplicado ou já utilizada em outra música. Renomeie ou remova o arquivo antes de salvar."
-        : `${duplicateEntries.length} partituras com nome duplicado ou já utilizadas em outra música. Renomeie ou remova os arquivos antes de salvar.`
-      : "";
 
   useEffect(() => {
     if (isOpen && files.length > 0) {
@@ -185,6 +169,11 @@ export function AddFilesModal({
       return;
     }
 
+    if (hasPendingIssues) {
+      setError("Corrija as pendências antes de salvar");
+      return;
+    }
+
     setIsSaving(true);
     setError("");
 
@@ -217,14 +206,97 @@ export function AddFilesModal({
     }
   };
 
-  if (files.length === 0) return null;
-
   const instrumentCount = activeFileEntries.length;
   const visibleFiles = sortIndexedFileEntriesForReview(
     activeFileEntries,
     instrumentNames,
     editingInstrumentIndex
   );
+
+  const reviewItems = useMemo(() => {
+    const items: Array<
+      | {
+          kind: "single";
+          file: IndexedFile;
+          idx: number;
+          conflictMessage: string | null;
+          isLocked: boolean;
+        }
+      | {
+          kind: "group";
+          normalizedInstrument: string;
+          entries: Array<{ file: IndexedFile; idx: number }>;
+        }
+    > = [];
+    const batchGroups = new Map<string, { normalizedInstrument: string; entries: Array<{ file: IndexedFile; idx: number }> }>();
+
+    visibleFiles.forEach(({ file, idx }) => {
+      const conflict = duplicateMap.get(idx) ?? null;
+      const normalizedInstrument = normalizedInstrumentNames.get(idx);
+      const isBatchDuplicate =
+        normalizedInstrument !== null &&
+        normalizedInstrument !== undefined &&
+        (normalizedInstrumentCounts.get(normalizedInstrument) ?? 0) > 1;
+
+      if (isBatchDuplicate && normalizedInstrument) {
+        const existingGroup = batchGroups.get(normalizedInstrument);
+        if (existingGroup) {
+          existingGroup.entries.push({ file, idx });
+          return;
+        }
+
+        const nextGroup = {
+          normalizedInstrument,
+          entries: [{ file, idx }],
+        };
+        batchGroups.set(normalizedInstrument, nextGroup);
+        items.push({ kind: "group", ...nextGroup });
+        return;
+      }
+
+      items.push({
+        kind: "single",
+        file,
+        idx,
+        conflictMessage: conflict ? describeScoreConflict(conflict, normalizedTitle) : null,
+        isLocked: conflict !== null,
+      });
+    });
+
+    return items;
+  }, [duplicateMap, normalizedInstrumentCounts, normalizedInstrumentNames, normalizedTitle, visibleFiles]);
+
+  const pendingIssueMessages = useMemo(() => {
+    const messages: string[] = [];
+
+    if (isDuplicateSong) {
+      messages.push(
+        `A música ${existingSong?.name ?? normalizedTitle} já existe. Altere o nome da música para continuar.`
+      );
+    }
+
+    reviewItems.forEach((item) => {
+      if (item.kind === "group") {
+        const firstEntry = item.entries[0];
+        const instrumentName = firstEntry
+          ? instrumentNames[firstEntry.idx] || firstEntry.file.instrument || item.normalizedInstrument
+          : item.normalizedInstrument;
+
+        messages.push(
+          `${item.entries.length} partituras usam o mesmo instrumento (${instrumentName}). Renomeie ou delete uma delas para continuar.`
+        );
+        return;
+      }
+
+      if (item.conflictMessage) {
+        messages.push(item.conflictMessage);
+      }
+    });
+
+    return messages;
+  }, [existingSong?.name, isDuplicateSong, instrumentNames, normalizedTitle, reviewItems]);
+
+  if (files.length === 0) return null;
 
   return (
     <Modal
@@ -237,23 +309,22 @@ export function AddFilesModal({
           onCancel={onClose}
           onConfirm={handleSave}
           isSaving={isSaving}
-          confirmDisabled={!hasAddableFiles}
+          confirmDisabled={hasPendingIssues || !hasAddableFiles}
         />
       }
     >
-      {hasPendingIssues && pendingIssuesMessage && (
+      {hasPendingIssues && pendingIssueMessages.length > 0 && (
         <div className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-          <p className="font-semibold">Há pendências nas partituras selecionadas.</p>
-          <p>{pendingIssuesMessage}</p>
+          <p className="font-semibold">Revise as pendências abaixo antes de salvar.</p>
+          <ul className="mt-1 list-disc space-y-1 pl-4">
+            {pendingIssueMessages.map((message) => (
+              <li key={message}>{message}</li>
+            ))}
+          </ul>
         </div>
       )}
 
       <FormField label="Nome da Música" required>
-        {duplicateSummaryMessage && (
-          <p className="mb-1.5 text-xs font-semibold text-amber-700">
-            {duplicateSummaryMessage}
-          </p>
-        )}
         <TextInput
           value={title}
           onChange={(value) => setTitle(normalizeSongNameInput(value))}
@@ -296,32 +367,98 @@ export function AddFilesModal({
       {instrumentCount > 0 && (
         <FormField label={`Instrumentos a adicionar (${instrumentCount})`}>
           <div className="rounded border border-[#c5cfdb] bg-white p-3 space-y-4 max-h-75 overflow-y-auto">
-            {visibleFiles.map(({ file, idx }) => {
-              const fileName = getFileName(file.path) || file.name;
-              const directoryPath = getDirectoryPath(file.path);
-              const conflict = duplicateMap.get(idx) ?? null;
-              const normalizedInstrument = normalizedInstrumentNames.get(idx);
-              const isBatchDuplicate =
-                normalizedInstrument !== null &&
-                normalizedInstrument !== undefined &&
-                (normalizedInstrumentCounts.get(normalizedInstrument) ?? 0) > 1;
-              const isLocked = conflict !== null;
-              const conflictMessage = conflict
-                ? describeScoreConflict(conflict, normalizedTitle)
-                : null;
-              const batchConflictMessage = isBatchDuplicate
-                ? "Essa partitura possui o mesmo nome de outra partitura nesta seleção e não será salva até ser renomeada ou removida."
-                : null;
-              
+            {reviewItems.map((item) => {
+              if (item.kind === "group") {
+                const firstEntry = item.entries[0];
+                const instrumentName = firstEntry
+                  ? instrumentNames[firstEntry.idx] || firstEntry.file.instrument || item.normalizedInstrument
+                  : item.normalizedInstrument;
+
+                return (
+                  <div key={item.normalizedInstrument} className="rounded border border-amber-200 bg-amber-50 p-2 space-y-3">
+                    {item.entries.map(({ file, idx }, index) => {
+                      const fileName = getFileName(file.path) || file.name;
+                      const directoryPath = getDirectoryPath(file.path);
+                      const isBusy = openingScorePath === file.path || openingLocationPath === file.path;
+
+                      return (
+                        <div key={idx} className={index > 0 ? "border-t border-amber-200 pt-3" : ""}>
+                          <div className="flex items-center justify-between">
+                            <div className="min-w-0 flex-1 pr-2">
+                              <p className="text-xs text-[#5d738b] font-semibold break-all whitespace-normal">
+                                {fileName}
+                              </p>
+                              <p className="text-[11px] text-[#8b9db2] break-all whitespace-normal mt-0.5">
+                                {directoryPath}
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removeFile(idx)}
+                              className="p-1 text-[#8b9db2] hover:text-red-500 transition-colors"
+                              title="Remover arquivo"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+
+                          <div className="flex items-center gap-2 flex-wrap mt-2">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenScore(file.path)}
+                              disabled={isBusy}
+                              className="inline-flex items-center gap-1 rounded border border-[#d8e0ea] px-2 py-1 text-[11px] text-[#5d738b] hover:bg-[#eef3f8] disabled:cursor-not-allowed disabled:opacity-60"
+                              title="Abrir partitura"
+                            >
+                              {openingScorePath === file.path ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <ExternalLink className="h-3.5 w-3.5" />
+                              )}
+                              Abrir partitura
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleOpenLocal(file.path)}
+                              disabled={isBusy}
+                              className="inline-flex items-center gap-1 rounded border border-[#d8e0ea] px-2 py-1 text-[11px] text-[#5d738b] hover:bg-[#eef3f8] disabled:cursor-not-allowed disabled:opacity-60"
+                              title="Abrir local"
+                            >
+                              {openingLocationPath === file.path ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <FolderOpen className="h-3.5 w-3.5" />
+                              )}
+                              Abrir local
+                            </button>
+                          </div>
+
+                          <TextInput
+                            value={instrumentNames[idx] || ""}
+                            onChange={(val) => updateInstrumentName(idx, val)}
+                            onFocus={() => setEditingInstrumentIndex(idx)}
+                            onBlur={() => setEditingInstrumentIndex(null)}
+                            placeholder="Nome do instrumento"
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              }
+
+              const fileName = getFileName(item.file.path) || item.file.name;
+              const directoryPath = getDirectoryPath(item.file.path);
+              const isBusy = openingScorePath === item.file.path || openingLocationPath === item.file.path;
+
               return (
-                <div key={idx} className="space-y-1">
+                <div
+                  key={item.idx}
+                  className={item.conflictMessage ? "rounded border border-amber-200 bg-amber-50 p-2 space-y-2" : "space-y-2"}
+                >
                   <div className="flex items-center justify-between">
                     <div className="min-w-0 flex-1 pr-2">
-                      {(conflictMessage || batchConflictMessage) && (
-                        <p className="text-xs font-semibold text-amber-700">
-                          {conflictMessage || batchConflictMessage}
-                        </p>
-                      )}
                       <p className="text-xs text-[#5d738b] font-semibold break-all whitespace-normal">
                         {fileName}
                       </p>
@@ -331,23 +468,24 @@ export function AddFilesModal({
                     </div>
                     <button
                       type="button"
-                      onClick={() => removeFile(idx)}
-                      disabled={isLocked}
+                      onClick={() => removeFile(item.idx)}
+                      disabled={item.isLocked}
                       className="p-1 text-[#8b9db2] hover:text-red-500 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
                       title="Remover arquivo"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
+
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => handleOpenScore(file.path)}
-                      disabled={openingScorePath === file.path || openingLocationPath === file.path}
+                      onClick={() => handleOpenScore(item.file.path)}
+                      disabled={isBusy}
                       className="inline-flex items-center gap-1 rounded border border-[#d8e0ea] px-2 py-1 text-[11px] text-[#5d738b] hover:bg-[#eef3f8] disabled:cursor-not-allowed disabled:opacity-60"
                       title="Abrir partitura"
                     >
-                      {openingScorePath === file.path ? (
+                      {openingScorePath === item.file.path ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
                       ) : (
                         <ExternalLink className="h-3.5 w-3.5" />
@@ -357,12 +495,12 @@ export function AddFilesModal({
 
                     <button
                       type="button"
-                      onClick={() => handleOpenLocal(file.path)}
-                      disabled={openingScorePath === file.path || openingLocationPath === file.path}
+                      onClick={() => handleOpenLocal(item.file.path)}
+                      disabled={isBusy}
                       className="inline-flex items-center gap-1 rounded border border-[#d8e0ea] px-2 py-1 text-[11px] text-[#5d738b] hover:bg-[#eef3f8] disabled:cursor-not-allowed disabled:opacity-60"
                       title="Abrir local"
                     >
-                      {openingLocationPath === file.path ? (
+                      {openingLocationPath === item.file.path ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
                       ) : (
                         <FolderOpen className="h-3.5 w-3.5" />
@@ -370,13 +508,14 @@ export function AddFilesModal({
                       Abrir local
                     </button>
                   </div>
+
                   <TextInput
-                    value={instrumentNames[idx] || ""}
-                    onChange={(val) => updateInstrumentName(idx, val)}
-                    onFocus={() => setEditingInstrumentIndex(idx)}
+                    value={instrumentNames[item.idx] || ""}
+                    onChange={(val) => updateInstrumentName(item.idx, val)}
+                    onFocus={() => setEditingInstrumentIndex(item.idx)}
                     onBlur={() => setEditingInstrumentIndex(null)}
                     placeholder="Nome do instrumento"
-                    readOnly={isLocked}
+                    readOnly={item.isLocked}
                   />
                 </div>
               );
