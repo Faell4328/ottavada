@@ -11,6 +11,9 @@ use crate::domain::models::{
 };
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
+use crate::services::cloud_paths::{
+    clear_server_apply_in_progress, has_server_apply_in_progress, mark_server_apply_in_progress,
+};
 
 #[tauri::command]
 pub async fn get_settings(
@@ -163,6 +166,25 @@ pub fn has_pending_changes(
     let settings = store.get_app_settings()?;
     let last_applied = settings.last_change_timestamp.unwrap_or(0);
     Ok(latest_change > last_applied)
+}
+
+#[tauri::command]
+pub fn has_server_apply_changes_in_progress(store: State<'_, SystemStore>) -> bool {
+    has_server_apply_in_progress(store.app_data_dir())
+}
+
+#[tauri::command]
+pub fn mark_server_apply_changes_in_progress(
+    store: State<'_, SystemStore>,
+) -> Result<(), AppError> {
+    mark_server_apply_in_progress(store.app_data_dir())
+}
+
+#[tauri::command]
+pub fn clear_server_apply_changes_in_progress(
+    store: State<'_, SystemStore>,
+) -> Result<(), AppError> {
+    clear_server_apply_in_progress(store.app_data_dir())
 }
 
 #[tauri::command]

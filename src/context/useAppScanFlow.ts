@@ -33,6 +33,14 @@ export interface RcloneProgressSnapshot {
 
 const SNAPSHOT_AUTO_THRESHOLD_BYTES = 2 * 1024 * 1024;
 
+export function shouldRunStartupServerScan(
+  computerType: "Server" | "Client" | undefined,
+  hasPendingChanges: boolean,
+  hasInterruptedApply: boolean
+) {
+  return computerType !== "Server" || hasPendingChanges || hasInterruptedApply;
+}
+
 function normalizeRcloneProgressForUi(progress: RcloneProgressSnapshot) {
   return {
     active: progress.active,
@@ -468,16 +476,18 @@ export function useAppScanFlow({
         },
       });
 
-      const shouldUseFullSync = shouldUseFullCloudSync({
+      const shouldUseFullSync = forceCloudSync || (!isAutomatic && shouldUseFullCloudSync({
         forceCloudSync,
         snapshotGenerated,
         eventsCount: eventsSummary.events_count,
         hasPendingChanges,
         hasDetectedFileChanges,
-      });
+      }));
 
       if (shouldUseFullSync) {
         // Full sync garante que a etapa de upload sempre exista no fluxo do servidor.
+        await api.markServerApplyChangesInProgress();
+
         if (snapshotGenerated) {
           let uploadError: unknown = null;
 
@@ -503,22 +513,32 @@ export function useAppScanFlow({
           await runSyncWithProgress("upload");
         }
       } else {
-        const uploadPaths = new Set<string>();
+        const uploadPaths: string[] = [];
+
+        const addUploadPath = (relativePath: string) => {
+          if (!uploadPaths.includes(relativePath)) {
+            uploadPaths.push(relativePath);
+          }
+        };
+
+        if (snapshotGenerated || eventsSummary.events_count > 0) {
+          addUploadPath("actions");
+        }
 
         for (const archiveResult of archiveSummary.results ?? []) {
           if (archiveResult.generated && archiveResult.song_id) {
-            uploadPaths.add(`sync/songs/${archiveResult.song_id}.tar.zst`);
+            addUploadPath(`songs/${archiveResult.song_id}.tar.zst`);
           }
         }
 
-        if (eventsSummary.events_count > 0) {
-          uploadPaths.add("sync/events/events.msgpack.zst");
-        }
-
-        if (uploadPaths.size === 0) {
-          await runSyncWithProgress("upload");
+        if (uploadPaths.length === 0) {
+          if (!isAutomatic) {
+            await api.markServerApplyChangesInProgress();
+            await runSyncWithProgress("upload");
+          }
         } else {
-          await runSelectiveUploadWithProgress(Array.from(uploadPaths));
+          await api.markServerApplyChangesInProgress();
+          await runSelectiveUploadWithProgress(uploadPaths);
         }
       }
 
@@ -527,6 +547,7 @@ export function useAppScanFlow({
 
       // Atualiza o marcador de "alterações aplicadas" somente ao concluir com sucesso.
       await api.markLocalChangesAsApplied();
+      await api.clearServerApplyChangesInProgress();
       await loadSettings();
       updateStepProgress(changedCount);
 

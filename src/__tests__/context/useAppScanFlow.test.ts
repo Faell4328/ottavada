@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 
 import {
   shouldDispatchRcloneProgressUpdate,
+  shouldRunStartupServerScan,
   shouldUseFullCloudSync,
 } from "../../context/useAppScanFlow";
 
@@ -106,5 +107,23 @@ describe("shouldDispatchRcloneProgressUpdate", () => {
         }
       )
     ).toBe(true);
+  });
+});
+
+describe("shouldRunStartupServerScan", () => {
+  it("skips the startup scan on the server when there are no pending changes", () => {
+    expect(shouldRunStartupServerScan("Server", false, false)).toBe(false);
+  });
+
+  it("runs the startup scan on the server when there are pending changes", () => {
+    expect(shouldRunStartupServerScan("Server", true, false)).toBe(true);
+  });
+
+  it("runs the startup scan on the server when an apply was interrupted", () => {
+    expect(shouldRunStartupServerScan("Server", false, true)).toBe(true);
+  });
+
+  it("keeps the client startup scan enabled", () => {
+    expect(shouldRunStartupServerScan("Client", false, false)).toBe(true);
   });
 });

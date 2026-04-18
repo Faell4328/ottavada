@@ -8,13 +8,12 @@ use crate::domain::models::ScoreStatus;
 use crate::domain::models::OperationGuard;
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
-use crate::services::cloud_paths::ensure_sync_cloud_dir;
+use crate::services::cloud_paths::ensure_actions_cloud_dir;
 use crate::services::backup_songs_service::list_draft_not_found_scores_with_previous_main;
 use crate::services::msgpack_zstd::{
     compress_zstd_with_threads, serialize_msgpack_named, write_atomic, ZSTD_LEVEL_BALANCED,
 };
 
-const EVENTS_DIR_NAME: &str = "events";
 const SNAPSHOT_FILE_NAME: &str = "snapshot.msgpack.zst";
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -75,7 +74,7 @@ pub fn generate_snapshot_msgpack(
 
     let generated_at = chrono::Local::now().timestamp();
 
-    let cloud_dir = ensure_sync_cloud_dir(store.app_data_dir())?;
+    let cloud_dir = ensure_actions_cloud_dir(store.app_data_dir())?;
 
     let previous_main_versions =
         list_draft_not_found_scores_with_previous_main(db, store.app_data_dir(), &cloud_dir)?;
@@ -193,14 +192,27 @@ fn compress_snapshot_with_retry(msgpack_bytes: &[u8]) -> Result<Vec<u8>, AppErro
 }
 
 fn clear_events_artifacts(cloud_dir: &std::path::Path) -> Result<(), AppError> {
-    let events_dir = cloud_dir.join(EVENTS_DIR_NAME);
-    if events_dir.exists() {
-        fs::remove_dir_all(&events_dir).map_err(|e| {
-            AppError::Generic(format!(
-                "Erro ao remover diretório de eventos após snapshot: {}",
-                e
-            ))
+    for entry in fs::read_dir(cloud_dir).map_err(|e| {
+        AppError::Generic(format!("Erro ao listar diretório de ações após snapshot: {}", e))
+    })? {
+        let entry = entry.map_err(|e| {
+            AppError::Generic(format!("Erro ao ler entrada de ações após snapshot: {}", e))
         })?;
+
+        let path = entry.path();
+        if path.file_name().and_then(|name| name.to_str()) == Some("snapshot.msgpack.zst") {
+            continue;
+        }
+
+        if path.is_file() {
+            fs::remove_file(&path).map_err(|e| {
+                AppError::Generic(format!("Erro ao remover arquivo de ações após snapshot: {}", e))
+            })?;
+        } else if path.is_dir() {
+            fs::remove_dir_all(&path).map_err(|e| {
+                AppError::Generic(format!("Erro ao remover diretório de ações após snapshot: {}", e))
+            })?;
+        }
     }
 
     let legacy_events_path = cloud_dir
@@ -267,7 +279,7 @@ mod tests {
         db.insert_song(&song, &[category.id.clone()])
             .expect("insert song");
 
-        let events_dir = dir.path().join("cloud").join("sync").join("events");
+        let events_dir = dir.path().join("cloud").join("actions");
         fs::create_dir_all(&events_dir).expect("create events dir");
         let events_file = events_dir.join("events.msgpack.zst");
         fs::write(&events_file, b"events").expect("write events file");
@@ -283,7 +295,7 @@ mod tests {
         assert!(summary.file_size > 0);
         assert!(summary.generated_at > 0);
         assert!(std::path::Path::new(&summary.output_path).ends_with(
-            std::path::Path::new("cloud").join("sync").join("snapshot.msgpack.zst")
+            std::path::Path::new("cloud").join("actions").join("snapshot.msgpack.zst")
         ));
         assert!(!events_file.exists());
         assert!(!stale_events_file.exists());

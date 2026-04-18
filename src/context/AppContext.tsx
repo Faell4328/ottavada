@@ -14,7 +14,7 @@ import { initialState, reducer } from "./reducer";
 import type { AppContextValue } from "./types";
 import { useAppBootstrap } from "./useAppBootstrap";
 import { useAppCrudActions } from "./useAppCrudActions";
-import { useAppScanFlow } from "./useAppScanFlow";
+import { shouldRunStartupServerScan, useAppScanFlow } from "./useAppScanFlow";
 import { compareSongNames } from "../utils/songOrder";
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -165,8 +165,33 @@ export function AppProvider({ children, disableBootstrap = false }: AppProviderP
       return;
     }
 
+    const settings = state.settings;
     startupScanTriggeredRef.current = true;
-    void scanFilesForChanges(true);
+
+    void (async () => {
+      let shouldRunScan = true;
+      let forceCloudSync = false;
+
+      if (settings.computer_type === "Server") {
+        const [hasPendingChanges, hasInterruptedApply] = await Promise.all([
+          api.hasPendingChanges(),
+          api.hasServerApplyChangesInProgress(),
+        ]);
+
+        shouldRunScan = shouldRunStartupServerScan(
+          settings.computer_type,
+          hasPendingChanges,
+          hasInterruptedApply
+        );
+        forceCloudSync = hasInterruptedApply;
+      }
+
+      if (!shouldRunScan) {
+        return;
+      }
+
+      void scanFilesForChanges({ isAutomatic: true, forceCloudSync });
+    })();
   }, [state.isLoading, state.isFirstRun, state.settings, scanFilesForChanges]);
 
   const value: AppContextValue = useMemo(

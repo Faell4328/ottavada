@@ -935,7 +935,7 @@ pub async fn sync_cloud_with_rclone(
     run_blocking_with_store(
         app_data_dir,
         "Falha interna ao sincronizar com rclone",
-        move |store| sync_cloud_directory_with_rclone_impl(&store, &direction, Some("sync")),
+        move |store| sync_cloud_directory_with_rclone_impl(&store, &direction, None),
     )
     .await
 }

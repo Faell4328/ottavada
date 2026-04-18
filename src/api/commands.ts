@@ -251,6 +251,18 @@ export async function hasPendingChanges(): Promise<boolean> {
   return invoke("has_pending_changes");
 }
 
+export async function hasServerApplyChangesInProgress(): Promise<boolean> {
+  return invoke("has_server_apply_changes_in_progress");
+}
+
+export async function markServerApplyChangesInProgress(): Promise<void> {
+  return invoke("mark_server_apply_changes_in_progress");
+}
+
+export async function clearServerApplyChangesInProgress(): Promise<void> {
+  return invoke("clear_server_apply_changes_in_progress");
+}
+
 export async function exitApplication(): Promise<void> {
   return invoke("exit_application");
 }

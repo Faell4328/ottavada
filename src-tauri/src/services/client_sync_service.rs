@@ -12,9 +12,9 @@ use crate::services::msgpack_zstd::read_zstd_msgpack;
 
 const CLOUD_DIR_NAME: &str = "cloud";
 const LEGACY_CLOUD_DIR_NAME: &str = "nuvem";
-const EVENTS_DIR_NAME: &str = "events";
 const EVENTS_FILE_NAME: &str = "events.msgpack.zst";
 const SNAPSHOT_FILE_NAME: &str = "snapshot.msgpack.zst";
+const ACTIONS_DIR_NAME: &str = "actions";
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ClientSyncSummary {
@@ -112,8 +112,9 @@ pub fn apply_server_changes_for_client(
     }
 
     let cloud_dir = resolve_cloud_dir(store.app_data_dir())?;
-    let snapshot_path = cloud_dir.join(SNAPSHOT_FILE_NAME);
-    let events_path = cloud_dir.join(EVENTS_DIR_NAME).join(EVENTS_FILE_NAME);
+    let actions_dir = cloud_dir.join(ACTIONS_DIR_NAME);
+    let snapshot_path = actions_dir.join(SNAPSHOT_FILE_NAME);
+    let events_path = actions_dir.join(EVENTS_FILE_NAME);
 
     let mut snapshot_applied = false;
 
@@ -242,7 +243,7 @@ fn apply_snapshot(db: &Database, payload: &SnapshotMessagePack) -> Result<(), Ap
                         song.id,
                         score.name,
                         "server",
-                        format!("/cloud/sync/songs/{}", song.id),
+                        format!("/cloud/songs/{}", song.id),
                         format!("{}.{}", score.id, file_extension),
                         score.updated_at,
                         score.status,
@@ -399,7 +400,7 @@ fn apply_upsert_field_event(
 
                 tx.execute(
                     "UPDATE scores SET song_id = ?1, file_path = ?2 WHERE id = ?3",
-                    params![song_id, format!("/cloud/sync/songs/{}", song_id), event.entity_id],
+                    params![song_id, format!("/cloud/songs/{}", song_id), event.entity_id],
                 )?;
 
                 if let Some(pending) = pending_scores.remove(&event.entity_id) {
@@ -535,7 +536,7 @@ fn ensure_score_exists(
         params![
             score_id,
             song_id,
-            format!("/cloud/sync/songs/{}", song_id),
+            format!("/cloud/songs/{}", song_id),
             format!("{}.score", score_id),
             timestamp,
         ],
@@ -680,7 +681,7 @@ mod tests {
         store.save_app_settings(&settings).expect("save settings");
 
         let cloud_dir = dir.path().join("cloud");
-        std::fs::create_dir_all(cloud_dir.join("events")).expect("create dirs");
+        std::fs::create_dir_all(cloud_dir.join("actions")).expect("create dirs");
 
         let snapshot_payload = SnapshotTestPayload {
             generated_at: 100,
@@ -725,10 +726,7 @@ mod tests {
             }],
         };
 
-        write_zstd_msgpack(
-            &cloud_dir.join("events").join("events.msgpack.zst"),
-            &events_payload,
-        );
+        write_zstd_msgpack(&cloud_dir.join("actions").join("events.msgpack.zst"), &events_payload);
 
         let summary = apply_server_changes_for_client(&db, &store).expect("sync client");
 
@@ -770,7 +768,7 @@ mod tests {
         store.save_app_settings(&settings).expect("save settings");
 
         let cloud_dir = dir.path().join("cloud");
-        std::fs::create_dir_all(cloud_dir.join("events")).expect("create dirs");
+        std::fs::create_dir_all(cloud_dir.join("actions")).expect("create dirs");
 
         let events_payload = EventsTestPayload {
             origin: "server".to_string(),
@@ -838,10 +836,7 @@ mod tests {
             ],
         };
 
-        write_zstd_msgpack(
-            &cloud_dir.join("events").join("events.msgpack.zst"),
-            &events_payload,
-        );
+        write_zstd_msgpack(&cloud_dir.join("actions").join("events.msgpack.zst"), &events_payload);
 
         let summary = apply_server_changes_for_client(&db, &store).expect("sync client");
         assert!(!summary.snapshot_applied);
@@ -876,7 +871,7 @@ mod tests {
         store.save_app_settings(&settings).expect("save settings");
 
         let cloud_dir = dir.path().join("cloud");
-        std::fs::create_dir_all(cloud_dir.join("events")).expect("create dirs");
+        std::fs::create_dir_all(cloud_dir.join("actions")).expect("create dirs");
 
         let snapshot_payload = SnapshotTestPayload {
             generated_at: 100,
@@ -894,10 +889,7 @@ mod tests {
             }],
         };
 
-        write_zstd_msgpack(
-            &cloud_dir.join("snapshot.msgpack.zst"),
-            &snapshot_payload,
-        );
+        write_zstd_msgpack(&cloud_dir.join("actions").join("snapshot.msgpack.zst"), &snapshot_payload);
 
         let summary = apply_server_changes_for_client(&db, &store).expect("sync client");
 
