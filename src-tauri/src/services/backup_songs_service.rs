@@ -2,7 +2,8 @@ use std::collections::{HashMap, HashSet};
 use std::ffi::OsString;
 use std::fs::{self, File};
 use std::path::{Path, PathBuf};
-use std::sync::mpsc;
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::{mpsc, Arc, Mutex};
 
 use rusqlite::params;
 use tar::Builder;
@@ -48,7 +49,6 @@ struct ScoreArchiveEntry {
 const SONGS_DIR_NAME: &str = "songs";
 const TMP_DIR_NAME: &str = "tmp";
 const PROCESSING_STATUS: &str = "processing";
-const MAX_ARCHIVE_WORKERS: usize = 4;
 
 #[derive(Debug)]
 struct ArchiveJob {
@@ -443,23 +443,92 @@ fn copy_and_rename_scores(entries: &[ScoreArchiveEntry], temp_dir: &Path) -> Res
     }
 
     for entry in entries {
-        if !entry.source_path.is_file() {
-            return Err(AppError::Generic(format!(
-                "Arquivo não encontrado para score {}: {}",
-                entry.score_id,
-                entry.source_path.display()
-            )));
-        }
+        copy_single_score(entry, temp_dir)?;
+    }
 
-        let destination = temp_dir.join(&entry.tar_name);
-        fs::copy(&entry.source_path, &destination).map_err(|e| {
-            AppError::Generic(format!(
-                "Erro ao copiar arquivo {} para {}: {}",
-                entry.source_path.display(),
-                destination.display(),
-                e
-            ))
-        })?;
+    Ok(())
+}
+
+fn copy_single_score(entry: &ScoreArchiveEntry, temp_dir: &Path) -> Result<(), AppError> {
+    if !entry.source_path.is_file() {
+        return Err(AppError::Generic(format!(
+            "Arquivo não encontrado para score {}: {}",
+            entry.score_id,
+            entry.source_path.display()
+        )));
+    }
+
+    let destination = temp_dir.join(&entry.tar_name);
+    fs::copy(&entry.source_path, &destination).map_err(|e| {
+        AppError::Generic(format!(
+            "Erro ao copiar arquivo {} para {}: {}",
+            entry.source_path.display(),
+            destination.display(),
+            e
+        ))
+    })?;
+
+    Ok(())
+}
+
+fn has_duplicate_tar_names(entries: &[ScoreArchiveEntry]) -> bool {
+    let mut seen = HashSet::new();
+
+    entries.iter().any(|entry| !seen.insert(entry.tar_name.clone()))
+}
+
+fn copy_and_rename_scores_parallel(
+    entries: &[ScoreArchiveEntry],
+    temp_dir: &Path,
+    copy_workers: usize,
+) -> Result<(), AppError> {
+    if entries.is_empty() {
+        return Err(AppError::Generic(
+            "Nenhuma partitura com status main/pending para gerar backup".to_string(),
+        ));
+    }
+
+    let workers = copy_workers.max(1).min(entries.len());
+    if workers == 1 || has_duplicate_tar_names(entries) {
+        return copy_and_rename_scores(entries, temp_dir);
+    }
+
+    let next_index = Arc::new(AtomicUsize::new(0));
+    let stop = Arc::new(AtomicBool::new(false));
+    let first_error: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
+
+    std::thread::scope(|scope| {
+        for _ in 0..workers {
+            let next_index = Arc::clone(&next_index);
+            let stop = Arc::clone(&stop);
+            let first_error = Arc::clone(&first_error);
+
+            scope.spawn(move || {
+                loop {
+                    if stop.load(Ordering::Relaxed) {
+                        break;
+                    }
+
+                    let idx = next_index.fetch_add(1, Ordering::Relaxed);
+                    if idx >= entries.len() {
+                        break;
+                    }
+
+                    if let Err(err) = copy_single_score(&entries[idx], temp_dir) {
+                        let mut guard = first_error.lock().unwrap();
+                        if guard.is_none() {
+                            *guard = Some(err.to_string());
+                        }
+                        stop.store(true, Ordering::Relaxed);
+                        break;
+                    }
+                }
+            });
+        }
+    });
+
+    if let Some(error) = first_error.lock().unwrap().clone() {
+        return Err(AppError::Generic(error));
     }
 
     Ok(())
@@ -474,6 +543,17 @@ fn zstd_threads_per_archive(archive_workers: usize) -> u32 {
 
     // Divide os núcleos entre os arquivos paralelos para evitar oversubscription.
     (total_cores / workers).max(1) as u32
+}
+
+fn archive_worker_count_for(total_jobs: usize, available_cores: usize) -> usize {
+    let song_worker_budget = (available_cores / 2).max(1);
+    song_worker_budget.min(total_jobs.max(1)).max(1)
+}
+
+fn copy_worker_count_for(archive_workers: usize, available_cores: usize) -> usize {
+    let workers = archive_workers.max(1);
+
+    (available_cores.max(1) / workers).max(1)
 }
 
 fn create_tar_zst_from_temp_dir_with_threads(
@@ -596,6 +676,7 @@ fn generate_archive_with_retry(
     songs_dir: &Path,
     temp_root: &Path,
     zstd_threads: u32,
+    copy_threads: usize,
 ) -> Result<(String, u64), AppError> {
     let final_file = songs_dir.join(format!("{}.tar.zst", song_id));
     let tmp_file = songs_dir.join(format!("{}.tar.zst.tmp", song_id));
@@ -606,7 +687,7 @@ fn generate_archive_with_retry(
         let song_temp_dir = create_song_temp_dir(temp_root, song_id)?;
 
         let attempt_result = (|| -> Result<(String, u64), AppError> {
-            copy_and_rename_scores(&entries, &song_temp_dir)?;
+            copy_and_rename_scores_parallel(&entries, &song_temp_dir, copy_threads)?;
 
             remove_if_exists(&tmp_file);
             let size = create_tar_zst_from_temp_dir_with_threads(
@@ -649,7 +730,7 @@ fn archive_worker_count(total_jobs: usize) -> usize {
         .unwrap_or(1)
         .max(1);
 
-    cpu_based.min(MAX_ARCHIVE_WORKERS).min(total_jobs).max(1)
+    archive_worker_count_for(total_jobs, cpu_based)
 }
 
 fn run_archive_jobs_parallel(
@@ -661,8 +742,13 @@ fn run_archive_jobs_parallel(
         return Vec::new();
     }
 
-    let workers = archive_worker_count(jobs.len());
+    let available_cores = std::thread::available_parallelism()
+        .map(usize::from)
+        .unwrap_or(1)
+        .max(1);
+    let workers = archive_worker_count_for(jobs.len(), available_cores);
     let zstd_threads = zstd_threads_per_archive(workers);
+    let copy_threads = copy_worker_count_for(workers, available_cores);
     if workers == 1 {
         return jobs
             .into_iter()
@@ -673,6 +759,7 @@ fn run_archive_jobs_parallel(
                     songs_dir,
                     temp_root,
                     zstd_threads,
+                    copy_threads,
                 );
                 (job.row, result)
             })
@@ -702,6 +789,7 @@ fn run_archive_jobs_parallel(
                         songs_dir,
                         temp_root,
                         zstd_threads,
+                        copy_threads,
                     );
 
                     // Se o receiver foi encerrado antecipadamente, só interrompe o worker.
@@ -1004,7 +1092,10 @@ pub fn regenerate_all_song_archives(
 mod tests {
     use tempfile::tempdir;
 
-    use super::{cleanup_orphan_archives, should_generate_archive, SongBackupRow};
+    use super::{
+        archive_worker_count_for, cleanup_orphan_archives, copy_and_rename_scores_parallel,
+        copy_worker_count_for, should_generate_archive, SongBackupRow, ScoreArchiveEntry,
+    };
 
     #[test]
     fn generates_when_archive_is_missing_even_if_last_backup_is_up_to_date() {
@@ -1037,8 +1128,62 @@ mod tests {
 
         let archive_path = songs_dir.join("song-2.tar.zst");
         std::fs::write(&archive_path, b"already generated").expect("create archive placeholder");
-
         assert!(!should_generate_archive(&row, &songs_dir, 0));
+    }
+
+    #[test]
+    fn archive_worker_count_uses_all_available_cores_up_to_the_number_of_jobs() {
+        assert_eq!(archive_worker_count_for(1, 8), 1);
+        assert_eq!(archive_worker_count_for(4, 8), 4);
+        assert_eq!(archive_worker_count_for(16, 8), 4);
+        assert_eq!(archive_worker_count_for(16, 1), 1);
+    }
+
+    #[test]
+    fn copy_worker_count_scales_with_song_workers() {
+        assert_eq!(copy_worker_count_for(1, 8), 8);
+        assert_eq!(copy_worker_count_for(4, 8), 2);
+        assert_eq!(copy_worker_count_for(16, 8), 1);
+    }
+
+    #[test]
+    fn copies_scores_in_parallel_into_temp_dir() {
+        let temp = tempdir().expect("temp dir");
+        let source_dir = temp.path().join("source");
+        let target_dir = temp.path().join("target");
+        std::fs::create_dir_all(&source_dir).expect("create source dir");
+        std::fs::create_dir_all(&target_dir).expect("create target dir");
+
+        let first_source = source_dir.join("first.musx");
+        let second_source = source_dir.join("second.musx");
+        let third_source = source_dir.join("third.musx");
+        std::fs::write(&first_source, b"first").expect("write first");
+        std::fs::write(&second_source, b"second").expect("write second");
+        std::fs::write(&third_source, b"third").expect("write third");
+
+        let entries = vec![
+            ScoreArchiveEntry {
+                score_id: "score-1".to_string(),
+                source_path: first_source,
+                tar_name: "first.tar".to_string(),
+            },
+            ScoreArchiveEntry {
+                score_id: "score-2".to_string(),
+                source_path: second_source,
+                tar_name: "second.tar".to_string(),
+            },
+            ScoreArchiveEntry {
+                score_id: "score-3".to_string(),
+                source_path: third_source,
+                tar_name: "third.tar".to_string(),
+            },
+        ];
+
+        copy_and_rename_scores_parallel(&entries, &target_dir, 2).expect("copy scores");
+
+        assert_eq!(std::fs::read(target_dir.join("first.tar")).expect("read first"), b"first");
+        assert_eq!(std::fs::read(target_dir.join("second.tar")).expect("read second"), b"second");
+        assert_eq!(std::fs::read(target_dir.join("third.tar")).expect("read third"), b"third");
     }
 
     #[test]

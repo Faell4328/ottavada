@@ -45,6 +45,25 @@ fn restore_main_window<R: tauri::Runtime, M: tauri::Manager<R>>(manager: &M) {
     let _ = window.set_focus();
 }
 
+#[cfg(target_os = "windows")]
+fn boost_current_process_priority() {
+    use windows_sys::Win32::System::Threading::{
+        GetCurrentProcess, SetPriorityClass, ABOVE_NORMAL_PRIORITY_CLASS,
+    };
+
+    unsafe {
+        let process = GetCurrentProcess();
+        if SetPriorityClass(process, ABOVE_NORMAL_PRIORITY_CLASS) == 0 {
+            warn!("Falha ao elevar a prioridade do processo principal");
+        } else {
+            info!("Prioridade do processo principal ajustada para acima do normal");
+        }
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+fn boost_current_process_priority() {}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -70,6 +89,8 @@ pub fn run() {
 
             // Inicializar logger
             logger::init_logger(&app_data_dir).expect("Não foi possível inicializar o logger");
+
+            boost_current_process_priority();
 
             if let Err(e) = reset_temp_directory(&app_data_dir) {
                 warn!(
