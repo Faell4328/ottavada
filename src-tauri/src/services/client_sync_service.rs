@@ -1,8 +1,10 @@
 use std::collections::HashMap;
 use std::fs;
+use std::path::Path;
 
 use rusqlite::{params, OptionalExtension};
 use serde::Deserialize;
+use tracing::warn;
 
 use crate::domain::errors::AppError;
 use crate::domain::models::ComputerType;
@@ -179,6 +181,43 @@ pub fn apply_server_changes_for_client(
         last_snapshot_timestamp: settings.last_snapshot_timestamp.unwrap_or(0),
         last_change_timestamp: settings.last_change_timestamp.unwrap_or(0),
     })
+}
+
+pub fn has_pending_server_changes(db: &Database, store: &SystemStore) -> Result<bool, AppError> {
+    let settings = store.get_app_settings()?;
+    let last_snapshot_timestamp = settings.last_snapshot_timestamp.unwrap_or(0);
+    let last_change_timestamp = settings.last_change_timestamp.unwrap_or(0);
+
+    let latest_change = db.get_latest_changed_field_timestamp()?.unwrap_or(0);
+    if latest_change > last_change_timestamp {
+        return Ok(true);
+    }
+
+    let actions_dir = resolve_cloud_dir(store.app_data_dir())?.join(ACTIONS_DIR_NAME);
+
+    match read_snapshot_generated_at(&actions_dir.join(SNAPSHOT_FILE_NAME)) {
+        Ok(Some(snapshot_generated_at)) if snapshot_generated_at > last_snapshot_timestamp => {
+            return Ok(true);
+        }
+        Ok(_) => {}
+        Err(err) => {
+            warn!("Falha ao ler snapshot local para validar alterações: {}", err);
+            return Ok(true);
+        }
+    }
+
+    match read_events_last_timestamp(&actions_dir.join(EVENTS_FILE_NAME)) {
+        Ok(Some(events_last_timestamp)) if events_last_timestamp > last_change_timestamp => {
+            return Ok(true);
+        }
+        Ok(_) => {}
+        Err(err) => {
+            warn!("Falha ao ler events local para validar alterações: {}", err);
+            return Ok(true);
+        }
+    }
+
+    Ok(false)
 }
 
 fn apply_snapshot(db: &Database, payload: &SnapshotMessagePack) -> Result<(), AppError> {
@@ -552,6 +591,32 @@ fn normalize_extension(raw_extension: Option<&str>) -> Option<String> {
         .map(|value| value.to_lowercase())
 }
 
+fn read_snapshot_generated_at(path: &Path) -> Result<Option<i64>, AppError> {
+    if !path.exists() {
+        return Ok(None);
+    }
+
+    let snapshot_payload: SnapshotMessagePack = read_zstd_msgpack(path, "snapshot.msgpack")?;
+    Ok(Some(snapshot_payload.generated_at))
+}
+
+fn read_events_last_timestamp(path: &Path) -> Result<Option<i64>, AppError> {
+    if !path.exists() {
+        return Ok(None);
+    }
+
+    let events_payload: EventsMessagePack = read_zstd_msgpack(path, "events.msgpack")?;
+    if events_payload.origin != "server" {
+        warn!(
+            "Arquivo de eventos em ações ignorado por origem inválida: origin='{}'",
+            events_payload.origin
+        );
+        return Ok(Some(i64::MAX));
+    }
+
+    Ok(events_payload.events.into_iter().map(|event| event.timestamp).max())
+}
+
 fn score_exists(tx: &rusqlite::Transaction<'_>, score_id: &str) -> Result<bool, AppError> {
     let exists = tx
         .query_row(
@@ -597,7 +662,7 @@ mod tests {
     use crate::infrastructure::database::Database;
     use crate::infrastructure::store::SystemStore;
 
-    use super::apply_server_changes_for_client;
+    use super::{apply_server_changes_for_client, has_pending_server_changes};
 
     #[derive(serde::Serialize)]
     struct SnapshotTestPayload {
@@ -706,7 +771,7 @@ mod tests {
         };
 
         write_zstd_msgpack(
-            &cloud_dir.join("snapshot.msgpack.zst"),
+            &cloud_dir.join("actions").join("snapshot.msgpack.zst"),
             &snapshot_payload,
         );
 
@@ -900,6 +965,74 @@ mod tests {
         let songs = db.get_all_songs().expect("get songs");
         assert_eq!(songs.len(), 1);
         assert_eq!(songs[0].name, "Musica do Snapshot");
+    }
+
+    #[test]
+    fn detects_pending_changes_when_actions_files_are_newer_than_store() {
+        let dir = tempdir().expect("temp dir");
+        let db_path = dir.path().join("test.db");
+        let db = Database::new(&db_path).expect("db init");
+        let store = SystemStore::new(dir.path().to_path_buf());
+
+        let settings = AppSettings {
+            computer_id: "server-4".to_string(),
+            computer_name: Some("Servidor".to_string()),
+            computer_type: ComputerType::Server,
+            first_run_completed: true,
+            last_snapshot_timestamp: Some(10),
+            last_change_timestamp: Some(10),
+            ..Default::default()
+        };
+        store.save_app_settings(&settings).expect("save settings");
+
+        let actions_dir = dir.path().join("cloud").join("actions");
+        std::fs::create_dir_all(&actions_dir).expect("create actions dir");
+
+        let snapshot_payload = SnapshotTestPayload {
+            generated_at: 25,
+            categories: vec![],
+            songs: vec![],
+        };
+        write_zstd_msgpack(&actions_dir.join("snapshot.msgpack.zst"), &snapshot_payload);
+
+        assert!(has_pending_server_changes(&db, &store).expect("inspect pending changes"));
+    }
+
+    #[test]
+    fn ignores_actions_files_when_their_timestamps_match_the_store() {
+        let dir = tempdir().expect("temp dir");
+        let db_path = dir.path().join("test.db");
+        let db = Database::new(&db_path).expect("db init");
+        let store = SystemStore::new(dir.path().to_path_buf());
+
+        let settings = AppSettings {
+            computer_id: "server-5".to_string(),
+            computer_name: Some("Servidor".to_string()),
+            computer_type: ComputerType::Server,
+            first_run_completed: true,
+            last_snapshot_timestamp: Some(25),
+            last_change_timestamp: Some(25),
+            ..Default::default()
+        };
+        store.save_app_settings(&settings).expect("save settings");
+
+        let actions_dir = dir.path().join("cloud").join("actions");
+        std::fs::create_dir_all(&actions_dir).expect("create actions dir");
+
+        let snapshot_payload = SnapshotTestPayload {
+            generated_at: 25,
+            categories: vec![],
+            songs: vec![],
+        };
+        write_zstd_msgpack(&actions_dir.join("snapshot.msgpack.zst"), &snapshot_payload);
+
+        let events_payload = EventsTestPayload {
+            origin: "server".to_string(),
+            events: vec![],
+        };
+        write_zstd_msgpack(&actions_dir.join("events.msgpack.zst"), &events_payload);
+
+        assert!(!has_pending_server_changes(&db, &store).expect("inspect pending changes"));
     }
 
     fn write_zstd_msgpack<T: serde::Serialize>(path: &std::path::Path, payload: &T) {

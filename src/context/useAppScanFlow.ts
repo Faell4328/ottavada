@@ -19,7 +19,14 @@ type ScanFilesForChangesOptions =
   | {
       isAutomatic?: boolean;
       forceCloudSync?: boolean;
+      snapshotSummary?: api.SnapshotFileSummary | null;
     };
+
+type RunSyncWithProgressOptions = {
+  direction: "upload" | "download";
+  relativePath?: string;
+  lockInteraction?: boolean;
+};
 
 export interface RcloneProgressSnapshot {
   active: boolean;
@@ -145,15 +152,20 @@ export function useAppScanFlow({
     dispatch({ type: "SET_RCLONE_PROGRESS", payload: progress });
   }, [dispatch]);
 
-  const runSyncWithProgress = useCallback(async (direction: "upload" | "download") => {
+  const runSyncWithProgress = useCallback(async ({
+    direction,
+    relativePath,
+    lockInteraction = true,
+  }: RunSyncWithProgressOptions) => {
     let stopPolling = false;
     lastRcloneProgressRef.current = null;
+    const progressDirection = lockInteraction ? direction : null;
 
     dispatch({
       type: "SET_RCLONE_PROGRESS",
       payload: {
         active: true,
-        direction,
+        direction: progressDirection,
         bytes: 0,
         totalBytes: null,
         percentage: null,
@@ -162,7 +174,7 @@ export function useAppScanFlow({
       },
     });
 
-    const syncPromise = api.syncCloudWithRclone(direction);
+    const syncPromise = api.syncCloudWithRclone(direction, relativePath);
 
     const pollingPromise = (async () => {
       while (!stopPolling) {
@@ -171,7 +183,7 @@ export function useAppScanFlow({
           if (stats) {
             dispatchRcloneProgress({
               active: stats.active,
-              direction,
+              direction: progressDirection,
               bytes: Math.max(stats.bytes, 0),
               totalBytes: stats.total_bytes,
               percentage: stats.percentage !== null ? Math.round(stats.percentage) : null,
@@ -254,6 +266,8 @@ export function useAppScanFlow({
       typeof options === "boolean" ? options : (options.isAutomatic ?? false);
     const forceCloudSync =
       typeof options === "boolean" ? false : (options.forceCloudSync ?? false);
+    const preGeneratedSnapshotSummary =
+      typeof options === "boolean" ? null : (options.snapshotSummary ?? null);
 
     if (scanInProgressRef.current) {
       if (!isAutomatic) {
@@ -275,55 +289,68 @@ export function useAppScanFlow({
         return;
       }
 
-      dispatch({ type: "SET_SCANNING_FILES", payload: true });
-      dispatch({
-        type: "SET_OPERATION_STATUS",
-        payload: {
-          title: "Etapa 1 - Iniciando verificação",
-          detail: "Preparando fluxo de sincronização",
-          stepCurrent: 1,
-          stepTotal: 1,
-        },
-      });
-      dispatch({
-        type: "SET_SCAN_PROGRESS",
-        payload: { total: 0, completed: 0, changedFiles: 0 },
-      });
-
       const isClient = computerType === "Client";
 
-      if (isClient) {
-        const clientTotalSteps = 2;
-        dispatch({
-          type: "SET_SCAN_PROGRESS",
-          payload: { total: clientTotalSteps, completed: 0, changedFiles: 0 },
-        });
-
+      if (!isClient) {
+        dispatch({ type: "SET_SCANNING_FILES", payload: true });
         dispatch({
           type: "SET_OPERATION_STATUS",
           payload: {
-            title: "Etapa 1 - Download da nuvem",
-            detail: "Baixando alterações da nuvem",
+            title: "Etapa 1 - Iniciando verificação",
+            detail: "Preparando fluxo de sincronização",
             stepCurrent: 1,
-            stepTotal: clientTotalSteps,
+            stepTotal: 1,
           },
         });
-        await runSyncWithProgress("download");
-
         dispatch({
           type: "SET_SCAN_PROGRESS",
-          payload: { total: clientTotalSteps, completed: 1, changedFiles: 0 },
+          payload: { total: 0, completed: 0, changedFiles: 0 },
+        });
+      }
+
+      if (isClient) {
+        await runSyncWithProgress({
+          direction: "download",
+          relativePath: "actions",
+          lockInteraction: false,
+        });
+
+        const hasPendingChanges = await api.hasPendingChanges();
+
+        if (!hasPendingChanges) {
+          return;
+        }
+
+        dispatch({
+          type: "SET_SCANNING_FILES",
+          payload: true,
+        });
+        dispatch({
+          type: "SET_OPERATION_STATUS",
+          payload: {
+            title: "Etapa 2 - Baixando músicas",
+            detail: "Atualizando arquivos locais do cliente",
+            stepCurrent: 1,
+            stepTotal: 1,
+          },
+        });
+
+        await runSyncWithProgress({
+          direction: "download",
+          relativePath: "songs",
+          lockInteraction: true,
         });
 
         dispatch({
           type: "SET_OPERATION_STATUS",
           payload: {
             title: "Etapa 2 - Aplicando alterações",
-            detail: "Atualizando base local do cliente",
-            stepCurrent: 2,
-            stepTotal: clientTotalSteps,
+            detail: "Atualizando banco local do cliente",
+            stepCurrent: 1,
+            stepTotal: 1,
           },
         });
+
         const syncSummary = await api.applyServerChangesOnClient();
 
         dispatch({
@@ -331,34 +358,16 @@ export function useAppScanFlow({
           payload: {
             title: "Etapa 2 - Atualizando interface",
             detail: "Recarregando músicas e partituras",
-            stepCurrent: 2,
-            stepTotal: clientTotalSteps,
-          },
-        });
-
-        dispatch({
-          type: "SET_SCAN_PROGRESS",
-          payload: {
-            total: clientTotalSteps,
-            completed: 1,
-            changedFiles: syncSummary.events_applied,
+            stepCurrent: 1,
+            stepTotal: 1,
           },
         });
 
         await Promise.all([loadSongs(), loadCategories(), loadSettings()]);
         await refreshSelectedSong();
 
-        dispatch({
-          type: "SET_SCAN_PROGRESS",
-          payload: {
-            total: clientTotalSteps,
-            completed: clientTotalSteps,
-            changedFiles: syncSummary.events_applied,
-          },
-        });
-
-        if (!isAutomatic) {
-          toast.success("Alterações aplicadas com sucesso.");
+        if (!isAutomatic && (syncSummary.snapshot_applied || syncSummary.events_applied > 0)) {
+          toast.success("Alterações da nuvem aplicadas com sucesso.");
         }
 
         scheduleScanReset(1500);
@@ -401,6 +410,11 @@ export function useAppScanFlow({
       const hasDetectedFileChanges =
         changedCount > 0 || recoveredCount > 0 || notFoundCount > 0;
 
+      if (!forceCloudSync && !hasPendingChanges && !hasDetectedFileChanges) {
+        resetScanState();
+        return;
+      }
+
       // Fluxo base do servidor: verificar, compactar, gerar events e subir para a nuvem.
       // Snapshot adiciona uma etapa extra ao total.
       currentTotalSteps = 4;
@@ -434,6 +448,7 @@ export function useAppScanFlow({
       updateStepProgress(changedCount);
 
       let snapshotGenerated = false;
+      let snapshotSummary: api.SnapshotFileSummary | null = null;
 
       if (eventsSummary.payload_size >= SNAPSHOT_AUTO_THRESHOLD_BYTES) {
         currentTotalSteps = 5;
@@ -447,7 +462,7 @@ export function useAppScanFlow({
             stepTotal: currentTotalSteps,
           },
         });
-        await api.generateSnapshotFile(false);
+        snapshotSummary = await api.generateSnapshotFile(false);
         snapshotGenerated = true;
         completedSteps += 1;
         updateStepProgress(changedCount);
@@ -493,7 +508,7 @@ export function useAppScanFlow({
 
           for (let attempt = 1; attempt <= 2; attempt += 1) {
             try {
-              await runSyncWithProgress("upload");
+              await runSyncWithProgress({ direction: "upload" });
               uploadError = null;
               break;
             } catch (error) {
@@ -510,7 +525,7 @@ export function useAppScanFlow({
             throw uploadError;
           }
         } else {
-          await runSyncWithProgress("upload");
+          await runSyncWithProgress({ direction: "upload" });
         }
       } else {
         const uploadPaths: string[] = [];
@@ -534,7 +549,7 @@ export function useAppScanFlow({
         if (uploadPaths.length === 0) {
           if (!isAutomatic) {
             await api.markServerApplyChangesInProgress();
-            await runSyncWithProgress("upload");
+            await runSyncWithProgress({ direction: "upload" });
           }
         } else {
           await api.markServerApplyChangesInProgress();
@@ -546,7 +561,16 @@ export function useAppScanFlow({
       updateStepProgress(changedCount);
 
       // Atualiza o marcador de "alterações aplicadas" somente ao concluir com sucesso.
-      await api.markLocalChangesAsApplied();
+      const appliedSnapshotSummary = snapshotSummary ?? preGeneratedSnapshotSummary;
+
+      if (appliedSnapshotSummary) {
+        await api.markSnapshotAsUploaded(
+          appliedSnapshotSummary.generated_at,
+          appliedSnapshotSummary.last_change_timestamp
+        );
+      } else {
+        await api.markLocalChangesAsApplied();
+      }
       await api.clearServerApplyChangesInProgress();
       await loadSettings();
       updateStepProgress(changedCount);
@@ -575,15 +599,14 @@ export function useAppScanFlow({
         }
 
         const hasFailures = failedCount > 0 || failedArchives > 0;
-        const summaryText =
-          summaryParts.length > 0
-            ? `Verificação concluída: ${summaryParts.join(", ")}`
-            : "Verificação concluída sem mudanças.";
+        if (summaryParts.length > 0) {
+          const summaryText = `Verificação concluída: ${summaryParts.join(", ")}`;
 
-        if (hasFailures) {
-          toast.error(`${summaryText} Mas algumas partes falharam.`);
-        } else {
-          toast.success(summaryText);
+          if (hasFailures) {
+            toast.error(`${summaryText} Mas algumas partes falharam.`);
+          } else {
+            toast.success(summaryText);
+          }
         }
       }
 

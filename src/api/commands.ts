@@ -271,6 +271,16 @@ export async function markLocalChangesAsApplied(): Promise<void> {
   return invoke("mark_local_changes_as_applied");
 }
 
+export async function markSnapshotAsUploaded(
+  lastSnapshotTimestamp: number,
+  lastChangeTimestamp: number | null
+): Promise<void> {
+  return invoke("mark_snapshot_as_uploaded", {
+    lastSnapshotTimestamp,
+    lastChangeTimestamp,
+  });
+}
+
 export async function checkForUpdates(): Promise<UpdateCheckResult> {
   return invoke("check_for_updates");
 }
@@ -352,9 +362,10 @@ export interface RcloneRcStats {
 }
 
 export async function syncCloudWithRclone(
-  direction: "upload" | "download"
+  direction: "upload" | "download",
+  relativePath?: string
 ): Promise<RcloneSyncSummary> {
-  return invoke("sync_cloud_with_rclone", { direction });
+  return invoke("sync_cloud_with_rclone", { direction, relativePath: relativePath ?? null });
 }
 
 export async function getRcloneRcStats(): Promise<RcloneRcStats | null> {
@@ -411,6 +422,7 @@ export interface SnapshotFileSummary {
   output_path: string;
   file_size: number;
   generated_at: number;
+  last_change_timestamp: number | null;
   songs_count: number;
   scores_count: number;
   categories_count: number;

@@ -419,6 +419,12 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [x] Mudar de backup a cada 1 dia para backup a cada 1 hora (backup automático para nuvem)
 - [x] Atualizando lista de partituras ao adicionar, editar e deletar partituras, quando a música estiver aberta.
 - [x] Não permitir que o aplicativo seja aberto várias vezes.
+- [x] Mudar os arquivos `snapshot.msgpack.zst` e `events.msgpack.zst` para o diretório `/cloud/actions`.
+- [x] Melhorando a consulta, verificando apenas o diretório `/cloud/actions` e se tiver alteração executa a sincronização com o `cloud/songs`.
+- [x] Removido o bloquei de interação do cliente.
+- [x] Mudando para atualizar o campo de `cloud` no `tauri-plugin-store`, apenas quando finalizar tudo. E usando ele como parâmetro de verificação, para o "aplicar alterações".
+- [x] Removendo o "aplicar alterações" ao abrir o servidor
+- [x] Mudando a tela de carregamento e padrão para branco.
 
 ## Funcionalidades para v2 (apenas rascunho/ideias)
 

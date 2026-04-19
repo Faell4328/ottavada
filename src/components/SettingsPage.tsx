@@ -310,10 +310,10 @@ export default function SettingsPage() {
     navigate("/");
     const loadingToastId = toast.loading("Organizando os dados e aplicando as alterações...");
     try {
-      await api.generateSnapshotFile(true);
+      const snapshotSummary = await api.generateSnapshotFile(true);
       await loadSettings();
 
-      await scanFilesForChanges({ forceCloudSync: true });
+      await scanFilesForChanges({ forceCloudSync: true, snapshotSummary });
       await Promise.all([loadSongs(), loadCategories()]);
       return true;
     } catch (error) {

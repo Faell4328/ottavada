@@ -26,9 +26,19 @@ import {
 
 export function LoadingScreen() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#5d6d82]">
-      <div className="text-white text-lg font-semibold animate-pulse">
-        Carregando...
+    <div className="fixed inset-0 z-[9999] flex h-screen w-screen items-center justify-center overflow-hidden bg-gradient-to-br from-white via-[#fbfcfe] to-[#eef3f8]">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(79,132,215,0.08),_transparent_42%),radial-gradient(circle_at_bottom_right,_rgba(93,109,130,0.08),_transparent_36%)]" />
+      <div className="relative flex w-full max-w-md flex-col items-center gap-4 rounded-3xl border border-[#dce6f1] bg-white/90 px-8 py-10 text-center shadow-[0_24px_80px_rgba(36,68,104,0.12)] backdrop-blur-sm">
+        <div className="flex h-14 w-14 items-center justify-center rounded-full border border-[#d6e2ef] bg-[#f7faff] shadow-inner">
+          <div className="h-8 w-8 animate-spin rounded-full border-3 border-[#dbe7f4] border-t-[#4f84d7]" />
+        </div>
+        <div>
+          <p className="text-lg font-semibold text-[#29445f]">Carregando Score Maestro</p>
+          <p className="mt-1 text-sm text-[#6e8399]">Preparando a interface inicial</p>
+        </div>
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#ecf2f8]">
+          <div className="h-full w-2/3 animate-pulse rounded-full bg-gradient-to-r from-[#4f84d7] to-[#7cb6ff]" />
+        </div>
       </div>
     </div>
   );

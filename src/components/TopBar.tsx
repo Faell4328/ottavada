@@ -181,7 +181,7 @@ export default function TopBar({
                 return;
               }
 
-              void scanFilesForChanges();
+              void scanFilesForChanges(isClient ? undefined : { forceCloudSync: true });
             }}
             disabled={isSyncLocked || isUpdateActionLocked}
           />

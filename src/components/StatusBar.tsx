@@ -11,38 +11,58 @@ export default function StatusBar() {
       : null;
 
   const hasOperationStatus = state.operationStatus.stepCurrent !== null;
-  const isRcloneActive = state.rcloneProgress.direction !== null;
-  const isVisible = state.isScanningFiles || hasOperationStatus;
+  const isRcloneActive = state.rcloneProgress.active;
+  const isVisible = state.isScanningFiles || hasOperationStatus || isRcloneActive;
 
   const etaText = formatEta(state.rcloneProgress.etaSeconds);
+
+  const titleStageLabel = extractStageLabelFromTitle(state.operationStatus.title);
+
+  const stageLabel =
+    titleStageLabel !== null && state.operationStatus.stepTotal === 1
+      ? titleStageLabel
+      : state.operationStatus.stepCurrent !== null && state.operationStatus.stepTotal !== null
+      ? `Etapa ${state.operationStatus.stepCurrent} de ${state.operationStatus.stepTotal}`
+      : state.operationStatus.stepCurrent !== null
+        ? `Etapa ${state.operationStatus.stepCurrent}`
+        : state.rcloneProgress.active
+          ? state.rcloneProgress.direction === null
+            ? "Consultando alterações"
+            : state.rcloneProgress.direction === "upload"
+              ? "Enviando"
+              : "Baixando"
+          : null;
 
   if (!isVisible) {
     return null;
   }
 
   const title =
-    state.operationStatus.title || (state.isScanningFiles ? "Verificando alteracoes" : "Processando");
-  const detail = state.operationStatus.detail;
+    state.operationStatus.title ||
+    (state.isScanningFiles
+      ? "Verificando alterações"
+      : state.rcloneProgress.active && state.rcloneProgress.direction === null
+        ? "Consultando alterações na nuvem"
+        : state.rcloneProgress.active
+          ? "Sincronizando com a nuvem"
+          : "Processando");
+  const detail =
+    state.operationStatus.detail ||
+    (state.rcloneProgress.active && state.rcloneProgress.direction === null
+      ? "Verificando snapshot e events da nuvem"
+      : null);
   const itemProgressText =
     state.operationStatus.itemCurrent !== null && state.operationStatus.itemTotal !== null
       ? `${state.operationStatus.itemCurrent} de ${state.operationStatus.itemTotal}`
       : null;
-  const totalSteps = Math.max(
-    state.operationStatus.stepTotal ?? state.scanProgress.total,
-    1
-  );
-  const currentStage =
-    state.operationStatus.stepCurrent ??
-    (state.scanProgress.completed >= totalSteps
-      ? totalSteps
-      : Math.min(state.scanProgress.completed + 1, totalSteps));
-  const workflowPercentage = state.isScanningFiles
-    ? totalSteps > 0
-      ? Math.round((state.scanProgress.completed / totalSteps) * 100)
-      : 0
-    : hasOperationStatus
-      ? 0
-      : 0;
+  const workflowPercentage =
+    state.operationStatus.stepCurrent !== null && state.operationStatus.stepTotal !== null
+      ? Math.round(
+          (state.operationStatus.stepCurrent / state.operationStatus.stepTotal) * 100
+        )
+      : state.isScanningFiles
+        ? 0
+        : 0;
   const totalBytes = state.rcloneProgress.totalBytes;
   const bytesTransferred = state.rcloneProgress.bytes;
   const bytesRemaining =
@@ -66,11 +86,15 @@ export default function StatusBar() {
           <div className="min-w-0">
             <div className="flex items-center gap-2 text-[12px] font-semibold text-[#21476c]">
               <Loader className="h-3.5 w-3.5 animate-spin text-blue-600" />
-              <span className="truncate">Etapa {currentStage} de {totalSteps}</span>
+              {stageLabel ? <span className="truncate">{stageLabel}</span> : <span className="truncate">Processando</span>}
               {isRcloneActive && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-[#eaf3ff] px-2 py-0.5 text-[11px] font-semibold text-[#23558b]">
                   <Cloud className="h-3 w-3" />
-                  Nuvem {state.rcloneProgress.direction === "upload" ? "upload" : "download"}
+                  {state.rcloneProgress.direction === "upload"
+                    ? "Enviando"
+                    : state.rcloneProgress.direction === "download"
+                      ? "Baixando"
+                      : "Consultando"}
                 </span>
               )}
             </div>
@@ -114,4 +138,13 @@ export default function StatusBar() {
       </div>
     </footer>
   );
+}
+
+function extractStageLabelFromTitle(title: string): string | null {
+  const match = title.match(/^Etapa\s+(\d+)\s*-/i);
+  if (!match) {
+    return null;
+  }
+
+  return `Etapa ${match[1]}`;
 }

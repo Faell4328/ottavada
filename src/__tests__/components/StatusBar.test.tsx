@@ -9,21 +9,27 @@ import { renderWithAppProvider } from "../utils/renderWithAppProvider";
 function StatusBarHarness({
   itemCurrent,
   itemTotal,
+  title = "",
+  stepCurrent = 2,
+  stepTotal = 4,
 }: {
   itemCurrent?: number;
   itemTotal?: number;
+  title?: string;
+  stepCurrent?: number;
+  stepTotal?: number;
 }) {
   const { setOperationStatus } = useAppState();
 
   useEffect(() => {
     setOperationStatus({
-      title: "",
-      stepCurrent: 2,
-      stepTotal: 4,
+      title,
+      stepCurrent,
+      stepTotal,
       itemCurrent: itemCurrent ?? null,
       itemTotal: itemTotal ?? null,
     });
-  }, [itemCurrent, itemTotal, setOperationStatus]);
+  }, [itemCurrent, itemTotal, setOperationStatus, stepCurrent, stepTotal, title]);
 
   return <StatusBar />;
 }
@@ -45,5 +51,18 @@ describe("StatusBar", () => {
 
     expect(await screen.findByText("Etapa 2 de 4")).toBeInTheDocument();
     expect(screen.getByText("3 de 10")).toBeInTheDocument();
+  });
+
+  it("shows the client stage from the title when the internal step counter is 1 of 1", async () => {
+    renderWithAppProvider(
+      <StatusBarHarness
+        title="Etapa 2 - Aplicando alterações"
+        stepCurrent={1}
+        stepTotal={1}
+      />
+    );
+
+    expect(await screen.findByText("Etapa 2")).toBeInTheDocument();
+    expect(screen.getByText("Etapa 2 - Aplicando alterações")).toBeInTheDocument();
   });
 });

@@ -25,9 +25,20 @@ describe("startup loading screen", () => {
     const { container } = render(<LoadingScreen />);
     const shell = container.firstElementChild;
 
-    expect(shell).toHaveClass("flex", "min-h-screen", "items-center", "justify-center");
-    expect(shell).toHaveClass("bg-[#5d6d82]");
-    expect(container).toHaveTextContent("Carregando...");
+    expect(shell).toHaveClass(
+      "fixed",
+      "inset-0",
+      "z-[9999]",
+      "flex",
+      "h-screen",
+      "w-screen",
+      "items-center",
+      "justify-center",
+      "overflow-hidden"
+    );
+    expect(shell).toHaveClass("bg-gradient-to-br");
+    expect(container).toHaveTextContent("Carregando Score Maestro");
+    expect(container).toHaveTextContent("Preparando a interface inicial");
   });
 
   it("finishes the startup gate after checking updates", async () => {

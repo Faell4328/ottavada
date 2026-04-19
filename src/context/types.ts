@@ -1,3 +1,4 @@
+import type { SnapshotFileSummary } from "../api/commands";
 import type { AppSettings, ScoreListItem, SidebarView, SongListItem } from "../types";
 import type { State } from "./reducer";
 
@@ -47,6 +48,12 @@ export interface AppContextValue {
     rcloneConfigJson: string
   ) => Promise<void>;
   scanFilesForChanges: (
-    options?: boolean | { isAutomatic?: boolean; forceCloudSync?: boolean }
+    options?:
+      | boolean
+      | {
+          isAutomatic?: boolean;
+          forceCloudSync?: boolean;
+            snapshotSummary?: SnapshotFileSummary | null;
+        }
   ) => Promise<void>;
 }

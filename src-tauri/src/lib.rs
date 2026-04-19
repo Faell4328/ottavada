@@ -159,9 +159,6 @@ pub fn run() {
             let store = SystemStore::new(app_data_dir.clone());
             app.manage(store);
 
-            #[cfg(target_os = "windows")]
-            restore_main_window(app);
-
             if let Ok(settings) = SystemStore::new(app_data_dir.clone()).get_app_settings() {
                 if settings.first_run_completed {
                     let db_for_telemetry = db.clone();
@@ -264,6 +261,7 @@ pub fn run() {
             commands::settings_commands::clear_server_apply_changes_in_progress,
             commands::settings_commands::exit_application,
             commands::settings_commands::mark_local_changes_as_applied,
+            commands::settings_commands::mark_snapshot_as_uploaded,
             commands::settings_commands::get_app_contacts,
             // Updates
             commands::update_commands::check_for_updates,

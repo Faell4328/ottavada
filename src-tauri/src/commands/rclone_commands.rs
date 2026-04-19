@@ -929,13 +929,16 @@ pub fn upload_with_rclone(
 pub async fn sync_cloud_with_rclone(
     store: State<'_, SystemStore>,
     direction: String,
+    relative_path: Option<String>,
 ) -> Result<RcloneSyncSummary, AppError> {
     let app_data_dir = store.app_data_dir().clone();
 
     run_blocking_with_store(
         app_data_dir,
         "Falha interna ao sincronizar com rclone",
-        move |store| sync_cloud_directory_with_rclone_impl(&store, &direction, None),
+        move |store| {
+            sync_cloud_directory_with_rclone_impl(&store, &direction, relative_path.as_deref())
+        },
     )
     .await
 }

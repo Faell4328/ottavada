@@ -16,7 +16,7 @@
         "width": 800,
         "height": 600,
         "maximized": true,
-        "backgroundColor": "#5d6d82",
+        "backgroundColor": "#fff",
         "scrollBarStyle": "fluentOverlay",
         "zoomHotkeysEnabled": false,
         "devtools": false,

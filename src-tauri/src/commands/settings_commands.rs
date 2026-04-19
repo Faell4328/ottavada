@@ -11,6 +11,7 @@ use crate::domain::models::{
 };
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
+use crate::services::client_sync_service::has_pending_server_changes;
 use crate::services::cloud_paths::{
     clear_server_apply_in_progress, has_server_apply_in_progress, mark_server_apply_in_progress,
 };
@@ -158,14 +159,7 @@ pub fn has_pending_changes(
     db: State<'_, Database>,
     store: State<'_, SystemStore>,
 ) -> Result<bool, AppError> {
-    let latest_change = db.get_latest_changed_field_timestamp()?.unwrap_or(0);
-    if latest_change == 0 {
-        return Ok(false);
-    }
-
-    let settings = store.get_app_settings()?;
-    let last_applied = settings.last_change_timestamp.unwrap_or(0);
-    Ok(latest_change > last_applied)
+    has_pending_server_changes(&db, &store)
 }
 
 #[tauri::command]
@@ -201,5 +195,21 @@ pub fn mark_local_changes_as_applied(
     let latest_change = db.get_latest_changed_field_timestamp()?.unwrap_or(0);
     let mut settings = store.get_app_settings()?;
     settings.last_change_timestamp = Some(latest_change);
+    store.save_app_settings(&settings)
+}
+
+#[tauri::command]
+pub fn mark_snapshot_as_uploaded(
+    store: State<'_, SystemStore>,
+    last_snapshot_timestamp: i64,
+    last_change_timestamp: Option<i64>,
+) -> Result<(), AppError> {
+    let mut settings = store.get_app_settings()?;
+    settings.last_snapshot_timestamp = Some(last_snapshot_timestamp);
+
+    if let Some(last_change_timestamp) = last_change_timestamp {
+        settings.last_change_timestamp = Some(last_change_timestamp);
+    }
+
     store.save_app_settings(&settings)
 }

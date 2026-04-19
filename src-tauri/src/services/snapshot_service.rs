@@ -21,6 +21,7 @@ pub struct SnapshotFileSummary {
     pub output_path: String,
     pub file_size: u64,
     pub generated_at: i64,
+    pub last_change_timestamp: Option<i64>,
     pub songs_count: usize,
     pub scores_count: usize,
     pub categories_count: usize,
@@ -131,6 +132,8 @@ pub fn generate_snapshot_msgpack(
         songs,
     };
 
+    let last_change_timestamp = db.get_latest_changed_field_timestamp()?;
+
     let msgpack_bytes = serialize_msgpack_named(&payload, "snapshot.msgpack")?;
 
     let compressed_bytes = compress_snapshot_with_retry(&msgpack_bytes)?;
@@ -151,14 +154,11 @@ pub fn generate_snapshot_msgpack(
 
     clear_events_artifacts(&cloud_dir)?;
 
-    let mut updated_settings = settings;
-    updated_settings.last_snapshot_timestamp = Some(generated_at);
-    store.save_app_settings(&updated_settings)?;
-
     Ok(SnapshotFileSummary {
         output_path: output_path.to_string_lossy().to_string(),
         file_size,
         generated_at,
+        last_change_timestamp,
         songs_count: payload.songs.len(),
         scores_count,
         categories_count: payload.categories.len(),
@@ -279,6 +279,11 @@ mod tests {
         db.insert_song(&song, &[category.id.clone()])
             .expect("insert song");
 
+        let latest_change_timestamp = db
+            .get_latest_changed_field_timestamp()
+            .expect("latest change timestamp")
+            .expect("latest change timestamp value");
+
         let events_dir = dir.path().join("cloud").join("actions");
         fs::create_dir_all(&events_dir).expect("create events dir");
         let events_file = events_dir.join("events.msgpack.zst");
@@ -307,9 +312,7 @@ mod tests {
         assert!(changed_fields.is_empty());
 
         let updated_settings = store.get_app_settings().expect("settings read");
-        assert_eq!(
-            updated_settings.last_snapshot_timestamp,
-            Some(summary.generated_at)
-        );
+        assert_eq!(updated_settings.last_snapshot_timestamp, Some(0));
+        assert_eq!(summary.last_change_timestamp, Some(latest_change_timestamp));
     }
 }
