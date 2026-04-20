@@ -17,6 +17,7 @@ import * as api from "./api/commands";
 import { ConfirmationModal } from "./components/ui/ConfirmationModal";
 import { getErrorMessage } from "./utils/errors";
 import { isUpdateActionLocked as getIsUpdateActionLocked } from "./utils/updateLock";
+import { restoreMainWindow } from "./utils/window";
 import type { UpdateInfo } from "./types";
 import type { UpdateCheckResult } from "./types";
 import { resolveStartupUpdateState } from "./utils/startupUpdate";
@@ -386,6 +387,10 @@ function AppContent({ startupUpdate }: AppContentProps) {
 function App() {
   const [startupReady, setStartupReady] = useState(false);
   const [startupUpdate, setStartupUpdate] = useState<UpdateInfo | null>(null);
+
+  useEffect(() => {
+    void restoreMainWindow();
+  }, []);
 
   return (
     <>

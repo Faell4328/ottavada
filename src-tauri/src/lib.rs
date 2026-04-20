@@ -30,19 +30,55 @@ fn updater_builder() -> tauri_plugin_updater::Builder {
     tauri_plugin_updater::Builder::new()
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum RestoreWindowAction {
+    Unminimize,
+    Show,
+    Maximize,
+    Focus,
+}
+
+fn planned_restore_window_actions(is_minimized: bool) -> Vec<RestoreWindowAction> {
+    if is_minimized {
+        vec![
+            RestoreWindowAction::Unminimize,
+            RestoreWindowAction::Show,
+            RestoreWindowAction::Maximize,
+            RestoreWindowAction::Focus,
+        ]
+    } else {
+        vec![
+            RestoreWindowAction::Show,
+            RestoreWindowAction::Maximize,
+            RestoreWindowAction::Focus,
+        ]
+    }
+}
+
 fn restore_main_window<R: tauri::Runtime, M: tauri::Manager<R>>(manager: &M) {
     let Some(window) = manager.get_webview_window("main") else {
         warn!("Janela principal não encontrada ao restaurar estado inicial");
         return;
     };
 
-    if let Ok(true) = window.is_minimized() {
-        let _ = window.unminimize();
-    }
+    let is_minimized = window.is_minimized().unwrap_or(false);
 
-    let _ = window.show();
-    let _ = window.maximize();
-    let _ = window.set_focus();
+    for action in planned_restore_window_actions(is_minimized) {
+        match action {
+            RestoreWindowAction::Unminimize => {
+                let _ = window.unminimize();
+            }
+            RestoreWindowAction::Show => {
+                let _ = window.show();
+            }
+            RestoreWindowAction::Maximize => {
+                let _ = window.maximize();
+            }
+            RestoreWindowAction::Focus => {
+                let _ = window.set_focus();
+            }
+        }
+    }
 }
 
 #[cfg(target_os = "windows")]
@@ -91,6 +127,7 @@ pub fn run() {
             logger::init_logger(&app_data_dir).expect("Não foi possível inicializar o logger");
 
             boost_current_process_priority();
+            restore_main_window(app);
 
             if let Err(e) = reset_temp_directory(&app_data_dir) {
                 warn!(
@@ -291,4 +328,34 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{planned_restore_window_actions, RestoreWindowAction};
+
+    #[test]
+    fn plans_minimized_window_restore_actions() {
+        assert_eq!(
+            planned_restore_window_actions(true),
+            vec![
+                RestoreWindowAction::Unminimize,
+                RestoreWindowAction::Show,
+                RestoreWindowAction::Maximize,
+                RestoreWindowAction::Focus,
+            ]
+        );
+    }
+
+    #[test]
+    fn plans_normal_window_restore_actions() {
+        assert_eq!(
+            planned_restore_window_actions(false),
+            vec![
+                RestoreWindowAction::Show,
+                RestoreWindowAction::Maximize,
+                RestoreWindowAction::Focus,
+            ]
+        );
+    }
 }
