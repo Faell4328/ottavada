@@ -18,6 +18,7 @@ describe("startup loading screen", () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.clearAllMocks();
   });
 
@@ -48,6 +49,51 @@ describe("startup loading screen", () => {
 
     await act(async () => {
       await Promise.resolve();
+    });
+
+    expect(api.checkForUpdates).toHaveBeenCalledTimes(1);
+    expect(onReady).toHaveBeenCalledWith(null);
+    expect(onReady).toHaveBeenCalledTimes(1);
+  });
+
+  it("finishes the startup gate and passes an available update", async () => {
+    const update = {
+      current_version: "1.0.2",
+      version: "1.0.3",
+      date: null,
+      body: "Nova versão",
+    };
+    vi.mocked(api.checkForUpdates).mockResolvedValue({
+      configured: true,
+      update,
+    });
+
+    const onReady = vi.fn();
+
+    render(<StartupUpdateGate onReady={onReady} />);
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(api.checkForUpdates).toHaveBeenCalledTimes(1);
+    expect(onReady).toHaveBeenCalledWith(update);
+    expect(onReady).toHaveBeenCalledTimes(1);
+  });
+
+  it("releases the startup gate after the update timeout", async () => {
+    vi.useFakeTimers();
+    vi.mocked(api.checkForUpdates).mockImplementation(
+      () =>
+        new Promise(() => {})
+    );
+
+    const onReady = vi.fn();
+
+    render(<StartupUpdateGate onReady={onReady} />);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2000);
     });
 
     expect(api.checkForUpdates).toHaveBeenCalledTimes(1);

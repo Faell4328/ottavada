@@ -18,11 +18,11 @@ import { ConfirmationModal } from "./components/ui/ConfirmationModal";
 import { getErrorMessage } from "./utils/errors";
 import { isUpdateActionLocked as getIsUpdateActionLocked } from "./utils/updateLock";
 import type { UpdateInfo } from "./types";
-import {
-  initialStartupUpdateState,
-  resolveStartupUpdateState,
-  type StartupUpdateState,
-} from "./utils/startupUpdate";
+import type { UpdateCheckResult } from "./types";
+import { resolveStartupUpdateState } from "./utils/startupUpdate";
+
+const STARTUP_UPDATE_TIMEOUT_MS = 2000;
+const STARTUP_UPDATE_TIMEOUT = Symbol("startup-update-timeout");
 
 export function LoadingScreen() {
   return (
@@ -44,41 +44,62 @@ export function LoadingScreen() {
   );
 }
 
-export function StartupUpdateGate({ onReady }: { onReady: () => void }) {
-  const [startupState, setStartupState] = useState<StartupUpdateState>(initialStartupUpdateState);
-  const [availableUpdate, setAvailableUpdate] = useState<UpdateInfo | null>(null);
-  const [isInstallingUpdate, setIsInstallingUpdate] = useState(false);
-
-  const finishStartup = useCallback(() => {
-    setStartupState({ status: "ready", update: null });
-    onReady();
-  }, [onReady]);
+export function StartupUpdateGate({ onReady }: { onReady: (update: UpdateInfo | null) => void }) {
+  const finishStartup = useCallback(
+    (update: UpdateInfo | null) => {
+      onReady(update);
+    },
+    [onReady]
+  );
 
   useEffect(() => {
     let cancelled = false;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
     const run = async () => {
       try {
-        const result = await api.checkForUpdates();
+        const result: UpdateCheckResult | typeof STARTUP_UPDATE_TIMEOUT = await Promise.race([
+          api.checkForUpdates(),
+          new Promise<UpdateCheckResult | typeof STARTUP_UPDATE_TIMEOUT>((resolve) => {
+            timeoutId = setTimeout(
+              () => resolve(STARTUP_UPDATE_TIMEOUT),
+              STARTUP_UPDATE_TIMEOUT_MS
+            );
+          }),
+        ]);
+
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
 
         if (cancelled) {
+          return;
+        }
+
+        if (result === STARTUP_UPDATE_TIMEOUT) {
+          console.warn(
+            `Startup update check timed out after ${STARTUP_UPDATE_TIMEOUT_MS}ms`
+          );
+          finishStartup(null);
           return;
         }
 
         const nextState = resolveStartupUpdateState(result);
 
         if (nextState.status === "ready") {
-          finishStartup();
+          finishStartup(null);
           return;
         }
 
-        setAvailableUpdate(nextState.update);
-        setStartupState(nextState);
+        finishStartup(nextState.update);
       } catch (error) {
         console.error("Failed to check startup updates:", error);
         if (!cancelled) {
-          //toast.error(`Falha ao verificar atualização: ${getErrorMessage(error)}`);
-          finishStartup();
+          finishStartup(null);
+        }
+      } finally {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
         }
       }
     };
@@ -87,45 +108,14 @@ export function StartupUpdateGate({ onReady }: { onReady: () => void }) {
 
     return () => {
       cancelled = true;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
     };
   }, [finishStartup]);
 
-  const handlePostpone = useCallback(() => {
-    setAvailableUpdate(null);
-    finishStartup();
-  }, [finishStartup]);
-
-  const handleInstall = useCallback(async () => {
-    if (!availableUpdate || isInstallingUpdate) {
-      return;
-    }
-
-    setIsInstallingUpdate(true);
-
-    try {
-      await api.installUpdate();
-      finishStartup();
-    } catch (error) {
-      console.error("Failed to install startup update:", error);
-      toast.error(`Erro ao instalar atualização: ${getErrorMessage(error)}`);
-    } finally {
-      setIsInstallingUpdate(false);
-    }
-  }, [availableUpdate, finishStartup, isInstallingUpdate]);
-
   return (
-    <>
-      <LoadingScreen />
-      <UpdateModal
-        isOpen={startupState.status === "update-available" && availableUpdate !== null}
-        update={availableUpdate}
-        isInstalling={isInstallingUpdate}
-        onCancel={handlePostpone}
-        onConfirm={() => {
-          void handleInstall();
-        }}
-      />
-    </>
+    <LoadingScreen />
   );
 }
 
@@ -159,7 +149,11 @@ function MainPage({
   );
 }
 
-function AppContent() {
+interface AppContentProps {
+  startupUpdate: UpdateInfo | null;
+}
+
+function AppContent({ startupUpdate }: AppContentProps) {
   const { state } = useAppState();
   const [showExitModal, setShowExitModal] = useState(false);
   const [exitMessage, setExitMessage] = useState("");
@@ -181,6 +175,15 @@ function AppContent() {
     isInstallingUpdate,
     isUpdateModalOpen,
   });
+
+  useEffect(() => {
+    if (!startupUpdate) {
+      return;
+    }
+
+    setAvailableUpdate(startupUpdate);
+    setIsUpdateModalOpen(true);
+  }, [startupUpdate]);
 
   const checkForUpdates = useCallback(async (manual = false) => {
     if (isCheckingUpdate || isInstallingUpdate) {
@@ -382,15 +385,21 @@ function AppContent() {
 
 function App() {
   const [startupReady, setStartupReady] = useState(false);
+  const [startupUpdate, setStartupUpdate] = useState<UpdateInfo | null>(null);
 
   return (
     <>
       {startupReady ? (
         <AppProvider>
-          <AppContent />
+          <AppContent startupUpdate={startupUpdate} />
         </AppProvider>
       ) : (
-        <StartupUpdateGate onReady={() => setStartupReady(true)} />
+        <StartupUpdateGate
+          onReady={(update) => {
+            setStartupUpdate(update);
+            setStartupReady(true);
+          }}
+        />
       )}
       <Toaster position="bottom-right" toastOptions={{ duration: 8000 }} />
     </>
