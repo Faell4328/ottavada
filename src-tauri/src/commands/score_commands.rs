@@ -8,7 +8,7 @@ use tracing::{error, info, warn};
 use crate::commands::common::configure_no_window_command;
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
-use crate::commands::common::require_server_settings;
+use crate::commands::common::{regenerate_song_archives_for_song_ids, require_server_settings};
 use crate::domain::errors::AppError;
 use crate::domain::models::ComputerType;
 use crate::domain::models::*;
@@ -458,6 +458,8 @@ pub fn add_score_to_song(
         e
     })?;
 
+    let _ = regenerate_song_archives_for_song_ids(&db, &store, &[song_id.clone()]);
+
     let _ = refresh_library_summary_cache(&db, &store);
 
     db.get_song_list_item_by_id(&song_id).map(|updated_song| {
@@ -503,6 +505,7 @@ pub fn add_scores_to_song(
     }
 
     if added_count > 0 {
+        let _ = regenerate_song_archives_for_song_ids(&db, &store, &[song_id.clone()]);
         let _ = refresh_library_summary_cache(&db, &store);
     }
 

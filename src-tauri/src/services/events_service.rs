@@ -6,7 +6,7 @@ use crate::domain::errors::AppError;
 use crate::domain::models::OperationGuard;
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
-use crate::services::cloud_paths::ensure_actions_cloud_dir;
+use crate::services::cloud_paths::{ensure_actions_cloud_dir, ensure_cloud_root_dir};
 use crate::services::backup_songs_service::list_draft_not_found_scores_with_previous_main;
 use crate::services::msgpack_zstd::{
     compress_zstd_with_threads, serialize_msgpack_named, write_atomic, ZSTD_LEVEL_BALANCED,
@@ -61,9 +61,10 @@ pub fn generate_events_msgpack(
     settings.require_server_only()?;
 
     let changed_fields = db.get_changed_fields_ordered()?;
-    let cloud_dir = ensure_actions_cloud_dir(store.app_data_dir())?;
+    let actions_dir = ensure_actions_cloud_dir(store.app_data_dir())?;
+    let cloud_root_dir = ensure_cloud_root_dir(store.app_data_dir())?;
     let previous_main_versions =
-        list_draft_not_found_scores_with_previous_main(db, store.app_data_dir(), &cloud_dir)?;
+        list_draft_not_found_scores_with_previous_main(db, store.app_data_dir(), &cloud_root_dir)?;
 
     let mut events = Vec::with_capacity(changed_fields.len());
     for change in changed_fields.iter() {
@@ -98,7 +99,7 @@ pub fn generate_events_msgpack(
         events,
     };
 
-    let output_path = cloud_dir.join(EVENTS_FILE_NAME);
+    let output_path = actions_dir.join(EVENTS_FILE_NAME);
 
     if payload.events.is_empty() {
         if output_path.exists() {
@@ -177,8 +178,8 @@ fn normalize_score_status_for_client(
         return Some(Some("not_found".to_string()));
     }
 
-    // Com versão main anterior, mantém cliente com main e ignora este evento.
-    None
+    // Com versão main anterior, o cliente deve continuar vendo main.
+    Some(Some("main".to_string()))
 }
 
 #[cfg(test)]
@@ -195,6 +196,7 @@ mod tests {
     use crate::infrastructure::store::SystemStore;
 
     use super::generate_events_msgpack;
+    use crate::services::backup_songs_service::list_draft_not_found_scores_with_previous_main;
 
     #[test]
     fn generates_events_msgpack_file() {
@@ -334,17 +336,31 @@ mod tests {
         )
         .expect("insert allowed event");
 
-        // Simula versão main anterior no arquivo de nuvem.
         create_tar_zst_with_entry(
             &dir.path().join("cloud").join("songs").join("song-1.tar.zst"),
             "score-1.musx",
             b"v1",
         );
+
         drop(conn);
+
+        let preserved_versions = list_draft_not_found_scores_with_previous_main(
+            &db,
+            dir.path(),
+            &dir.path().join("cloud"),
+        )
+        .expect("list preserved versions");
+        assert!(preserved_versions.has_previous_main("score-1"));
 
         let summary = generate_events_msgpack(&db, &store).expect("generate events");
 
-        assert_eq!(summary.events_count, 1);
+        assert_eq!(summary.events_count, 3);
+
+        let raw = fs::read(dir.path().join("cloud").join("actions").join("events.msgpack.zst"))
+            .expect("read events file");
+        let mut decoder = zstd::stream::read::Decoder::new(raw.as_slice()).expect("decoder");
+        let payload: serde_json::Value = rmp_serde::from_read(&mut decoder).expect("decode msgpack");
+        assert_eq!(payload["events"][0]["data"][0]["newValue"], "main");
     }
 
     #[test]

@@ -1090,12 +1090,36 @@ pub fn regenerate_all_song_archives(
 
 #[cfg(test)]
 mod tests {
+    use std::fs::File;
+
+    use tar::Builder;
     use tempfile::tempdir;
 
     use super::{
         archive_worker_count_for, cleanup_orphan_archives, copy_and_rename_scores_parallel,
-        copy_worker_count_for, should_generate_archive, SongBackupRow, ScoreArchiveEntry,
+        copy_worker_count_for, list_draft_not_found_scores_with_previous_main,
+        should_generate_archive, SongBackupRow, ScoreArchiveEntry,
     };
+
+    fn create_tar_zst_with_entry(archive_path: &std::path::Path, file_name: &str, content: &[u8]) {
+        if let Some(parent) = archive_path.parent() {
+            std::fs::create_dir_all(parent).expect("create archive dir");
+        }
+
+        let output = File::create(archive_path).expect("create archive file");
+        let encoder = zstd::stream::Encoder::new(output, 5).expect("encoder");
+        let mut tar = Builder::new(encoder);
+
+        let mut header = tar::Header::new_gnu();
+        header.set_path(file_name).expect("set path");
+        header.set_size(content.len() as u64);
+        header.set_mode(0o644);
+        header.set_cksum();
+
+        tar.append(&header, content).expect("append entry");
+        let encoder = tar.into_inner().expect("finish tar");
+        encoder.finish().expect("finish zstd");
+    }
 
     #[test]
     fn generates_when_archive_is_missing_even_if_last_backup_is_up_to_date() {
@@ -1279,5 +1303,61 @@ mod tests {
 
         assert_eq!(removed, 0);
         assert!(songs_dir.join("notes.txt").is_file());
+    }
+
+    #[test]
+    fn finds_previous_main_version_from_cloud_songs_archive() {
+        let temp = tempdir().expect("temp dir");
+        let db_path = temp.path().join("test.db");
+        let db = crate::infrastructure::database::Database::new(&db_path).expect("db init");
+        let cloud_root_dir = temp.path().join("cloud");
+
+        db.insert_song(
+            &crate::domain::models::Song {
+                id: "song-1".to_string(),
+                name: "Musica".to_string(),
+                composer: None,
+                arranger: None,
+                is_favorite: false,
+                status: crate::domain::models::ScoreStatus::Main,
+                updated_at: chrono::Local::now().naive_local(),
+                updated_by: "server-1".to_string(),
+            },
+            &[],
+        )
+        .expect("insert song");
+
+        let conn = db.conn.lock().expect("lock db");
+        conn.execute(
+            "INSERT INTO scores (id, song_id, name, host_id, file_path, file_name, file_size, file_modified_at, status)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, datetime('now'), ?8)",
+            rusqlite::params![
+                "score-1",
+                "song-1",
+                "flauta",
+                "server",
+                "/tmp",
+                "score-1.musx",
+                0,
+                "draft",
+            ],
+        )
+        .expect("insert draft score");
+        drop(conn);
+
+        create_tar_zst_with_entry(
+            &cloud_root_dir.join("songs").join("song-1.tar.zst"),
+            "score-1.musx",
+            b"main-version",
+        );
+
+        let summary = list_draft_not_found_scores_with_previous_main(
+            &db,
+            temp.path(),
+            &cloud_root_dir,
+        )
+        .expect("list preserved versions");
+
+        assert!(summary.has_previous_main("score-1"));
     }
 }

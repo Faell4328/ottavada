@@ -5,6 +5,7 @@ use tracing::{error, info, warn};
 use serde::Serialize;
 
 use crate::commands::common::require_server_settings;
+use crate::commands::common::regenerate_song_archives_for_song_ids;
 use crate::domain::errors::AppError;
 use crate::domain::models::*;
 use crate::infrastructure::database::Database;
@@ -175,6 +176,7 @@ pub fn scan_directory(directory: String) -> Result<Vec<IndexedFile>, AppError> {
 /// Músicas existentes (case-insensitive) não são duplicadas.
 fn import_files_core(
     db: &Database,
+    store: &SystemStore,
     host_id: &str,
     files: &[IndexedFile],
     category_ids: &[String],
@@ -314,6 +316,8 @@ fn import_files_core(
             added_count += 1;
         }
 
+        let _ = regenerate_song_archives_for_song_ids(db, store, &[song_id.clone()]);
+
     }
 
     Ok(ImportIndexedFilesResult {
@@ -338,6 +342,7 @@ pub fn import_indexed_files(
     let settings = require_server_settings(&store)?;
     import_files_core(
         &db,
+        &store,
         &settings.computer_id,
         &files,
         &category_ids,
@@ -370,6 +375,7 @@ pub fn import_indexed_files_with_metadata(
 
     import_files_core(
         &db,
+        &store,
         &settings.computer_id,
         &files,
         &category_ids,
@@ -569,4 +575,65 @@ pub fn delete_song(
 
     info!("Música deletada com sucesso: {}", song_id);
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use std::fs;
+
+    use tempfile::tempdir;
+
+    use super::import_files_core;
+    use crate::domain::models::{AppSettings, ComputerType, IndexedFile};
+    use crate::infrastructure::database::Database;
+    use crate::infrastructure::store::SystemStore;
+
+    #[test]
+    fn importing_indexed_files_generates_the_song_archive() {
+        let dir = tempdir().expect("temp dir");
+        let db = Database::new(&dir.path().join("songs.db")).expect("db");
+        let store = SystemStore::new(dir.path().to_path_buf());
+
+        store
+            .save_app_settings(&AppSettings {
+                computer_id: "server-1".to_string(),
+                computer_name: Some("Servidor".to_string()),
+                computer_type: ComputerType::Server,
+                first_run_completed: true,
+                ..Default::default()
+            })
+            .expect("save settings");
+
+        let source_dir = dir.path().join("import");
+        fs::create_dir_all(&source_dir).expect("create source dir");
+        let score_path = source_dir.join("score-1.musx");
+        fs::write(&score_path, b"score-contents").expect("write score");
+
+        let files = vec![IndexedFile {
+            path: score_path.to_string_lossy().to_string(),
+            name: "CANON".to_string(),
+            instrument: Some("flauta".to_string()),
+            extension: "musx".to_string(),
+        }];
+
+        let result = import_files_core(
+            &db,
+            &store,
+            "server-1",
+            &files,
+            &[],
+            None,
+            None,
+        )
+        .expect("import files");
+
+        let song_id = &result.songs[0].id;
+        assert!(
+            dir.path()
+                .join("cloud")
+                .join("songs")
+                .join(format!("{}.tar.zst", song_id))
+                .is_file()
+        );
+    }
 }
