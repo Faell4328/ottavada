@@ -37,7 +37,7 @@ export default function SettingsPage() {
   const isClient = isClientComputer(state.settings?.computer_type);
   const isSyncLocked =
     state.isScanningFiles ||
-    state.rcloneProgress.direction !== null ||
+    state.rcloneProgress.active ||
     state.operationStatus.stepCurrent !== null;
   const [settings, setSettings] = useState<AppSettings>(
     state.settings ?? {

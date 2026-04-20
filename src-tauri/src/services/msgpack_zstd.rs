@@ -17,7 +17,7 @@ pub fn compress_zstd_with_threads(
     level: i32,
     file_label: &str,
 ) -> Result<Vec<u8>, AppError> {
-    let mut encoder = zstd::stream::Encoder::new(Vec::new(), level).map_err(|e| {
+    let mut encoder = zstd::stream::Encoder::new(Vec::new(), 5).map_err(|e| {
         AppError::Generic(format!(
             "Erro ao iniciar compressao zstd de {}: {}",
             file_label, e

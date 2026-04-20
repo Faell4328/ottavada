@@ -25,7 +25,7 @@ export default function Sidebar() {
   const isClient = isClientComputer(state.settings?.computer_type);
   const isSyncLocked =
     state.isScanningFiles ||
-    state.rcloneProgress.direction !== null ||
+    state.rcloneProgress.active ||
     state.operationStatus.stepCurrent !== null;
   const isCategoryLocked = isClient || isSyncLocked;
   const categoryLockedTitle = isClient

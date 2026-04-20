@@ -172,7 +172,7 @@ function AppContent() {
   const isAppBusy =
     state.isLoading ||
     state.isScanningFiles ||
-    state.rcloneProgress.direction !== null ||
+    state.rcloneProgress.active ||
     state.operationStatus.stepCurrent !== null;
 
   const isUpdateBusy = isCheckingUpdate || isInstallingUpdate;

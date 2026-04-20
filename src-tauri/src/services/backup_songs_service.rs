@@ -569,7 +569,7 @@ fn create_tar_zst_from_temp_dir_with_threads(
         ))
     })?;
 
-    let level = 10;
+    let level = 5;
     let mut encoder = zstd::stream::Encoder::new(output, level)
         .map_err(|e| AppError::Generic(format!("Erro ao inicializar encoder zstd: {}", e)))?;
 

@@ -56,7 +56,7 @@ export default function SongsList() {
   const [isSearchPending, startSearchTransition] = useTransition();
   const isSyncLocked =
     state.isScanningFiles ||
-    state.rcloneProgress.direction !== null ||
+    state.rcloneProgress.active ||
     state.operationStatus.stepCurrent !== null;
   const normalizedSearchQuery = useMemo(
     () => normalizeSearchText(state.searchQuery),

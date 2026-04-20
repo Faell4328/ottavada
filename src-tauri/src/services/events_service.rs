@@ -423,7 +423,7 @@ mod tests {
         }
 
         let output = File::create(archive_path).expect("create archive file");
-        let encoder = zstd::stream::Encoder::new(output, 10).expect("encoder");
+        let encoder = zstd::stream::Encoder::new(output, 5).expect("encoder");
         let mut tar = Builder::new(encoder);
 
         let mut header = tar::Header::new_gnu();
