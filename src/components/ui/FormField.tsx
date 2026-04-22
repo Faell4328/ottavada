@@ -43,6 +43,7 @@ export function TextInput({
 }: TextInputProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const selectionRef = useRef<{ start: number; end: number; value: string } | null>(null);
+  const lastKeyRef = useRef<string | null>(null);
 
   const rememberSelection = () => {
     const input = inputRef.current;
@@ -72,18 +73,28 @@ export function TextInput({
     }
 
     const previousSelectionLength = Math.max(selection.end - selection.start, 0);
-    const insertedTextLength = Math.max(
-      input.value.length - (selection.value.length - previousSelectionLength),
-      0
-    );
-    const nextCaretPosition = selection.start + insertedTextLength;
+    let nextCaretPosition = selection.start;
+
+    if (lastKeyRef.current === "Backspace" && previousSelectionLength === 0) {
+      nextCaretPosition = Math.max(selection.start - 1, 0);
+    } else if (lastKeyRef.current === "Delete" && previousSelectionLength === 0) {
+      nextCaretPosition = selection.start;
+    } else {
+      const insertedTextLength = Math.max(
+        input.value.length - (selection.value.length - previousSelectionLength),
+        0
+      );
+      nextCaretPosition = selection.start + insertedTextLength;
+    }
 
     input.setSelectionRange(nextCaretPosition, nextCaretPosition);
     selectionRef.current = null;
+    lastKeyRef.current = null;
   }, [value]);
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     rememberSelection();
+    lastKeyRef.current = event.key;
     onKeyDown?.(event);
   };
 

@@ -131,7 +131,7 @@ describe("shouldRunStartupServerScan", () => {
 
 describe("getScanFailureToastMessage", () => {
   it("uses the client-specific fallback message", () => {
-    const getErrorMessage = vi.fn((error: unknown, fallback: string) => fallback);
+    const getErrorMessage = vi.fn((_error: unknown, fallback: string) => fallback);
 
     expect(getScanFailureToastMessage({}, getErrorMessage, "Client")).toBe(
       "Não foi possível consultar as alterações."
@@ -143,7 +143,7 @@ describe("getScanFailureToastMessage", () => {
   });
 
   it("keeps the server fallback for server scans", () => {
-    const getErrorMessage = vi.fn((error: unknown, fallback: string) => fallback);
+    const getErrorMessage = vi.fn((_error: unknown, fallback: string) => fallback);
 
     expect(getScanFailureToastMessage({}, getErrorMessage, "Server")).toBe(
       "Não foi possível concluir a verificação."
