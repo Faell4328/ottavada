@@ -35,6 +35,7 @@ export function AddScoreToSongModal({
 }: AddScoreToSongModalProps) {
   const scoresForDuplicateCheck = existingScores ?? [];
   const [instrumentNames, setInstrumentNames] = useState<Record<number, string>>({});
+  const [reviewInstrumentNames, setReviewInstrumentNames] = useState<Record<number, string>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
   const [openingScorePath, setOpeningScorePath] = useState<string | null>(null);
@@ -71,11 +72,11 @@ export function AddScoreToSongModal({
     const map = new Map<number, string | null>();
 
     activeFileEntries.forEach(({ file, idx }) => {
-      map.set(idx, normalizeScoreNameForSave(instrumentNames[idx] ?? file.instrument));
+      map.set(idx, normalizeScoreNameForSave(reviewInstrumentNames[idx] ?? file.instrument));
     });
 
     return map;
-  }, [activeFileEntries, instrumentNames]);
+  }, [activeFileEntries, reviewInstrumentNames]);
 
   const normalizedInstrumentCounts = useMemo(() => {
     const counts = new Map<string, number>();
@@ -105,7 +106,7 @@ export function AddScoreToSongModal({
     const map = new Map<number, boolean>();
 
     activeFileEntries.forEach(({ file, idx }) => {
-      const normalizedInstrument = normalizeScoreNameForSave(instrumentNames[idx] ?? file.instrument);
+      const normalizedInstrument = normalizeScoreNameForSave(reviewInstrumentNames[idx] ?? file.instrument);
       map.set(
         idx,
         normalizedInstrument !== null && (normalizedInstrumentCounts.get(normalizedInstrument) ?? 0) > 1
@@ -113,7 +114,7 @@ export function AddScoreToSongModal({
     });
 
     return map;
-  }, [activeFileEntries, instrumentNames, normalizedInstrumentCounts]);
+  }, [activeFileEntries, normalizedInstrumentCounts, reviewInstrumentNames]);
 
   const duplicateEntries = activeFileEntries.filter(({ idx }) => {
     return duplicateMap.get(idx) !== null || batchDuplicateMap.get(idx) === true;
@@ -137,6 +138,7 @@ export function AddScoreToSongModal({
     });
 
     setInstrumentNames(names);
+    setReviewInstrumentNames(names);
     setError("");
     setIsSaving(false);
     setOpeningScorePath(null);
@@ -214,9 +216,16 @@ export function AddScoreToSongModal({
     }
   };
 
+  const commitInstrumentName = (idx: number) => {
+    setReviewInstrumentNames((prev) => ({
+      ...prev,
+      [idx]: normalizeScoreNameInput(instrumentNames[idx] ?? ""),
+    }));
+  };
+
   const visibleFiles = sortIndexedFileEntriesForReview(
     activeFileEntries,
-    instrumentNames,
+    reviewInstrumentNames,
     editingInstrumentIndex
   );
 
@@ -283,7 +292,7 @@ export function AddScoreToSongModal({
       if (item.kind === "group") {
         const firstEntry = item.entries[0];
         const instrumentName = firstEntry
-          ? instrumentNames[firstEntry.idx] || firstEntry.file.instrument || item.normalizedInstrument
+          ? reviewInstrumentNames[firstEntry.idx] || firstEntry.file.instrument || item.normalizedInstrument
           : item.normalizedInstrument;
 
         messages.push(
@@ -302,7 +311,7 @@ export function AddScoreToSongModal({
     });
 
     return messages;
-  }, [reviewItems]);
+  }, [reviewInstrumentNames, reviewItems]);
 
   if (files.length === 0) {
     return null;
@@ -420,7 +429,10 @@ export function AddScoreToSongModal({
                             }));
                           }}
                           onFocus={() => setEditingInstrumentIndex(idx)}
-                          onBlur={() => setEditingInstrumentIndex(null)}
+                          onBlur={() => {
+                            commitInstrumentName(idx);
+                            setEditingInstrumentIndex(null);
+                          }}
                           placeholder="Nome do instrumento"
                           autoFocus={visibleFiles[0]?.idx === idx}
                         />
@@ -507,7 +519,10 @@ export function AddScoreToSongModal({
                     }));
                   }}
                   onFocus={() => setEditingInstrumentIndex(item.idx)}
-                  onBlur={() => setEditingInstrumentIndex(null)}
+                  onBlur={() => {
+                    commitInstrumentName(item.idx);
+                    setEditingInstrumentIndex(null);
+                  }}
                   placeholder="Nome do instrumento"
                   autoFocus={visibleFiles[0]?.idx === item.idx}
                   readOnly={item.isLocked}

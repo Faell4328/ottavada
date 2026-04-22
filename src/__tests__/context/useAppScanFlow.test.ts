@@ -1,6 +1,7 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 
 import {
+  getScanFailureToastMessage,
   shouldDispatchRcloneProgressUpdate,
   shouldRunStartupServerScan,
   shouldUseFullCloudSync,
@@ -125,5 +126,31 @@ describe("shouldRunStartupServerScan", () => {
 
   it("keeps the client startup scan enabled", () => {
     expect(shouldRunStartupServerScan("Client", false, false)).toBe(true);
+  });
+});
+
+describe("getScanFailureToastMessage", () => {
+  it("uses the client-specific fallback message", () => {
+    const getErrorMessage = vi.fn((error: unknown, fallback: string) => fallback);
+
+    expect(getScanFailureToastMessage({}, getErrorMessage, "Client")).toBe(
+      "Não foi possível consultar as alterações."
+    );
+    expect(getErrorMessage).toHaveBeenCalledWith(
+      {},
+      "Não foi possível consultar as alterações."
+    );
+  });
+
+  it("keeps the server fallback for server scans", () => {
+    const getErrorMessage = vi.fn((error: unknown, fallback: string) => fallback);
+
+    expect(getScanFailureToastMessage({}, getErrorMessage, "Server")).toBe(
+      "Não foi possível concluir a verificação."
+    );
+    expect(getErrorMessage).toHaveBeenCalledWith(
+      {},
+      "Não foi possível concluir a verificação."
+    );
   });
 });

@@ -209,6 +209,40 @@ describe("AddScoreToSongModal", () => {
     expect(instrumentInputs[1]).not.toHaveAttribute("readonly");
   });
 
+  it("should keep focus while editing a repeated instrument until blur", async () => {
+    renderWithAppProvider(
+      <AddScoreToSongModal
+        isOpen={true}
+        songName="HINO NACIONAL"
+        files={duplicateBatchFiles}
+        onClose={mockOnClose}
+        onSave={mockOnSave}
+      />
+    );
+
+    const instrumentInput = screen.getAllByPlaceholderText("Nome do instrumento")[0] as HTMLInputElement;
+    instrumentInput.focus();
+
+    fireEvent.change(instrumentInput, { target: { value: "Clarinete" } });
+
+    expect(document.activeElement).toBe(instrumentInput);
+    expect(
+      screen.getByText(
+        "2 partituras usam o mesmo instrumento (Flauta). Renomeie ou delete uma delas para continuar."
+      )
+    ).toBeInTheDocument();
+
+    fireEvent.blur(instrumentInput);
+
+    await waitFor(() => {
+      expect(
+        screen.queryByText(
+          "2 partituras usam o mesmo instrumento (Flauta). Renomeie ou delete uma delas para continuar."
+        )
+      ).not.toBeInTheDocument();
+    });
+  });
+
   it("should render files in the same review order as directory indexing", () => {
     renderWithAppProvider(
       <AddScoreToSongModal

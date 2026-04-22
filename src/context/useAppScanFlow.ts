@@ -99,6 +99,19 @@ export function shouldUseFullCloudSync(params: {
   );
 }
 
+export function getScanFailureToastMessage(
+  err: unknown,
+  getErrorMessage: (err: unknown, fallback: string) => string,
+  computerType: "Server" | "Client" | undefined
+) {
+  const fallbackMessage =
+    computerType === "Client"
+      ? "Não foi possível consultar as alterações."
+      : "Não foi possível concluir a verificação.";
+
+  return getErrorMessage(err, fallbackMessage);
+}
+
 export function useAppScanFlow({
   dispatch,
   computerType,
@@ -621,7 +634,7 @@ export function useAppScanFlow({
     } catch (err) {
       console.error("Failed to scan files for changes:", err);
       if (!isAutomatic) {
-        toast.error("Não foi possível concluir a verificação.");
+        toast.error(getScanFailureToastMessage(err, getErrorMessage, computerType));
       }
       clearScanTimer();
       resetScanState();

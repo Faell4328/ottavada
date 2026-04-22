@@ -212,6 +212,39 @@ describe("AddFilesModal", () => {
     expect(instrumentInputs[1]).not.toHaveAttribute("readonly");
   });
 
+  it("should keep focus while editing a repeated instrument until blur", async () => {
+    renderWithAppProvider(
+      <AddFilesModal
+        isOpen={true}
+        files={duplicateBatchFiles}
+        onClose={mockOnClose}
+        onSuccess={mockOnSuccess}
+      />
+    );
+
+    const instrumentInput = screen.getAllByPlaceholderText("Nome do instrumento")[0] as HTMLInputElement;
+    instrumentInput.focus();
+
+    fireEvent.change(instrumentInput, { target: { value: "Clarinete" } });
+
+    expect(document.activeElement).toBe(instrumentInput);
+    expect(
+      screen.getByText(
+        "2 partituras usam o mesmo instrumento (Flauta). Renomeie ou delete uma delas para continuar."
+      )
+    ).toBeInTheDocument();
+
+    fireEvent.blur(instrumentInput);
+
+    await waitFor(() => {
+      expect(
+        screen.queryByText(
+          "2 partituras usam o mesmo instrumento (Flauta). Renomeie ou delete uma delas para continuar."
+        )
+      ).not.toBeInTheDocument();
+    });
+  });
+
   it("should show when a score is already used in another song and disable save", () => {
     renderWithAppProvider(
       <AddFilesModal

@@ -53,6 +53,7 @@ export function AddFilesModal({
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
   const [instrumentNames, setInstrumentNames] = useState<Record<number, string>>({});
+  const [reviewInstrumentNames, setReviewInstrumentNames] = useState<Record<number, string>>({});
   const [removedFileIndices, setRemovedFileIndices] = useState<Set<number>>(new Set());
   const [editingInstrumentIndex, setEditingInstrumentIndex] = useState<number | null>(null);
   const [openingScorePath, setOpeningScorePath] = useState<string | null>(null);
@@ -76,11 +77,11 @@ export function AddFilesModal({
     () =>
       analyzeAddFilesReview(
         activeFileEntries,
-        instrumentNames,
+        reviewInstrumentNames,
         songsForDuplicateCheck,
         normalizedTitle
       ),
-    [activeFileEntries, instrumentNames, normalizedTitle, songsForDuplicateCheck]
+    [activeFileEntries, normalizedTitle, reviewInstrumentNames, songsForDuplicateCheck]
   );
   const hasAddableFiles = addableEntries.length > 0;
   const isDuplicateSong = existingSong !== null;
@@ -103,6 +104,7 @@ export function AddFilesModal({
         names[idx] = normalizeScoreNameInput(file.instrument || "");
       });
       setInstrumentNames(names);
+      setReviewInstrumentNames(names);
     }
   }, [defaultCategoryIds, files, isOpen]);
 
@@ -118,6 +120,13 @@ export function AddFilesModal({
     setInstrumentNames((prev) => ({
       ...prev,
       [idx]: normalizeScoreNameInput(name),
+    }));
+  };
+
+  const commitInstrumentName = (idx: number) => {
+    setReviewInstrumentNames((prev) => ({
+      ...prev,
+      [idx]: normalizeScoreNameInput(instrumentNames[idx] ?? ""),
     }));
   };
 
@@ -284,7 +293,7 @@ export function AddFilesModal({
       if (item.kind === "group") {
         const firstEntry = item.entries[0];
         const instrumentName = firstEntry
-          ? instrumentNames[firstEntry.idx] || firstEntry.file.instrument || item.normalizedInstrument
+          ? reviewInstrumentNames[firstEntry.idx] || firstEntry.file.instrument || item.normalizedInstrument
           : item.normalizedInstrument;
 
         messages.push(
@@ -303,7 +312,7 @@ export function AddFilesModal({
     });
 
     return messages;
-  }, [existingSong?.name, isDuplicateSong, instrumentNames, reviewItems]);
+  }, [existingSong?.name, isDuplicateSong, reviewInstrumentNames, reviewItems]);
 
   if (files.length === 0) return null;
 
@@ -442,8 +451,12 @@ export function AddFilesModal({
                             value={instrumentNames[idx] || ""}
                             onChange={(val) => updateInstrumentName(idx, val)}
                             onFocus={() => setEditingInstrumentIndex(idx)}
-                            onBlur={() => setEditingInstrumentIndex(null)}
+                            onBlur={() => {
+                              commitInstrumentName(idx);
+                              setEditingInstrumentIndex(null);
+                            }}
                             placeholder="Nome do instrumento"
+                            autoFocus={visibleFiles[0]?.idx === idx}
                           />
                         </div>
                       );
@@ -523,8 +536,12 @@ export function AddFilesModal({
                     value={instrumentNames[item.idx] || ""}
                     onChange={(val) => updateInstrumentName(item.idx, val)}
                     onFocus={() => setEditingInstrumentIndex(item.idx)}
-                    onBlur={() => setEditingInstrumentIndex(null)}
+                    onBlur={() => {
+                      commitInstrumentName(item.idx);
+                      setEditingInstrumentIndex(null);
+                    }}
                     placeholder="Nome do instrumento"
+                    autoFocus={visibleFiles[0]?.idx === item.idx}
                     readOnly={item.isLocked}
                   />
                 </div>
