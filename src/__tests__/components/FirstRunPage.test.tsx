@@ -29,10 +29,17 @@ vi.mock("react-hot-toast", () => ({
 
 describe("FirstRunPage", () => {
   it("starts with the intro video and moves to computer type", async () => {
-    renderWithAppProvider(<FirstRunPage />);
+    const { container } = renderWithAppProvider(<FirstRunPage />);
 
-    expect(screen.getByText("Antes de começar")).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: "Score Maestro" })).toBeInTheDocument();
+    expect(container.querySelector("video")).toBeInTheDocument();
+    expect(container.querySelector('video source[type="video/webm"]')).toHaveAttribute(
+      "src",
+      "/intro.webm"
+    );
+    expect(container.querySelector('video source[type="video/mp4"]')).toHaveAttribute(
+      "src",
+      "/intro.mp4"
+    );
     expect(screen.getByText("Avançar")).toBeInTheDocument();
 
     fireEvent.click(screen.getByText("Avançar"));

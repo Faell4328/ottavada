@@ -1,13 +1,13 @@
 {
   "name": "score-maestro",
   "private": true,
-  "version": "1.0.6",
+  "version": "1.0.7",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "tauri:linux": "sh -lc 'set -a; . src-tauri/.env; set +a; APPIMAGE_EXTRACT_AND_RUN=1 tauri'",
+    "tauri:linux": "sh -lc 'set -a; . src-tauri/.env; set +a; APPIMAGE_EXTRACT_AND_RUN=1 tauri dev'",
     "tauri:win": "dotenv -e src-tauri/.env -- tauri dev",
     "tauri:win:x64": "rustup target add x86_64-pc-windows-gnu && tauri build --target x86_64-pc-windows-gnu",
     "tauri:win:x32": "sh -lc 'set -a; . src-tauri/.env; set +a; mv src-tauri/rclone/rclone.exe src-tauri/rclone/rclone64.exe && mv src-tauri/rclone/rclone32.exe src-tauri/rclone/rclone.exe && (rustup target add i686-pc-windows-gnu && tauri build --target i686-pc-windows-gnu); status=$?; mv src-tauri/rclone/rclone.exe src-tauri/rclone/rclone32.exe && mv src-tauri/rclone/rclone64.exe src-tauri/rclone/rclone.exe; exit $status'",

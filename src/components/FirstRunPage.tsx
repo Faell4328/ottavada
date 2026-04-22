@@ -176,14 +176,11 @@ export default function FirstRunPage() {
         {step === "intro" && (
           <>
             <div className="mb-6 overflow-hidden rounded-xl border border-[#c5cfdb] bg-[#f8fafd]">
-              <video
-                src="/intro.mp4"
-                autoPlay
-                muted
-                playsInline
-                controls={false}
-                className="h-auto w-full bg-black"
-              />
+              <video autoPlay muted playsInline preload="auto" className="h-auto w-full bg-black">
+                <source src="/intro.webm" type="video/webm" />
+                <source src="/intro.mp4" type="video/mp4" />
+                Seu navegador não suporta reprodução de vídeo.
+              </video>
             </div>
 
             <button
@@ -300,7 +297,6 @@ export default function FirstRunPage() {
                 className="h-10 w-full rounded-lg border border-[#c5cfdb] bg-[#f8fafd] px-3 text-sm text-[#4d6075] outline-none focus:border-[#7ba0d4] focus:ring-2 focus:ring-[#7ba0d4]/20"
                 placeholder="Ex: Orquestra, igreja, ministério..."
               />
-
             </div>
 
             <button
