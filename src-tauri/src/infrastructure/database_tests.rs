@@ -75,6 +75,22 @@ mod tests {
         assert_eq!(errors[0].timestamp, 1_710_684_000);
     }
 
+    #[test]
+    fn telemetry_summary_counts_are_zero_for_an_empty_database() {
+        let db = make_db();
+
+        let counts = db.get_telemetry_summary_counts().expect("telemetry counts");
+
+        assert_eq!(counts.music_count, 0);
+        assert_eq!(counts.music_main, 0);
+        assert_eq!(counts.music_draft, 0);
+        assert_eq!(counts.music_not_found, 0);
+        assert_eq!(counts.scores_count, 0);
+        assert_eq!(counts.scores_main, 0);
+        assert_eq!(counts.scores_draft, 0);
+        assert_eq!(counts.scores_not_found, 0);
+    }
+
     // ── Paths ──
 
     #[test]

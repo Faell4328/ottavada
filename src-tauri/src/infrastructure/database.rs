@@ -1822,9 +1822,9 @@ impl Database {
             )
             SELECT
                 COUNT(s.id) AS music_count,
-                SUM(CASE WHEN COALESCE(ss.has_main, 0) = 1 THEN 1 ELSE 0 END) AS music_main,
-                SUM(CASE WHEN COALESCE(ss.has_main, 0) = 0 AND COALESCE(ss.has_draft, 0) = 1 THEN 1 ELSE 0 END) AS music_draft,
-                SUM(CASE WHEN COALESCE(ss.has_main, 0) = 0 AND COALESCE(ss.has_draft, 0) = 0 AND COALESCE(ss.has_not_found, 0) = 1 THEN 1 ELSE 0 END) AS music_not_found,
+                COALESCE(SUM(CASE WHEN COALESCE(ss.has_main, 0) = 1 THEN 1 ELSE 0 END), 0) AS music_main,
+                COALESCE(SUM(CASE WHEN COALESCE(ss.has_main, 0) = 0 AND COALESCE(ss.has_draft, 0) = 1 THEN 1 ELSE 0 END), 0) AS music_draft,
+                COALESCE(SUM(CASE WHEN COALESCE(ss.has_main, 0) = 0 AND COALESCE(ss.has_draft, 0) = 0 AND COALESCE(ss.has_not_found, 0) = 1 THEN 1 ELSE 0 END), 0) AS music_not_found,
                 COALESCE(SUM(ss.scores_count), 0) AS scores_count,
                 COALESCE(SUM(ss.scores_main), 0) AS scores_main,
                 COALESCE(SUM(ss.scores_draft), 0) AS scores_draft,
@@ -1911,7 +1911,7 @@ impl Database {
         )?;
 
         conn.execute(
-            "INSERT INTO errors (id, computerId, date, message, timestamp, report)
+            "INSERT OR IGNORE INTO errors (id, computerId, date, message, timestamp, report)
              VALUES (?1, ?2, ?3, ?4, ?5, 0)",
             params![id, computer_id, date, message, timestamp],
         )?;
