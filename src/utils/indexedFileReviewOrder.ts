@@ -8,23 +8,19 @@ export interface IndexedFileEntry {
 
 function getReviewInstrumentName(
   entry: IndexedFileEntry,
-  instrumentNames: Record<number, string>,
-  editingInstrumentIndex: number | null
+  instrumentNames: Record<number, string>
 ): string | null {
-  const useEditedNames = editingInstrumentIndex === null;
-
-  return useEditedNames ? instrumentNames[entry.idx] ?? entry.file.instrument : entry.file.instrument;
+  return instrumentNames[entry.idx] ?? entry.file.instrument;
 }
 
 export function sortIndexedFileEntriesForReview(
   entries: IndexedFileEntry[],
-  instrumentNames: Record<number, string>,
-  editingInstrumentIndex: number | null
+  instrumentNames: Record<number, string>
 ): IndexedFileEntry[] {
   return entries.slice().sort((a, b) => {
     return compareInstrumentNames(
-      getReviewInstrumentName(a, instrumentNames, editingInstrumentIndex),
-      getReviewInstrumentName(b, instrumentNames, editingInstrumentIndex)
+      getReviewInstrumentName(a, instrumentNames),
+      getReviewInstrumentName(b, instrumentNames)
     );
   });
 }

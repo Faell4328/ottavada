@@ -55,7 +55,6 @@ export function AddFilesModal({
   const [instrumentNames, setInstrumentNames] = useState<Record<number, string>>({});
   const [reviewInstrumentNames, setReviewInstrumentNames] = useState<Record<number, string>>({});
   const [removedFileIndices, setRemovedFileIndices] = useState<Set<number>>(new Set());
-  const [editingInstrumentIndex, setEditingInstrumentIndex] = useState<number | null>(null);
   const [openingScorePath, setOpeningScorePath] = useState<string | null>(null);
   const [openingLocationPath, setOpeningLocationPath] = useState<string | null>(null);
   const normalizedTitle = useMemo(() => normalizeSongNameForSave(title), [title]);
@@ -95,7 +94,6 @@ export function AddFilesModal({
       setSelectedCategories([...defaultCategoryIds]);
       setError("");
       setRemovedFileIndices(new Set());
-      setEditingInstrumentIndex(null);
       setOpeningScorePath(null);
       setOpeningLocationPath(null);
       
@@ -124,10 +122,18 @@ export function AddFilesModal({
   };
 
   const commitInstrumentName = (idx: number) => {
-    setReviewInstrumentNames((prev) => ({
-      ...prev,
-      [idx]: normalizeScoreNameInput(instrumentNames[idx] ?? ""),
-    }));
+    const nextValue = normalizeScoreNameInput(instrumentNames[idx] ?? "");
+
+    setReviewInstrumentNames((prev) => {
+      if ((prev[idx] ?? "") === nextValue) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        [idx]: nextValue,
+      };
+    });
   };
 
   const removeFile = (idx: number) => {
@@ -218,11 +224,7 @@ export function AddFilesModal({
   };
 
   const instrumentCount = activeFileEntries.length;
-  const visibleFiles = sortIndexedFileEntriesForReview(
-    activeFileEntries,
-    instrumentNames,
-    editingInstrumentIndex
-  );
+  const visibleFiles = sortIndexedFileEntriesForReview(activeFileEntries, reviewInstrumentNames);
 
   const reviewItems = useMemo(() => {
     const items: Array<
@@ -450,10 +452,8 @@ export function AddFilesModal({
                           <TextInput
                             value={instrumentNames[idx] || ""}
                             onChange={(val) => updateInstrumentName(idx, val)}
-                            onFocus={() => setEditingInstrumentIndex(idx)}
                             onBlur={() => {
                               commitInstrumentName(idx);
-                              setEditingInstrumentIndex(null);
                             }}
                             placeholder="Nome do instrumento"
                             autoFocus={visibleFiles[0]?.idx === idx}
@@ -535,10 +535,8 @@ export function AddFilesModal({
                   <TextInput
                     value={instrumentNames[item.idx] || ""}
                     onChange={(val) => updateInstrumentName(item.idx, val)}
-                    onFocus={() => setEditingInstrumentIndex(item.idx)}
                     onBlur={() => {
                       commitInstrumentName(item.idx);
-                      setEditingInstrumentIndex(null);
                     }}
                     placeholder="Nome do instrumento"
                     autoFocus={visibleFiles[0]?.idx === item.idx}

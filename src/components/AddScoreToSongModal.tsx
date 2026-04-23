@@ -40,7 +40,6 @@ export function AddScoreToSongModal({
   const [error, setError] = useState("");
   const [openingScorePath, setOpeningScorePath] = useState<string | null>(null);
   const [openingLocationPath, setOpeningLocationPath] = useState<string | null>(null);
-  const [editingInstrumentIndex, setEditingInstrumentIndex] = useState<number | null>(null);
   const [removedFileIndices, setRemovedFileIndices] = useState<Set<number>>(new Set());
 
   const currentSong = useMemo<SongListItem>(
@@ -143,7 +142,6 @@ export function AddScoreToSongModal({
     setIsSaving(false);
     setOpeningScorePath(null);
     setOpeningLocationPath(null);
-    setEditingInstrumentIndex(null);
     setRemovedFileIndices(new Set());
   }, [files, isOpen]);
 
@@ -217,17 +215,21 @@ export function AddScoreToSongModal({
   };
 
   const commitInstrumentName = (idx: number) => {
-    setReviewInstrumentNames((prev) => ({
-      ...prev,
-      [idx]: normalizeScoreNameInput(instrumentNames[idx] ?? ""),
-    }));
+    const nextValue = normalizeScoreNameInput(instrumentNames[idx] ?? "");
+
+    setReviewInstrumentNames((prev) => {
+      if ((prev[idx] ?? "") === nextValue) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        [idx]: nextValue,
+      };
+    });
   };
 
-  const visibleFiles = sortIndexedFileEntriesForReview(
-    activeFileEntries,
-    reviewInstrumentNames,
-    editingInstrumentIndex
-  );
+  const visibleFiles = sortIndexedFileEntriesForReview(activeFileEntries, reviewInstrumentNames);
 
   const reviewItems = useMemo(() => {
     const items: Array<
@@ -428,10 +430,8 @@ export function AddScoreToSongModal({
                               [idx]: normalizeScoreNameInput(value),
                             }));
                           }}
-                          onFocus={() => setEditingInstrumentIndex(idx)}
                           onBlur={() => {
                             commitInstrumentName(idx);
-                            setEditingInstrumentIndex(null);
                           }}
                           placeholder="Nome do instrumento"
                           autoFocus={visibleFiles[0]?.idx === idx}
@@ -518,10 +518,8 @@ export function AddScoreToSongModal({
                       [item.idx]: normalizeScoreNameInput(value),
                     }));
                   }}
-                  onFocus={() => setEditingInstrumentIndex(item.idx)}
                   onBlur={() => {
                     commitInstrumentName(item.idx);
-                    setEditingInstrumentIndex(null);
                   }}
                   placeholder="Nome do instrumento"
                   autoFocus={visibleFiles[0]?.idx === item.idx}

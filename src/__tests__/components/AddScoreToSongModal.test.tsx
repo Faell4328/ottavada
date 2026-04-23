@@ -83,6 +83,27 @@ const unsortedFiles: IndexedFile[] = [
   },
 ];
 
+const reorderFiles: IndexedFile[] = [
+  {
+    path: "/music/HINO NACIONAL - Violino.musx",
+    name: "HINO NACIONAL",
+    instrument: "Violino",
+    extension: "musx",
+  },
+  {
+    path: "/music/HINO NACIONAL - Oboe.musx",
+    name: "HINO NACIONAL",
+    instrument: "Oboe",
+    extension: "musx",
+  },
+  {
+    path: "/music/HINO NACIONAL - Flauta.musx",
+    name: "HINO NACIONAL",
+    instrument: "Flauta",
+    extension: "musx",
+  },
+];
+
 const existingScores: ScoreListItem[] = [
   {
     id: "score-1",
@@ -263,6 +284,48 @@ describe("AddScoreToSongModal", () => {
       "HINO NACIONAL - Oboe.musx",
       "HINO NACIONAL - Violino.musx",
     ]);
+  });
+
+  it("should only reorder review items after the instrument input is blurred", async () => {
+    renderWithAppProvider(
+      <AddScoreToSongModal
+        isOpen={true}
+        songName="HINO NACIONAL"
+        files={reorderFiles}
+        onClose={mockOnClose}
+        onSave={mockOnSave}
+      />
+    );
+
+    const initialOrder = screen
+      .getAllByText(/HINO NACIONAL - .*\.musx/)
+      .map((element) => element.textContent);
+
+    expect(initialOrder).toEqual([
+      "HINO NACIONAL - Flauta.musx",
+      "HINO NACIONAL - Oboe.musx",
+      "HINO NACIONAL - Violino.musx",
+    ]);
+
+    const instrumentInput = screen.getAllByPlaceholderText("Nome do instrumento")[0] as HTMLInputElement;
+    fireEvent.focus(instrumentInput);
+    fireEvent.change(instrumentInput, { target: { value: "Zarpe" } });
+
+    expect(
+      screen.getAllByText(/HINO NACIONAL - .*\.musx/).map((element) => element.textContent)
+    ).toEqual(initialOrder);
+
+    fireEvent.blur(instrumentInput);
+
+    await waitFor(() => {
+      expect(
+        screen.getAllByText(/HINO NACIONAL - .*\.musx/).map((element) => element.textContent)
+      ).toEqual([
+        "HINO NACIONAL - Oboe.musx",
+        "HINO NACIONAL - Violino.musx",
+        "HINO NACIONAL - Flauta.musx",
+      ]);
+    });
   });
 
   it("should show feedback before save when the selected file is already used by another song", () => {

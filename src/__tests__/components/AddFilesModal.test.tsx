@@ -54,6 +54,12 @@ const duplicateBatchFiles: IndexedFile[] = [
   { path: "/music/Canon - Flauta 2.musx", name: "Canon", instrument: "Flauta", extension: "musx" },
 ];
 
+const reorderFiles: IndexedFile[] = [
+  { path: "/music/Canon - Violino.musx", name: "Canon", instrument: "Violino", extension: "musx" },
+  { path: "/music/Canon - Oboe.musx", name: "Canon", instrument: "Oboe", extension: "musx" },
+  { path: "/music/Canon - Flauta.musx", name: "Canon", instrument: "Flauta", extension: "musx" },
+];
+
 const duplicateSongs: SongListItem[] = [
   {
     id: "song-1",
@@ -171,6 +177,38 @@ describe("AddFilesModal", () => {
 
     fireEvent.change(instrumentInputs[0], { target: { value: "Flauta 2 Transversal" } });
     expect(instrumentInputs[0]).toHaveValue("Flauta 2 Transversal");
+  });
+
+  it("should only reorder review items after the instrument input is blurred", async () => {
+    renderWithAppProvider(
+      <AddFilesModal isOpen={true} files={reorderFiles} onClose={mockOnClose} onSuccess={mockOnSuccess} />
+    );
+
+    const initialOrder = screen
+      .getAllByText(/Canon - .*\.musx/)
+      .map((element) => element.textContent);
+
+    expect(initialOrder).toEqual([
+      "Canon - Flauta.musx",
+      "Canon - Oboe.musx",
+      "Canon - Violino.musx",
+    ]);
+
+    const instrumentInput = screen.getAllByPlaceholderText("Nome do instrumento")[0] as HTMLInputElement;
+    fireEvent.focus(instrumentInput);
+    fireEvent.change(instrumentInput, { target: { value: "Zarpe" } });
+
+    expect(screen.getAllByText(/Canon - .*\.musx/).map((element) => element.textContent)).toEqual(initialOrder);
+
+    fireEvent.blur(instrumentInput);
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/Canon - .*\.musx/).map((element) => element.textContent)).toEqual([
+        "Canon - Oboe.musx",
+        "Canon - Violino.musx",
+        "Canon - Flauta.musx",
+      ]);
+    });
   });
 
   it("should show duplicate score feedback above the score file name and keep the input readonly", () => {
