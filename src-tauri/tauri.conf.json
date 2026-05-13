@@ -36,7 +36,7 @@
     }
   },
   "bundle": {
-    "publisher": "Rhafaell Software",
+    "publisher": "Faell Software",
     "createUpdaterArtifacts": true,
     "windows": {
       "nsis": {
