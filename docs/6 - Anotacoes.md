@@ -172,3 +172,29 @@ Arrumando o caminho
 
 Simplificando a telemetria
 - Está sendo bem chato implementar a telemetria, devido a muitos eventos e possibilidades, então para `v1` o que importa mesmo é: o software está sendo usado, quais problemas os usuários estão tendo e algumas informações a mais.
+
+**11/05/2026**
+
+O maestro da minha orquestra não está usando a ferramenta e o feedback não veio, apesar das tentativas. Para evitar atrito e insistência improdutiva, vou mudar o foco para validar o produto em outra organização.
+
+Erros identificado:
+- Eu conhecia a dor como ajudante da orquestra, mas não observei o fluxo real do maestro antes de construir o software (tinha uma leve visão, mas não perguntei e investiguei).
+- Deveria ter me preparado melhor na hora de mostrar, mesmo o software sendo "gratuito", devia ter sido melhor em "vender o peixe", mostrando como era feio antes e agora com o "peixe" fica mais fácil e bonito.
+
+Próximo passo e correções:
+- Buscar outra organização com problema parecido, com maior abertura para testar a ferramenta e dar retorno prático.
+- Criar um powerpointer para ilustrar o problema e a solução.
+- Treinar mais meu lado "vendedor" e confiante (levar isso a sério).
+- Deixar o maestro usar a ferramenta, para "sentir ela".
+
+Preciso tomar cuidado:
+- Resolver uma dor concreta (ok)
+- Exigir pouca mudança de hábito (não sei)
+- Ser simples de explicar (mais ou menos)
+	- Essa parte é mais complicada, porque coloque um monte de coisa para "facilitar" a vida, mas acaba aumentando a explicação e deixando mais cansativa. Então, quando for explicar vou focar apenas nas funcionalidades chave e não nos facilitadores.
+- Mostrar ganho imediato (não sei).
+
+Próximos passos e melhorias:
+- Preciso ter bem documentando EXATAMENTE os problemas que o software resolve e conseguir explicar/dizer de forma clara para pessoa esse problemas.
+- Preciso criar um laucher e arrumar um jeito de tirar a maldida mensagem do windows de software suspeito (Microsoft defender SmartScreen).
+	- Nem que eu tenha que subir 1000 máquinas virtuais e baixar o Score Maestro nas 1000.
