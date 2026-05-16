@@ -1,0 +1,14 @@
+.arm {
+  transform-origin: 50% 100%;
+  animation: metronome 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes metronome {
+  from {
+    transform: rotate(-10deg);
+  }
+
+  to {
+    transform: rotate(10deg);
+  }
+}

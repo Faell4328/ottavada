@@ -1,6 +1,7 @@
-import { Cloud, Loader } from "lucide-react";
+import { Cloud } from "lucide-react";
 import { useAppState } from "../context/AppContext";
 import { formatBytes, formatEta } from "../utils/formatters";
+import Metronome from "./ui/Metronome";
 
 export default function StatusBar() {
   const { state } = useAppState();
@@ -84,9 +85,15 @@ export default function StatusBar() {
       <div className="rounded-xl border border-[#c8d9ee] bg-white/95 px-4 py-3 shadow-[0_10px_30px_rgba(22,55,90,0.18)] backdrop-blur-sm">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <div className="flex items-center gap-2 text-[12px] font-semibold text-[#21476c]">
-              <Loader className="h-3.5 w-3.5 animate-spin text-blue-600" />
-              {stageLabel ? <span className="truncate">{stageLabel}</span> : <span className="truncate">Processando</span>}
+            <div className="flex items-center text-[12px] gap-2 font-semibold text-[#21476c]">
+              {stageLabel ? (
+                <>
+                  <Metronome />
+                  <span className="truncate">{stageLabel}</span>
+                </>
+              ) : (
+                <span className="truncate">Processando</span>
+              )}
               {isRcloneActive && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-[#eaf3ff] px-2 py-0.5 text-[11px] font-semibold text-[#23558b]">
                   <Cloud className="h-3 w-3" />

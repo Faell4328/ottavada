@@ -24,6 +24,7 @@ import { EditMusicModal } from "./EditMusicModal";
 import { EditScoreModal } from "./EditScoreModal";
 import { MemoizedScoreRow } from "./ScoreRow";
 import { MemoizedSongRow } from "./SongRow";
+import Metronomo from "./ui/Metronome.tsx";
 
 export default function SongsList() {
   const {
