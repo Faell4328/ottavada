@@ -279,6 +279,7 @@ pub fn run() {
             commands::score_commands::open_file_location,
             commands::score_commands::update_score_status,
             commands::score_commands::delete_score,
+            commands::score_commands::use_score_as_base,
             // Categories
             commands::category_commands::get_categories,
             commands::category_commands::create_category,

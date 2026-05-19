@@ -653,6 +653,114 @@ pub fn delete_score(
         })
 }
 
+#[tauri::command]
+pub fn use_score_as_base(
+    db: State<'_, Database>,
+    store: State<'_, SystemStore>,
+    source_score_id: String,
+    new_score_name: String,
+) -> Result<SongListItem, AppError> {
+    let settings = require_server_settings(&store)?;
+
+    info!(
+        "Usando partitura como base: source_score_id={}, new_score_name={}",
+        source_score_id, new_score_name
+    );
+
+    // Find the source score and its song
+    let all_songs = db.get_all_songs()?;
+    let (song, _source_score) = all_songs
+        .iter()
+        .find_map(|song| {
+            song.scores
+                .iter()
+                .find(|score| score.id == source_score_id)
+                .map(|score| (song, score))
+        })
+        .ok_or_else(|| AppError::Generic(format!("Partitura não encontrada: {}", source_score_id)))?;
+
+    let song_id = &song.id;
+
+    let source_full_path = Path::new(&db.get_score_file_path(&source_score_id)?).to_path_buf();
+    
+    if !source_full_path.exists() || !source_full_path.is_file() {
+        return Err(AppError::Generic("Arquivo de origem não encontrado".into()));
+    }
+
+    let source_file_name = source_full_path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .ok_or_else(|| AppError::Generic("Nome do arquivo de origem inválido".into()))?;
+
+    let (song_prefix, extension) = source_file_name.rsplit_once('.').ok_or_else(|| {
+        AppError::Generic("Extensão de arquivo inválida".into())
+    })?;
+
+    let file_name_prefix = song_prefix
+        .rsplit_once(" - ")
+        .map(|(prefix, _)| prefix)
+        .unwrap_or(song_prefix);
+
+    let compacted_score_name = new_score_name.replace(' ', "");
+
+    // Create new filename with the new name and extension
+    let new_filename = format!("{} - {}.{}", file_name_prefix, compacted_score_name, extension);
+    let source_parent = source_full_path.parent().ok_or_else(|| {
+        AppError::Generic("Não foi possível identificar o diretório da partitura de origem".into())
+    })?;
+    let new_file_path = source_parent.join(&new_filename);
+
+    // Copy the file
+    fs::copy(&source_full_path, &new_file_path).map_err(|e| {
+        error!(
+            "Erro ao copiar arquivo: {} -> {}: {}",
+            source_full_path.display(),
+            new_file_path.display(),
+            e
+        );
+        AppError::Generic(format!("Erro ao copiar arquivo: {}", e))
+    })?;
+
+    // Create new score entry
+    let (file_size, file_modified_at) = read_score_file_metadata(&new_file_path)?;
+    let (score_file_path, file_name) = split_file_path(&new_file_path.to_string_lossy().to_string());
+
+    let now = Local::now().naive_local();
+    let new_score = Score {
+        id: uuid::Uuid::new_v4().to_string(),
+        song_id: song_id.clone(),
+        name: Some(new_score_name.clone()),
+        host_id: settings.computer_id.clone(),
+        file_path: score_file_path,
+        file_name,
+        file_size,
+        file_modified_at,
+        updated_at: now,
+        status: ScoreStatus::Main,
+        updated_by: settings.computer_id.clone(),
+    };
+
+    db.insert_score(&new_score).map_err(|e| {
+        error!(
+            "Erro ao inserir nova partitura em song_id={}: {:?}",
+            song_id, e
+        );
+        // Rollback: delete the copied file if database insertion fails
+        let _ = fs::remove_file(&new_file_path);
+        e
+    })?;
+
+    info!(
+        "Partitura criada com sucesso a partir da base: song_id={}, new_score_id={}",
+        song_id, new_score.id
+    );
+
+    let _ = regenerate_song_archives_for_song_ids(&db, &store, &[song_id.clone()]);
+    let _ = refresh_library_summary_cache(&db, &store);
+
+    db.get_song_list_item_by_id(song_id)
+}
+
 #[cfg(test)]
 mod tests {
     use std::fs;
@@ -738,5 +846,27 @@ mod tests {
     fn builds_friendly_name_with_default_score_when_missing() {
         let name = build_client_extracted_score_name("HINO NACIONAL", None);
         assert_eq!(name, "HINO NACIONAL - Sem instrumento");
+    }
+
+    #[test]
+    fn copies_file_and_updates_extension_correctly() {
+        let dir = tempdir().expect("create temp dir");
+        let source_file = dir.path().join("original.musx");
+        fs::write(&source_file, b"test content").expect("write source file");
+
+        let new_name = "copy";
+        let extension = source_file
+            .extension()
+            .and_then(|e| e.to_str())
+            .expect("get extension")
+            .to_lowercase();
+        let new_filename = format!("{}.{}", new_name, extension);
+        let new_file_path = dir.path().join(&new_filename);
+
+        fs::copy(&source_file, &new_file_path).expect("copy file");
+
+        assert!(new_file_path.exists());
+        assert_eq!(fs::read(&new_file_path).expect("read new file"), b"test content");
+        assert_eq!(new_file_path.file_name().and_then(|n| n.to_str()), Some("copy.musx"));
     }
 }

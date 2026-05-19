@@ -23,6 +23,7 @@ export interface ScoreRowProps {
   onEdit: () => void;
   onStatusChange: (scoreId: string, status: "main") => Promise<void>;
   onDelete: (scoreId: string) => Promise<void>;
+  onUseAsBase: () => void;
   computerType?: string;
   isLocked: boolean;
 }
@@ -37,6 +38,7 @@ function ScoreRow({
   onEdit,
   onStatusChange,
   onDelete,
+  onUseAsBase,
   computerType,
   isLocked,
 }: ScoreRowProps) {
@@ -179,6 +181,15 @@ function ScoreRow({
                     onClick={(e) => {
                       e.stopPropagation();
                       onEdit();
+                      onMenuClose();
+                    }}
+                    disabled={isActionLocked}
+                  />
+                  <ContextMenuItem
+                    label="Usar Como Base"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onUseAsBase();
                       onMenuClose();
                     }}
                     disabled={isActionLocked}

@@ -40,6 +40,7 @@ export interface AppContextValue {
   updateScoreStatus: (scoreId: string, status: "main") => Promise<void>;
   deleteScore: (scoreId: string) => Promise<void>;
   deleteSong: (songId: string) => Promise<void>;
+  useScoreAsBase: (sourceScoreId: string, newScoreName: string) => Promise<void>;
   completeFirstRun: (
     computerId: string,
     computerName: string,

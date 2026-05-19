@@ -34,6 +34,7 @@ function buildScoreRowProps(overrides: Partial<ScoreRowProps> = {}): ScoreRowPro
     onEdit: () => undefined,
     onStatusChange: async () => undefined,
     onDelete: async () => undefined,
+    onUseAsBase: () => undefined,
     computerType: "Server",
     isLocked: false,
     ...overrides,

@@ -130,6 +130,7 @@ export function AppProvider({ children, disableBootstrap = false }: AppProviderP
     updateScoreStatus,
     deleteScore,
     deleteSong,
+    useScoreAsBase,
     saveSettings,
     completeFirstRun,
   } = useAppCrudActions({
@@ -197,6 +198,7 @@ export function AppProvider({ children, disableBootstrap = false }: AppProviderP
       updateScoreStatus,
       deleteScore,
       deleteSong,
+      useScoreAsBase,
       saveSettings,
       completeFirstRun,
       scanFilesForChanges,
@@ -221,6 +223,7 @@ export function AppProvider({ children, disableBootstrap = false }: AppProviderP
       updateScoreStatus,
       deleteScore,
       deleteSong,
+      useScoreAsBase,
       saveSettings,
       completeFirstRun,
       scanFilesForChanges,

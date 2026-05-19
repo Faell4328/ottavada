@@ -425,6 +425,9 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 - [x] Mudando para atualizar o campo de `cloud` no `tauri-plugin-store`, apenas quando finalizar tudo. E usando ele como parâmetro de verificação, para o "aplicar alterações".
 - [x] Removendo o "aplicar alterações" ao abrir o servidor
 - [x] Mudando a tela de carregamento e padrão para branco.
+- [x] Implementar funcionalidade de "usar como base a partitura"
+	- [x] Ao clicar no overflow menu da partitura, deve ter a opção "usar como base a partitura". Ao clicar, deve ser aberto um modal pedindo o nome da nova partitura.
+	- [x] Quando o usuário colocar, deve ser ser copiado a partitura usada como referência e mudado o instrumento ao final do nome do arquivo, ex: "Eis o nosso deus - flauta".
 
 ## Funcionalidades para v2 (apenas rascunho/ideias)
 

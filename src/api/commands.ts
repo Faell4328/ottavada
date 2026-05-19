@@ -167,6 +167,16 @@ export async function deleteScore(scoreId: string): Promise<void> {
   return invoke("delete_score", { scoreId });
 }
 
+export async function useScoreAsBase(
+  sourceScoreId: string,
+  newScoreName: string
+): Promise<SongListItem> {
+  return invoke("use_score_as_base", {
+    sourceScoreId,
+    newScoreName,
+  });
+}
+
 export async function deleteSong(songId: string): Promise<void> {
   return invoke("delete_song", { songId });
 }

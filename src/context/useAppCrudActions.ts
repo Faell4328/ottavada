@@ -264,6 +264,24 @@ export function useAppCrudActions({
     }
   }, [dispatch, loadCategories, loadSettings, loadSongs, refreshSelectedSong]);
 
+  const useScoreAsBase = useCallback(async (
+    sourceScoreId: string,
+    newScoreName: string
+  ) => {
+    try {
+      const updatedSong = await api.useScoreAsBase(sourceScoreId, newScoreName);
+      dispatch({ type: "UPDATE_SELECTED_SONG", payload: updatedSong });
+      await loadSongs();
+      await refreshSelectedSong();
+      await loadSettings();
+      toast.success("Partitura duplicada com sucesso.");
+    } catch (err) {
+      console.error("Failed to use score as base:", err);
+      toast.error("Não foi possível duplicar a partitura.");
+      throw err;
+    }
+  }, [dispatch, loadSettings, loadSongs, refreshSelectedSong]);
+
   return {
     setSidebarView,
     selectSong,
@@ -279,5 +297,6 @@ export function useAppCrudActions({
     deleteSong,
     saveSettings,
     completeFirstRun,
+    useScoreAsBase,
   };
 }

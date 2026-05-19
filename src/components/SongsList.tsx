@@ -22,6 +22,7 @@ import type { IndexedFile, ScoreListItem, SongListItem } from "../types";
 import { AddScoreToSongModal } from "./AddScoreToSongModal.tsx";
 import { EditMusicModal } from "./EditMusicModal";
 import { EditScoreModal } from "./EditScoreModal";
+import { UseAsBaseScoreModal } from "./UseAsBaseScoreModal";
 import { MemoizedScoreRow } from "./ScoreRow";
 import { MemoizedSongRow } from "./SongRow";
 
@@ -38,6 +39,7 @@ export default function SongsList() {
     updateScoreStatus,
     deleteScore,
     deleteSong,
+    useScoreAsBase,
   } = useAppState();
 
   const expandedSongIdRef = useRef<string | null>(null);
@@ -45,6 +47,8 @@ export default function SongsList() {
   const [isEditMusicModalOpen, setIsEditMusicModalOpen] = useState(false);
   const [editingScore, setEditingScore] = useState<ScoreListItem | null>(null);
   const [isEditScoreModalOpen, setIsEditScoreModalOpen] = useState(false);
+  const [baseScore, setBaseScore] = useState<ScoreListItem | null>(null);
+  const [isUseAsBaseModalOpen, setIsUseAsBaseModalOpen] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [songForAddFile, setSongForAddFile] = useState<SongListItem | null>(null);
   const [pendingFilesToAdd, setPendingFilesToAdd] = useState<IndexedFile[]>([]);
@@ -447,6 +451,10 @@ export default function SongsList() {
                               onDelete={async (scoreId) => {
                                 await handleDeleteScore(song.id, scoreId);
                               }}
+                              onUseAsBase={() => {
+                                setBaseScore(score);
+                                setIsUseAsBaseModalOpen(true);
+                              }}
                               computerType={state.settings?.computer_type}
                               isLocked={isSyncLocked}
                             />
@@ -490,6 +498,27 @@ export default function SongsList() {
         existingSongs={existingSongsForAddFile}
         onClose={closeAddFileModal}
         onSave={handleSaveFilesToSong}
+      />
+
+      <UseAsBaseScoreModal
+        isOpen={isUseAsBaseModalOpen}
+        song={state.selectedSong}
+        score={baseScore}
+        onClose={() => {
+          setIsUseAsBaseModalOpen(false);
+          setBaseScore(null);
+        }}
+        onSave={async (sourceScoreId, newScoreName) => {
+          try {
+            await useScoreAsBase(sourceScoreId, newScoreName);
+            setIsUseAsBaseModalOpen(false);
+            setBaseScore(null);
+          } catch (err) {
+            console.error("Failed to use score as base:", err);
+            toast.error(err instanceof Error ? err.message : "Não foi possível salvar a nova partitura.");
+            throw err;
+          }
+        }}
       />
     </section>
   );
