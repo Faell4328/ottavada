@@ -26,6 +26,7 @@ const baseSong = {
 function buildScoreRowProps(overrides: Partial<ScoreRowProps> = {}): ScoreRowProps {
   return {
     score: baseScore,
+    displayIndex: 0,
     onSelectScore: () => undefined,
     menuId: "score-1",
     isMenuOpen: false,
@@ -64,6 +65,13 @@ describe("row memo comparators", () => {
   it("re-renders score rows when lock state changes", () => {
     const prev = buildScoreRowProps();
     const next = buildScoreRowProps({ isLocked: true });
+
+    expect(areScoreRowPropsEqual(prev, next)).toBe(false);
+  });
+
+  it("re-renders score rows when display index changes", () => {
+    const prev = buildScoreRowProps();
+    const next = buildScoreRowProps({ displayIndex: 1 });
 
     expect(areScoreRowPropsEqual(prev, next)).toBe(false);
   });

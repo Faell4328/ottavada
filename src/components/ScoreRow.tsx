@@ -15,6 +15,7 @@ import {
 
 export interface ScoreRowProps {
   score: ScoreListItem;
+  displayIndex: number;
   onSelectScore: () => void;
   menuId: string;
   isMenuOpen: boolean;
@@ -30,6 +31,7 @@ export interface ScoreRowProps {
 
 function ScoreRow({
   score,
+  displayIndex,
   onSelectScore,
   menuId,
   isMenuOpen,
@@ -47,6 +49,7 @@ function ScoreRow({
   const isClient = isClientComputer(computerType);
   const isActionLocked = isClient || isLocked;
   const statusKey = normalizeScoreStatus(score.status);
+  const rowBackgroundClass = displayIndex % 2 === 0 ? "bg-[#f4f7fb]" : "bg-[#fff]";
 
   const openScoreFile = async () => {
     if (statusKey === "not_found") {
@@ -120,7 +123,7 @@ function ScoreRow({
           contentVisibility: "auto",
           containIntrinsicSize: "34px",
         }}
-        className={`border-b border-[#d8e0ea] text-sm text-[#4a6278] cursor-pointer transition-colors ${isOpening ? "opacity-60" : ""}`}
+        className={`border-b border-[#d8e0ea] text-sm text-[#4a6278] cursor-pointer transition-colors ${rowBackgroundClass} ${isOpening ? "opacity-60" : ""}`}
       >
         <td className="px-3.5 py-1.5 pl-9">
           <span className="flex items-center gap-1.5">
@@ -228,6 +231,7 @@ export function areScoreRowPropsEqual(prev: ScoreRowProps, next: ScoreRowProps) 
     prev.score.id === next.score.id &&
     prev.score.name === next.score.name &&
     normalizeScoreStatus(prev.score.status) === normalizeScoreStatus(next.score.status) &&
+    prev.displayIndex === next.displayIndex &&
     prev.isMenuOpen === next.isMenuOpen &&
     prev.isLocked === next.isLocked &&
     prev.computerType === next.computerType

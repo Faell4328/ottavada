@@ -429,10 +429,11 @@ export default function SongsList() {
                             </td>
                           </tr>
                         ) : (
-                          displayedScores.map((score) => (
+                          displayedScores.map((score, scoreIndex) => (
                             <MemoizedScoreRow
                               key={score.id}
                               score={score}
+                              displayIndex={scoreIndex}
                               onSelectScore={() => {
                                 selectScore(state.selectedScore?.id === score.id ? null : score);
                                 closeAllMenus();

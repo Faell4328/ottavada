@@ -84,16 +84,16 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(function Son
           containIntrinsicSize: "44px",
         }}
         className={`border-b border-[#d8e0ea] text-sm text-[#344b61] ${
-          isExpanded ? "bg-[#eef3f9] font-bold" : "hover:bg-[#f2f5fa]"
+          isExpanded ? "bg-[#edf2f7] font-bold" : "bg-white hover:bg-[#f7f9fc]"
         } cursor-pointer transition-colors`}
         onClick={onToggle}
       >
         <td className="px-3.5 py-2">
           <span className="flex items-center gap-2">
             {isExpanded ? (
-              <ChevronDown className="h-3.5 w-3.5 text-[#7b8da1] flex-shrink-0" />
+              <ChevronDown className="h-3.5 w-3.5 text-[#7b8da1] shrink-0" />
             ) : (
-              <ChevronRight className="h-3.5 w-3.5 text-[#7b8da1] flex-shrink-0" />
+              <ChevronRight className="h-3.5 w-3.5 text-[#7b8da1] shrink-0" />
             )}
             <span className="font-bold truncate">{song.name}</span>
           </span>
