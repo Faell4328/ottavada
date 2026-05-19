@@ -2,6 +2,8 @@ import type { SnapshotFileSummary } from "../api/commands";
 import type { AppSettings, ScoreListItem, SidebarView, SongListItem } from "../types";
 import type { State } from "./reducer";
 
+export type AuthorFilterValue = "all" | "none" | string;
+
 export interface AppContextValue {
   state: State;
   loadSongs: () => Promise<void>;
@@ -21,6 +23,7 @@ export interface AppContextValue {
   selectSong: (song: SongListItem | null) => void;
   selectScore: (score: ScoreListItem | null) => void;
   setSearchQuery: (query: string) => void;
+  setAuthorFilters: (payload: { composer: AuthorFilterValue; arranger: AuthorFilterValue }) => void;
   toggleFavorite: (songId: string) => Promise<void>;
   createCategory: (name: string) => Promise<void>;
   deleteCategory: (categoryId: string) => Promise<void>;

@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 
 interface FormFieldProps {
   label: string;
@@ -129,6 +129,67 @@ export function ErrorMessage({ error }: ErrorMessageProps) {
   return (
     <div className="rounded bg-red-50 border border-red-200 p-2.5">
       <p className="text-xs text-red-600">{error}</p>
+    </div>
+  );
+}
+
+interface AutocompleteInputProps extends TextInputProps {
+  suggestions: string[];
+}
+
+export function AutocompleteInput({
+  suggestions,
+  value,
+  onChange,
+  onFocus,
+  onBlur,
+  ...props
+}: AutocompleteInputProps) {
+  const [isFocused, setIsFocused] = useState(false);
+  const normalizedValue = value.trim().toLowerCase();
+  const filteredSuggestions = useMemo(
+    () =>
+      suggestions.filter((suggestion) => {
+        const normalizedSuggestion = suggestion.toLowerCase();
+        return normalizedSuggestion.includes(normalizedValue) && normalizedSuggestion !== normalizedValue;
+      }),
+    [normalizedValue, suggestions]
+  );
+
+  return (
+    <div className="relative">
+      <TextInput
+        {...props}
+        value={value}
+        onChange={onChange}
+        onFocus={() => {
+          setIsFocused(true);
+          onFocus?.();
+        }}
+        onBlur={() => {
+          window.setTimeout(() => setIsFocused(false), 120);
+          onBlur?.();
+        }}
+      />
+      {isFocused && value.trim().length > 0 && (
+        <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-20 rounded border border-[#c5cfdb] bg-white shadow-lg">
+          {filteredSuggestions.length > 0 ? (
+            <div className="max-h-40 overflow-y-auto py-1">
+              {filteredSuggestions.map((suggestion) => (
+                <button
+                  type="button"
+                  key={suggestion}
+                  className="block w-full px-3 py-2 text-left text-sm text-[#344b61] hover:bg-[#edf3fb]"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => onChange(suggestion)}
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      )}
     </div>
   );
 }

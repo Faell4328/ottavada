@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
   Library,
   Heart,
@@ -15,7 +15,7 @@ import { isSidebarViewActive } from "../utils/sidebarView";
 import toast from "react-hot-toast";
 
 export default function Sidebar() {
-  const { state, setSidebarView, createCategory, deleteCategory } =
+  const { state, setSidebarView, setAuthorFilters, createCategory, deleteCategory } =
     useAppState();
   const [newCategoryName, setNewCategoryName] = useState("");
   const [showNewCategory, setShowNewCategory] = useState(false);
@@ -53,6 +53,18 @@ export default function Sidebar() {
       icon: <AlertCircle className="h-3.5 w-3.5" />,
     },
   ];
+
+  const composerOptions = useMemo(() => {
+    const values = new Set<string>();
+    state.songs.forEach((song) => song.composer?.trim() && values.add(song.composer.trim()));
+    return [...values].sort((left, right) => left.localeCompare(right, "pt-BR", { sensitivity: "base" }));
+  }, [state.songs]);
+
+  const arrangerOptions = useMemo(() => {
+    const values = new Set<string>();
+    state.songs.forEach((song) => song.arranger?.trim() && values.add(song.arranger.trim()));
+    return [...values].sort((left, right) => left.localeCompare(right, "pt-BR", { sensitivity: "base" }));
+  }, [state.songs]);
 
   async function handleCreateCategory() {
     if (isCategoryLocked) {
@@ -96,7 +108,7 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="flex w-[240px] flex-col gap-2.5 border-r border-white/20 bg-gradient-to-b from-[rgba(35,52,72,0.94)] to-[rgba(55,78,106,0.9)] px-3 py-3 text-[#dce7f5]">
+    <aside className="flex w-60 flex-col gap-2.5 border-r border-white/20 bg-linear-to-b from-[rgba(35,52,72,0.94)] to-[rgba(55,78,106,0.9)] px-3 py-3 text-[#dce7f5]">
       {/* Biblioteca */}
       <div className="border-b border-white/15 pb-2">
         <div className="flex items-center gap-1.5 text-sm font-bold mb-1.5">
@@ -186,6 +198,52 @@ export default function Sidebar() {
           )}
         </nav>
       </div>
+
+      <div className="border-t border-white/15 pt-2">
+        <div className="mb-1.5 text-sm font-bold">Compositor</div>
+        <nav className="flex flex-col">
+          <SidebarItem
+            label="Todos"
+            active={state.authorFilters.composer === "all"}
+            onClick={() => setAuthorFilters({ ...state.authorFilters, composer: "all" })}
+          />
+          <SidebarItem
+            label="Sem compositor"
+            active={state.authorFilters.composer === "none"}
+            onClick={() => setAuthorFilters({ ...state.authorFilters, composer: "none" })}
+          />
+          {composerOptions.map((composer) => (
+            <SidebarItem
+              key={composer}
+              label={composer}
+              active={state.authorFilters.composer === composer}
+              onClick={() => setAuthorFilters({ ...state.authorFilters, composer })}
+            />
+          ))}
+        </nav>
+
+        <div className="mt-2.5 mb-1.5 text-sm font-bold">Arranjador</div>
+        <nav className="flex flex-col">
+          <SidebarItem
+            label="Todos"
+            active={state.authorFilters.arranger === "all"}
+            onClick={() => setAuthorFilters({ ...state.authorFilters, arranger: "all" })}
+          />
+          <SidebarItem
+            label="Sem arranjador"
+            active={state.authorFilters.arranger === "none"}
+            onClick={() => setAuthorFilters({ ...state.authorFilters, arranger: "none" })}
+          />
+          {arrangerOptions.map((arranger) => (
+            <SidebarItem
+              key={arranger}
+              label={arranger}
+              active={state.authorFilters.arranger === arranger}
+              onClick={() => setAuthorFilters({ ...state.authorFilters, arranger })}
+            />
+          ))}
+        </nav>
+      </div>
     </aside>
   );
 }
@@ -218,3 +276,4 @@ function SidebarItem({
     </button>
   );
 }
+

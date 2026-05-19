@@ -430,6 +430,14 @@ Para a organização (orquestra) que estou em mente que estou desenvolvendo o so
 	- [x] Quando o usuário colocar, deve ser ser copiado a partitura usada como referência e mudado o instrumento ao final do nome do arquivo, ex: "Eis o nosso deus - flauta".
 - [x] Adicionar suporta a partituras com apenas o nome do instrumento, ex: "Eis o nosso deus/flauta.mus"
 - [x] Adicionar suporta a outros tipos de arquivos músicais: .MSCX, .MSCZ, .XML, .MUSICXML, .ENC, .MID e .MIDI.
+- [x] Adicionando mais utilidade e facilidade para compositor e arranjador
+	- [x] Adicionar acima das categorias: compositor e arrajador (separados).
+		- [x] Assim como é na cagetória, deve ser "Sem compositor" ou "Sem arranjador", também deve ter "todos" (em ambos).
+	- [x] O usuário pode "aplicar filtro", selecionando o composito, arranjador e a categoria, listando no SongsList apenas os que se aplicam ao filtro
+	- [x] Caso o arranjador ou compositor não existe, não deve aparecer.
+	- [x] Ao adicionar música ou editar, deve ter nos campos compositor e arranjador um input autocomplete, aparecendo abaixo a medida que o usuário digita
+		- [x] Caso o usuário digite um compositor ou arranjador que não existe, deve criar um novo
+- [ ] Backup incremental com copy e com ano-mes-dia-hora-minuto no nome do backup.mgspack.
 
 ## Funcionalidades para v2 (apenas rascunho/ideias)
 

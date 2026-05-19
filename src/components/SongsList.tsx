@@ -17,7 +17,7 @@ import { compareInstrumentNames } from "../utils/instrumentOrder";
 import { getErrorMessage } from "../utils/errors";
 import { getDirectoryPath, isSamePath } from "../utils/paths";
 import { getSidebarViewLabel } from "../utils/sidebarView";
-import { normalizeSearchText, songMatchesSearchQuery } from "../utils/songSearch";
+import { normalizeSearchText, songMatchesAuthorFilter, songMatchesSearchQuery } from "../utils/songSearch";
 import type { IndexedFile, ScoreListItem, SongListItem } from "../types";
 import { AddScoreToSongModal } from "./AddScoreToSongModal.tsx";
 import { EditMusicModal } from "./EditMusicModal";
@@ -69,12 +69,12 @@ export default function SongsList() {
   const deferredSearchQuery = useDeferredValue(normalizedSearchQuery);
 
   const displayedSongs = useMemo(() => {
-    if (!deferredSearchQuery) {
-      return state.songs;
-    }
-
-    return state.songs.filter((song) => songMatchesSearchQuery(song, deferredSearchQuery));
-  }, [deferredSearchQuery, state.songs]);
+    return state.songs.filter((song) => {
+      const matchesSearch = deferredSearchQuery ? songMatchesSearchQuery(song, deferredSearchQuery) : true;
+      const matchesAuthors = songMatchesAuthorFilter(song, state.authorFilters);
+      return matchesSearch && matchesAuthors;
+    });
+  }, [deferredSearchQuery, state.authorFilters, state.songs]);
 
   const closeAllMenus = useCallback(() => setOpenMenuId(null), []);
 

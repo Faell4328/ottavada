@@ -1,12 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAppState } from "../context/AppContext";
 import type { SongListItem } from "../types";
-import { Modal, ModalFooterButtons, FormField, TextInput, ErrorMessage } from "./ui";
+import { Modal, ModalFooterButtons, FormField, TextInput, ErrorMessage, AutocompleteInput } from "./ui";
 import { CategoryCheckboxList } from "./ui/CategoryCheckboxList";
 import {
   normalizeSongNameForSave,
   normalizeSongNameInput,
 } from "../utils/nameFormat";
+import { getUniqueSongAuthors } from "../utils/songSearch";
 
 interface EditMusicModalProps {
   isOpen: boolean;
@@ -31,6 +32,8 @@ export function EditMusicModal({
   const visibleCategories = state.categories.filter(
     (category) => category.name.toLowerCase() !== "sem categoria"
   );
+  const composerSuggestions = useMemo(() => getUniqueSongAuthors(state.songs, "composer"), [state.songs]);
+  const arrangerSuggestions = useMemo(() => getUniqueSongAuthors(state.songs, "arranger"), [state.songs]);
   const [title, setTitle] = useState("");
   const [composer, setComposer] = useState("");
   const [arranger, setArranger] = useState("");
@@ -109,20 +112,22 @@ export function EditMusicModal({
       </FormField>
 
       <FormField label="Compositor">
-        <TextInput
+        <AutocompleteInput
           value={composer}
           onChange={setComposer}
           placeholder="Nome do compositor"
           disabled={isSaving}
+          suggestions={composerSuggestions}
         />
       </FormField>
 
       <FormField label="Arranjador">
-        <TextInput
+        <AutocompleteInput
           value={arranger}
           onChange={setArranger}
           placeholder="Nome do arranjador"
           disabled={isSaving}
+          suggestions={arrangerSuggestions}
         />
       </FormField>
 

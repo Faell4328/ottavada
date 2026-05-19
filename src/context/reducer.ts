@@ -16,6 +16,10 @@ export interface State {
   selectedSong: SongListItem | null;
   selectedScore: ScoreListItem | null;
   searchQuery: string;
+  authorFilters: {
+    composer: string;
+    arranger: string;
+  };
   isFirstRun: boolean;
   isLoading: boolean;
   isScanningFiles: boolean;
@@ -51,6 +55,10 @@ export const initialState: State = {
   selectedSong: null,
   selectedScore: null,
   searchQuery: "",
+  authorFilters: {
+    composer: "all",
+    arranger: "all",
+  },
   isFirstRun: false,
   isLoading: true,
   isScanningFiles: false,
@@ -88,6 +96,7 @@ export type Action =
   | { type: "SET_SELECTED_SONG"; payload: SongListItem | null }
   | { type: "SET_SELECTED_SCORE"; payload: ScoreListItem | null }
   | { type: "SET_SEARCH_QUERY"; payload: string }
+  | { type: "SET_AUTHOR_FILTERS"; payload: { composer: string; arranger: string } }
   | { type: "SET_FIRST_RUN"; payload: boolean }
   | { type: "SET_LOADING"; payload: boolean }
   | { type: "TOGGLE_FAVORITE"; payload: { songId: string; isFavorite: boolean } }
@@ -161,6 +170,8 @@ export function reducer(state: State, action: Action): State {
       return { ...state, selectedScore: action.payload };
     case "SET_SEARCH_QUERY":
       return { ...state, searchQuery: action.payload };
+    case "SET_AUTHOR_FILTERS":
+      return { ...state, authorFilters: action.payload };
     case "SET_FIRST_RUN":
       return { ...state, isFirstRun: action.payload };
     case "SET_LOADING":

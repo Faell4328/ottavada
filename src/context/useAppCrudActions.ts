@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import * as api from "../api/commands";
 import type { AppSettings, ScoreListItem, SidebarView, SongListItem } from "../types";
 import type { Action, State } from "./reducer";
+import type { AuthorFilterValue } from "./types";
 
 interface UseAppCrudActionsParams {
   state: State;
@@ -38,6 +39,10 @@ export function useAppCrudActions({
 
   const setSearchQuery = useCallback((query: string) => {
     dispatch({ type: "SET_SEARCH_QUERY", payload: query });
+  }, [dispatch]);
+
+  const setAuthorFilters = useCallback((payload: { composer: AuthorFilterValue; arranger: AuthorFilterValue }) => {
+    dispatch({ type: "SET_AUTHOR_FILTERS", payload });
   }, [dispatch]);
 
   const toggleFavorite = useCallback(async (songId: string) => {
@@ -287,6 +292,7 @@ export function useAppCrudActions({
     selectSong,
     selectScore,
     setSearchQuery,
+    setAuthorFilters,
     toggleFavorite,
     createCategory,
     deleteCategory,
