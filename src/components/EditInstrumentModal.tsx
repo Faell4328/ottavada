@@ -126,7 +126,7 @@ export function EditInstrumentModal({
         filters: [
           {
             name: "Partituras",
-            extensions: ["pdf", "PDF", "mus", "MUS", "musx", "MUSX"],
+            extensions: ["pdf", "PDF", "mus", "MUS", "musx", "MUSX", "mscx", "MSCX", "mscz", "MSCZ", "xml", "XML", "musicxml", "MUSICXML", "sib", "SIB", "enc", "ENC", "mid", "MID", "midi", "MIDI"],
           },
         ],
       });

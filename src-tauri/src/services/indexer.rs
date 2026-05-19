@@ -6,7 +6,19 @@ use crate::domain::models::IndexedFile;
 use crate::services::name_formatter::{normalize_optional_score_name, normalize_song_name};
 
 /// Extensões de arquivo suportadas
-const SUPPORTED_EXTENSIONS: &[&str] = &["pdf", "mus", "musx"];
+const SUPPORTED_EXTENSIONS: &[&str] = &[
+    "pdf",
+    "mus",
+    "musx",
+    "mscx",
+    "mscz",
+    "xml",
+    "musicxml",
+    "sib",
+    "enc",
+    "mid",
+    "midi",
+];
 
 /// Indexa um diretório, retornando todos os arquivos de partitura encontrados.
 pub fn scan_directory(dir_path: &Path) -> Vec<IndexedFile> {
@@ -317,6 +329,18 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_instrument_from_instrument_only_file_name() {
+        let instrument = parse_instrument_from_file_stem("flauta", "EIS O NOSSO DEUS");
+        assert_eq!(instrument, Some("flauta".to_string()));
+    }
+
+    #[test]
+    fn test_parse_instrument_returns_none_for_unrecognized_file_name() {
+        let instrument = parse_instrument_from_file_stem("tema principal", "EIS O NOSSO DEUS");
+        assert_eq!(instrument, None);
+    }
+
+    #[test]
     fn test_parse_instrument_ignores_file_name_equal_to_song_name() {
         let instrument = parse_instrument_from_file_stem("Eis o nosso deus", "EIS O NOSSO DEUS");
         assert_eq!(instrument, None);
@@ -337,13 +361,15 @@ mod tests {
         std::fs::write(dir.path().join("Canon - Violino.pdf"), b"fake pdf").unwrap();
         std::fs::write(dir.path().join("Moonlight.musx"), b"fake musx").unwrap();
         std::fs::write(dir.path().join("Ode - Piano.mus"), b"fake mus").unwrap();
+        std::fs::write(dir.path().join("Suite - Flauta.MSCX"), b"fake mscx").unwrap();
+        std::fs::write(dir.path().join("Hymn - Trompete.MUSICXML"), b"fake musicxml").unwrap();
 
         // Create unsupported files
         std::fs::write(dir.path().join("readme.txt"), b"text").unwrap();
         std::fs::write(dir.path().join("photo.jpg"), b"img").unwrap();
 
         let files = scan_directory(dir.path());
-        assert_eq!(files.len(), 3);
+        assert_eq!(files.len(), 5);
 
         let expected_song_name = normalize_song_name(
             dir.path()
@@ -352,6 +378,8 @@ mod tests {
                 .unwrap_or(""),
         );
         assert!(files.iter().all(|f| f.name == expected_song_name));
+        assert!(files.iter().any(|f| f.extension == "mscx"));
+        assert!(files.iter().any(|f| f.extension == "musicxml"));
     }
 
     #[test]
@@ -387,6 +415,32 @@ mod tests {
         assert_eq!(files[0].name, "EIS O NOSSO DEUS");
         assert_eq!(files[0].instrument, Some("Flute".to_string()));
         assert_eq!(files[0].extension, "pdf");
+    }
+
+    #[test]
+    fn test_scan_directory_supports_instrument_only_file_name() {
+        let dir = tempfile::tempdir().unwrap();
+        let song_dir = dir.path().join("Eis o nosso deus");
+        std::fs::create_dir(&song_dir).unwrap();
+        std::fs::write(song_dir.join("flauta.mus"), b"data").unwrap();
+
+        let files = scan_directory(&song_dir);
+        assert_eq!(files.len(), 1);
+        assert_eq!(files[0].instrument, Some("flauta".to_string()));
+        assert_eq!(files[0].extension, "mus");
+    }
+
+    #[test]
+    fn test_scan_directory_sets_null_instrument_for_unrecognized_file_name() {
+        let dir = tempfile::tempdir().unwrap();
+        let song_dir = dir.path().join("Eis o nosso deus");
+        std::fs::create_dir(&song_dir).unwrap();
+        std::fs::write(song_dir.join("tema principal.SIB"), b"data").unwrap();
+
+        let files = scan_directory(&song_dir);
+        assert_eq!(files.len(), 1);
+        assert_eq!(files[0].instrument, None);
+        assert_eq!(files[0].extension, "sib");
     }
 
     // ── split_file_path tests ──

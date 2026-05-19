@@ -17,7 +17,19 @@ use crate::infrastructure::store::SystemStore;
 use crate::services::indexer::{get_file_metadata, paths_match, split_file_path};
 use crate::services::name_formatter::normalize_optional_score_name;
 
-const VALID_SCORE_EXTENSIONS: [&str; 3] = ["pdf", "mus", "musx"];
+const VALID_SCORE_EXTENSIONS: [&str; 11] = [
+    "pdf",
+    "mus",
+    "musx",
+    "mscx",
+    "mscz",
+    "xml",
+    "musicxml",
+    "sib",
+    "enc",
+    "mid",
+    "midi",
+];
 
 fn score_exists_for_indexed_file(
     scores: &[ScoreListItem],
