@@ -1,5 +1,6 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::process::Command;
 use tauri::{AppHandle, State};
 use tracing::{error, info};
 
@@ -92,6 +93,40 @@ pub fn generate_computer_id() -> String {
     let id = uuid::Uuid::new_v4().to_string();
     info!("ID do computador gerado: {}", id);
     id
+}
+
+fn open_url_on_system(url: &str) -> Result<(), AppError> {
+    #[cfg(target_os = "windows")]
+    {
+        let mut cmd = crate::commands::common::configure_no_window_command(Command::new("cmd"));
+        cmd.args(["/C", "start", "", url])
+            .spawn()
+            .map_err(|e| AppError::Generic(format!("Erro ao abrir o navegador: {}", e)))?;
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        Command::new("open")
+            .arg(url)
+            .spawn()
+            .map_err(|e| AppError::Generic(format!("Erro ao abrir o navegador: {}", e)))?;
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        Command::new("xdg-open")
+            .arg(url)
+            .spawn()
+            .map_err(|e| AppError::Generic(format!("Erro ao abrir o navegador: {}", e)))?;
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn open_tutorial_site() -> Result<(), AppError> {
+    info!("Abrindo site oficial do tutorial");
+    open_url_on_system("https://scoremaestro.rhafaell.com.br/#tutorial")
 }
 
 #[tauri::command]

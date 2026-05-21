@@ -9,6 +9,7 @@ vi.mock("../../api/commands", () => ({
   generateRcloneConfig: vi.fn(async () => undefined),
   deleteRcloneTestFile: vi.fn(async () => undefined),
   completeFirstRun: vi.fn(async () => undefined),
+  openTutorialSite: vi.fn(async () => undefined),
   testRcloneUpload: vi.fn(async () => undefined),
 }));
 
@@ -29,8 +30,15 @@ vi.mock("react-hot-toast", () => ({
 
 describe("FirstRunPage", () => {
   it("starts with the intro video and moves to computer type", async () => {
+    const { openTutorialSite } = await import("../../api/commands");
     const { container } = renderWithAppProvider(<FirstRunPage />);
 
+    expect(screen.getByText("Antes de começar")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /Para conseguir utilizar a ferramenta corretamente, assista ao vídeo de introdução/i
+      )
+    ).toBeInTheDocument();
     expect(container.querySelector("video")).toBeInTheDocument();
     expect(container.querySelector('video source[type="video/webm"]')).toHaveAttribute(
       "src",
@@ -40,6 +48,8 @@ describe("FirstRunPage", () => {
       "src",
       "/intro.mp4"
     );
+    fireEvent.click(screen.getByText("Abrir tutorial no navegador"));
+    expect(openTutorialSite).toHaveBeenCalledTimes(1);
     expect(screen.getByText("Avançar")).toBeInTheDocument();
 
     fireEvent.click(screen.getByText("Avançar"));

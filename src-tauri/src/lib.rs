@@ -291,6 +291,7 @@ pub fn run() {
             commands::settings_commands::is_first_run,
             commands::settings_commands::complete_first_run,
             commands::settings_commands::generate_computer_id,
+            commands::settings_commands::open_tutorial_site,
             commands::settings_commands::is_initial_scan_completed,
             commands::settings_commands::toggle_computer_type,
             commands::settings_commands::has_pending_changes,

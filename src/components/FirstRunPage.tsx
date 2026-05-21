@@ -140,6 +140,10 @@ export default function FirstRunPage() {
     setStep("confirm");
   }
 
+  function handleOpenTutorial() {
+    void api.openTutorialSite();
+  }
+
   async function handleConfirm() {
     setIsLoading(true);
     try {
@@ -175,6 +179,22 @@ export default function FirstRunPage() {
 
         {step === "intro" && (
           <>
+            <div className="mb-6 rounded-xl border border-[#c5cfdb] bg-[#f8fafd] p-5">
+              <h2 className="mb-3 text-lg font-semibold text-[#34485d]">Antes de começar</h2>
+              <p className="text-sm leading-6 text-[#6b849e]">
+                Para conseguir utilizar a ferramenta corretamente, assista ao vídeo de introdução
+                no site oficial: scoremaestro.rhafaell.com.br/#tutorial. Ele mostra o fluxo básico
+                e o que você precisa fazer no primeiro acesso.
+              </p>
+              <button
+                type="button"
+                onClick={handleOpenTutorial}
+                className="mt-4 h-11 w-full rounded-lg border border-[#7ba0d4] bg-white text-sm font-bold text-[#4f84d7] transition-colors hover:bg-[#f8fafd] cursor-pointer"
+              >
+                Abrir tutorial no navegador
+              </button>
+            </div>
+
             <div className="mb-6 overflow-hidden rounded-xl border border-[#c5cfdb] bg-[#f8fafd]">
               <video autoPlay muted playsInline preload="auto" className="h-auto w-full bg-black">
                 <source src="/intro.webm" type="video/webm" />

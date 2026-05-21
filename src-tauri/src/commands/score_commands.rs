@@ -150,6 +150,34 @@ fn open_path_on_system(file_path: &str) -> Result<(), AppError> {
     Ok(())
 }
 
+fn open_url_on_system(url: &str) -> Result<(), AppError> {
+    #[cfg(target_os = "windows")]
+    {
+        let mut cmd = configure_no_window_command(std::process::Command::new("cmd"));
+        cmd.args(["/C", "start", "", url])
+            .spawn()
+            .map_err(|e| AppError::Generic(format!("Erro ao abrir URL: {}", e)))?;
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(url)
+            .spawn()
+            .map_err(|e| AppError::Generic(format!("Erro ao abrir URL: {}", e)))?;
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(url)
+            .spawn()
+            .map_err(|e| AppError::Generic(format!("Erro ao abrir URL: {}", e)))?;
+    }
+
+    Ok(())
+}
+
 fn open_file_location_on_system(file_path: &str) -> Result<(), AppError> {
     let normalized_path = file_path.replace('/', "\\");
     let path = Path::new(&normalized_path);
@@ -160,9 +188,10 @@ fn open_file_location_on_system(file_path: &str) -> Result<(), AppError> {
 
     #[cfg(target_os = "windows")]
     {
-        tauri_plugin_opener::reveal_item_in_dir(path).map_err(|e| {
-            AppError::Generic(format!("Erro ao abrir local do arquivo: {}", e))
-        })?;
+        let mut cmd = configure_no_window_command(std::process::Command::new("explorer"));
+        cmd.args(["/select,", &normalized_path])
+            .spawn()
+            .map_err(|e| AppError::Generic(format!("Erro ao abrir local do arquivo: {}", e)))?;
     }
 
     #[cfg(target_os = "macos")]
@@ -187,6 +216,11 @@ fn open_file_location_on_system(file_path: &str) -> Result<(), AppError> {
     }
 
     Ok(())
+}
+
+#[tauri::command]
+pub fn open_tutorial_url() -> Result<(), AppError> {
+    open_url_on_system("https://scoremaestro.rhafaell.com.br/#tutorial")
 }
 
 fn extract_score_file_from_archive(
