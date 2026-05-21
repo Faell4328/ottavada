@@ -272,7 +272,7 @@ export default function SongsList() {
       const selected = await open({
         directory: false,
         multiple: true,
-        filters: [{ name: "Partituras", extensions: ["pdf", "PDF", "mus", "MUS", "musx", "MUSX"] }],
+        filters: [{ name: "Partituras", extensions: ["pdf", "PDF", "mus", "MUS", "musx", "MUSX", "mscx", "MSCX", "mscz", "MSCZ", "xml", "XML", "musicxml", "MUSICXML", "sib", "SIB", "enc", "ENC", "mid", "MID", "midi", "MIDI"] }],
       });
 
       if (!selected) return;
