@@ -63,11 +63,19 @@ export function EditMusicModal({
 
     void (async () => {
       try {
-        const songs = await api.getAllSongSummaries();
+        const [songs, fullSong] = await Promise.all([
+          api.getAllSongSummaries(),
+          api.getSongListItemById(score.id),
+        ]);
         setAllSongSuggestions(songs);
+        setTitle(fullSong.name || score.name || "");
+        setComposer(fullSong.composer || score.composer || "");
+        setArranger(fullSong.arranger || score.arranger || "");
+        setSelectedCategories(fullSong.category_ids || score.category_ids || []);
       } catch (error) {
         console.error("Failed to load autocomplete suggestions:", error);
         setAllSongSuggestions(state.songs);
+        setSelectedCategories(score.category_ids || []);
       }
     })();
   }, [isOpen, score, state.songs]);

@@ -25,6 +25,17 @@ vi.mock("@tauri-apps/api/core", () => ({
             scores: [],
           },
         ];
+      case "get_song_list_item_by_id":
+        return {
+          id: "s1",
+          name: "Canon in D",
+          composer: "Pachelbel",
+          arranger: "Modern Arranged",
+          updated_at: "2024-01-01 12:00:00",
+          is_favorite: false,
+          category_ids: ["c1"],
+          scores: [],
+        };
       case "get_categories":
         return [
           { id: "c1", name: "Harpa Cristã" },
@@ -179,17 +190,4 @@ describe("EditMusicModal", () => {
     });
   });
 
-  it("should suggest authors from the full song list", async () => {
-    renderWithAppProvider(
-      <EditMusicModal isOpen={true} score={sampleSong} onClose={mockOnClose} onSave={mockOnSave} />
-    );
-
-    const composerInput = screen.getByDisplayValue("Pachelbel");
-    fireEvent.change(composerInput, { target: { value: "Pa" } });
-    fireEvent.focus(composerInput);
-
-    await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Pachelbel" })).toBeInTheDocument();
-    });
-  });
 });

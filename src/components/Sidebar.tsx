@@ -12,6 +12,8 @@ import { useAppState } from "../context/AppContext";
 import type { SidebarView } from "../types";
 import { isClientComputer } from "../utils/computer";
 import { isSidebarViewActive } from "../utils/sidebarView";
+import { useConfirmation } from "../hooks/useConfirmation";
+import { ConfirmationModal } from "./ui/ConfirmationModal";
 import toast from "react-hot-toast";
 
 export default function Sidebar() {
@@ -20,6 +22,7 @@ export default function Sidebar() {
   const [newCategoryName, setNewCategoryName] = useState("");
   const [showNewCategory, setShowNewCategory] = useState(false);
   const [isCreatingCategory, setIsCreatingCategory] = useState(false);
+  const confirmation = useConfirmation();
 
   const currentView = state.sidebarView;
   const isClient = isClientComputer(state.settings?.computer_type);
@@ -180,10 +183,18 @@ export default function Sidebar() {
                 }
                 className="flex-1"
               />
-              {!isCategoryLocked && (
+              {!isCategoryLocked && cat.id !== "default-category" && cat.name.toLowerCase() !== "sem categoria" && (
                 <button
                   type="button"
-                  onClick={() => deleteCategory(cat.id)}
+                  onClick={() =>
+                    confirmation.requestConfirmation(
+                      "Excluir categoria?",
+                      `A categoria \"${cat.name}\" será removida. As músicas continuarão na biblioteca sem essa categoria.`,
+                      async () => {
+                        await deleteCategory(cat.id);
+                      }
+                    )
+                  }
                   className="opacity-0 group-hover:opacity-100 flex h-5 w-5 items-center justify-center rounded bg-transparent hover:bg-red-500/20 transition-all cursor-pointer border-0 text-red-300/70"
                 >
                   <Trash2 className="h-3 w-3" />
@@ -244,6 +255,16 @@ export default function Sidebar() {
           ))}
         </nav>
       </div>
+      <ConfirmationModal
+        isOpen={confirmation.isOpen}
+        title={confirmation.title}
+        message={confirmation.message}
+        isLoading={confirmation.isLoading}
+        onConfirm={() => {
+          void confirmation.confirm();
+        }}
+        onCancel={confirmation.cancel}
+      />
     </aside>
   );
 }
