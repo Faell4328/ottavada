@@ -3,11 +3,9 @@ import { useAppState } from "../context/AppContext";
 import type { SongListItem } from "../types";
 import { Modal, ModalFooterButtons, FormField, TextInput, ErrorMessage, AutocompleteInput } from "./ui";
 import { CategoryCheckboxList } from "./ui/CategoryCheckboxList";
-import {
-  normalizeSongNameForSave,
-  normalizeSongNameInput,
-} from "../utils/nameFormat";
+import { normalizeSongNameForSave, normalizeSongNameInput } from "../utils/nameFormat";
 import { getUniqueSongAuthors } from "../utils/songSearch";
+import * as api from "../api/commands";
 
 interface EditMusicModalProps {
   isOpen: boolean;
@@ -32,8 +30,15 @@ export function EditMusicModal({
   const visibleCategories = state.categories.filter(
     (category) => category.name.toLowerCase() !== "sem categoria"
   );
-  const composerSuggestions = useMemo(() => getUniqueSongAuthors(state.songs, "composer"), [state.songs]);
-  const arrangerSuggestions = useMemo(() => getUniqueSongAuthors(state.songs, "arranger"), [state.songs]);
+  const [allSongSuggestions, setAllSongSuggestions] = useState(state.songs);
+  const composerSuggestions = useMemo(
+    () => getUniqueSongAuthors(allSongSuggestions, "composer"),
+    [allSongSuggestions]
+  );
+  const arrangerSuggestions = useMemo(
+    () => getUniqueSongAuthors(allSongSuggestions, "arranger"),
+    [allSongSuggestions]
+  );
   const [title, setTitle] = useState("");
   const [composer, setComposer] = useState("");
   const [arranger, setArranger] = useState("");
@@ -50,6 +55,22 @@ export function EditMusicModal({
       setError("");
     }
   }, [isOpen, score]);
+
+  useEffect(() => {
+    if (!isOpen || !score) {
+      return;
+    }
+
+    void (async () => {
+      try {
+        const songs = await api.getAllSongSummaries();
+        setAllSongSuggestions(songs);
+      } catch (error) {
+        console.error("Failed to load autocomplete suggestions:", error);
+        setAllSongSuggestions(state.songs);
+      }
+    })();
+  }, [isOpen, score, state.songs]);
 
   const toggleCategory = (categoryId: string) => {
     setSelectedCategories((prev) =>

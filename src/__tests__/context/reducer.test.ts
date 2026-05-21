@@ -104,6 +104,22 @@ describe("AppContext Reducer", () => {
       });
       expect(state.sidebarView).toBe("favorites");
     });
+
+    it("should reset author filters when changing view", () => {
+      const stateWithFilters = {
+        ...initialState,
+        authorFilters: {
+          composer: "Bach",
+          arranger: "none",
+        },
+      };
+      const state = reducer(stateWithFilters, {
+        type: "SET_SIDEBAR_VIEW",
+        payload: "favorites",
+      });
+
+      expect(state.authorFilters).toEqual({ composer: "all", arranger: "all" });
+    });
   });
 
   describe("SET_SELECTED_SONG", () => {

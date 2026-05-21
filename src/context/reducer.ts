@@ -159,6 +159,10 @@ export function reducer(state: State, action: Action): State {
         sidebarView: action.payload,
         selectedSong: null,
         selectedScore: null,
+        authorFilters: {
+          composer: "all",
+          arranger: "all",
+        },
       };
     case "SET_SELECTED_SONG":
       return {

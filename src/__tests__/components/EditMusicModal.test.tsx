@@ -13,7 +13,18 @@ vi.mock("@tauri-apps/api/core", () => ({
       case "get_all_songs":
         return [];
       case "get_all_song_summaries":
-        return [];
+        return [
+          {
+            id: "s-global-1",
+            name: "Global Song",
+            composer: "Pachelbel",
+            arranger: "Global Arranger",
+            updated_at: "2024-01-01 12:00:00",
+            is_favorite: false,
+            category_ids: [],
+            scores: [],
+          },
+        ];
       case "get_categories":
         return [
           { id: "c1", name: "Harpa Cristã" },
@@ -165,6 +176,20 @@ describe("EditMusicModal", () => {
           arranger: null,
         })
       );
+    });
+  });
+
+  it("should suggest authors from the full song list", async () => {
+    renderWithAppProvider(
+      <EditMusicModal isOpen={true} score={sampleSong} onClose={mockOnClose} onSave={mockOnSave} />
+    );
+
+    const composerInput = screen.getByDisplayValue("Pachelbel");
+    fireEvent.change(composerInput, { target: { value: "Pa" } });
+    fireEvent.focus(composerInput);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Pachelbel" })).toBeInTheDocument();
     });
   });
 });

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import * as api from "../api/commands";
 import { useAppState } from "../context/AppContext";
 import { Modal, ModalFooterButtons, FormField, TextInput, ErrorMessage, AutocompleteInput } from "./ui";
 import { CategoryCheckboxList } from "./ui/CategoryCheckboxList";
@@ -31,8 +32,15 @@ export function AddMusicModal({
   const visibleCategories = state.categories.filter(
     (category) => category.name.toLowerCase() !== "sem categoria"
   );
-  const composerSuggestions = useMemo(() => getUniqueSongAuthors(state.songs, "composer"), [state.songs]);
-  const arrangerSuggestions = useMemo(() => getUniqueSongAuthors(state.songs, "arranger"), [state.songs]);
+  const [allSongSuggestions, setAllSongSuggestions] = useState(state.songs);
+  const composerSuggestions = useMemo(
+    () => getUniqueSongAuthors(allSongSuggestions, "composer"),
+    [allSongSuggestions]
+  );
+  const arrangerSuggestions = useMemo(
+    () => getUniqueSongAuthors(allSongSuggestions, "arranger"),
+    [allSongSuggestions]
+  );
   const [title, setTitle] = useState("");
   const [composer, setComposer] = useState("");
   const [arranger, setArranger] = useState("");
@@ -55,6 +63,22 @@ export function AddMusicModal({
       setError("");
     }
   }, [defaultCategoryIds, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    void (async () => {
+      try {
+        const songs = await api.getAllSongSummaries();
+        setAllSongSuggestions(songs);
+      } catch (error) {
+        console.error("Failed to load autocomplete suggestions:", error);
+        setAllSongSuggestions(state.songs);
+      }
+    })();
+  }, [isOpen, state.songs]);
 
   const toggleCategory = (categoryId: string) => {
     setSelectedCategories((prev) =>
