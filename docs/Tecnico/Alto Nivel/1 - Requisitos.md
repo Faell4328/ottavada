@@ -1,11 +1,22 @@
 # Requisitos funcionais
 
-## Geral
-- Sistema deve ser tolerante a falha.
-- Sistema deve sempre verificar antes de agir.
-- Sistema deve ser transparente com que está fazendo.
-- Mais importante, sistema deve ser simples e confiável. Não é para adicionar firula, que não agregue ao objetivo principal.
-- O aplicativo deve ter versão `x32` e `x64`.
+## Músicas
+
+**Indexar diretório**: É feito a leitura do diretório selecionado pelo 
+
+## Partituras
+
+## Categorias
+
+## Configurações
+
+## Telemetria
+
+## Segurança
+
+## Transparência
+
+## Sistemas suportados
 
 ## Gerenciamento de Músicas e Partituras
 
@@ -26,17 +37,28 @@
 - O usuário pode alterar o nome do computador
 - O usuário pode alterar o tipo de computador dele (entre cliente e servidor).
 
-
 ## Telemetria
 
 - A telemetria deve ser simples, sendo enviada a cada 5 minutos. Após o envio com sucesso, a tabela de erro deve ser limpa.
 - Caso ocorra algum erro no envio ou recebimento da telemetria pelo servidor, a tabela de erro não deve ser limpa e deve ser tentado envia novamente em 5 minutos.
-	- As outras informações não tem problema.
+  - As outras informações não tem problema.
 - Não é preciso emitir toast para usuário sobre isso.
 - Antes de preparar para enviar, deve verificar se tem erros mais velhos que 1 semana, se tive é para remover todos esses.
 - Cada requisição deve ter um `uuid` como `id`, como está no exemplo do `Servidor.md`.
 
+## Segurança e Transparência
+
+- Sistema deve ser tolerante a falha.
+- Sistema deve sempre verificar antes de agir.
+- Sistema deve ser transparente com que está fazendo.
+- Mais importante, sistema deve ser simples e confiável. Não é para adicionar firula, que não agregue ao objetivo principal.
+
+## Sistemas Operacionais que deve rodar
+
+- Em Windows 10 e 11 `x32` e `x64`.
+
 ---
+
 # Requisitos Não Funcionais
 
 ## Armazenamento Local
@@ -49,6 +71,7 @@
 - Na nuvem só pode existir partituras com status `main` ou `pending`, os outros status são usado localmente.
 
 ## Transparência
+
 - O sistema deve mostrar no `Footer` o que está fazendo, ex: "compactando partitura xxx", "compactando partitura yyy", "renomeado partitura zzz", "upload do arquivo aaa", "consultando alterações nuvem" e etc.
 - Utilizar `rclone sync origem destino --rc --rc-addr=127.0.0.1:5572` e consultar o progresso de download/upload com isso, a cada 1 segundo. Essas informações devem ser mostradas no `Footer` do site.
 
