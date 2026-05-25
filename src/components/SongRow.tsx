@@ -125,7 +125,7 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(function Son
                     disabled={isActionLocked}
                   />
                   <ContextMenuItem
-                    label="Selecionar arquivo(s)"
+                    label="Adicioanar arquivo(s)"
                     onClick={(e) => handleMenuAction(e, onAddFile)}
                     disabled={isActionLocked}
                   />

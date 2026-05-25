@@ -1,12 +1,4 @@
-# Observações
-
-- Os arquivos com as partituras em `.tar.zst` possuem em média 1MB e compressão e descompressão é quase instantânea.
-
-! Eu preciso tomar cuidado em como vou fazer a atualização do software em produção. É preciso ter um plano para não quebrar o software já funcionando ou pelo menos uma forma de quebrar e recuperar ele rapidamente.
-
-! Eu preciso tomar cuidado em relação ao backup, preciso decidir como irei controlar ele. Por que, caso a pessoa tenha mudado de computador possivelmente o diretório das partituras mudou.
-
----
+# "Diário"
 
 **19-03-2026** - Estava cogitando utilizando o `notify`, mas, ele vai dar mais problema que benefício. Então estou buscando uma alternativa melhor e mais robusta.
 Solução:

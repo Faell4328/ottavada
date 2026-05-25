@@ -6,18 +6,8 @@ Tudo que tiver no "Alto Nível" deve estar detalhado no "Baixo Nível".
 
 ## Alto Nível
 
-É foca em explicar a parte de alto nível do software:
-
-- Regra de negócio
-
-- Requisitos
+O objetivo é anotar os conceitos de mais alto nível, requisitos e outras coisas de mais alto nível.
 
 ## Baixo Nível
 
-É focado na parte de implementação do código
-
-- Tecnologias e ferramentas
-
-- Modelagem
-
-- Fluxos
+É focado na documentação de problema, estrutura dos dados, fluxo e etc, o nível mais baixo.
