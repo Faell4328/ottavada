@@ -280,6 +280,25 @@ mod tests {
     }
 
     #[test]
+    fn test_update_song_removes_default_category_when_a_real_category_is_selected() {
+        let db = make_db();
+
+        let cat = make_category("c1", "Hinos");
+        db.insert_category(&cat).unwrap();
+
+        db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
+
+        db.update_song(
+            &make_song("s1", "Canon"),
+            &["default-category".to_string(), "c1".to_string()],
+        )
+        .unwrap();
+
+        let song = db.get_song_list_item_by_id("s1").unwrap();
+        assert_eq!(song.category_ids, vec!["c1".to_string()]);
+    }
+
+    #[test]
     fn test_update_song_category_ids_are_deduplicated_for_changed_field_generation() {
         let db = make_db();
         db.insert_category(&make_category("c1", "Hinos")).unwrap();

@@ -46,6 +46,10 @@ impl Database {
             }
         }
 
+        if normalized.len() > 1 {
+            normalized.retain(|category_id| category_id != DEFAULT_CATEGORY_ID);
+        }
+
         if normalized.is_empty() {
             vec![DEFAULT_CATEGORY_ID.to_string()]
         } else {
