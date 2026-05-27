@@ -319,10 +319,12 @@
 - atualizando a modelagem do banco de dados.
 - atualizando os arquivos `*.msgpack`.
 
-! Refatoração completa do código.
+! Refatoração completa do código (ex: arquivo do db gitante).
 
 ## Correções
 
 - removendo duplicações e padronizando os campos no `tauri-store`.
 - removendo completamente o status `pedding` do código.
 - removendo inconsistências no status `draft`.
+- removendo o criar música.
+- corrigindo o indexar diretório para o novo padrão.
