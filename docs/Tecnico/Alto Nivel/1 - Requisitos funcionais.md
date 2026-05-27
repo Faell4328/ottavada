@@ -308,3 +308,13 @@ Durante a iniciação do aplicativo, o sistema deve:
 2. Enviar telemetria.
 
 3. Verificar alterações.
+
+---
+
+# 13. Backup
+
+O backup deve ser **gerado automaticamente todos os dias**.
+
+Um backup **não deve substituir** o outro.
+
+Backups **mais velhos que 7 dias** devem ser **deletados**.

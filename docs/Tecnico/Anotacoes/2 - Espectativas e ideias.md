@@ -7,6 +7,8 @@
 - atualização automática do rclone.
   - Caso um dia eu precise abandonar o projeto, não quero que ele pare de funcionar por causa do rclone desatualizado, então preciso encontrar um meio de manter o rclone atualizando.
 - implementar hash de verificação de arquivos.
+- implementar **verificação confiável** no cliente. Não mostrando uma música que não tenha arquivo.
+- verificar a geração de `{songId}.tar.zst`.
 
 ---
 
