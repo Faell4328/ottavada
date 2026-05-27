@@ -65,6 +65,7 @@ struct BackupSong {
     name: String,
     composer: Option<String>,
     arranger: Option<String>,
+    path: String,
     is_favorite: bool,
     last_score_file_modified_at: i64,
 }
@@ -92,17 +93,13 @@ struct BackupCategorySong {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct BackupChangedField {
     id: String,
-    origin: String,
     #[serde(rename = "type")]
     change_type: String,
     entity: String,
     #[serde(rename = "entityId")]
     entity_id: String,
     field: Option<String>,
-    #[serde(rename = "oldValue")]
-    old_value: Option<String>,
-    #[serde(rename = "newValue")]
-    new_value: Option<String>,
+    value: Option<String>,
     timestamp: i64,
 }
 
@@ -293,7 +290,7 @@ fn collect_backup_payload(
 
     let songs = {
         let mut stmt = conn.prepare(
-            "SELECT id, name, composer, arranger, is_favorite, last_score_file_modified_at
+            "SELECT id, name, composer, arranger, path, is_favorite, last_score_file_modified_at
              FROM songs
              ORDER BY last_score_file_modified_at DESC, id ASC",
         )?;
@@ -303,8 +300,9 @@ fn collect_backup_payload(
                 name: row.get(1)?,
                 composer: row.get(2)?,
                 arranger: row.get(3)?,
-                is_favorite: row.get::<_, i32>(4)? != 0,
-                last_score_file_modified_at: row.get(5)?,
+                path: row.get(4)?,
+                is_favorite: row.get::<_, bool>(5)?,
+                last_score_file_modified_at: row.get(6)?,
             })
         })?;
         rows.collect::<Result<Vec<_>, _>>()?
@@ -334,7 +332,7 @@ fn collect_backup_payload(
 
     let categories_songs = {
         let mut stmt = conn.prepare(
-            "SELECT id, category_id, song_id
+            "SELECT id, categoryId AS category_id, songId AS song_id
              FROM categoriesSongs
              ORDER BY id ASC",
         )?;
@@ -350,21 +348,19 @@ fn collect_backup_payload(
 
     let changed_field = {
         let mut stmt = conn.prepare(
-            "SELECT id, origin, type, entity, entityId, field, oldValue, newValue, timestamp
+            "SELECT id, type, entity, entityId, field, value, timestamp
              FROM changedField
              ORDER BY timestamp ASC, id ASC",
         )?;
         let rows = stmt.query_map([], |row| {
             Ok(BackupChangedField {
                 id: row.get(0)?,
-                origin: row.get(1)?,
-                change_type: row.get(2)?,
-                entity: row.get(3)?,
-                entity_id: row.get(4)?,
-                field: row.get(5)?,
-                old_value: row.get(6)?,
-                new_value: row.get(7)?,
-                timestamp: row.get(8)?,
+                change_type: row.get(1)?,
+                entity: row.get(2)?,
+                entity_id: row.get(3)?,
+                field: row.get(4)?,
+                value: row.get(5)?,
+                timestamp: row.get(6)?,
             })
         })?;
         rows.collect::<Result<Vec<_>, _>>()?
@@ -372,17 +368,17 @@ fn collect_backup_payload(
 
     let backup_songs = {
         let mut stmt = conn.prepare(
-            "SELECT id, song_id, status, last_backup_at, error_message
-             FROM backupSongs
-             ORDER BY song_id ASC",
+              "SELECT songId AS id, songId AS song_id, status
+             FROM songsBackup
+               ORDER BY songId ASC",
         )?;
         let rows = stmt.query_map([], |row| {
             Ok(BackupSongStatusRecord {
                 id: row.get(0)?,
                 song_id: row.get(1)?,
                 status: row.get(2)?,
-                last_backup_at: row.get(3)?,
-                error_message: row.get(4)?,
+                last_backup_at: None,
+                error_message: None,
             })
         })?;
         rows.collect::<Result<Vec<_>, _>>()?
@@ -471,7 +467,7 @@ fn restore_backup_payload(db: &Database, payload: &BackupMessagePack) -> Result<
         tx.execute_batch(
             "
             DELETE FROM changedField;
-            DELETE FROM backupSongs;
+            DELETE FROM songsBackup;
             DELETE FROM categoriesSongs;
             DELETE FROM scores;
             DELETE FROM songs;
@@ -488,23 +484,30 @@ fn restore_backup_payload(db: &Database, payload: &BackupMessagePack) -> Result<
 
         for song in &payload.songs {
             tx.execute(
-                "INSERT INTO songs (id, name, composer, arranger, is_favorite, last_score_file_modified_at)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                "INSERT INTO songs (id, name, composer, arranger, path, is_favorite, last_score_file_modified_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
                 params![
                     song.id,
                     song.name,
                     song.composer,
                     song.arranger,
-                    song.is_favorite as i32,
+                    song.path,
+                    song.is_favorite,
                     song.last_score_file_modified_at,
                 ],
             )?;
         }
 
         for score in &payload.scores {
+            let file_extension = Path::new(&score.file_name)
+                .extension()
+                .and_then(|ext| ext.to_str())
+                .map(|ext| ext.to_lowercase())
+                .unwrap_or_else(|| "score".to_string());
+
             tx.execute(
-                "INSERT INTO scores (id, song_id, name, host_id, file_path, file_name, file_size, file_modified_at, status)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+                "INSERT INTO scores (id, song_id, name, host_id, file_path, file_name, file_extension, file_size, file_modified_at, status)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
                 params![
                     score.id,
                     score.song_id,
@@ -512,6 +515,7 @@ fn restore_backup_payload(db: &Database, payload: &BackupMessagePack) -> Result<
                     score.host_id,
                     score.file_path,
                     score.file_name,
+                    file_extension,
                     score.file_size,
                     score.file_modified_at,
                     score.status,
@@ -521,38 +525,30 @@ fn restore_backup_payload(db: &Database, payload: &BackupMessagePack) -> Result<
 
         for relation in &payload.categories_songs {
             tx.execute(
-                "INSERT INTO categoriesSongs (id, category_id, song_id) VALUES (?1, ?2, ?3)",
+                "INSERT INTO categoriesSongs (id, categoryId, songId) VALUES (?1, ?2, ?3)",
                 params![relation.id, relation.category_id, relation.song_id],
             )?;
         }
 
         for backup_song in &payload.backup_songs {
             tx.execute(
-                "INSERT INTO backupSongs (id, song_id, status, last_backup_at, error_message)
-                 VALUES (?1, ?2, ?3, ?4, ?5)",
-                params![
-                    backup_song.id,
-                    backup_song.song_id,
-                    backup_song.status,
-                    backup_song.last_backup_at,
-                    backup_song.error_message,
-                ],
+                "INSERT INTO songsBackup (songId, status)
+                 VALUES (?1, ?2)",
+                params![backup_song.song_id, backup_song.status],
             )?;
         }
 
         for change in &payload.changed_field {
             tx.execute(
-                "INSERT INTO changedField (id, origin, type, entity, entityId, field, oldValue, newValue, timestamp)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+                "INSERT INTO changedField (id, type, entity, entityId, field, value, timestamp)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
                 params![
                     change.id,
-                    change.origin,
                     change.change_type,
                     change.entity,
                     change.entity_id,
                     change.field,
-                    change.old_value,
-                    change.new_value,
+                    change.value,
                     change.timestamp,
                 ],
             )?;
@@ -627,6 +623,7 @@ mod tests {
             name: "Musica Teste".to_string(),
             composer: Some("Composer".to_string()),
             arranger: Some("Arranger".to_string()),
+            path: "/music/song-1".to_string(),
             is_favorite: true,
             status: ScoreStatus::Main,
             updated_at: chrono::Local::now().naive_local(),

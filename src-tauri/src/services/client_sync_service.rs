@@ -46,6 +46,8 @@ struct SnapshotSong {
     name: String,
     composer: Option<String>,
     arranger: Option<String>,
+    #[serde(default)]
+    path: String,
     #[serde(rename = "categoriesId")]
     categories_id: Vec<String>,
     scores: Vec<SnapshotScore>,
@@ -228,7 +230,7 @@ fn apply_snapshot(db: &Database, payload: &SnapshotMessagePack) -> Result<(), Ap
         tx.execute_batch(
             "
             DELETE FROM changedField;
-            DELETE FROM backupSongs;
+            DELETE FROM songsBackup;
             DELETE FROM categoriesSongs;
             DELETE FROM scores;
             DELETE FROM songs;
@@ -250,22 +252,28 @@ fn apply_snapshot(db: &Database, payload: &SnapshotMessagePack) -> Result<(), Ap
                 .map(|score| score.updated_at)
                 .max()
                 .unwrap_or(payload.generated_at);
+            let song_path = if song.path.trim().is_empty() {
+                format!("/songs/{}", song.id)
+            } else {
+                song.path.clone()
+            };
 
             tx.execute(
-                "INSERT INTO songs (id, name, composer, arranger, is_favorite, last_score_file_modified_at)
-                 VALUES (?1, ?2, ?3, ?4, 0, ?5)",
+                "INSERT INTO songs (id, name, composer, arranger, path, is_favorite, last_score_file_modified_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, 0, ?6)",
                 params![
                     song.id,
                     song.name,
                     song.composer,
                     song.arranger,
+                    song_path,
                     last_score_file_modified_at,
                 ],
             )?;
 
             for category_id in &song.categories_id {
                 tx.execute(
-                    "INSERT OR IGNORE INTO categoriesSongs (id, category_id, song_id) VALUES (?1, ?2, ?3)",
+                    "INSERT OR IGNORE INTO categoriesSongs (id, categoryId, songId) VALUES (?1, ?2, ?3)",
                     params![uuid::Uuid::new_v4().to_string(), category_id, song.id],
                 )?;
             }
@@ -275,8 +283,8 @@ fn apply_snapshot(db: &Database, payload: &SnapshotMessagePack) -> Result<(), Ap
                     .unwrap_or_else(|| "score".to_string());
 
                 tx.execute(
-                    "INSERT INTO scores (id, song_id, name, host_id, file_path, file_name, file_size, file_modified_at, status)
-                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, 0, datetime(?7, 'unixepoch'), ?8)",
+                    "INSERT INTO scores (id, song_id, name, host_id, file_path, file_name, file_extension, file_size, file_modified_at, status)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 0, datetime(?8, 'unixepoch'), ?9)",
                     params![
                         score.id,
                         song.id,
@@ -284,6 +292,7 @@ fn apply_snapshot(db: &Database, payload: &SnapshotMessagePack) -> Result<(), Ap
                         "server",
                         format!("/cloud/songs/{}", song.id),
                         format!("{}.{}", score.id, file_extension),
+                        file_extension,
                         score.updated_at,
                         score.status,
                     ],
@@ -368,7 +377,7 @@ fn apply_delete_event(
                         if item.field == "categoryId" {
                             if let Some(category_id) = item.old_value.as_ref().or(item.new_value.as_ref()) {
                                 tx.execute(
-                                    "DELETE FROM categoriesSongs WHERE category_id = ?1",
+                                    "DELETE FROM categoriesSongs WHERE categoryId = ?1",
                                     params![category_id],
                                 )?;
                             }
@@ -531,7 +540,7 @@ fn apply_upsert_field_event(
                 ensure_song_exists(tx, &song_id, event.timestamp)?;
 
                 tx.execute(
-                    "INSERT OR IGNORE INTO categoriesSongs (id, category_id, song_id) VALUES (?1, ?2, ?3)",
+                    "INSERT OR IGNORE INTO categoriesSongs (id, categoryId, songId) VALUES (?1, ?2, ?3)",
                     params![event.entity_id, category_id, song_id],
                 )?;
             }
@@ -548,9 +557,9 @@ fn ensure_song_exists(
     timestamp: i64,
 ) -> Result<(), AppError> {
     tx.execute(
-        "INSERT OR IGNORE INTO songs (id, name, composer, arranger, is_favorite, last_score_file_modified_at)
-         VALUES (?1, '', NULL, NULL, 0, ?2)",
-        params![song_id, timestamp],
+        "INSERT OR IGNORE INTO songs (id, name, composer, arranger, path, is_favorite, last_score_file_modified_at)
+         VALUES (?1, '', NULL, NULL, ?3, 0, ?2)",
+        params![song_id, timestamp, format!("/songs/{}", song_id)],
     )?;
     Ok(())
 }
@@ -570,13 +579,14 @@ fn ensure_score_exists(
     timestamp: i64,
 ) -> Result<(), AppError> {
     tx.execute(
-        "INSERT OR IGNORE INTO scores (id, song_id, name, host_id, file_path, file_name, file_size, file_modified_at, status)
-         VALUES (?1, ?2, NULL, 'server', ?3, ?4, 0, datetime(?5, 'unixepoch'), 'main')",
+        "INSERT OR IGNORE INTO scores (id, song_id, name, host_id, file_path, file_name, file_extension, file_size, file_modified_at, status)
+         VALUES (?1, ?2, NULL, 'server', ?3, ?4, ?5, 0, datetime(?6, 'unixepoch'), 'main')",
         params![
             score_id,
             song_id,
             format!("/cloud/songs/{}", song_id),
             format!("{}.score", score_id),
+            "score",
             timestamp,
         ],
     )?;

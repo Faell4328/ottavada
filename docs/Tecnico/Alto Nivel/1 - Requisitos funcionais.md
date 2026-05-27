@@ -1,10 +1,10 @@
 # 1. Manipulação de diretórios e arquivos
 
-## 1.1 Renomear arquivos
+## 1.1. Renomear arquivos
 
 O sistema só pode mudar o nome com o novo nome sugerido pelo usuário e sua autorização, apenas em caso de conflito.
 
-## 1.2 Remoção de diretórios e arquivos
+## 1.2. Remoção de diretórios e arquivos
 
 O sistema só pode deletar o diretório ou arquivo com autorização do usuário.
 
@@ -12,7 +12,7 @@ O sistema só pode deletar o diretório ou arquivo com autorização do usuário
 
 # 2. Status
 
-## 2.1 Música
+## 2.1. Música
 
 Para a música ser definida automaticamente como:
 
@@ -24,7 +24,7 @@ Para a música ser definida automaticamente como:
 
 O usuário deve poder mudar a música de **principal** -> **rascunho** ou **rascunho** -> **principal**.
 
-## 2.2 Partitura
+## 2.2. Partitura
 
 Para uma partitura ser definida automaticamente como:
 
@@ -38,7 +38,7 @@ O usuário deve poder mudar a música de **principal** -> **rascunho** ou **rasc
 
 # 3. Músicas
 
-## 3.1 Indexação
+## 3.1. Indexação
 
 O sistema deve permitir a indexação de diretórios que contenham partituras.
 
@@ -48,7 +48,7 @@ Durante o processo de indexação, o sistema deve:
 - identificar os instrumentos com base nos nomes dos arquivos encontrados;
 - sugerir automaticamente ao usuário os instrumentos detectados.
 
-## 3.2 Operações disponíveis
+## 3.2. Operações disponíveis
 
 O usuário deve poder:
 
@@ -64,11 +64,11 @@ O usuário deve poder:
 - interromper a indexação do diretório, removendo a música e suas partituras apenas do Score Maestro, mantendo os arquivos no computador;
 - excluir definitivamente o diretório da música, interrompendo também sua indexação.
 
-## 3.3 Visualização expandida
+## 3.3. Visualização expandida
 
 Quando uma música estiver expandida e exibindo suas partituras, o sistema deve monitorar continuamente o diretório indexado e atualizar a interface sempre que alterações forem identificadas.
 
-## 3.4 Diretório indisponível
+## 3.4. Diretório indisponível
 
 Caso o diretório seja movido, renomeado ou removido, o sistema deve:
 
@@ -81,7 +81,7 @@ Caso o diretório seja movido, renomeado ou removido, o sistema deve:
 
 # 4. Partituras
 
-## 4.1 Operações disponíveis
+## 4.1. Operações disponíveis
 
 O usuário deve poder:
 
@@ -92,7 +92,7 @@ O usuário deve poder:
 - excluir definitivamente o arquivo da partitura;
 - definir uma partitura como **principal**.
 
-## 4.2 Partitura indisponível
+## 4.2. Partitura indisponível
 
 Caso o diretório seja movido, renomeado ou removido, o sistema deve:
 
@@ -100,7 +100,7 @@ Caso o diretório seja movido, renomeado ou removido, o sistema deve:
 - disponibilizar opções para reindexação;
 - permitir a exclusão da música.
 
-## 4.3 Detecção de alterações nas partituras
+## 4.3. Detecção de alterações nas partituras
 
 O sistema deve monitorar continuamente os arquivos das partituras pertencentes aos diretórios indexados e identificar alterações.
 
@@ -115,7 +115,7 @@ As seguintes alterações devem ser detectadas:
 
 # 5. Categorias
 
-## 5.1 Operações disponíveis
+## 5.1. Operações disponíveis
 
 O usuário deve poder:
 
@@ -123,7 +123,7 @@ O usuário deve poder:
 - editar categorias;
 - excluir categorias.
 
-## 5.2 Categoria padrão
+## 5.2. Categoria padrão
 
 O sistema deve manter permanentemente a categoria **Sem categoria**.
 
@@ -131,11 +131,11 @@ O sistema deve manter permanentemente a categoria **Sem categoria**.
 
 # 6. Compositores e Arranjadores
 
-## 6.1 Criação automática
+## 6.1. Criação automática
 
 Compositores e arranjadores devem ser criados automaticamente quando forem associados a uma música durante sua criação ou edição.
 
-## 6.2 Operações disponíveis
+## 6.2. Operações disponíveis
 
 O usuário deve poder:
 
@@ -144,7 +144,7 @@ O usuário deve poder:
 - remover compositores;
 - remover arranjadores.
 
-## 6.3 Sugestões durante digitação
+## 6.3. Sugestões durante digitação
 
 Ao informar compositores ou arranjadores durante a criação ou edição de músicas, o sistema deve sugerir registros já existentes.
 
@@ -152,7 +152,7 @@ Ao informar compositores ou arranjadores durante a criação ou edição de mús
 
 # 7. Servidor Score Maestro
 
-## 7.1 Telemetria
+## 7.1. Telemetria
 
 O sistema deve enviar dados de telemetria:
 
@@ -162,7 +162,7 @@ Os dados enviados deve ser:
 
 - xxx
 
-## 7.2 Atualizações
+## 7.2. Atualizações
 
 O sistema deve suportar atualização de versão. Utilizando o próprio mecanismo do Tauri.
 
@@ -172,11 +172,11 @@ O sistema deve suportar atualização de versão. Utilizando o próprio mecanism
 
 Os filtros devem operar de forma cumulativa.
 
-## 8.1 Categoria
+## 8.1. Categoria
 
 O usuário deve poder selecionar categorias específicas para visualizar apenas as músicas associadas.
 
-## 8.2 Compositor e arranjador
+## 8.2. Compositor e arranjador
 
 O usuário deve poder selecionar:
 
@@ -185,7 +185,7 @@ O usuário deve poder selecionar:
 
 para filtrar músicas relacionadas.
 
-## 8.3 Valores padrão
+## 8.3. Valores padrão
 
 Os filtros devem iniciar com os seguintes valores:
 
@@ -212,7 +212,7 @@ O usuário deve poder:
 
 # 10. Nuvem
 
-## 10.1 Provedores suportados
+## 10.1. Provedores suportados
 
 O Score Maestro deve suportar:
 
@@ -221,7 +221,7 @@ O Score Maestro deve suportar:
 - WebDAV;
 - SFTP.
 
-## 10.2 Rclone
+## 10.2. Rclone
 
 O Score Maestro deve utilizar internamente o `rclone` como mecanismo padrão para sincronização, envio e recebimento de arquivos.
 
@@ -237,7 +237,7 @@ O sistema deve abstrair completamente a utilização do `rclone`.
 
 O sistema deve exibir o progresso de todas as etapas executadas.
 
-## 11.1 Etapas upload para nuvem
+## 11.1. Etapas upload para nuvem
 
 Etapas:
 
@@ -246,7 +246,7 @@ Etapas:
 3. Agrupar e compactar arquivos alterados;
 4. Enviar arquivos novos ou modificados.
 
-## 11.2 Etapas download da nuvem
+## 11.2. Etapas download da nuvem
 
 Etapas:
 
@@ -254,7 +254,7 @@ Etapas:
 2. Aplicar eventos e/ou snapshot;
 3. Baixar arquivos novos ou modificados.
 
-## 11.4 Restrições durante sincronização
+## 11.3. Restrições durante sincronização
 
 Durante sincronizações, o usuário poderá apenas:
 
@@ -265,7 +265,7 @@ Durante sincronizações, o usuário poderá apenas:
 
 Demais operações devem permanecer bloqueadas.
 
-## 11.5 Empacotamento com `tar`
+## 11.4. Empacotamento com `tar`
 
 Ao agrupar partituras:
 
@@ -273,16 +273,7 @@ Ao agrupar partituras:
 - não devem existir subdiretórios;
 - os arquivos devem ser renomeados utilizando o ID da partitura.
 
-## 11.6 Snapshot
-
-Um snapshot deve ser gerado quando o arquivo de eventos ultrapassar **2 MB**.
-
-Após a geração:
-
-- o cliente deve limpar os dados locais e os dados devem ser restaurados a partir do snapshot.
-- o arquivo de events do servidor é zarado.
-
-### 11.6 Snapshot
+### 11.5. Snapshot
 
 Um snapshot deve ser gerado quando o arquivo de eventos ultrapassar **2 MB**.
 
@@ -293,7 +284,7 @@ Após a geração do snapshot:
 3. O estado deve ser restaurado a partir do novo snapshot;
 4. O arquivo de eventos do servidor deve ser reinicializado, removendo os eventos já consolidados no snapshot.
 
-## 11.7 Persistência
+## 11.6. Persistência
 
 Durante a geração dos arquivos agrupados (`tar`) e sua compactação (`zst`), caso a partitura esteja nos estados `draft` ou `not_found`, o sistema deve manter a última versão disponível marcada como `main`.
 

@@ -199,7 +199,7 @@ fn resolve_recovered_score_status(
     }
 
     Ok(match previous_status {
-        Some(ScoreStatus::Pending) => ScoreStatus::Pending,
+        Some(ScoreStatus::Draft) => ScoreStatus::Draft,
         Some(ScoreStatus::Main) => ScoreStatus::Main,
         _ => ScoreStatus::Main,
     })
@@ -272,6 +272,7 @@ mod tests {
                 name: "CANON".to_string(),
                 composer: None,
                 arranger: None,
+                path: dir.path().join("songs").join("song-1").to_string_lossy().to_string(),
                 is_favorite: false,
                 status: ScoreStatus::Main,
                 updated_at: now(),

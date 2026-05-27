@@ -150,7 +150,7 @@ fn resolve_recovered_score_status(
     }
 
     match previous_status {
-        Some(ScoreStatus::Pending) => ScoreStatus::Pending,
+        Some(ScoreStatus::Draft) => ScoreStatus::Draft,
         Some(ScoreStatus::Main) => ScoreStatus::Main,
         _ => ScoreStatus::Main,
     }

@@ -94,6 +94,7 @@ export default function TopBar({
 
   async function handleCreateMusic(data: {
     title: string;
+    path: string;
     composer: string | null;
     arranger: string | null;
     categoryIds: string[];
@@ -101,6 +102,7 @@ export default function TopBar({
     try {
       await api.createSongWithMetadata(
         data.title,
+        data.path,
         data.composer,
         data.arranger,
         data.categoryIds

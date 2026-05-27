@@ -318,4 +318,6 @@
 
 ## Correções
 
-- removendo campos duplicados no `tauri-store`.
+- removendo duplicações e padronizando os campos no `tauri-store`.
+- removendo completamente o status `pedding` do código.
+- corrigindo inconsistências no status `draft`.

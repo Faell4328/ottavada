@@ -99,25 +99,28 @@ export async function getSongSummariesByCategory(
   return invoke("get_song_summaries_by_category", { categoryId });
 }
 
-export async function createSong(name: string): Promise<SongListItem> {
-  return invoke("create_song", { name });
+export async function createSong(name: string, path: string): Promise<SongListItem> {
+  return invoke("create_song", { name, path });
 }
 
 export async function createSongWithCategories(
   name: string,
+  path: string,
   categoryIds: string[]
 ): Promise<SongListItem> {
-  return invoke("create_song_with_categories", { name, categoryIds });
+  return invoke("create_song_with_categories", { name, path, categoryIds });
 }
 
 export async function createSongWithMetadata(
   name: string,
+  path: string,
   composer: string | null,
   arranger: string | null,
   categoryIds: string[]
 ): Promise<SongListItem> {
   return invoke("create_song_with_metadata", {
     name,
+    path,
     composer,
     arranger,
     categoryIds,

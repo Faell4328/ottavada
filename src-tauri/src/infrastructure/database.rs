@@ -1,4 +1,4 @@
-use rusqlite::{params, Connection};
+use rusqlite::{params, Connection, OptionalExtension};
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
@@ -6,8 +6,6 @@ use std::sync::{Arc, Mutex};
 use crate::domain::errors::AppError;
 use crate::domain::models::datetime_utils;
 use crate::domain::models::*;
-
-const CHANGE_ORIGIN_SERVER: &str = "server";
 const DEFAULT_CATEGORY_ID: &str = "default-category";
 const DEFAULT_CATEGORY_NAME: &str = "Sem categoria";
 
@@ -18,8 +16,7 @@ pub struct ChangedFieldRecord {
     pub entity: String,
     pub entity_id: String,
     pub field: Option<String>,
-    pub old_value: Option<String>,
-    pub new_value: Option<String>,
+    pub value: Option<String>,
     pub timestamp: i64,
 }
 
@@ -96,7 +93,7 @@ impl Database {
         let db = Self {
             conn: Arc::new(Mutex::new(conn)),
         };
-        db.run_migrations()?;
+        db.initialize_schema()?;
         Ok(db)
     }
 
@@ -106,16 +103,16 @@ impl Database {
         let db = Self {
             conn: Arc::new(Mutex::new(conn)),
         };
-        db.run_migrations()?;
+        db.initialize_schema()?;
         Ok(db)
     }
 
-    fn run_migrations(&self) -> Result<(), AppError> {
+    fn initialize_schema(&self) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
-        Self::run_migrations_with_conn(&conn)
+        Self::initialize_schema_with_conn(&conn)
     }
 
-    fn run_migrations_with_conn(conn: &Connection) -> Result<(), AppError> {
+    fn initialize_schema_with_conn(conn: &Connection) -> Result<(), AppError> {
         conn.execute_batch(
             "
             PRAGMA journal_mode=WAL;
@@ -131,20 +128,45 @@ impl Database {
                 name TEXT NOT NULL UNIQUE
             );
 
+            CREATE TABLE IF NOT EXISTS composer (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL UNIQUE
+            );
+
+            CREATE TABLE IF NOT EXISTS arranger (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL UNIQUE
+            );
+
             CREATE TABLE IF NOT EXISTS songs (
                 id TEXT PRIMARY KEY,
                 name TEXT NOT NULL,
                 composer TEXT,
                 arranger TEXT,
-                is_favorite INTEGER NOT NULL DEFAULT 0,
+                path TEXT NOT NULL,
+                is_favorite BOOLEAN NOT NULL DEFAULT 0,
                 last_score_file_modified_at INTEGER NOT NULL DEFAULT 0
+            );
+
+            CREATE TABLE IF NOT EXISTS composerSongs (
+                id TEXT PRIMARY KEY,
+                composerId TEXT NOT NULL REFERENCES composer(id) ON DELETE CASCADE,
+                songId TEXT NOT NULL REFERENCES songs(id) ON DELETE CASCADE,
+                UNIQUE(composerId, songId)
+            );
+
+            CREATE TABLE IF NOT EXISTS arrangerSongs (
+                id TEXT PRIMARY KEY,
+                arrangerId TEXT NOT NULL REFERENCES arranger(id) ON DELETE CASCADE,
+                songId TEXT NOT NULL REFERENCES songs(id) ON DELETE CASCADE,
+                UNIQUE(arrangerId, songId)
             );
 
             CREATE TABLE IF NOT EXISTS categoriesSongs (
                 id TEXT PRIMARY KEY,
-                category_id TEXT NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
-                song_id TEXT NOT NULL REFERENCES songs(id) ON DELETE CASCADE,
-                UNIQUE(category_id, song_id)
+                categoryId TEXT NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+                songId TEXT NOT NULL REFERENCES songs(id) ON DELETE CASCADE,
+                UNIQUE(categoryId, songId)
             );
         ",
         )?;
@@ -159,7 +181,8 @@ impl Database {
                 host_id TEXT NOT NULL,
                 file_path TEXT NOT NULL,
                 file_name TEXT NOT NULL,
-                file_size INTEGER NOT NULL DEFAULT 0,
+                file_extension TEXT NOT NULL,
+                file_size INTEGER NOT NULL,
                 file_modified_at TEXT NOT NULL DEFAULT (datetime('now')),
                 status TEXT NOT NULL DEFAULT 'main',
                 UNIQUE(file_path, file_name)
@@ -172,13 +195,11 @@ impl Database {
             "
             CREATE TABLE IF NOT EXISTS changedField (
                 id TEXT PRIMARY KEY,
-                origin TEXT NOT NULL,
                 type TEXT NOT NULL,
                 entity TEXT NOT NULL,
                 entityId TEXT NOT NULL,
                 field TEXT,
-                oldValue TEXT,
-                newValue TEXT,
+                value TEXT,
                 timestamp INTEGER NOT NULL
             );
 
@@ -190,12 +211,9 @@ impl Database {
         // Tabela para rastreamento de status de backup por música
         conn.execute_batch(
             "
-            CREATE TABLE IF NOT EXISTS backupSongs (
-                id TEXT PRIMARY KEY,
-                song_id TEXT NOT NULL UNIQUE REFERENCES songs(id) ON DELETE CASCADE,
-                status TEXT NOT NULL DEFAULT 'processing',
-                last_backup_at INTEGER,
-                error_message TEXT
+            CREATE TABLE IF NOT EXISTS songsBackup (
+                songId TEXT PRIMARY KEY REFERENCES songs(id) ON DELETE CASCADE,
+                status TEXT NOT NULL DEFAULT 'processing'
             );
         ",
         )?;
@@ -231,11 +249,8 @@ impl Database {
 
             CREATE TABLE IF NOT EXISTS errors (
                 id TEXT PRIMARY KEY,
-                computerId TEXT NOT NULL REFERENCES computerInformation(computerId) ON DELETE CASCADE,
-                date TEXT NOT NULL,
                 message TEXT NOT NULL DEFAULT '',
-                timestamp INTEGER NOT NULL,
-                report INTEGER NOT NULL DEFAULT 0
+                timestamp INTEGER NOT NULL
             );
         ",
         )?;
@@ -244,16 +259,15 @@ impl Database {
         conn.execute_batch("
             CREATE INDEX IF NOT EXISTS idx_scores_song_id ON scores(song_id);
             CREATE INDEX IF NOT EXISTS idx_scores_file_path ON scores(file_path);
-            CREATE INDEX IF NOT EXISTS idx_categories_songs_song_id ON categoriesSongs(song_id);
-            CREATE INDEX IF NOT EXISTS idx_categories_songs_category_id ON categoriesSongs(category_id);
+            CREATE INDEX IF NOT EXISTS idx_categories_songs_songId ON categoriesSongs(songId);
+            CREATE INDEX IF NOT EXISTS idx_categories_songs_categoryId ON categoriesSongs(categoryId);
             CREATE INDEX IF NOT EXISTS idx_songs_is_favorite ON songs(is_favorite);
-            CREATE INDEX IF NOT EXISTS idx_backupSongs_song_id ON backupSongs(song_id);
-            CREATE INDEX IF NOT EXISTS idx_backupSongs_status ON backupSongs(status);
+            CREATE INDEX IF NOT EXISTS idx_songsBackup_songId ON songsBackup(songId);
+            CREATE INDEX IF NOT EXISTS idx_songsBackup_status ON songsBackup(status);
             CREATE INDEX IF NOT EXISTS idx_computerInformation_report ON computerInformation(report);
             CREATE INDEX IF NOT EXISTS idx_usage_computerId ON usage(computerId);
             CREATE INDEX IF NOT EXISTS idx_usage_report ON usage(report);
-            CREATE INDEX IF NOT EXISTS idx_errors_computerId ON errors(computerId);
-            CREATE INDEX IF NOT EXISTS idx_errors_report ON errors(report);
+            CREATE INDEX IF NOT EXISTS idx_errors_timestamp ON errors(timestamp);
         ")?;
 
         Self::ensure_default_category_with_conn(conn)?;
@@ -269,7 +283,7 @@ impl Database {
 
         let mut stmt = conn.prepare(
             "SELECT id FROM songs WHERE id NOT IN (
-                SELECT DISTINCT song_id FROM categoriesSongs
+                SELECT DISTINCT songId FROM categoriesSongs
             )",
         )?;
 
@@ -280,7 +294,7 @@ impl Database {
 
         for song_id in song_ids {
             conn.execute(
-                "INSERT OR IGNORE INTO categoriesSongs (id, category_id, song_id) VALUES (?1, ?2, ?3)",
+                "INSERT OR IGNORE INTO categoriesSongs (id, categoryId, songId) VALUES (?1, ?2, ?3)",
                 params![uuid::Uuid::new_v4().to_string(), DEFAULT_CATEGORY_ID, song_id],
             )?;
         }
@@ -299,21 +313,18 @@ impl Database {
         entity: &str,
         entity_id: &str,
         field: Option<&str>,
-        old_value: Option<String>,
-        new_value: Option<String>,
+        value: Option<String>,
     ) -> Result<(), AppError> {
         conn.execute(
-            "INSERT INTO changedField (id, origin, type, entity, entityId, field, oldValue, newValue, timestamp)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+                "INSERT INTO changedField (id, type, entity, entityId, field, value, timestamp)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             params![
                 uuid::Uuid::new_v4().to_string(),
-                CHANGE_ORIGIN_SERVER,
                 change_type,
                 entity,
                 entity_id,
                 field,
-                old_value,
-                new_value,
+                value,
                 chrono::Local::now().timestamp(),
             ],
         )?;
@@ -328,15 +339,22 @@ impl Database {
         let now_ts = chrono::Local::now().timestamp();
         let category_ids = Self::normalize_category_ids(category_ids);
 
+        if song.path.trim().is_empty() {
+            return Err(AppError::Generic(
+                "Caminho da música não pode estar vazio".to_string(),
+            ));
+        }
+
         conn.execute(
-            "INSERT INTO songs (id, name, composer, arranger, is_favorite, last_score_file_modified_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            "INSERT INTO songs (id, name, composer, arranger, path, is_favorite, last_score_file_modified_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             params![
                 song.id,
                 song.name,
                 song.composer,
                 song.arranger,
-                song.is_favorite as i32,
+                song.path,
+                song.is_favorite,
                 now_ts,
             ],
         )?;
@@ -344,7 +362,7 @@ impl Database {
         for category_id in category_ids {
             let rel_id = uuid::Uuid::new_v4().to_string();
             conn.execute(
-                "INSERT OR IGNORE INTO categoriesSongs (id, category_id, song_id) VALUES (?1, ?2, ?3)",
+                "INSERT OR IGNORE INTO categoriesSongs (id, categoryId, songId) VALUES (?1, ?2, ?3)",
                 params![rel_id, category_id, song.id],
             )?;
 
@@ -354,7 +372,6 @@ impl Database {
                 "categoriesSongs",
                 &rel_id,
                 Some("categoryId"),
-                None,
                 Some(category_id.clone()),
             )?;
 
@@ -364,7 +381,6 @@ impl Database {
                 "categoriesSongs",
                 &rel_id,
                 Some("songId"),
-                None,
                 Some(song.id.clone()),
             )?;
         }
@@ -375,7 +391,6 @@ impl Database {
             "songs",
             &song.id,
             Some("name"),
-            None,
             Some(song.name.clone()),
         )?;
         Self::insert_changed_field(
@@ -384,7 +399,6 @@ impl Database {
             "songs",
             &song.id,
             Some("composer"),
-            None,
             song.composer.clone(),
         )?;
         Self::insert_changed_field(
@@ -393,7 +407,6 @@ impl Database {
             "songs",
             &song.id,
             Some("arranger"),
-            None,
             song.arranger.clone(),
         )?;
         Ok(())
@@ -405,13 +418,14 @@ impl Database {
 
         let original_song = conn
             .query_row(
-                "SELECT name, composer, arranger FROM songs WHERE id = ?1",
+                "SELECT name, composer, arranger, path FROM songs WHERE id = ?1",
                 params![song.id],
                 |row| {
                     Ok((
                         row.get::<_, String>(0)?,
                         row.get::<_, Option<String>>(1)?,
                         row.get::<_, Option<String>>(2)?,
+                        row.get::<_, String>(3)?,
                     ))
                 },
             )
@@ -423,26 +437,27 @@ impl Database {
         let old_category_ids = Self::get_category_ids(&conn, &song.id)?;
 
         conn.execute(
-            "UPDATE songs SET name = ?1, composer = ?2, arranger = ?3, is_favorite = ?4
-             WHERE id = ?5",
+            "UPDATE songs SET name = ?1, composer = ?2, arranger = ?3, path = ?4, is_favorite = ?5
+             WHERE id = ?6",
             params![
                 song.name,
                 song.composer,
                 song.arranger,
-                song.is_favorite as i32,
+                song.path,
+                song.is_favorite,
                 song.id,
             ],
         )?;
 
         conn.execute(
-            "DELETE FROM categoriesSongs WHERE song_id = ?1",
+            "DELETE FROM categoriesSongs WHERE songId = ?1",
             params![song.id],
         )?;
 
         for category_id in &category_ids {
             let rel_id = uuid::Uuid::new_v4().to_string();
             conn.execute(
-                "INSERT OR IGNORE INTO categoriesSongs (id, category_id, song_id) VALUES (?1, ?2, ?3)",
+                "INSERT OR IGNORE INTO categoriesSongs (id, categoryId, songId) VALUES (?1, ?2, ?3)",
                 params![rel_id, category_id, song.id],
             )?;
 
@@ -453,7 +468,6 @@ impl Database {
                     "categoriesSongs",
                     &rel_id,
                     Some("categoryId"),
-                    None,
                     Some(category_id.clone()),
                 )?;
 
@@ -463,7 +477,6 @@ impl Database {
                     "categoriesSongs",
                     &rel_id,
                     Some("songId"),
-                    None,
                     Some(song.id.clone()),
                 )?;
             }
@@ -476,8 +489,7 @@ impl Database {
                 "songs",
                 &song.id,
                 Some("name"),
-                Some(original_song.0),
-                Some(song.name.clone()),
+                Some(song.name.clone()).or(Some(original_song.0)),
             )?;
         }
 
@@ -488,8 +500,7 @@ impl Database {
                 "songs",
                 &song.id,
                 Some("composer"),
-                original_song.1,
-                song.composer.clone(),
+                song.composer.clone().or(original_song.1),
             )?;
         }
 
@@ -500,8 +511,7 @@ impl Database {
                 "songs",
                 &song.id,
                 Some("arranger"),
-                original_song.2,
-                song.arranger.clone(),
+                song.arranger.clone().or(original_song.2),
             )?;
         }
 
@@ -513,7 +523,6 @@ impl Database {
                     "categoriesSongs",
                     &uuid::Uuid::new_v4().to_string(),
                     Some("categoryId"),
-                    Some(old_category_id),
                     None,
                 )?;
             }
@@ -526,7 +535,7 @@ impl Database {
         let conn = self.conn.lock().unwrap();
 
         conn.query_row(
-            "SELECT id, name, composer, arranger, is_favorite FROM songs WHERE id = ?1",
+            "SELECT id, name, composer, arranger, path, is_favorite FROM songs WHERE id = ?1",
             params![song_id],
             |row| {
                 Ok(Song {
@@ -534,7 +543,8 @@ impl Database {
                     name: row.get(1)?,
                     composer: row.get(2)?,
                     arranger: row.get(3)?,
-                    is_favorite: row.get::<_, i32>(4)? != 0,
+                    path: row.get(4)?,
+                    is_favorite: row.get::<_, bool>(5)?,
                     status: ScoreStatus::Main,
                     updated_at: chrono::Local::now().naive_local(),
                     updated_by: String::new(),
@@ -552,7 +562,7 @@ impl Database {
         let conn = self.conn.lock().unwrap();
         let mut items = Self::query_song_list_items(
             &conn,
-            "SELECT id, name, composer, arranger, datetime('now') AS updated_at, is_favorite FROM songs WHERE id = ?1",
+            r#"SELECT id, name, composer, arranger, datetime('now') AS updated_at, is_favorite FROM songs WHERE id = ?1"#,
             &[&song_id as &dyn rusqlite::ToSql],
             true,
         )?;
@@ -698,10 +708,10 @@ impl Database {
         let mut summary = LibrarySummary::default();
 
         let mut stmt = conn.prepare(
-            "SELECT status, COUNT(*) AS scores_count, COUNT(DISTINCT song_id) AS songs_count
-             FROM scores
-             WHERE status IN ('main', 'pending', 'not_found')
-             GROUP BY status",
+                        r#"SELECT status, COUNT(*) AS scores_count, COUNT(DISTINCT song_id) AS songs_count
+                         FROM scores
+                             WHERE status IN ('main', 'draft', 'not_found')
+                         GROUP BY status"#,
         )?;
 
         let rows = stmt.query_map([], |row| {
@@ -721,7 +731,7 @@ impl Database {
 
             match status.as_str() {
                 "main" => summary.main = bucket,
-                "pending" => summary.pending = bucket,
+                "draft" => summary.draft = bucket,
                 "not_found" => summary.not_found = bucket,
                 _ => {}
             }
@@ -734,9 +744,9 @@ impl Database {
         let conn = self.conn.lock().unwrap();
         Self::query_song_list_items(
             &conn,
-            "SELECT id, name, composer, arranger, datetime('now') AS updated_at, is_favorite
+            r#"SELECT id, name, composer, arranger, datetime('now') AS updated_at, is_favorite
              FROM songs
-             ORDER BY name COLLATE NOCASE ASC, id ASC",
+             ORDER BY name COLLATE NOCASE ASC, id ASC"#,
             &[],
             true,
         )
@@ -746,9 +756,9 @@ impl Database {
         let conn = self.conn.lock().unwrap();
         Self::query_song_list_items(
             &conn,
-            "SELECT id, name, composer, arranger, datetime('now') AS updated_at, is_favorite
+            r#"SELECT id, name, composer, arranger, datetime('now') AS updated_at, is_favorite
              FROM songs
-             ORDER BY name COLLATE NOCASE ASC, id ASC",
+             ORDER BY name COLLATE NOCASE ASC, id ASC"#,
             &[],
             false,
         )
@@ -758,10 +768,10 @@ impl Database {
         let conn = self.conn.lock().unwrap();
         Self::query_song_list_items(
             &conn,
-            "SELECT id, name, composer, arranger, datetime('now') AS updated_at, is_favorite
+            r#"SELECT id, name, composer, arranger, datetime('now') AS updated_at, is_favorite
              FROM songs
              WHERE is_favorite = 1
-             ORDER BY name COLLATE NOCASE ASC, id ASC",
+             ORDER BY name COLLATE NOCASE ASC, id ASC"#,
             &[],
             true,
         )
@@ -771,10 +781,10 @@ impl Database {
         let conn = self.conn.lock().unwrap();
         Self::query_song_list_items(
             &conn,
-            "SELECT id, name, composer, arranger, datetime('now') AS updated_at, is_favorite
+            r#"SELECT id, name, composer, arranger, datetime('now') AS updated_at, is_favorite
              FROM songs
              WHERE is_favorite = 1
-             ORDER BY name COLLATE NOCASE ASC, id ASC",
+             ORDER BY name COLLATE NOCASE ASC, id ASC"#,
             &[],
             false,
         )
@@ -802,12 +812,12 @@ impl Database {
         let like_query = format!("%{}%", query.trim());
         Self::query_song_list_items(
             &conn,
-            "SELECT s.id, s.name, s.composer, s.arranger, datetime('now') AS updated_at, s.is_favorite
+            r#"SELECT s.id, s.name, s.composer, s.arranger, datetime('now') AS updated_at, s.is_favorite
              FROM songs s
              WHERE s.name LIKE ?1
                 OR COALESCE(s.composer, '') LIKE ?1
                 OR COALESCE(s.arranger, '') LIKE ?1
-             ORDER BY s.name COLLATE NOCASE ASC, s.id ASC",
+             ORDER BY s.name COLLATE NOCASE ASC, s.id ASC"#,
             &[&like_query as &dyn rusqlite::ToSql],
             true,
         )
@@ -819,12 +829,12 @@ impl Database {
         let like_query = format!("%{}%", query.trim());
         Self::query_song_list_items(
             &conn,
-            "SELECT s.id, s.name, s.composer, s.arranger, datetime('now') AS updated_at, s.is_favorite
+            r#"SELECT s.id, s.name, s.composer, s.arranger, datetime('now') AS updated_at, s.is_favorite
              FROM songs s
              WHERE s.name LIKE ?1
                 OR COALESCE(s.composer, '') LIKE ?1
                 OR COALESCE(s.arranger, '') LIKE ?1
-             ORDER BY s.name COLLATE NOCASE ASC, s.id ASC",
+             ORDER BY s.name COLLATE NOCASE ASC, s.id ASC"#,
             &[&like_query as &dyn rusqlite::ToSql],
             false,
         )
@@ -836,8 +846,8 @@ impl Database {
             &conn,
             "SELECT s.id, s.name, s.composer, s.arranger, datetime('now') AS updated_at, s.is_favorite
              FROM songs s
-             INNER JOIN categoriesSongs cs ON cs.song_id = s.id
-             WHERE cs.category_id = ?1
+             INNER JOIN categoriesSongs cs ON cs.songId = s.id
+             WHERE cs.categoryId = ?1
              ORDER BY s.name COLLATE NOCASE ASC, s.id ASC",
             &[&category_id as &dyn rusqlite::ToSql],
             true,
@@ -853,8 +863,8 @@ impl Database {
             &conn,
             "SELECT s.id, s.name, s.composer, s.arranger, datetime('now') AS updated_at, s.is_favorite
              FROM songs s
-             INNER JOIN categoriesSongs cs ON cs.song_id = s.id
-             WHERE cs.category_id = ?1
+             INNER JOIN categoriesSongs cs ON cs.songId = s.id
+             WHERE cs.categoryId = ?1
              ORDER BY s.name COLLATE NOCASE ASC, s.id ASC",
             &[&category_id as &dyn rusqlite::ToSql],
             false,
@@ -929,10 +939,11 @@ impl Database {
     pub fn insert_score(&self, score: &Score) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
         let file_modified_at_ts = score.file_modified_at.and_utc().timestamp();
+        let file_extension = Self::extract_file_extension(&score.file_name).unwrap_or_default();
 
         conn.execute(
-            "INSERT INTO scores (id, song_id, name, host_id, file_path, file_name, file_size, file_modified_at, status)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+            "INSERT INTO scores (id, song_id, name, host_id, file_path, file_name, file_extension, file_size, file_modified_at, status)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
             params![
                 score.id,
                 score.song_id,
@@ -940,6 +951,7 @@ impl Database {
                 score.host_id,
                 score.file_path,
                 score.file_name,
+                file_extension,
                 score.file_size,
                 datetime_utils::format_datetime(score.file_modified_at),
                 score.status.as_str(),
@@ -948,12 +960,13 @@ impl Database {
 
         conn.execute(
             "UPDATE songs
-             SET last_score_file_modified_at = CASE
-                   WHEN last_score_file_modified_at > ?1 THEN last_score_file_modified_at
-                   ELSE ?1
+             SET path = ?1,
+                 last_score_file_modified_at = CASE
+                   WHEN last_score_file_modified_at > ?2 THEN last_score_file_modified_at
+                   ELSE ?2
                  END
-             WHERE id = ?2",
-            params![file_modified_at_ts, score.song_id],
+                         WHERE id = ?3",
+            params![score.file_path, file_modified_at_ts, score.song_id],
         )?;
 
         Self::insert_changed_field(
@@ -962,7 +975,6 @@ impl Database {
             "scores",
             &score.id,
             Some("songId"),
-            None,
             Some(score.song_id.clone()),
         )?;
         Self::insert_changed_field(
@@ -971,7 +983,6 @@ impl Database {
             "scores",
             &score.id,
             Some("name"),
-            None,
             score.name.clone(),
         )?;
         Self::insert_changed_field(
@@ -980,7 +991,6 @@ impl Database {
             "scores",
             &score.id,
             Some("status"),
-            None,
             Some(score.status.as_str().to_string()),
         )?;
 
@@ -991,22 +1001,18 @@ impl Database {
                 "scores",
                 &score.id,
                 Some("extension"),
-                None,
                 Some(extension),
             )?;
         }
 
         // Inserir uma nova partitura invalida o backup atual da música,
         // forçando a regeneração do arquivo {songId}.tar.zst.
-        let backup_status_id = uuid::Uuid::new_v4().to_string();
         conn.execute(
-            "INSERT INTO backupSongs (id, song_id, status, last_backup_at, error_message)
-             VALUES (?1, ?2, 'processing', NULL, NULL)
-             ON CONFLICT(song_id) DO UPDATE SET
-                status = 'processing',
-                last_backup_at = NULL,
-                error_message = NULL",
-            params![backup_status_id, score.song_id],
+            "INSERT INTO songsBackup (songId, status)
+             VALUES (?1, 'processing')
+             ON CONFLICT(songId) DO UPDATE SET
+                status = 'processing'",
+            params![score.song_id],
         )?;
 
         Ok(())
@@ -1025,8 +1031,9 @@ impl Database {
     ) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
         let file_modified_at_ts = file_modified_at.and_utc().timestamp();
+        let file_extension = Self::extract_file_extension(file_name).unwrap_or_default();
 
-        let old_values = conn
+        let (original_name, original_file_path, original_file_name, original_status) = conn
             .query_row(
                 "SELECT name, file_path, file_name, status FROM scores WHERE id = ?1",
                 params![score_id],
@@ -1046,24 +1053,27 @@ impl Database {
                 other => AppError::Database(other),
             })?;
 
-        let file_changed = old_values.1 != file_path || old_values.2 != file_name;
+        let file_changed = original_file_path != file_path || original_file_name != file_name;
+        let name_change_value = name.clone().or(original_name.clone());
 
         conn.execute(
             "UPDATE scores
              SET name = ?1,
                  file_path = ?2,
                  file_name = ?3,
-                 file_size = ?4,
-                 file_modified_at = ?5,
-                 status = ?6
-             WHERE id = ?7",
+                 file_extension = ?4,
+                 file_size = ?5,
+                 file_modified_at = ?6,
+                 status = ?7
+             WHERE id = ?8",
             params![
                 name,
                 file_path,
                 file_name,
+                file_extension,
                 file_size,
                 datetime_utils::format_datetime(file_modified_at),
-                old_values.3.clone(),
+                original_status.clone(),
                 score_id,
             ],
         )?;
@@ -1077,23 +1087,23 @@ impl Database {
 
         conn.execute(
             "UPDATE songs
-             SET last_score_file_modified_at = CASE
-                   WHEN last_score_file_modified_at > ?1 THEN last_score_file_modified_at
-                   ELSE ?1
+             SET path = ?1,
+                 last_score_file_modified_at = CASE
+                   WHEN last_score_file_modified_at > ?2 THEN last_score_file_modified_at
+                   ELSE ?2
                  END
-             WHERE id = ?2",
-            params![file_modified_at_ts, song_id],
+                         WHERE id = ?3",
+            params![file_path, file_modified_at_ts, song_id],
         )?;
 
-        if old_values.0 != name {
+        if original_name != name {
             Self::insert_changed_field(
                 &conn,
                 "update",
                 "scores",
                 score_id,
                 Some("name"),
-                old_values.0,
-                name,
+                name_change_value,
             )?;
         }
 
@@ -1105,10 +1115,9 @@ impl Database {
                 score_id,
                 Some("file"),
                 None,
-                None,
             )?;
 
-            let old_extension = Self::extract_file_extension(&old_values.2);
+            let old_extension = Self::extract_file_extension(&original_file_name);
             let new_extension = Self::extract_file_extension(file_name);
             if old_extension != new_extension {
                 Self::insert_changed_field(
@@ -1117,26 +1126,22 @@ impl Database {
                     "scores",
                     score_id,
                     Some("extension"),
-                    old_extension,
-                    new_extension,
+                    new_extension.or(old_extension),
                 )?;
             }
 
             let affected = conn.execute(
-                "UPDATE backupSongs
-                 SET status = 'processing',
-                     last_backup_at = NULL,
-                     error_message = NULL
-                 WHERE song_id = ?1",
+                "UPDATE songsBackup
+                 SET status = 'processing'
+                 WHERE songId = ?1",
                 params![song_id],
             )?;
 
             if affected == 0 {
-                let backup_status_id = uuid::Uuid::new_v4().to_string();
                 conn.execute(
-                    "INSERT INTO backupSongs (id, song_id, status, last_backup_at, error_message)
-                     VALUES (?1, ?2, 'processing', NULL, NULL)",
-                    params![backup_status_id, song_id],
+                    "INSERT INTO songsBackup (songId, status)
+                     VALUES (?1, 'processing')",
+                    params![song_id],
                 )?;
             }
         }
@@ -1165,19 +1170,16 @@ impl Database {
             return Err(AppError::ScoreNotFound(score_id.to_string()));
         }
 
-        Self::insert_changed_field(&conn, "delete", "scores", score_id, None, None, None)?;
+        Self::insert_changed_field(&conn, "delete", "scores", score_id, None, None)?;
 
         // Deletar uma partitura precisa invalidar o último backup da música,
         // forçando a regeneração do arquivo {songId}.tar.zst no próximo ciclo.
-        let backup_status_id = uuid::Uuid::new_v4().to_string();
         conn.execute(
-            "INSERT INTO backupSongs (id, song_id, status, last_backup_at, error_message)
-             VALUES (?1, ?2, 'processing', NULL, NULL)
-             ON CONFLICT(song_id) DO UPDATE SET
-                status = 'processing',
-                last_backup_at = NULL,
-                error_message = NULL",
-            params![backup_status_id, song_id],
+            "INSERT INTO songsBackup (songId, status)
+             VALUES (?1, 'processing')
+             ON CONFLICT(songId) DO UPDATE SET
+                status = 'processing'",
+            params![song_id],
         )?;
 
         Ok(())
@@ -1358,7 +1360,6 @@ impl Database {
                 "scores",
                 score_id,
                 Some("status"),
-                Some(old_status),
                 Some(status.as_str().to_string()),
             )?;
         }
@@ -1382,7 +1383,7 @@ impl Database {
 
     fn get_category_ids(conn: &Connection, song_id: &str) -> Result<Vec<String>, AppError> {
         let mut stmt =
-            conn.prepare("SELECT category_id FROM categoriesSongs WHERE song_id = ?1")?;
+            conn.prepare("SELECT categoryId FROM categoriesSongs WHERE songId = ?1")?;
 
         let category_ids: Vec<String> = stmt
             .query_map(params![song_id], |row| row.get(0))?
@@ -1407,7 +1408,6 @@ impl Database {
             "categories",
             &category.id,
             Some("name"),
-            None,
             Some(category.name.clone()),
         )?;
 
@@ -1444,7 +1444,7 @@ impl Database {
         }
 
         let relation_ids: Vec<String> = {
-            let mut stmt = conn.prepare("SELECT id FROM categoriesSongs WHERE category_id = ?1")?;
+            let mut stmt = conn.prepare("SELECT id FROM categoriesSongs WHERE categoryId = ?1")?;
             let rows = stmt.query_map(params![category_id], |row| row.get::<_, String>(0))?;
             rows.filter_map(|r| r.ok()).collect()
         };
@@ -1459,11 +1459,10 @@ impl Database {
                 &relation_id,
                 None,
                 None,
-                None,
             )?;
         }
 
-        Self::insert_changed_field(&conn, "delete", "categories", category_id, None, None, None)?;
+        Self::insert_changed_field(&conn, "delete", "categories", category_id, None, None)?;
 
         Ok(())
     }
@@ -1488,7 +1487,7 @@ impl Database {
         };
 
         let relation_ids: Vec<String> = {
-            let mut stmt = conn.prepare("SELECT id FROM categoriesSongs WHERE song_id = ?1")?;
+            let mut stmt = conn.prepare("SELECT id FROM categoriesSongs WHERE songId = ?1")?;
             let rows = stmt.query_map(params![song_id], |row| row.get::<_, String>(0))?;
             rows.filter_map(|r| r.ok()).collect()
         };
@@ -1498,7 +1497,7 @@ impl Database {
 
         // Deletar as associações de categorias
         conn.execute(
-            "DELETE FROM categoriesSongs WHERE song_id = ?1",
+            "DELETE FROM categoriesSongs WHERE songId = ?1",
             params![song_id],
         )?;
 
@@ -1509,7 +1508,7 @@ impl Database {
         }
 
         for score_id in score_ids {
-            Self::insert_changed_field(&conn, "delete", "scores", &score_id, None, None, None)?;
+            Self::insert_changed_field(&conn, "delete", "scores", &score_id, None, None)?;
         }
 
         for relation_id in relation_ids {
@@ -1520,11 +1519,10 @@ impl Database {
                 &relation_id,
                 None,
                 None,
-                None,
             )?;
         }
 
-        Self::insert_changed_field(&conn, "delete", "songs", song_id, None, None, None)?;
+        Self::insert_changed_field(&conn, "delete", "songs", song_id, None, None)?;
 
         Ok(())
     }
@@ -1553,20 +1551,17 @@ impl Database {
         let conn = self.conn.lock().unwrap();
 
         conn.execute(
-            "INSERT OR IGNORE INTO backupSongs (id, song_id, status, last_backup_at, error_message)
-             SELECT lower(hex(randomblob(16))), s.id, 'processing', NULL, NULL
+            "INSERT OR IGNORE INTO songsBackup (songId, status)
+             SELECT s.id, 'processing'
              FROM songs s",
             [],
         )
         .map_err(AppError::Database)?;
 
         conn.execute(
-            "UPDATE backupSongs
-             SET
-                status = 'processing',
-                last_backup_at = NULL,
-                error_message = NULL
-             WHERE song_id IN (SELECT id FROM songs)",
+            "UPDATE songsBackup
+             SET status = 'processing'
+             WHERE songId IN (SELECT id FROM songs)",
             [],
         )
         .map_err(AppError::Database)
@@ -1579,36 +1574,31 @@ impl Database {
     ) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
         let status_str = status.as_str();
-        let id = uuid::Uuid::new_v4().to_string();
-        let now = chrono::Local::now().timestamp();
 
         conn.execute(
-            "INSERT INTO backupSongs (id, song_id, status, last_backup_at, error_message)
-             VALUES (?1, ?2, ?3, ?4, NULL)
-             ON CONFLICT(song_id) DO UPDATE SET
-             status = ?3,
-             last_backup_at = ?4",
-            params![id, song_id, status_str, now],
+            "INSERT INTO songsBackup (songId, status)
+             VALUES (?1, ?2)
+             ON CONFLICT(songId) DO UPDATE SET
+             status = excluded.status",
+            params![song_id, status_str],
         )?;
         Ok(())
     }
 
-    /// Atualiza o status de backup de uma música com mensagem de erro opcional
+    /// Atualiza o status de backup de uma música
     pub fn update_backup_song_status(
         &self,
         song_id: &str,
         status: &BackupStatus,
-        error_message: Option<String>,
     ) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
         let status_str = status.as_str();
-        let now = chrono::Local::now().timestamp();
 
         conn.execute(
-            "UPDATE backupSongs
-             SET status = ?1, last_backup_at = ?2, error_message = ?3
-             WHERE song_id = ?4",
-            params![status_str, now, error_message, song_id],
+            "UPDATE songsBackup
+             SET status = ?1
+             WHERE songId = ?2",
+            params![status_str, song_id],
         )?;
         Ok(())
     }
@@ -1620,17 +1610,17 @@ impl Database {
     ) -> Result<Option<SongBackupStatus>, AppError> {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
-            "SELECT id, song_id, status, last_backup_at, error_message
-             FROM backupSongs WHERE song_id = ?1",
+            "SELECT songId, status
+             FROM songsBackup WHERE songId = ?1",
         )?;
 
         let result = stmt.query_row(params![song_id], |row| {
             Ok(SongBackupStatus {
                 id: row.get(0)?,
-                song_id: row.get(1)?,
-                status: BackupStatus::from_str(&row.get::<_, String>(2)?),
-                last_backup_at: row.get(3)?,
-                error_message: row.get(4)?,
+                song_id: row.get(0)?,
+                status: BackupStatus::from_str(&row.get::<_, String>(1)?),
+                last_backup_at: None,
+                error_message: None,
             })
         });
 
@@ -1645,17 +1635,17 @@ impl Database {
     pub fn get_all_backup_songs_status(&self) -> Result<Vec<SongBackupStatus>, AppError> {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
-            "SELECT id, song_id, status, last_backup_at, error_message
-             FROM backupSongs ORDER BY last_backup_at DESC",
+              "SELECT songId, status
+               FROM songsBackup ORDER BY songId ASC",
         )?;
 
         let results = stmt.query_map([], |row| {
             Ok(SongBackupStatus {
                 id: row.get(0)?,
-                song_id: row.get(1)?,
-                status: BackupStatus::from_str(&row.get::<_, String>(2)?),
-                last_backup_at: row.get(3)?,
-                error_message: row.get(4)?,
+                song_id: row.get(0)?,
+                status: BackupStatus::from_str(&row.get::<_, String>(1)?),
+                last_backup_at: None,
+                error_message: None,
             })
         })?;
 
@@ -1671,17 +1661,17 @@ impl Database {
         let conn = self.conn.lock().unwrap();
         let status_str = status.as_str();
         let mut stmt = conn.prepare(
-            "SELECT id, song_id, status, last_backup_at, error_message
-             FROM backupSongs WHERE status = ?1 ORDER BY last_backup_at DESC",
+              "SELECT songId, status
+               FROM songsBackup WHERE status = ?1 ORDER BY songId ASC",
         )?;
 
         let results = stmt.query_map(params![status_str], |row| {
             Ok(SongBackupStatus {
                 id: row.get(0)?,
-                song_id: row.get(1)?,
-                status: BackupStatus::from_str(&row.get::<_, String>(2)?),
-                last_backup_at: row.get(3)?,
-                error_message: row.get(4)?,
+                song_id: row.get(0)?,
+                status: BackupStatus::from_str(&row.get::<_, String>(1)?),
+                last_backup_at: None,
+                error_message: None,
             })
         })?;
 
@@ -1693,16 +1683,16 @@ impl Database {
     pub fn delete_backup_song_status(&self, song_id: &str) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
         conn.execute(
-            "DELETE FROM backupSongs WHERE song_id = ?1",
+            "DELETE FROM songsBackup WHERE songId = ?1",
             params![song_id],
         )?;
         Ok(())
     }
 
-    /// Limpa todos os registros de backupSongs com status de erro
+    /// Limpa todos os registros de songsBackup com status de erro
     pub fn clear_backup_errors(&self) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
-        conn.execute("DELETE FROM backupSongs WHERE status = 'error'", [])?;
+        conn.execute("DELETE FROM songsBackup WHERE status = 'error'", [])?;
         Ok(())
     }
 
@@ -1736,17 +1726,35 @@ impl Database {
         score_id: &str,
     ) -> Result<Option<ScoreStatus>, AppError> {
         let conn = self.conn.lock().unwrap();
+        let latest_not_found_rowid: Option<i64> = conn
+            .query_row(
+                "SELECT rowid
+                 FROM changedField
+                 WHERE entity = 'scores'
+                   AND entityId = ?1
+                   AND field = 'status'
+                   AND value = 'not_found'
+                 ORDER BY timestamp DESC, rowid DESC
+                 LIMIT 1",
+                params![score_id],
+                |row| row.get(0),
+            )
+            .optional()?;
+
+        let Some(latest_not_found_rowid) = latest_not_found_rowid else {
+            return Ok(None);
+        };
 
         let previous_status = conn.query_row(
-            "SELECT oldValue
+            "SELECT value
              FROM changedField
              WHERE entity = 'scores'
                AND entityId = ?1
                AND field = 'status'
-               AND newValue = 'not_found'
-             ORDER BY timestamp DESC, id DESC
+               AND rowid < ?2
+             ORDER BY rowid DESC
              LIMIT 1",
-            params![score_id],
+            params![score_id, latest_not_found_rowid],
             |row| row.get::<_, Option<String>>(0),
         );
 
@@ -1761,7 +1769,7 @@ impl Database {
     pub fn get_changed_fields_ordered(&self) -> Result<Vec<ChangedFieldRecord>, AppError> {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
-            "SELECT id, type, entity, entityId, field, oldValue, newValue, timestamp
+            "SELECT id, type, entity, entityId, field, value, timestamp
              FROM changedField
              ORDER BY timestamp ASC, id ASC",
         )?;
@@ -1773,9 +1781,8 @@ impl Database {
                 entity: row.get(2)?,
                 entity_id: row.get(3)?,
                 field: row.get(4)?,
-                old_value: row.get(5)?,
-                new_value: row.get(6)?,
-                timestamp: row.get(7)?,
+                value: row.get(5)?,
+                timestamp: row.get(6)?,
             })
         })?;
 
@@ -1915,9 +1922,9 @@ impl Database {
         )?;
 
         conn.execute(
-            "INSERT OR IGNORE INTO errors (id, computerId, date, message, timestamp, report)
-             VALUES (?1, ?2, ?3, ?4, ?5, 0)",
-            params![id, computer_id, date, message, timestamp],
+            "INSERT OR IGNORE INTO errors (id, message, timestamp)
+             VALUES (?1, ?2, ?3)",
+            params![id, message, timestamp],
         )?;
 
         Ok(())

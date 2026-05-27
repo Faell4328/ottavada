@@ -76,8 +76,8 @@ pub fn generate_events_msgpack(
         let data = change.field.as_ref().map(|field| {
             vec![EventDataMessagePack {
                 field: field.clone(),
-                old_value: change.old_value.clone(),
-                new_value: status_override.clone().or_else(|| change.new_value.clone()),
+                old_value: None,
+                new_value: status_override.clone().or_else(|| change.value.clone()),
             }]
         });
 
@@ -169,7 +169,7 @@ fn normalize_score_status_for_client(
         return Some(None);
     }
 
-    if !matches!(change.new_value.as_deref(), Some("draft") | Some("not_found")) {
+    if !matches!(change.value.as_deref(), Some("draft") | Some("not_found")) {
         return Some(None);
     }
 
@@ -226,6 +226,7 @@ mod tests {
             name: "Musica Teste".to_string(),
             composer: None,
             arranger: None,
+            path: dir.path().join("songs").join("song-1").to_string_lossy().to_string(),
             is_favorite: false,
             status: crate::domain::models::ScoreStatus::Main,
             updated_at: chrono::Local::now().naive_local(),
@@ -263,15 +264,15 @@ mod tests {
             .expect("clear changed fields");
 
         conn.execute(
-            "INSERT INTO songs (id, name, composer, arranger, is_favorite, last_score_file_modified_at)
-             VALUES (?1, ?2, NULL, NULL, 0, 0)",
-            params!["song-1", "MUSICA TESTE"],
+            "INSERT INTO songs (id, name, composer, arranger, path, is_favorite, last_score_file_modified_at)
+             VALUES (?1, ?2, NULL, NULL, ?3, 0, 0)",
+            params!["song-1", "MUSICA TESTE", "/music/song-1"],
         )
         .expect("insert song");
 
         conn.execute(
-            "INSERT INTO scores (id, song_id, name, host_id, file_path, file_name, file_size, file_modified_at, status)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, datetime('now'), ?8)",
+            "INSERT INTO scores (id, song_id, name, host_id, file_path, file_name, file_extension, file_size, file_modified_at, status)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, datetime('now'), ?9)",
             params![
                 "score-1",
                 "song-1",
@@ -279,6 +280,7 @@ mod tests {
                 "server",
                 "/tmp",
                 "score-1.musx",
+                "musx",
                 0,
                 "draft",
             ],
@@ -286,16 +288,14 @@ mod tests {
         .expect("insert score");
 
         conn.execute(
-            "INSERT INTO changedField (id, origin, type, entity, entityId, field, oldValue, newValue, timestamp)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+            "INSERT INTO changedField (id, type, entity, entityId, field, value, timestamp)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             params![
                 "evt-not-found",
-                "server",
                 "update",
                 "scores",
                 "score-1",
                 "status",
-                "main",
                 "not_found",
                 chrono::Local::now().timestamp(),
             ],
@@ -303,16 +303,14 @@ mod tests {
         .expect("insert not_found event");
 
         conn.execute(
-            "INSERT INTO changedField (id, origin, type, entity, entityId, field, oldValue, newValue, timestamp)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+            "INSERT INTO changedField (id, type, entity, entityId, field, value, timestamp)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             params![
                 "evt-draft",
-                "server",
                 "update",
                 "scores",
                 "score-1",
                 "status",
-                "main",
                 "draft",
                 chrono::Local::now().timestamp() + 1,
             ],
@@ -320,16 +318,14 @@ mod tests {
         .expect("insert draft event");
 
         conn.execute(
-            "INSERT INTO changedField (id, origin, type, entity, entityId, field, oldValue, newValue, timestamp)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+            "INSERT INTO changedField (id, type, entity, entityId, field, value, timestamp)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             params![
                 "evt-song-name",
-                "server",
                 "update",
                 "songs",
                 "song-1",
                 "name",
-                "Old Name",
                 "New Name",
                 chrono::Local::now().timestamp() + 2,
             ],
@@ -383,15 +379,15 @@ mod tests {
             .expect("clear changed fields");
 
         conn.execute(
-            "INSERT INTO songs (id, name, composer, arranger, is_favorite, last_score_file_modified_at)
-             VALUES (?1, ?2, NULL, NULL, 0, 0)",
-            params!["song-1", "MUSICA TESTE"],
+            "INSERT INTO songs (id, name, composer, arranger, path, is_favorite, last_score_file_modified_at)
+             VALUES (?1, ?2, NULL, NULL, ?3, 0, 0)",
+            params!["song-1", "MUSICA TESTE", "/music/song-1"],
         )
         .expect("insert song");
 
         conn.execute(
-            "INSERT INTO scores (id, song_id, name, host_id, file_path, file_name, file_size, file_modified_at, status)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, datetime('now'), ?8)",
+            "INSERT INTO scores (id, song_id, name, host_id, file_path, file_name, file_extension, file_size, file_modified_at, status)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, datetime('now'), ?9)",
             params![
                 "score-1",
                 "song-1",
@@ -399,6 +395,7 @@ mod tests {
                 "server",
                 "/tmp",
                 "score-1.musx",
+                "musx",
                 0,
                 "draft",
             ],
@@ -406,16 +403,14 @@ mod tests {
         .expect("insert score");
 
         conn.execute(
-            "INSERT INTO changedField (id, origin, type, entity, entityId, field, oldValue, newValue, timestamp)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+            "INSERT INTO changedField (id, type, entity, entityId, field, value, timestamp)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             params![
                 "evt-draft",
-                "server",
                 "update",
                 "scores",
                 "score-1",
                 "status",
-                "main",
                 "draft",
                 chrono::Local::now().timestamp(),
             ],

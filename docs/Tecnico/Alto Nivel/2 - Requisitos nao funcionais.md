@@ -1,12 +1,12 @@
 # 1. Categorias
 
-## 1.1 Associação
+## 1.1. Associação
 
 Uma música pode possuir entre **0 e N categorias**.
 
 Quando nenhuma categoria for definida, a categoria **Sem categoria** deve ser atribuída automaticamente.
 
-## 1.2 Categoria “Sem categoria”
+## 1.2. Categoria “Sem categoria”
 
 A categoria **Sem categoria**:
 
@@ -61,9 +61,9 @@ O usuário não deve poder alterar o modo de operação entre:
 
 ---
 
-# 5. Cliente
+# 6. Cliente
 
-## 6.1 Armazenamento local
+## 6.1. Armazenamento local
 
 Partituras baixadas devem permanecer compactadas e somente podem ser descompactadas em diretórios temporários quando forem abertas.
 
@@ -102,13 +102,13 @@ O sistema deve:
 - validar pré-condições antes da execução de qualquer operação;
 - apresentar ao usuário informações claras sobre as operações executadas.
 
-## 9.1 Logs
+## 9.1. Logs
 
 - Os logs devem ser mantidos por **30 dias**.
 
 - Os logs devem ser armazenados no diretório raiz do projeto.
 
-## 9.2 Exclusão
+## 9.2. Exclusão
 
 O sistema deve solicitar confirmação antes da remoção definitiva de qualquer item.
 
@@ -116,13 +116,13 @@ O sistema deve solicitar confirmação antes da remoção definitiva de qualquer
 
 # 10. Servidor Score Maestro
 
-## 10.1 Telemetria
+## 10.1. Telemetria
 
 Em caso de falha no envio: nenhuma notificação visível deve ser apresentada ao usuário.
 
 Em caso de sucesso: a tabela `errors` deve ser limpa.
 
-## 10.2 Atualizações
+## 10.2. Atualizações
 
 O usuário deve poder adiar a atualização.
 
@@ -132,7 +132,7 @@ O usuário deve poder adiar a atualização.
 
 # 11. Compactação
 
-## 11.1 Desempenho e nível de compressão
+## 11.1. Desempenho e nível de compressão
 
 Todas as etapas devem ser executadas em threads independentes para evitar bloqueios ou sobrecarga da thread principal.
 
@@ -141,6 +141,6 @@ A compactação `zst` deve utilizar:
 - `-10` para compressão balanceada;
 - `-T0` para utilização de todos os núcleos disponíveis.
 
-## 11.2 Upload e Download para a nuvem
+## 11.2. Upload e Download para a nuvem
 
 Todos os arquivos devem ser compactados com `zst` antes de ser enviado para a nuvem.   

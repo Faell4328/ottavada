@@ -984,6 +984,7 @@ mod tests {
                 name: "HINO NACIONAL".to_string(),
                 composer: None,
                 arranger: None,
+                path: dir.path().join("songs").join("song-1").to_string_lossy().to_string(),
                 is_favorite: false,
                 status: ScoreStatus::Main,
                 updated_at: chrono::Local::now().naive_local(),

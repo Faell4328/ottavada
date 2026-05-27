@@ -390,7 +390,7 @@ mod tests {
                     songs_count: 2,
                     scores_count: 4,
                 },
-                pending: LibraryStatusSummary {
+                draft: LibraryStatusSummary {
                     songs_count: 1,
                     scores_count: 1,
                 },

@@ -51,6 +51,7 @@ struct SnapshotSong {
     composer: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     arranger: Option<String>,
+    path: String,
     #[serde(rename = "categoriesId")]
     categories_id: Vec<String>,
     scores: Vec<SnapshotScore>,
@@ -92,6 +93,11 @@ pub fn generate_snapshot_msgpack(
             name: song.name.clone(),
             composer: song.composer.clone(),
             arranger: song.arranger.clone(),
+            path: song
+                .scores
+                .first()
+                .map(|score| score.file_path.clone())
+                .unwrap_or_else(|| format!("/songs/{}", song.id)),
             categories_id: song.category_ids.clone(),
             scores: song
                 .scores
@@ -301,6 +307,7 @@ mod tests {
             name: "Musica Teste".to_string(),
             composer: None,
             arranger: None,
+            path: dir.path().join("songs").join("song-1").to_string_lossy().to_string(),
             is_favorite: false,
             status: crate::domain::models::ScoreStatus::Main,
             updated_at: chrono::Local::now().naive_local(),
@@ -374,6 +381,7 @@ mod tests {
             name: "Musica Teste".to_string(),
             composer: None,
             arranger: None,
+            path: "/music/song-1".to_string(),
             is_favorite: false,
             status: crate::domain::models::ScoreStatus::Main,
             updated_at: chrono::Local::now().naive_local(),
@@ -403,8 +411,8 @@ mod tests {
     fn conn_execute_draft_score(db: &Database) {
         let conn = db.conn.lock().expect("lock db");
         conn.execute(
-            "INSERT INTO scores (id, song_id, name, host_id, file_path, file_name, file_size, file_modified_at, status)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, datetime('now'), ?8)",
+            "INSERT INTO scores (id, song_id, name, host_id, file_path, file_name, file_extension, file_size, file_modified_at, status)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, datetime('now'), ?9)",
             rusqlite::params![
                 "score-1",
                 "song-1",
@@ -412,6 +420,7 @@ mod tests {
                 "server",
                 "/tmp",
                 "score-1.musx",
+                "musx",
                 0,
                 "draft",
             ],

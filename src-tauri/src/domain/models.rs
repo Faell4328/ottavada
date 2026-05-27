@@ -9,6 +9,7 @@ pub struct Song {
     pub name: String,
     pub composer: Option<String>,
     pub arranger: Option<String>,
+    pub path: String,
     pub is_favorite: bool,
     pub status: ScoreStatus,
     pub updated_at: NaiveDateTime,
@@ -17,9 +18,9 @@ pub struct Song {
 
 /// Status de uma partitura
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
 pub enum ScoreStatus {
     Main,
-    Pending,
     Draft,
     NotFound,
 }
@@ -28,16 +29,14 @@ impl ScoreStatus {
     pub fn as_str(&self) -> &str {
         match self {
             ScoreStatus::Main => "main",
-            ScoreStatus::Pending => "pending",
             ScoreStatus::Draft => "draft",
             ScoreStatus::NotFound => "not_found",
         }
     }
 
     pub fn from_str(s: &str) -> Self {
-        match s {
+        match s.to_ascii_lowercase().as_str() {
             "main" => ScoreStatus::Main,
-            "pending" => ScoreStatus::Pending,
             "draft" => ScoreStatus::Draft,
             "not_found" => ScoreStatus::NotFound,
             _ => ScoreStatus::Main,
@@ -169,7 +168,7 @@ pub struct LibraryStatusSummary {
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct LibrarySummary {
     pub main: LibraryStatusSummary,
-    pub pending: LibraryStatusSummary,
+    pub draft: LibraryStatusSummary,
     pub not_found: LibraryStatusSummary,
 }
 

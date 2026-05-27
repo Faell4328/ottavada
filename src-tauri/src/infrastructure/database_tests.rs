@@ -18,6 +18,7 @@ mod tests {
             name: name.to_string(),
             composer: Some("Bach".to_string()),
             arranger: None,
+            path: format!("/music/{}", id),
             is_favorite: false,
             status: ScoreStatus::Main,
             updated_at: now(),
@@ -454,7 +455,7 @@ mod tests {
     }
 
     #[test]
-    fn test_get_library_summary_counts_includes_pending_and_not_found() {
+    fn test_get_library_summary_counts_includes_draft_and_not_found() {
         let db = make_db();
         db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
         db.insert_song(&make_song("s2", "Ave Maria"), &[]).unwrap();
@@ -463,9 +464,9 @@ mod tests {
         main_score.status = ScoreStatus::Main;
         db.insert_score(&main_score).unwrap();
 
-        let mut pending_score = make_score(&db, "sc2", "s1", Some("Piano"));
-        pending_score.status = ScoreStatus::Pending;
-        db.insert_score(&pending_score).unwrap();
+        let mut draft_score = make_score(&db, "sc2", "s1", Some("Piano"));
+        draft_score.status = ScoreStatus::Draft;
+        db.insert_score(&draft_score).unwrap();
 
         let mut not_found_score = make_score(&db, "sc3", "s2", Some("Trompete"));
         not_found_score.status = ScoreStatus::NotFound;
@@ -475,8 +476,8 @@ mod tests {
 
         assert_eq!(summary.main.scores_count, 1);
         assert_eq!(summary.main.songs_count, 1);
-        assert_eq!(summary.pending.scores_count, 1);
-        assert_eq!(summary.pending.songs_count, 1);
+        assert_eq!(summary.draft.scores_count, 1);
+        assert_eq!(summary.draft.songs_count, 1);
         assert_eq!(summary.not_found.scores_count, 1);
         assert_eq!(summary.not_found.songs_count, 1);
     }
@@ -544,12 +545,10 @@ mod tests {
         {
             let conn = db.conn.lock().unwrap();
             conn.execute(
-                "UPDATE backupSongs
-                 SET status = ?1,
-                     last_backup_at = ?2,
-                     error_message = NULL
-                 WHERE song_id = ?3",
-                rusqlite::params!["ok", 123_i64, "s1"],
+                "UPDATE songsBackup
+                 SET status = ?1
+                 WHERE songId = ?2",
+                rusqlite::params!["ok", "s1"],
             )
             .unwrap();
         }
@@ -575,18 +574,12 @@ mod tests {
         let conn = db.conn.lock().unwrap();
         let backup = conn
             .query_row(
-                "SELECT status, last_backup_at FROM backupSongs WHERE song_id = ?1",
+                "SELECT status FROM songsBackup WHERE songId = ?1",
                 ["s1"],
-                |row| {
-                    Ok((
-                        row.get::<_, String>(0)?,
-                        row.get::<_, Option<i64>>(1)?,
-                    ))
-                },
+                |row| Ok(row.get::<_, String>(0)?),
             )
             .unwrap();
-        assert_eq!(backup.0, "processing");
-        assert_eq!(backup.1, None);
+        assert_eq!(backup, "processing");
     }
 
     #[test]
@@ -597,9 +590,9 @@ mod tests {
         {
             let conn = db.conn.lock().unwrap();
             conn.execute(
-                "INSERT INTO backupSongs (id, song_id, status, last_backup_at, error_message)
-                 VALUES (?1, ?2, ?3, ?4, NULL)",
-                rusqlite::params!["b1", "s1", "ok", 123_i64],
+                "INSERT INTO songsBackup (songId, status)
+                 VALUES (?1, ?2)",
+                rusqlite::params!["s1", "ok"],
             )
             .unwrap();
         }
@@ -610,19 +603,13 @@ mod tests {
         let conn = db.conn.lock().unwrap();
         let backup = conn
             .query_row(
-                "SELECT status, last_backup_at FROM backupSongs WHERE song_id = ?1",
+                "SELECT status FROM songsBackup WHERE songId = ?1",
                 ["s1"],
-                |row| {
-                    Ok((
-                        row.get::<_, String>(0)?,
-                        row.get::<_, Option<i64>>(1)?,
-                    ))
-                },
+                |row| Ok(row.get::<_, String>(0)?),
             )
             .unwrap();
 
-        assert_eq!(backup.0, "processing");
-        assert!(backup.1.is_none());
+        assert_eq!(backup, "processing");
     }
 
     #[test]
@@ -660,19 +647,13 @@ mod tests {
         let conn = db.conn.lock().unwrap();
         let backup = conn
             .query_row(
-                "SELECT status, last_backup_at FROM backupSongs WHERE song_id = ?1",
+                "SELECT status FROM songsBackup WHERE songId = ?1",
                 ["s1"],
-                |row| {
-                    Ok((
-                        row.get::<_, String>(0)?,
-                        row.get::<_, Option<i64>>(1)?,
-                    ))
-                },
+                |row| Ok(row.get::<_, String>(0)?),
             )
             .unwrap();
 
-        assert_eq!(backup.0, "processing");
-        assert!(backup.1.is_none());
+        assert_eq!(backup, "processing");
     }
 
     #[test]
@@ -741,8 +722,8 @@ mod tests {
         let legacy_full_path = "/music/scores/Canon - Violino.musx";
         let conn = db.conn.lock().unwrap();
         conn.execute(
-            "INSERT INTO scores (id, song_id, name, host_id, file_path, file_name, file_size, file_modified_at, status)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+            "INSERT INTO scores (id, song_id, name, host_id, file_path, file_name, file_extension, file_size, file_modified_at, status)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
             rusqlite::params![
                 "sc1",
                 "s1",
@@ -750,6 +731,7 @@ mod tests {
                 "test-computer",
                 legacy_full_path,
                 "Canon - Violino.musx",
+                "musx",
                 1024u64,
                 datetime_utils::format_datetime(now()),
                 "main"
@@ -824,7 +806,7 @@ mod tests {
             let not_found_events: i64 = conn
                 .query_row(
                     "SELECT COUNT(*) FROM changedField
-                     WHERE entity = 'scores' AND field = 'status' AND newValue = 'not_found'",
+                     WHERE entity = 'scores' AND field = 'status' AND value = 'not_found'",
                     [],
                     |row| row.get(0),
                 )
@@ -847,7 +829,7 @@ mod tests {
         let draft_events: i64 = conn
             .query_row(
                 "SELECT COUNT(*) FROM changedField
-                 WHERE entity = 'scores' AND field = 'status' AND newValue = 'draft'",
+                 WHERE entity = 'scores' AND field = 'status' AND value = 'draft'",
                 [],
                 |row| row.get(0),
             )

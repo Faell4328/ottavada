@@ -2,4 +2,6 @@
 
 ---
 
+# 
+
 **Cliente**: É o computador destinado à consulta e sincronização do repertório. Ele pode armazenar partituras localmente para acesso offline, porém **não precisa manter a estrutura completa indexada como o servidor**. O cliente possui acesso apenas para leitura, sem permissão para adicionar, editar ou excluir músicas e partituras. Sua função é receber, sincronizar e disponibilizar localmente os arquivos distribuídos pelo servidor. Por padrão, o cliente recebe e exibe apenas as partituras marcadas como `main` pelo servidor.

@@ -85,7 +85,7 @@ fn should_generate_archive(
         return row.last_uploadable_score_modified_at.is_some() || preserved_scores_count > 0;
     }
 
-    // Se não existe partitura elegível para nuvem (main/pending),
+    // Se não existe partitura elegível para nuvem (main),
     // nunca deve regerar o arquivo com conteúdo draft/not_found.
     let Some(last_uploadable_modified_at) = row.last_uploadable_score_modified_at else {
         return false;
@@ -98,15 +98,13 @@ fn should_generate_archive(
 
 fn upsert_processing_status(db: &Database, song_id: &str) -> Result<(), AppError> {
     let conn = db.conn.lock().unwrap();
-    let id = uuid::Uuid::new_v4().to_string();
 
     conn.execute(
-        "INSERT INTO backupSongs (id, song_id, status, last_backup_at, error_message)
-         VALUES (?1, ?2, ?3, NULL, NULL)
-         ON CONFLICT(song_id) DO UPDATE SET
-         status = excluded.status,
-         error_message = NULL",
-        params![id, song_id, PROCESSING_STATUS],
+        "INSERT INTO songsBackup (songId, status)
+         VALUES (?1, ?2)
+         ON CONFLICT(songId) DO UPDATE SET
+            status = excluded.status",
+        params![song_id, PROCESSING_STATUS],
     )?;
 
     Ok(())
@@ -116,42 +114,45 @@ fn update_backup_status(
     db: &Database,
     song_id: &str,
     status: &str,
-    last_backup_at: Option<i64>,
-    error_message: Option<&str>,
 ) -> Result<(), AppError> {
     let conn = db.conn.lock().unwrap();
     conn.execute(
-        "UPDATE backupSongs
-         SET status = ?1, last_backup_at = ?2, error_message = ?3
-         WHERE song_id = ?4",
-        params![status, last_backup_at, error_message, song_id],
+        "UPDATE songsBackup
+         SET status = ?1
+         WHERE songId = ?2",
+        params![status, song_id],
     )?;
     Ok(())
 }
 
-fn list_song_backup_rows(db: &Database) -> Result<Vec<SongBackupRow>, AppError> {
+fn list_song_backup_rows(db: &Database, songs_dir: &Path) -> Result<Vec<SongBackupRow>, AppError> {
     let conn = db.conn.lock().unwrap();
     let mut stmt = conn.prepare(
         "SELECT
             s.id,
             s.name,
-            MAX(CAST(strftime('%s', sc.file_modified_at) AS INTEGER)) AS last_uploadable_score_modified_at,
-            b.last_backup_at
+            MAX(CAST(strftime('%s', sc.file_modified_at) AS INTEGER)) AS last_uploadable_score_modified_at
          FROM songs s
          LEFT JOIN scores sc
             ON s.id = sc.song_id
-           AND sc.status IN ('main', 'pending')
-         LEFT JOIN backupSongs b ON s.id = b.song_id
-         GROUP BY s.id, s.name, b.last_backup_at
+           AND sc.status IN ('main')
+         GROUP BY s.id, s.name
          ORDER BY s.name",
     )?;
 
     let rows = stmt.query_map([], |row| {
+        let song_id: String = row.get(0)?;
+        let last_backup_at = fs::metadata(songs_dir.join(format!("{}.tar.zst", song_id)))
+            .ok()
+            .and_then(|metadata| metadata.modified().ok())
+            .and_then(|modified| modified.duration_since(std::time::UNIX_EPOCH).ok())
+            .map(|duration| duration.as_secs() as i64);
+
         Ok(SongBackupRow {
-            song_id: row.get(0)?,
+            song_id,
             song_name: row.get(1)?,
             last_uploadable_score_modified_at: row.get(2)?,
-            last_backup_at: row.get(3)?,
+            last_backup_at,
         })
     })?;
 
@@ -201,7 +202,7 @@ fn list_scores_for_archive(
             }));
         }
 
-        if !matches!(normalized_status.as_str(), "main" | "pending") {
+        if !matches!(normalized_status.as_str(), "main" | "draft") {
             return Ok(None);
         }
 
@@ -438,7 +439,7 @@ fn create_song_temp_dir(temp_root: &Path, song_id: &str) -> Result<PathBuf, AppE
 fn copy_and_rename_scores(entries: &[ScoreArchiveEntry], temp_dir: &Path) -> Result<(), AppError> {
     if entries.is_empty() {
         return Err(AppError::Generic(
-            "Nenhuma partitura com status main/pending para gerar backup".to_string(),
+            "Nenhuma partitura elegível para gerar backup".to_string(),
         ));
     }
 
@@ -484,7 +485,7 @@ fn copy_and_rename_scores_parallel(
 ) -> Result<(), AppError> {
     if entries.is_empty() {
         return Err(AppError::Generic(
-            "Nenhuma partitura com status main/pending para gerar backup".to_string(),
+            "Nenhuma partitura elegível para gerar backup".to_string(),
         ));
     }
 
@@ -831,7 +832,7 @@ fn generate_song_archives_with_prepared_versions(
     fs::create_dir_all(&songs_dir)?;
     fs::create_dir_all(&temp_root)?;
 
-    let rows = list_song_backup_rows(db)?;
+    let rows = list_song_backup_rows(db, &songs_dir)?;
 
     let removed_orphans = cleanup_orphan_archives(&songs_dir, &rows)?;
     if removed_orphans > 0 {
@@ -887,8 +888,7 @@ fn generate_song_archives_with_prepared_versions(
         let should_generate = should_generate_archive(&row, &songs_dir, preserved_scores_count);
 
         if !should_generate {
-            if let Err(err) = update_backup_status(db, &row.song_id, "ok", row.last_backup_at, None)
-            {
+            if let Err(err) = update_backup_status(db, &row.song_id, "ok") {
                 error!(
                     "Erro ao atualizar status de backup (skip) para {}: {}",
                     row.song_id, err
@@ -910,13 +910,7 @@ fn generate_song_archives_with_prepared_versions(
             Ok(entries) => entries,
             Err(err) => {
                 let error_text = err.to_string();
-                if let Err(status_err) = update_backup_status(
-                    db,
-                    &row.song_id,
-                    "error",
-                    row.last_backup_at,
-                    Some(&error_text),
-                ) {
+                if let Err(status_err) = update_backup_status(db, &row.song_id, "error") {
                     error!(
                         "Erro ao atualizar status de backup (error) para {}: {}",
                         row.song_id, status_err
@@ -952,13 +946,7 @@ fn generate_song_archives_with_prepared_versions(
     for (row, archive_result) in run_archive_jobs_parallel(jobs, &songs_dir, &temp_root) {
         match archive_result {
             Ok((archive_path, archive_size)) => {
-                if let Err(err) = update_backup_status(
-                    db,
-                    &row.song_id,
-                    "ok",
-                    row.last_uploadable_score_modified_at,
-                    None,
-                ) {
+                if let Err(err) = update_backup_status(db, &row.song_id, "ok") {
                     error!(
                         "Erro ao atualizar status de backup (ok) para {}: {}",
                         row.song_id, err
@@ -982,13 +970,7 @@ fn generate_song_archives_with_prepared_versions(
             Err(err) => {
                 let error_text = err.to_string();
 
-                if let Err(status_err) = update_backup_status(
-                    db,
-                    &row.song_id,
-                    "error",
-                    row.last_backup_at,
-                    Some(&error_text),
-                ) {
+                if let Err(status_err) = update_backup_status(db, &row.song_id, "error") {
                     error!(
                         "Erro ao atualizar status de backup (error) para {}: {}",
                         row.song_id, status_err
@@ -1092,12 +1074,15 @@ pub fn regenerate_all_song_archives(
 mod tests {
     use std::fs::File;
 
+    use chrono::Local;
+    use crate::domain::models::{Score, ScoreStatus, Song};
+    use crate::infrastructure::database::Database;
     use tar::Builder;
     use tempfile::tempdir;
 
     use super::{
         archive_worker_count_for, cleanup_orphan_archives, copy_and_rename_scores_parallel,
-        copy_worker_count_for, list_draft_not_found_scores_with_previous_main,
+        copy_worker_count_for, generate_song_archives, list_draft_not_found_scores_with_previous_main,
         should_generate_archive, SongBackupRow, ScoreArchiveEntry,
     };
 
@@ -1250,6 +1235,64 @@ mod tests {
     }
 
     #[test]
+    fn does_not_generate_archive_for_draft_only_song() {
+        let temp = tempdir().expect("temp dir");
+        let app_data_dir = temp.path().join("app-data");
+        let cloud_root_dir = temp.path().join("cloud");
+        let db_path = temp.path().join("database.sqlite");
+
+        std::fs::create_dir_all(&app_data_dir).expect("create app data dir");
+        std::fs::create_dir_all(cloud_root_dir.join("songs")).expect("create cloud songs dir");
+
+        let db = Database::new(&db_path).expect("create db");
+
+        let song_dir = temp.path().join("songs").join("song-1");
+        std::fs::create_dir_all(&song_dir).expect("create song dir");
+        let score_file_path = song_dir.join("draft-score.musx");
+        std::fs::write(&score_file_path, b"draft content").expect("write score file");
+
+        db.insert_song(
+            &Song {
+                id: "song-1".to_string(),
+                name: "Musica".to_string(),
+                composer: None,
+                arranger: None,
+                path: song_dir.to_string_lossy().to_string(),
+                is_favorite: false,
+                status: ScoreStatus::Main,
+                updated_at: Local::now().naive_local(),
+                updated_by: "server-1".to_string(),
+            },
+            &[],
+        )
+        .expect("insert song");
+
+        db.insert_score(&Score {
+            id: "score-1".to_string(),
+            song_id: "song-1".to_string(),
+            name: Some("Piano".to_string()),
+            host_id: "server-1".to_string(),
+            file_path: song_dir.to_string_lossy().to_string(),
+            file_name: "draft-score.musx".to_string(),
+            file_size: 13,
+            file_modified_at: Local::now().naive_local(),
+            updated_at: Local::now().naive_local(),
+            status: ScoreStatus::Draft,
+            updated_by: "server-1".to_string(),
+        })
+        .expect("insert draft score");
+
+        let summary = generate_song_archives(&db, &app_data_dir, &cloud_root_dir)
+            .expect("generate archives");
+
+        assert_eq!(summary.total, 1);
+        assert_eq!(summary.generated, 0);
+        assert_eq!(summary.skipped, 1);
+        assert_eq!(summary.failed, 0);
+        assert!(!cloud_root_dir.join("songs").join("song-1.tar.zst").exists());
+    }
+
+    #[test]
     fn regenerates_when_archive_missing_but_has_preserved_scores() {
         let temp = tempdir().expect("temp dir");
         let songs_dir = temp.path().join("songs");
@@ -1318,6 +1361,7 @@ mod tests {
                 name: "Musica".to_string(),
                 composer: None,
                 arranger: None,
+                path: "/music/song-1".to_string(),
                 is_favorite: false,
                 status: crate::domain::models::ScoreStatus::Main,
                 updated_at: chrono::Local::now().naive_local(),
@@ -1329,8 +1373,8 @@ mod tests {
 
         let conn = db.conn.lock().expect("lock db");
         conn.execute(
-            "INSERT INTO scores (id, song_id, name, host_id, file_path, file_name, file_size, file_modified_at, status)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, datetime('now'), ?8)",
+            "INSERT INTO scores (id, song_id, name, host_id, file_path, file_name, file_extension, file_size, file_modified_at, status)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, datetime('now'), ?9)",
             rusqlite::params![
                 "score-1",
                 "song-1",
@@ -1338,6 +1382,7 @@ mod tests {
                 "server",
                 "/tmp",
                 "score-1.musx",
+                "musx",
                 0,
                 "draft",
             ],

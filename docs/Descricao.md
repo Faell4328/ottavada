@@ -1,4 +1,4 @@
-# Descrição do Projeto
+# 1. Descrição do Projeto
 
 O **Score Maestro** é um software gratuito, desenvolvido para facilitar o dia a dia de músicos e regentes no gerenciamento de músicas e partituras. Seu principal objetivo é resolver desafios comuns relacionados à organização, sincronização e distribuição de repertórios.
 
@@ -12,7 +12,7 @@ O **Score Maestro** foi projetado para funcionar em conjunto com ferramentas a
 
 Dessa forma, o sistema se adapta ao fluxo de trabalho já estabelecido, permitindo que músicos e regentes continuem utilizando as ferramentas que já conhecem e preferem, sem necessidade de mudanças na rotina de trabalho.
 
-## 1. Repertório organizado
+## 1.1. Repertório organizado
 
 O **Score Maestro** oferece diversos filtros para facilitar a organização e a localização das músicas, incluindo:
 
@@ -25,7 +25,7 @@ Além disso, o sistema já possui uma **barra de pesquisa**, permitindo localiz
 
 Atualmente, a pesquisa funciona de forma direta e depende da correspondência dos termos informados. Futuramente, está prevista a implementação de uma **pesquisa inteligente**, capaz de identificar músicas mesmo com erros de digitação, nomes incompletos ou pequenas variações na busca.
 
-## 2. Evitar duplicação no repertório
+## 1.2. Evitar duplicação no repertório
 
 Para manter a organização do repertório, o Score Maestro não permite músicas com nomes duplicados e também impede partituras de instrumentos com o mesmo nome dentro de uma mesma música.
 
@@ -47,7 +47,7 @@ Quando for necessário criar variações, os nomes das músicas e dos instrument
 
 Dessa forma, o sistema evita duplicações, reduz ambiguidades e mantém o repertório mais organizado e consistente.
 
-## 3. Sincronização entre computadores
+## 1.3. Sincronização entre computadores
 
 O **Score Maestro** utiliza uma arquitetura **cliente-servidor**, permitindo que múltiplos computadores mantenham suas partituras sincronizadas.
 
@@ -69,15 +69,15 @@ O cliente funciona como um leitor e sincronizador local, permitindo:
 
 **Importante:** o sistema permite **apenas um servidor** e **vários clientes conectados**.
 
-## 4. Partituras disponíveis offline
+## 1.4. Partituras disponíveis offline
 
 Com o **Score Maestro**, não é necessário estar conectado à internet para acessar as partituras já sincronizadas. Todos os arquivos ficam armazenados localmente no computador do cliente, garantindo acesso mesmo sem conexão.
 
 **Observação:** para aplicar novas alterações ou receber, é necessário acesso à internet. Entretanto, as partituras já baixadas permanecem disponíveis normalmente.
 
-# Limitações e filosofia do sistema
+# 2. Limitações e filosofia do sistema
 
-## Limitação intencional
+## 2.1. Limitação intencional
 
 O **Score Maestro** possui uma limitação intencional: o sistema apenas indexa um diretório existente e as partituras nele contidas. Essa decisão faz parte da filosofia do projeto e não representa uma restrição técnica.
 
@@ -111,7 +111,7 @@ Amazing Grace/
 └── Amazing Grace - trombone.mus
 ```
 
-## Fluxo simplificado
+## 2.2. Fluxo simplificado
 
 ![](C:\Users\rhafa\Documents\Score-Maestro\docs\Diagrama.jpg)
 

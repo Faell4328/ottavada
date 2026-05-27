@@ -1,6 +1,6 @@
 # 1. Primeiro acesso
 
-## 1.1 Tela de apresentação
+## 1.1. Tela de apresentação
 
 A tela deve ter um texto informando se o usuário for novo, é recomendado assistir o tutorial para aprender a usar a ferramenta. Deve ter um botão que abre o navegador padrão com o link do tutorial.
 
@@ -8,13 +8,13 @@ Também deve ter a intro do Score Maestro
 
 ---
 
-## 1.2 Selecionar o tipo do computador
+## 1.2. Selecionar o tipo do computador
 
 O usuário deve selecionar entre cliente e servidor. Deve ter um breve texto explicando a diferença de cada um.
 
 ---
 
-## 1.3 Adicionar nome do computador e organização
+## 1.3. Adicionar nome do computador e organização
 
 O usuário deve informar o nome do computador e da organização
 

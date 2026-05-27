@@ -583,7 +583,7 @@ export default function SettingsPage() {
   const librarySummary = settings.library_summary;
 
   return (
-    <div className="flex min-h-screen flex-col bg-gradient-to-b from-[#edf1f6] via-[#f2f5fa] to-[#f8fafd] select-none">
+    <div className="flex min-h-screen flex-col bg-linear-to-b from-[#edf1f6] via-[#f2f5fa] to-[#f8fafd] select-none">
       {/* Header */}
       <div className="flex items-center gap-3 border-b border-[#d8e0ea] bg-[#eef2f6] px-4 py-3">
         <button
@@ -838,13 +838,13 @@ export default function SettingsPage() {
                 <SummaryColumn
                   label="Músicas"
                   main={librarySummary.main.songs_count}
-                  pending={librarySummary.pending.songs_count}
+                  draft={librarySummary.draft.songs_count}
                   notFound={librarySummary.not_found.songs_count}
                 />
                 <SummaryColumn
                   label="Partituras"
                   main={librarySummary.main.scores_count}
-                  pending={librarySummary.pending.scores_count}
+                  draft={librarySummary.draft.scores_count}
                   notFound={librarySummary.not_found.scores_count}
                 />
               </div>
@@ -963,12 +963,12 @@ function Field({
 function SummaryColumn({
   label,
   main,
-  pending,
+  draft,
   notFound,
 }: {
   label: string;
   main: number;
-  pending: number;
+  draft: number;
   notFound: number;
 }) {
   return (
@@ -980,8 +980,8 @@ function SummaryColumn({
           <strong>{main}</strong>
         </div>
         <div className="flex items-center justify-between">
-          <span>Pending</span>
-          <strong>{pending}</strong>
+          <span>Rascunho</span>
+          <strong>{draft}</strong>
         </div>
         <div className="flex items-center justify-between">
           <span>Not found</span>

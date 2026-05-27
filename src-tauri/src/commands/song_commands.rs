@@ -31,6 +31,16 @@ fn normalized_optional_text_ref(value: Option<&str>) -> Option<String> {
     value.map(|v| v.trim().to_string()).filter(|v| !v.is_empty())
 }
 
+fn normalized_required_song_path(path: &str) -> Result<String, AppError> {
+    let normalized = path.trim().to_string();
+    if normalized.is_empty() {
+        return Err(AppError::Generic(
+            "Caminho da música não pode estar vazio".into(),
+        ));
+    }
+    Ok(normalized)
+}
+
 fn ensure_unique_song_name(
     songs: &[SongListItem],
     song_name: &str,
@@ -288,11 +298,13 @@ fn import_files_core(
             existing.id.clone()
         } else {
             let new_song_id = uuid::Uuid::new_v4().to_string();
+            let song_path = crate::services::indexer::split_file_path(&group_files[0].path).0;
             let song = Song {
                 id: new_song_id.clone(),
                 name: song_name.clone(),
                 composer: normalized_optional_text_ref(composer),
                 arranger: normalized_optional_text_ref(arranger),
+                path: song_path,
                 is_favorite: false,
                 status: ScoreStatus::Main,
                 updated_at: now,
@@ -434,8 +446,9 @@ pub fn create_song(
     db: State<'_, Database>,
     store: State<'_, SystemStore>,
     name: String,
+    path: String,
 ) -> Result<SongListItem, AppError> {
-    create_song_with_metadata(db, store, name, None, None, Vec::new())
+    create_song_with_metadata(db, store, name, path, None, None, Vec::new())
 }
 
 #[tauri::command]
@@ -443,9 +456,10 @@ pub fn create_song_with_categories(
     db: State<'_, Database>,
     store: State<'_, SystemStore>,
     name: String,
+    path: String,
     category_ids: Vec<String>,
 ) -> Result<SongListItem, AppError> {
-    create_song_with_metadata(db, store, name, None, None, category_ids)
+    create_song_with_metadata(db, store, name, path, None, None, category_ids)
 }
 
 #[tauri::command]
@@ -453,11 +467,13 @@ pub fn create_song_with_metadata(
     db: State<'_, Database>,
     store: State<'_, SystemStore>,
     name: String,
+    path: String,
     composer: Option<String>,
     arranger: Option<String>,
     category_ids: Vec<String>,
 ) -> Result<SongListItem, AppError> {
     let normalized_name = normalized_required_song_name(&name)?;
+    let normalized_path = normalized_required_song_path(&path)?;
     let updated_by = validate_server_create_song(&db, &store, &normalized_name)?;
     let now = Local::now().naive_local();
     let song_id = uuid::Uuid::new_v4().to_string();
@@ -468,6 +484,7 @@ pub fn create_song_with_metadata(
         name: normalized_name,
         composer: normalized_optional_text(composer),
         arranger: normalized_optional_text(arranger),
+        path: normalized_path,
         is_favorite: false,
         status: ScoreStatus::Main,
         updated_at: now,
@@ -518,6 +535,7 @@ pub fn update_song(
         name: normalized_name,
         composer: normalized_optional_text(composer),
         arranger: normalized_optional_text(arranger),
+        path: original_song.path,
         is_favorite: original_song.is_favorite,
         status: original_song.status,
         updated_at: now,

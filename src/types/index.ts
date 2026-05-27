@@ -17,7 +17,7 @@ export interface ScoreListItem {
   file_path: string;
   file_extension: string;
   updated_at: string;
-  status: "main" | "pending" | "draft" | "not_found";
+  status: "main" | "draft" | "not_found";
 }
 
 export interface Category {
@@ -57,7 +57,7 @@ export interface LibraryStatusSummary {
 
 export interface LibrarySummary {
   main: LibraryStatusSummary;
-  pending: LibraryStatusSummary;
+  draft: LibraryStatusSummary;
   not_found: LibraryStatusSummary;
 }
 

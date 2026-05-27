@@ -118,6 +118,7 @@ mod tests {
                 name: "CANON".to_string(),
                 composer: None,
                 arranger: None,
+                path: source_dir.to_string_lossy().to_string(),
                 is_favorite: false,
                 status: ScoreStatus::Main,
                 updated_at: now(),

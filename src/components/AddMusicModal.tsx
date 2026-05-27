@@ -15,6 +15,7 @@ interface AddMusicModalProps {
   onClose: () => void;
   onSave: (data: {
     title: string;
+    path: string;
     composer: string | null;
     arranger: string | null;
     categoryIds: string[];
@@ -42,6 +43,7 @@ export function AddMusicModal({
     [allSongSuggestions]
   );
   const [title, setTitle] = useState("");
+  const [path, setPath] = useState("");
   const [composer, setComposer] = useState("");
   const [arranger, setArranger] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -57,6 +59,7 @@ export function AddMusicModal({
   useEffect(() => {
     if (isOpen) {
       setTitle("");
+      setPath("");
       setComposer("");
       setArranger("");
       setSelectedCategories(defaultCategoryIds);
@@ -94,6 +97,11 @@ export function AddMusicModal({
       return;
     }
 
+    if (!path.trim()) {
+      setError("Digite o caminho da música");
+      return;
+    }
+
     if (isDuplicateSong) {
       setError(describeExistingSongWarning());
       return;
@@ -105,6 +113,7 @@ export function AddMusicModal({
     try {
       await onSave({
         title: normalizedTitle,
+        path: path.trim(),
         composer: composer.trim() || null,
         arranger: arranger.trim() || null,
         categoryIds: selectedCategories,
@@ -146,6 +155,16 @@ export function AddMusicModal({
           onChange={(value) => setTitle(normalizeSongNameInput(value))}
           placeholder="Nome da música"
           autoFocus
+          readOnly={isDuplicateSong}
+          onKeyDown={(e) => { if (e.key === "Enter") handleSave(); }}
+        />
+      </FormField>
+
+      <FormField label="Caminho da Música" required>
+        <TextInput
+          value={path}
+          onChange={setPath}
+          placeholder="C:\\Músicas\\Canon"
           readOnly={isDuplicateSong}
           onKeyDown={(e) => { if (e.key === "Enter") handleSave(); }}
         />

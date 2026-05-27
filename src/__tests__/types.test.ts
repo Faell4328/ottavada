@@ -45,11 +45,11 @@ describe("TypeScript Types", () => {
     it("should support status values", () => {
       const scores: ScoreListItem[] = [
         { id: "1", name: "V1", file_extension: "pdf", file_path: "/v1.pdf", updated_at: "2024-01-01 12:00:00", status: "main" },
-        { id: "2", name: "V2", file_extension: "pdf", file_path: "/v2.pdf", updated_at: "2024-01-01 12:00:00", status: "pending" },
+        { id: "2", name: "V2", file_extension: "pdf", file_path: "/v2.pdf", updated_at: "2024-01-01 12:00:00", status: "draft" },
         { id: "3", name: "V3", file_extension: "pdf", file_path: "/v3.pdf", updated_at: "2024-01-01 12:00:00", status: "draft" },
       ];
       expect(scores[0].status).toBe("main");
-      expect(scores[1].status).toBe("pending");
+      expect(scores[1].status).toBe("draft");
       expect(scores[2].status).toBe("draft");
     });
   });
