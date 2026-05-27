@@ -307,3 +307,15 @@
 - corrigir problemas de perda de backup;
 - impedir múltiplas instâncias do app;
 - revisar a estrutura de upload, consulta e integração com nuvem.
+
+# Versão 1.2
+
+## Funcionalidades
+
+## Melhorias
+
+- mudando de indexar arquivo para indexar diretórios.
+
+## Correções
+
+- removendo campos duplicados no `tauri-store`.

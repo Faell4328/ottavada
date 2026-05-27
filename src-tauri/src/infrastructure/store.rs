@@ -97,26 +97,21 @@ impl SystemStore {
     pub fn get_app_settings(&self) -> Result<AppSettings, AppError> {
         let store = self.load_store()?;
 
-        let computer_id = read_string(&store, &["computer_id", "computerId", "id"])
-            .unwrap_or_default();
+        let computer_id = read_string(&store, &["id"]).unwrap_or_default();
 
-        let computer_name = read_string(&store, &["computer_name", "computerName", "name"]);
+        let computer_name = read_string(&store, &["computerName"]);
 
-        let organization_name = read_string(
-            &store,
-            &["organization_name", "organizationName", "organization"],
-        )
-        .and_then(|value| if value.trim().is_empty() { None } else { Some(value) });
+        let organization_name = read_string(&store, &["organizationName"])
+            .and_then(|value| if value.trim().is_empty() { None } else { Some(value) });
 
-        let computer_type_raw = read_string(&store, &["computer_type", "computerType", "type"])
+        let computer_type_raw = read_string(&store, &["type"])
             .unwrap_or_else(|| "server".to_string());
 
         let computer_type = ComputerType::from_store_str(&computer_type_raw);
 
         let rclone_config = store
-            .get("rclone_config")
-            .and_then(Self::parse_rclone_config)
-            .or_else(|| store.get("rclone").and_then(Self::parse_rclone_config));
+            .get("rclone")
+            .and_then(Self::parse_rclone_config);
 
         let cloud = store.get("cloud");
         let last_snapshot_timestamp = cloud
@@ -202,40 +197,27 @@ impl SystemStore {
     pub fn save_app_settings(&self, settings: &AppSettings) -> Result<(), AppError> {
         let mut store = self.load_store()?;
 
-        // Estrutura canônica do store: campos modernos e chaves legadas convivem
         store["id"] = serde_json::json!(settings.computer_id);
-        store["computer_id"] = serde_json::json!(settings.computer_id);
-        store["name"] = serde_json::json!(settings.computer_name.clone().unwrap_or_default());
-        store["computer_name"] = serde_json::json!(settings.computer_name.clone().unwrap_or_default());
         store["computerName"] = serde_json::json!(settings.computer_name.clone().unwrap_or_default());
         store["type"] = serde_json::json!(settings.computer_type.as_store_str());
-        store["computer_type"] = serde_json::json!(settings.computer_type.as_store_str());
 
         if let Some(organization_name) = settings.organization_name.as_ref() {
             let organization_name = organization_name.trim();
             if !organization_name.is_empty() {
-                store["organization"] = serde_json::json!(organization_name);
                 store["organizationName"] = serde_json::json!(organization_name);
-                store["organization_name"] = serde_json::json!(organization_name);
             } else {
-                store.as_object_mut().map(|obj| obj.remove("organization"));
                 store.as_object_mut().map(|obj| obj.remove("organizationName"));
-                store.as_object_mut().map(|obj| obj.remove("organization_name"));
             }
         } else {
-            store.as_object_mut().map(|obj| obj.remove("organization"));
             store.as_object_mut().map(|obj| obj.remove("organizationName"));
-            store.as_object_mut().map(|obj| obj.remove("organization_name"));
         }
 
         if let Some(ref rclone_cfg) = settings.rclone_config {
             let rclone_json = serde_json::to_value(rclone_cfg).map_err(|e| {
                 AppError::Generic(format!("Erro ao serializar rclone config: {}", e))
             })?;
-            store["rclone"] = rclone_json.clone();
-            store["rclone_config"] = rclone_json;
+            store["rclone"] = rclone_json;
         } else {
-            store.as_object_mut().map(|obj| obj.remove("rclone_config"));
             store.as_object_mut().map(|obj| obj.remove("rclone"));
         }
 
@@ -245,7 +227,6 @@ impl SystemStore {
             "lastBackupTimestamp": settings.last_backup_timestamp.unwrap_or(0),
         });
 
-        // Chaves legadas mantidas por compatibilidade enquanto o frontend migra completamente.
         let mode_str = match settings.google_drive_mode {
             GoogleDriveMode::Local => "local",
             GoogleDriveMode::Api => "api",
@@ -431,7 +412,7 @@ mod tests {
     }
 
     #[test]
-    fn persists_documented_store_shape_and_reads_legacy_keys() {
+    fn persists_documented_store_shape() {
         let dir = create_test_app_data_dir("store-shape");
         let store = SystemStore::new(dir.path().to_path_buf());
 
@@ -456,16 +437,17 @@ mod tests {
             Some("Servidor")
         );
         assert_eq!(
-            raw_store.get("organization").and_then(|v| v.as_str()),
-            Some("Orquestra")
-        );
-        assert_eq!(
             raw_store.get("organizationName").and_then(|v| v.as_str()),
             Some("Orquestra")
         );
         assert_eq!(raw_store.get("type").and_then(|v| v.as_str()), Some("server"));
         assert!(raw_store.get("rclone").is_some());
         assert!(raw_store.get("cloud").is_some());
+        assert!(raw_store.get("computer_id").is_none());
+        assert!(raw_store.get("computer_name").is_none());
+        assert!(raw_store.get("organization_name").is_none());
+        assert!(raw_store.get("computer_type").is_none());
+        assert!(raw_store.get("rclone_config").is_none());
 
         let loaded = store.get_app_settings().expect("reload settings");
         assert_eq!(loaded.computer_id, "server-2");

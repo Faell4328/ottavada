@@ -2,12 +2,12 @@
 {
     "id": "lfajkdçf",
     "computerName": "Faell",
-    "organization": "Sei la",
+    "organizationName": "Sei la",
+    "firstRunCompleted": false,
     "type": "client",
     "rclone": {
         "provider": "drive" || "koofr",
     },
-    "first_run_completed": false,
     "cloud": {
         // Timestamp do último snapshot implementado
         "lastSnapshotTimestamp": 14821049124,
