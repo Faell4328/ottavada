@@ -24,10 +24,6 @@ pub struct EventsFileSummary {
 
 #[derive(Debug, Serialize)]
 struct EventsMessagePack {
-    #[serde(rename = "computerId")]
-    computer_id: String,
-    #[serde(rename = "origin")]
-    origin: String,
     events: Vec<EventMessagePack>,
 }
 
@@ -47,10 +43,8 @@ struct EventMessagePack {
 #[derive(Debug, Serialize)]
 struct EventDataMessagePack {
     field: String,
-    #[serde(rename = "oldValue", skip_serializing_if = "Option::is_none")]
-    old_value: Option<String>,
-    #[serde(rename = "newValue", skip_serializing_if = "Option::is_none")]
-    new_value: Option<String>,
+    #[serde(rename = "value", skip_serializing_if = "Option::is_none")]
+    value: Option<String>,
 }
 
 pub fn generate_events_msgpack(
@@ -76,8 +70,7 @@ pub fn generate_events_msgpack(
         let data = change.field.as_ref().map(|field| {
             vec![EventDataMessagePack {
                 field: field.clone(),
-                old_value: None,
-                new_value: status_override.clone().or_else(|| change.value.clone()),
+                value: status_override.clone().or_else(|| change.value.clone()),
             }]
         });
 
@@ -91,13 +84,7 @@ pub fn generate_events_msgpack(
         });
     }
 
-    let origin = settings.computer_type.as_store_str().to_string();
-
-    let payload = EventsMessagePack {
-        computer_id: settings.computer_id,
-        origin,
-        events,
-    };
+    let payload = EventsMessagePack { events };
 
     let output_path = actions_dir.join(EVENTS_FILE_NAME);
 

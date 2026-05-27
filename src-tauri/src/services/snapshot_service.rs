@@ -1,4 +1,5 @@
 use std::fs;
+use std::collections::HashMap;
 
 use serde::Serialize;
 use tracing::warn;
@@ -34,6 +35,14 @@ struct SnapshotMessagePack {
     #[serde(rename = "generatedAt")]
     generated_at: i64,
     categories: Vec<SnapshotCategory>,
+    #[serde(rename = "categoriesSongs")]
+    categories_songs: Vec<SnapshotCategorySong>,
+    composers: Vec<SnapshotNamedEntity>,
+    #[serde(rename = "composerSongs")]
+    composer_songs: Vec<SnapshotNamedRelation>,
+    arrangers: Vec<SnapshotNamedEntity>,
+    #[serde(rename = "arrangerSongs")]
+    arranger_songs: Vec<SnapshotNamedRelation>,
     songs: Vec<SnapshotSong>,
 }
 
@@ -47,25 +56,46 @@ struct SnapshotCategory {
 struct SnapshotSong {
     id: String,
     name: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    composer: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    arranger: Option<String>,
-    path: String,
-    #[serde(rename = "categoriesId")]
-    categories_id: Vec<String>,
     scores: Vec<SnapshotScore>,
 }
 
 #[derive(Debug, Serialize)]
 struct SnapshotScore {
     id: String,
+    #[serde(rename = "songId")]
+    song_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     name: Option<String>,
-    extension: String,
-    status: String,
-    #[serde(rename = "updatedAt")]
-    updated_at: i64,
+    #[serde(rename = "fileExtension")]
+    file_extension: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    status: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+struct SnapshotCategorySong {
+    id: String,
+    #[serde(rename = "categoryId")]
+    category_id: String,
+    #[serde(rename = "songId")]
+    song_id: String,
+}
+
+#[derive(Debug, Serialize)]
+struct SnapshotNamedEntity {
+    id: String,
+    name: String,
+}
+
+#[derive(Debug, Serialize)]
+struct SnapshotNamedRelation {
+    id: String,
+    #[serde(rename = "composerId", skip_serializing_if = "Option::is_none")]
+    composer_id: Option<String>,
+    #[serde(rename = "arrangerId", skip_serializing_if = "Option::is_none")]
+    arranger_id: Option<String>,
+    #[serde(rename = "songId")]
+    song_id: String,
 }
 
 pub fn generate_snapshot_msgpack(
@@ -86,43 +116,103 @@ pub fn generate_snapshot_msgpack(
     let all_songs = db.get_all_songs()?;
     let all_categories = db.get_all_categories()?;
 
+    let mut category_songs = Vec::new();
+    let mut composers_by_name: HashMap<String, String> = HashMap::new();
+    let mut composer_entities = Vec::new();
+    let mut composer_songs = Vec::new();
+    let mut arrangers_by_name: HashMap<String, String> = HashMap::new();
+    let mut arranger_entities = Vec::new();
+    let mut arranger_songs = Vec::new();
+
     let songs = all_songs
         .iter()
         .map(|song| SnapshotSong {
             id: song.id.clone(),
             name: song.name.clone(),
-            composer: song.composer.clone(),
-            arranger: song.arranger.clone(),
-            path: song
-                .scores
-                .first()
-                .map(|score| score.file_path.clone())
-                .unwrap_or_else(|| format!("/songs/{}", song.id)),
-            categories_id: song.category_ids.clone(),
             scores: song
                 .scores
                 .iter()
                 .map(|score| SnapshotScore {
-                    // Para draft/not_found, o snapshot reflete a versão efetivamente disponível
-                    // na nuvem (main anterior quando existir; not_found quando não existir).
+                    id: score.id.clone(),
+                    song_id: song.id.clone(),
+                    name: score.name.clone(),
+                    file_extension: if score.file_extension.starts_with('.') {
+                        score.file_extension.clone()
+                    } else {
+                        format!(".{}", score.file_extension.trim_start_matches('.'))
+                    },
                     status: match score.status {
-                        ScoreStatus::Draft | ScoreStatus::NotFound => {
+                        ScoreStatus::Draft | ScoreStatus::NotFound => Some(
                             if previous_main_versions.has_previous_main(&score.id) {
                                 "main".to_string()
                             } else {
                                 "not_found".to_string()
-                            }
-                        }
-                        _ => score.status.as_str().to_string(),
+                            },
+                        ),
+                        _ => None,
                     },
-                    id: score.id.clone(),
-                    name: score.name.clone(),
-                    extension: score.file_extension.clone(),
-                    updated_at: score.updated_at.and_utc().timestamp(),
                 })
                 .collect(),
         })
         .collect::<Vec<_>>();
+
+    for song in &all_songs {
+        for category_id in &song.category_ids {
+            category_songs.push(SnapshotCategorySong {
+                id: uuid::Uuid::new_v4().to_string(),
+                category_id: category_id.clone(),
+                song_id: song.id.clone(),
+            });
+        }
+
+        if let Some(composer_name) = song.composer.as_ref().map(|value| value.trim()).filter(|value| !value.is_empty()) {
+            let composer_id = composers_by_name
+                .entry(composer_name.to_string())
+                .or_insert_with(|| uuid::Uuid::new_v4().to_string())
+                .clone();
+
+            if !composer_entities.iter().any(|entity: &SnapshotNamedEntity| entity.id == composer_id) {
+                composer_entities.push(SnapshotNamedEntity {
+                    id: composer_id.clone(),
+                    name: composer_name.to_string(),
+                });
+            }
+
+            composer_songs.push(SnapshotNamedRelation {
+                id: uuid::Uuid::new_v4().to_string(),
+                composer_id: Some(composer_id),
+                arranger_id: None,
+                song_id: song.id.clone(),
+            });
+        }
+
+        if let Some(arranger_name) = song.arranger.as_ref().map(|value| value.trim()).filter(|value| !value.is_empty()) {
+            let arranger_id = arrangers_by_name
+                .entry(arranger_name.to_string())
+                .or_insert_with(|| uuid::Uuid::new_v4().to_string())
+                .clone();
+
+            if !arranger_entities.iter().any(|entity: &SnapshotNamedEntity| entity.id == arranger_id) {
+                arranger_entities.push(SnapshotNamedEntity {
+                    id: arranger_id.clone(),
+                    name: arranger_name.to_string(),
+                });
+            }
+
+            arranger_songs.push(SnapshotNamedRelation {
+                id: uuid::Uuid::new_v4().to_string(),
+                composer_id: None,
+                arranger_id: Some(arranger_id),
+                song_id: song.id.clone(),
+            });
+        }
+    }
+
+    category_songs.sort_by(|left, right| left.id.cmp(&right.id));
+    composer_entities.sort_by(|left, right| left.name.cmp(&right.name).then(left.id.cmp(&right.id)));
+    composer_songs.sort_by(|left, right| left.id.cmp(&right.id));
+    arranger_entities.sort_by(|left, right| left.name.cmp(&right.name).then(left.id.cmp(&right.id)));
+    arranger_songs.sort_by(|left, right| left.id.cmp(&right.id));
 
     let categories = all_categories
         .iter()
@@ -137,6 +227,11 @@ pub fn generate_snapshot_msgpack(
     let payload = SnapshotMessagePack {
         generated_at,
         categories,
+        categories_songs: category_songs,
+        composers: composer_entities,
+        composer_songs,
+        arrangers: arranger_entities,
+        arranger_songs,
         songs,
     };
 

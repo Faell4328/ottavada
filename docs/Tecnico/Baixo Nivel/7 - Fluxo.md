@@ -555,11 +555,11 @@
 
 8. Descompacta o arquivo "events.msgpack.zst" para "events.msgpack" no diretório: "/temp/events/"
 
-9. Pega o arquivo e verifica se o tipo dele é "server", pelo campo "origin" no arquivo "events.msgpack"
-    - Caso não seja:
+9. Pega o arquivo e valida os eventos de acordo com o formato esperado pelo cliente.
+    - Caso o arquivo esteja inválido:
         - Deve ser emitido um toast avisando o usuário que existe algo errado e deve chamar o desenvolvedor responsável para investigar
         - O fluxo deve ser encerrado (caso esse fluxo esteja em outro, o fluxo pai deve ser encerrado também)
-    - Caso seja:
+    - Caso esteja válido:
         - Vai para próxima etapa
 
 10. Verifica em seu "tauri-plugin-store" o "lastChangeTimestamp" e verifica se possui algum evento novo, com base no "timestamp" de cada evento
@@ -1049,11 +1049,11 @@
 8. Copia o arquivo em um diretório temporário e descompacta
     - Diretório: "/temp/events/"
 
-9. Pega o arquivo e verifica se o tipo dele é "server", pelo campo "origin" no arquivo "events.msgpack"
-    - Caso não seja:
+9. Pega o arquivo e valida os eventos de acordo com o formato esperado pelo cliente.
+    - Caso o arquivo esteja inválido:
         - Deve ser emitido um toast avisando o usuário que existe algo errado e deve chamar o desenvolvedor responsável para investigar
         - O fluxo deve ser encerrado (caso esse fluxo esteja em outro, o fluxo pai deve ser encerrado também)
-    - Caso seja:
+    - Caso esteja válido:
         - Vai para próxima etapa
 
 10. Verifica em seu "tauri-plugin-store" o "lastChangeTimestamp" e verifica se possui algum evento novo, com base no "timestamp" de cada evento

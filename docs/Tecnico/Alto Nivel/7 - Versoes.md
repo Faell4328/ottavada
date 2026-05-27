@@ -312,12 +312,17 @@
 
 ## Funcionalidades
 
+- indexação de diretórios.
+
 ## Melhorias
 
-- mudando de indexar arquivo para indexar diretórios.
+- atualizando a modelagem do banco de dados.
+- atualizando os arquivos `*.msgpack`.
+
+! Refatoração completa do código.
 
 ## Correções
 
 - removendo duplicações e padronizando os campos no `tauri-store`.
 - removendo completamente o status `pedding` do código.
-- corrigindo inconsistências no status `draft`.
+- removendo inconsistências no status `draft`.

@@ -677,10 +677,10 @@ impl Database {
             .join(", ");
 
         let sql = format!(
-            "SELECT song_id, category_id
+            "SELECT songId, categoryId
              FROM categoriesSongs
-             WHERE song_id IN ({})
-             ORDER BY song_id ASC, category_id ASC",
+             WHERE songId IN ({})
+             ORDER BY songId ASC, categoryId ASC",
             placeholders
         );
 

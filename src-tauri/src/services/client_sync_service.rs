@@ -30,7 +30,18 @@ pub struct ClientSyncSummary {
 struct SnapshotMessagePack {
     #[serde(rename = "generatedAt")]
     generated_at: i64,
+    #[serde(default)]
     categories: Vec<SnapshotCategory>,
+    #[serde(default, rename = "categoriesSongs")]
+    categories_songs: Vec<SnapshotCategorySong>,
+    #[serde(default)]
+    composers: Vec<SnapshotNamedEntity>,
+    #[serde(default, rename = "composerSongs")]
+    composer_songs: Vec<SnapshotNamedRelation>,
+    #[serde(default)]
+    arrangers: Vec<SnapshotNamedEntity>,
+    #[serde(default, rename = "arrangerSongs")]
+    arranger_songs: Vec<SnapshotNamedRelation>,
     songs: Vec<SnapshotSong>,
 }
 
@@ -44,30 +55,61 @@ struct SnapshotCategory {
 struct SnapshotSong {
     id: String,
     name: String,
+    #[serde(default)]
     composer: Option<String>,
+    #[serde(default)]
     arranger: Option<String>,
     #[serde(default)]
-    path: String,
-    #[serde(rename = "categoriesId")]
+    path: Option<String>,
+    #[serde(default, rename = "categoriesId")]
     categories_id: Vec<String>,
+    #[serde(default)]
     scores: Vec<SnapshotScore>,
 }
 
 #[derive(Debug, Deserialize)]
 struct SnapshotScore {
     id: String,
-    name: Option<String>,
+    #[serde(rename = "songId", default)]
+    song_id: Option<String>,
     #[serde(default)]
-    extension: Option<String>,
-    status: String,
-    #[serde(rename = "updatedAt")]
-    updated_at: i64,
+    name: Option<String>,
+    #[serde(rename = "fileExtension", alias = "extension", default)]
+    file_extension: Option<String>,
+    #[serde(default)]
+    status: Option<String>,
+    #[serde(rename = "updatedAt", default)]
+    updated_at: Option<i64>,
+}
+
+#[derive(Debug, Deserialize)]
+struct SnapshotCategorySong {
+    id: String,
+    #[serde(rename = "categoryId")]
+    category_id: String,
+    #[serde(rename = "songId")]
+    song_id: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct SnapshotNamedEntity {
+    id: String,
+    name: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct SnapshotNamedRelation {
+    id: String,
+    #[serde(rename = "composerId", default)]
+    composer_id: Option<String>,
+    #[serde(rename = "arrangerId", default)]
+    arranger_id: Option<String>,
+    #[serde(rename = "songId")]
+    song_id: String,
 }
 
 #[derive(Debug, Deserialize)]
 struct EventsMessagePack {
-    #[serde(rename = "origin")]
-    origin: String,
     events: Vec<EventMessagePack>,
 }
 
@@ -85,10 +127,8 @@ struct EventMessagePack {
 #[derive(Debug, Deserialize)]
 struct EventDataMessagePack {
     field: String,
-    #[serde(rename = "oldValue")]
-    old_value: Option<String>,
-    #[serde(rename = "newValue")]
-    new_value: Option<String>,
+    #[serde(rename = "value", alias = "oldValue", alias = "newValue")]
+    value: Option<String>,
 }
 
 #[derive(Default)]
@@ -147,12 +187,6 @@ pub fn apply_server_changes_for_client(
     if events_path.exists() {
         let events_payload: EventsMessagePack =
             read_zstd_msgpack(&events_path, "events.msgpack")?;
-        if events_payload.origin != "server" {
-            return Err(AppError::Generic(format!(
-                "Arquivo de eventos inválido para cliente: origin='{}'",
-                events_payload.origin
-            )));
-        }
 
         let known_change_timestamp = settings.last_change_timestamp.unwrap_or(0);
 
@@ -227,13 +261,46 @@ fn apply_snapshot(db: &Database, payload: &SnapshotMessagePack) -> Result<(), Ap
         let mut conn = db.conn.lock().unwrap();
         let tx = conn.transaction()?;
 
+        let composer_name_by_id: HashMap<String, String> = payload
+            .composers
+            .iter()
+            .map(|entity| (entity.id.clone(), entity.name.clone()))
+            .collect();
+        let arranger_name_by_id: HashMap<String, String> = payload
+            .arrangers
+            .iter()
+            .map(|entity| (entity.id.clone(), entity.name.clone()))
+            .collect();
+
+        let mut composer_name_by_song_id: HashMap<String, String> = HashMap::new();
+        for relation in &payload.composer_songs {
+            if let Some(composer_id) = relation.composer_id.as_ref() {
+                if let Some(name) = composer_name_by_id.get(composer_id) {
+                    composer_name_by_song_id.insert(relation.song_id.clone(), name.clone());
+                }
+            }
+        }
+
+        let mut arranger_name_by_song_id: HashMap<String, String> = HashMap::new();
+        for relation in &payload.arranger_songs {
+            if let Some(arranger_id) = relation.arranger_id.as_ref() {
+                if let Some(name) = arranger_name_by_id.get(arranger_id) {
+                    arranger_name_by_song_id.insert(relation.song_id.clone(), name.clone());
+                }
+            }
+        }
+
         tx.execute_batch(
             "
             DELETE FROM changedField;
             DELETE FROM songsBackup;
+            DELETE FROM composerSongs;
+            DELETE FROM arrangerSongs;
             DELETE FROM categoriesSongs;
             DELETE FROM scores;
             DELETE FROM songs;
+            DELETE FROM composer;
+            DELETE FROM arranger;
             DELETE FROM categories;
         ",
         )?;
@@ -245,18 +312,51 @@ fn apply_snapshot(db: &Database, payload: &SnapshotMessagePack) -> Result<(), Ap
             )?;
         }
 
+        for composer in &payload.composers {
+            tx.execute(
+                "INSERT INTO composer (id, name) VALUES (?1, ?2)",
+                params![composer.id, composer.name],
+            )?;
+        }
+
+        for arranger in &payload.arrangers {
+            tx.execute(
+                "INSERT INTO arranger (id, name) VALUES (?1, ?2)",
+                params![arranger.id, arranger.name],
+            )?;
+        }
+
         for song in &payload.songs {
             let last_score_file_modified_at = song
                 .scores
                 .iter()
-                .map(|score| score.updated_at)
+                .filter_map(|score| score.updated_at)
                 .max()
                 .unwrap_or(payload.generated_at);
-            let song_path = if song.path.trim().is_empty() {
-                format!("/songs/{}", song.id)
+            let song_path = if song
+                .path
+                .as_ref()
+                .map(|value| value.trim())
+                .filter(|value| !value.is_empty())
+                .is_some()
+            {
+                song.path.clone().unwrap()
             } else {
-                song.path.clone()
+                format!("/songs/{}", song.id)
             };
+
+            let composer_name = composer_name_by_song_id.get(&song.id).cloned().or_else(|| {
+                song.composer
+                    .as_ref()
+                    .map(|value| value.trim().to_string())
+                    .filter(|value| !value.is_empty())
+            });
+            let arranger_name = arranger_name_by_song_id.get(&song.id).cloned().or_else(|| {
+                song.arranger
+                    .as_ref()
+                    .map(|value| value.trim().to_string())
+                    .filter(|value| !value.is_empty())
+            });
 
             tx.execute(
                 "INSERT INTO songs (id, name, composer, arranger, path, is_favorite, last_score_file_modified_at)
@@ -264,38 +364,77 @@ fn apply_snapshot(db: &Database, payload: &SnapshotMessagePack) -> Result<(), Ap
                 params![
                     song.id,
                     song.name,
-                    song.composer,
-                    song.arranger,
+                    composer_name,
+                    arranger_name,
                     song_path,
                     last_score_file_modified_at,
                 ],
             )?;
 
-            for category_id in &song.categories_id {
-                tx.execute(
-                    "INSERT OR IGNORE INTO categoriesSongs (id, categoryId, songId) VALUES (?1, ?2, ?3)",
-                    params![uuid::Uuid::new_v4().to_string(), category_id, song.id],
-                )?;
+            if payload.categories_songs.is_empty() {
+                for category_id in &song.categories_id {
+                    tx.execute(
+                        "INSERT OR IGNORE INTO categoriesSongs (id, categoryId, songId) VALUES (?1, ?2, ?3)",
+                        params![uuid::Uuid::new_v4().to_string(), category_id, song.id],
+                    )?;
+                }
+            }
+
+            if song.categories_id.is_empty() && payload.categories_songs.is_empty() {
+                for relation in payload.categories_songs.iter().filter(|relation| relation.song_id == song.id) {
+                    tx.execute(
+                        "INSERT OR IGNORE INTO categoriesSongs (id, categoryId, songId) VALUES (?1, ?2, ?3)",
+                        params![relation.id.clone(), relation.category_id.clone(), song.id],
+                    )?;
+                }
             }
 
             for score in &song.scores {
-                let file_extension = normalize_extension(score.extension.as_deref())
+                let score_song_id = score.song_id.as_ref().unwrap_or(&song.id);
+                let file_extension = normalize_extension(score.file_extension.as_deref())
                     .unwrap_or_else(|| "score".to_string());
+                let score_status = score.status.clone().unwrap_or_else(|| "main".to_string());
+                let score_updated_at = score.updated_at.unwrap_or(payload.generated_at);
 
                 tx.execute(
                     "INSERT INTO scores (id, song_id, name, host_id, file_path, file_name, file_extension, file_size, file_modified_at, status)
                      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 0, datetime(?8, 'unixepoch'), ?9)",
                     params![
                         score.id,
-                        song.id,
+                        score_song_id,
                         score.name,
                         "server",
-                        format!("/cloud/songs/{}", song.id),
+                        format!("/cloud/songs/{}", score_song_id),
                         format!("{}.{}", score.id, file_extension),
                         file_extension,
-                        score.updated_at,
-                        score.status,
+                        score_updated_at,
+                        score_status,
                     ],
+                )?;
+            }
+        }
+
+        for relation in &payload.categories_songs {
+            tx.execute(
+                "INSERT INTO categoriesSongs (id, categoryId, songId) VALUES (?1, ?2, ?3)",
+                params![relation.id, relation.category_id, relation.song_id],
+            )?;
+        }
+
+        for relation in &payload.composer_songs {
+            if let Some(composer_id) = relation.composer_id.as_ref() {
+                tx.execute(
+                    "INSERT INTO composerSongs (id, composerId, songId) VALUES (?1, ?2, ?3)",
+                    params![relation.id, composer_id, relation.song_id],
+                )?;
+            }
+        }
+
+        for relation in &payload.arranger_songs {
+            if let Some(arranger_id) = relation.arranger_id.as_ref() {
+                tx.execute(
+                    "INSERT INTO arrangerSongs (id, arrangerId, songId) VALUES (?1, ?2, ?3)",
+                    params![relation.id, arranger_id, relation.song_id],
                 )?;
             }
         }
@@ -375,7 +514,7 @@ fn apply_delete_event(
                 if let Some(data_items) = &event.data {
                     for item in data_items {
                         if item.field == "categoryId" {
-                            if let Some(category_id) = item.old_value.as_ref().or(item.new_value.as_ref()) {
+                            if let Some(category_id) = item.value.as_ref() {
                                 tx.execute(
                                     "DELETE FROM categoriesSongs WHERE categoryId = ?1",
                                     params![category_id],
@@ -409,19 +548,19 @@ fn apply_upsert_field_event(
                 "name" => {
                     tx.execute(
                         "UPDATE songs SET name = COALESCE(?1, name) WHERE id = ?2",
-                        params![item.new_value.clone(), event.entity_id],
+                        params![item.value.clone(), event.entity_id],
                     )?;
                 }
                 "composer" => {
                     tx.execute(
                         "UPDATE songs SET composer = ?1 WHERE id = ?2",
-                        params![item.new_value.clone(), event.entity_id],
+                        params![item.value.clone(), event.entity_id],
                     )?;
                 }
                 "arranger" => {
                     tx.execute(
                         "UPDATE songs SET arranger = ?1 WHERE id = ?2",
-                        params![item.new_value.clone(), event.entity_id],
+                        params![item.value.clone(), event.entity_id],
                     )?;
                 }
                 _ => {}
@@ -429,7 +568,7 @@ fn apply_upsert_field_event(
         }
         "categories" => {
             if item.field == "name" {
-                let name = item.new_value.clone().unwrap_or_default();
+                let name = item.value.clone().unwrap_or_default();
                 tx.execute(
                     "INSERT INTO categories (id, name) VALUES (?1, ?2)
                      ON CONFLICT(id) DO UPDATE SET name = excluded.name",
@@ -439,7 +578,7 @@ fn apply_upsert_field_event(
         }
         "scores" => match item.field.as_str() {
             "songId" => {
-                let song_id = item.new_value.clone().ok_or_else(|| {
+                let song_id = item.value.clone().ok_or_else(|| {
                     AppError::Generic("Evento de score sem songId".to_string())
                 })?;
 
@@ -478,30 +617,30 @@ fn apply_upsert_field_event(
                 if score_exists(tx, &event.entity_id)? {
                     tx.execute(
                         "UPDATE scores SET name = ?1 WHERE id = ?2",
-                        params![item.new_value.clone(), event.entity_id],
+                        params![item.value.clone(), event.entity_id],
                     )?;
                 } else {
                     let pending = pending_scores
                         .entry(event.entity_id.clone())
                         .or_default();
-                    pending.name = item.new_value.clone();
+                    pending.name = item.value.clone();
                 }
             }
             "status" => {
                 if score_exists(tx, &event.entity_id)? {
                     tx.execute(
                         "UPDATE scores SET status = COALESCE(?1, status) WHERE id = ?2",
-                        params![item.new_value.clone(), event.entity_id],
+                        params![item.value.clone(), event.entity_id],
                     )?;
                 } else {
                     let pending = pending_scores
                         .entry(event.entity_id.clone())
                         .or_default();
-                    pending.status = item.new_value.clone();
+                    pending.status = item.value.clone();
                 }
             }
             "extension" => {
-                let Some(extension) = normalize_extension(item.new_value.as_deref()) else {
+                let Some(extension) = normalize_extension(item.value.as_deref()) else {
                     return Ok(());
                 };
 
@@ -527,10 +666,10 @@ fn apply_upsert_field_event(
                 .or_default();
 
             if item.field == "categoryId" {
-                entry.category_id = item.new_value.clone();
+                entry.category_id = item.value.clone();
             }
             if item.field == "songId" {
-                entry.song_id = item.new_value.clone();
+                entry.song_id = item.value.clone();
             }
 
             if let (Some(category_id), Some(song_id)) =
@@ -616,14 +755,6 @@ fn read_events_last_timestamp(path: &Path) -> Result<Option<i64>, AppError> {
     }
 
     let events_payload: EventsMessagePack = read_zstd_msgpack(path, "events.msgpack")?;
-    if events_payload.origin != "server" {
-        warn!(
-            "Arquivo de eventos em ações ignorado por origem inválida: origin='{}'",
-            events_payload.origin
-        );
-        return Ok(Some(i64::MAX));
-    }
-
     Ok(events_payload.events.into_iter().map(|event| event.timestamp).max())
 }
 
@@ -679,6 +810,14 @@ mod tests {
         #[serde(rename = "generatedAt")]
         generated_at: i64,
         categories: Vec<SnapshotCategoryTestPayload>,
+        #[serde(rename = "categoriesSongs")]
+        categories_songs: Vec<SnapshotCategorySongTestPayload>,
+        composers: Vec<SnapshotNamedEntityTestPayload>,
+        #[serde(rename = "composerSongs")]
+        composer_songs: Vec<SnapshotNamedRelationTestPayload>,
+        arrangers: Vec<SnapshotNamedEntityTestPayload>,
+        #[serde(rename = "arrangerSongs")]
+        arranger_songs: Vec<SnapshotNamedRelationTestPayload>,
         songs: Vec<SnapshotSongTestPayload>,
     }
 
@@ -692,26 +831,49 @@ mod tests {
     struct SnapshotSongTestPayload {
         id: String,
         name: String,
-        composer: Option<String>,
-        arranger: Option<String>,
-        #[serde(rename = "categoriesId")]
-        categories_id: Vec<String>,
         scores: Vec<SnapshotScoreTestPayload>,
     }
 
     #[derive(serde::Serialize)]
     struct SnapshotScoreTestPayload {
         id: String,
+        #[serde(rename = "songId")]
+        song_id: String,
         name: Option<String>,
-        extension: Option<String>,
-        status: String,
-        #[serde(rename = "updatedAt")]
-        updated_at: i64,
+        #[serde(rename = "fileExtension")]
+        file_extension: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        status: Option<String>,
+    }
+
+    #[derive(serde::Serialize)]
+    struct SnapshotCategorySongTestPayload {
+        id: String,
+        #[serde(rename = "categoryId")]
+        category_id: String,
+        #[serde(rename = "songId")]
+        song_id: String,
+    }
+
+    #[derive(serde::Serialize)]
+    struct SnapshotNamedEntityTestPayload {
+        id: String,
+        name: String,
+    }
+
+    #[derive(serde::Serialize)]
+    struct SnapshotNamedRelationTestPayload {
+        id: String,
+        #[serde(rename = "composerId", skip_serializing_if = "Option::is_none")]
+        composer_id: Option<String>,
+        #[serde(rename = "arrangerId", skip_serializing_if = "Option::is_none")]
+        arranger_id: Option<String>,
+        #[serde(rename = "songId")]
+        song_id: String,
     }
 
     #[derive(serde::Serialize)]
     struct EventsTestPayload {
-        origin: String,
         events: Vec<EventTestPayload>,
     }
 
@@ -730,10 +892,7 @@ mod tests {
     #[derive(serde::Serialize)]
     struct EventDataTestPayload {
         field: String,
-        #[serde(rename = "oldValue")]
-        old_value: Option<String>,
-        #[serde(rename = "newValue")]
-        new_value: Option<String>,
+        value: Option<String>,
     }
 
     #[test]
@@ -764,18 +923,24 @@ mod tests {
                 id: "cat-1".to_string(),
                 name: "Harpa".to_string(),
             }],
+            categories_songs: vec![SnapshotCategorySongTestPayload {
+                id: "cat-song-1".to_string(),
+                category_id: "cat-1".to_string(),
+                song_id: "song-1".to_string(),
+            }],
+            composers: Vec::new(),
+            composer_songs: Vec::new(),
+            arrangers: Vec::new(),
+            arranger_songs: Vec::new(),
             songs: vec![SnapshotSongTestPayload {
                 id: "song-1".to_string(),
                 name: "Musica 1".to_string(),
-                composer: None,
-                arranger: None,
-                categories_id: vec!["cat-1".to_string()],
                 scores: vec![SnapshotScoreTestPayload {
                     id: "score-1".to_string(),
+                    song_id: "song-1".to_string(),
                     name: Some("Flauta".to_string()),
-                    extension: Some("musx".to_string()),
-                    status: "main".to_string(),
-                    updated_at: 100,
+                    file_extension: ".musx".to_string(),
+                    status: None,
                 }],
             }],
         };
@@ -786,7 +951,6 @@ mod tests {
         );
 
         let events_payload = EventsTestPayload {
-            origin: "server".to_string(),
             events: vec![EventTestPayload {
                 id: "evt-1".to_string(),
                 timestamp: 120,
@@ -795,8 +959,7 @@ mod tests {
                 entity_id: "song-1".to_string(),
                 data: Some(vec![EventDataTestPayload {
                     field: "name".to_string(),
-                    old_value: Some("Musica 1".to_string()),
-                    new_value: Some("Musica 1 Atualizada".to_string()),
+                    value: Some("Musica 1 Atualizada".to_string()),
                 }]),
             }],
         };
@@ -846,7 +1009,6 @@ mod tests {
         std::fs::create_dir_all(cloud_dir.join("actions")).expect("create dirs");
 
         let events_payload = EventsTestPayload {
-            origin: "server".to_string(),
             events: vec![
                 EventTestPayload {
                     id: "e1".to_string(),
@@ -856,8 +1018,7 @@ mod tests {
                     entity_id: "score-10".to_string(),
                     data: Some(vec![EventDataTestPayload {
                         field: "name".to_string(),
-                        old_value: None,
-                        new_value: Some("Tuba".to_string()),
+                        value: Some("Tuba".to_string()),
                     }]),
                 },
                 EventTestPayload {
@@ -868,8 +1029,7 @@ mod tests {
                     entity_id: "score-10".to_string(),
                     data: Some(vec![EventDataTestPayload {
                         field: "status".to_string(),
-                        old_value: None,
-                        new_value: Some("main".to_string()),
+                        value: Some("main".to_string()),
                     }]),
                 },
                 EventTestPayload {
@@ -880,8 +1040,7 @@ mod tests {
                     entity_id: "score-10".to_string(),
                     data: Some(vec![EventDataTestPayload {
                         field: "extension".to_string(),
-                        old_value: None,
-                        new_value: Some("pdf".to_string()),
+                        value: Some("pdf".to_string()),
                     }]),
                 },
                 EventTestPayload {
@@ -892,8 +1051,7 @@ mod tests {
                     entity_id: "song-10".to_string(),
                     data: Some(vec![EventDataTestPayload {
                         field: "name".to_string(),
-                        old_value: None,
-                        new_value: Some("Buscai".to_string()),
+                        value: Some("Buscai".to_string()),
                     }]),
                 },
                 EventTestPayload {
@@ -904,8 +1062,7 @@ mod tests {
                     entity_id: "score-10".to_string(),
                     data: Some(vec![EventDataTestPayload {
                         field: "songId".to_string(),
-                        old_value: None,
-                        new_value: Some("song-10".to_string()),
+                        value: Some("song-10".to_string()),
                     }]),
                 },
             ],
@@ -954,12 +1111,18 @@ mod tests {
                 id: "cat-1".to_string(),
                 name: "Harpa".to_string(),
             }],
+            categories_songs: vec![SnapshotCategorySongTestPayload {
+                id: "cat-song-1".to_string(),
+                category_id: "cat-1".to_string(),
+                song_id: "song-1".to_string(),
+            }],
+            composers: Vec::new(),
+            composer_songs: Vec::new(),
+            arrangers: Vec::new(),
+            arranger_songs: Vec::new(),
             songs: vec![SnapshotSongTestPayload {
                 id: "song-1".to_string(),
                 name: "Musica do Snapshot".to_string(),
-                composer: None,
-                arranger: None,
-                categories_id: vec!["cat-1".to_string()],
                 scores: vec![],
             }],
         };
@@ -1001,6 +1164,11 @@ mod tests {
         let snapshot_payload = SnapshotTestPayload {
             generated_at: 25,
             categories: vec![],
+            categories_songs: vec![],
+            composers: vec![],
+            composer_songs: vec![],
+            arrangers: vec![],
+            arranger_songs: vec![],
             songs: vec![],
         };
         write_zstd_msgpack(&actions_dir.join("snapshot.msgpack.zst"), &snapshot_payload);
@@ -1032,12 +1200,16 @@ mod tests {
         let snapshot_payload = SnapshotTestPayload {
             generated_at: 25,
             categories: vec![],
+            categories_songs: vec![],
+            composers: vec![],
+            composer_songs: vec![],
+            arrangers: vec![],
+            arranger_songs: vec![],
             songs: vec![],
         };
         write_zstd_msgpack(&actions_dir.join("snapshot.msgpack.zst"), &snapshot_payload);
 
         let events_payload = EventsTestPayload {
-            origin: "server".to_string(),
             events: vec![],
         };
         write_zstd_msgpack(&actions_dir.join("events.msgpack.zst"), &events_payload);
