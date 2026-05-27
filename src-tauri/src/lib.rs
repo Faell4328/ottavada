@@ -270,8 +270,6 @@ pub fn run() {
             commands::song_commands::delete_song,
             // Scores
             commands::score_commands::update_score,
-            commands::score_commands::add_score_to_song,
-            commands::score_commands::add_scores_to_song,
             commands::score_commands::get_scores_for_song,
             commands::score_commands::open_file,
             commands::score_commands::open_file_path,

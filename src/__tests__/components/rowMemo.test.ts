@@ -48,7 +48,6 @@ function buildSongRowProps(overrides: Partial<SongRowProps> = {}): SongRowProps 
     isExpanded: true,
     onToggle: () => undefined,
     onToggleFavorite: () => undefined,
-    onAddFile: () => undefined,
     onEdit: () => undefined,
     onDelete: async () => undefined,
     menuId: "song-1",

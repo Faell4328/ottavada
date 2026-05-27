@@ -8,18 +8,14 @@ import React, {
   useTransition,
 } from "react";
 import { Search, FileMusic } from "lucide-react";
-import { open } from "@tauri-apps/plugin-dialog";
 import toast from "react-hot-toast";
 
 import * as api from "../api/commands";
 import { useAppState } from "../context/AppContext";
 import { compareInstrumentNames } from "../utils/instrumentOrder";
-import { getErrorMessage } from "../utils/errors";
-import { getDirectoryPath, isSamePath } from "../utils/paths";
 import { getSidebarViewLabel } from "../utils/sidebarView";
 import { normalizeSearchText, songMatchesAuthorFilter, songMatchesSearchQuery } from "../utils/songSearch";
-import type { IndexedFile, ScoreListItem, SongListItem } from "../types";
-import { AddScoreToSongModal } from "./AddScoreToSongModal.tsx";
+import type { ScoreListItem, SongListItem } from "../types";
 import { EditMusicModal } from "./EditMusicModal";
 import { EditScoreModal } from "./EditScoreModal";
 import { UseAsBaseScoreModal } from "./UseAsBaseScoreModal";
@@ -33,7 +29,6 @@ export default function SongsList() {
     selectSong,
     selectScore,
     toggleFavorite,
-    loadSongs,
     updateSong,
     updateScore,
     updateScoreStatus,
@@ -50,11 +45,6 @@ export default function SongsList() {
   const [baseScore, setBaseScore] = useState<ScoreListItem | null>(null);
   const [isUseAsBaseModalOpen, setIsUseAsBaseModalOpen] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  const [songForAddFile, setSongForAddFile] = useState<SongListItem | null>(null);
-  const [pendingFilesToAdd, setPendingFilesToAdd] = useState<IndexedFile[]>([]);
-  const [existingScoresForAddFile, setExistingScoresForAddFile] = useState<ScoreListItem[]>([]);
-  const [existingSongsForAddFile, setExistingSongsForAddFile] = useState<SongListItem[]>([]);
-  const [isAddFileModalOpen, setIsAddFileModalOpen] = useState(false);
   const [scoresBySongId, setScoresBySongId] = useState<Record<string, ScoreListItem[]>>({});
   const [loadingScoresBySongId, setLoadingScoresBySongId] = useState<Record<string, boolean>>({});
   const [isSearchPending, startSearchTransition] = useTransition();
@@ -246,71 +236,6 @@ export default function SongsList() {
     [deleteScore, refreshScoresForSong]
   );
 
-  async function handleSaveFilesToSong(files: IndexedFile[]) {
-    if (!songForAddFile) {
-      throw new Error("Música inválida para adicionar arquivo");
-    }
-
-    try {
-      const updatedSong = await api.addScoresToSong(songForAddFile.id, files);
-      setSearchQuery("");
-      await loadSongs();
-      selectSong(updatedSong);
-      setScoresBySongId((prev) => ({
-        ...prev,
-        [updatedSong.id]: [...updatedSong.scores].sort((a, b) => compareInstrumentNames(a.name, b.name)),
-      }));
-      toast.success(`${files.length} arquivo(s) adicionado(s) com sucesso`);
-    } catch (err) {
-      console.error("Failed to add file to song:", err);
-      throw new Error(getErrorMessage(err));
-    }
-  }
-
-  async function handleAddFileToSong(song: SongListItem) {
-    try {
-      const selected = await open({
-        directory: false,
-        multiple: true,
-        filters: [{ name: "Partituras", extensions: ["pdf", "PDF", "mus", "MUS", "musx", "MUSX", "mscx", "MSCX", "mscz", "MSCZ", "xml", "XML", "musicxml", "MUSICXML", "sib", "SIB", "enc", "ENC", "mid", "MID", "midi", "MIDI"] }],
-      });
-
-      if (!selected) return;
-
-      const selectedPaths = Array.isArray(selected) ? selected : [selected];
-      const indexedFiles: IndexedFile[] = [];
-
-      for (const selectedPath of selectedPaths) {
-        const directory = getDirectoryPath(selectedPath);
-        const scannedFiles = await api.scanDirectory(directory);
-        const indexedFile = scannedFiles.find((file) => isSamePath(file.path, selectedPath));
-
-        if (!indexedFile) {
-          toast.error("Não foi possível identificar um dos arquivos selecionados. Tente novamente.");
-          return;
-        }
-
-        indexedFiles.push(indexedFile);
-      }
-
-      setSongForAddFile(song);
-      const [existingScores, existingSongs] = await Promise.all([
-        api.getScoresForSong(song.id),
-        api.getAllSongs(),
-      ]);
-      setExistingScoresForAddFile(existingScores);
-      setExistingSongsForAddFile(existingSongs);
-      setPendingFilesToAdd(indexedFiles.map((file) => ({
-        ...file,
-        name: song.name,
-      })));
-      setIsAddFileModalOpen(true);
-    } catch (err) {
-      console.error("Failed to add file to song:", err);
-      toast.error(`Erro ao adicionar partitura: ${getErrorMessage(err)}`);
-    }
-  }
-
   const getDisplayedScoresForSong = useCallback(
     (song: SongListItem) => {
       const cachedScores = scoresBySongId[song.id];
@@ -323,14 +248,6 @@ export default function SongsList() {
     },
     [scoresBySongId]
   );
-
-  const closeAddFileModal = () => {
-    setIsAddFileModalOpen(false);
-    setSongForAddFile(null);
-    setPendingFilesToAdd([]);
-    setExistingScoresForAddFile([]);
-    setExistingSongsForAddFile([]);
-  };
 
   return (
     <section className="flex flex-1 flex-col gap-2.5 bg-[#edf1f6] p-3.5 border-r border-[#c8d1dc] overflow-hidden">
@@ -404,7 +321,6 @@ export default function SongsList() {
                           void handleToggleSong(song);
                         }}
                         onToggleFavorite={() => toggleFavorite(song.id)}
-                        onAddFile={() => handleAddFileToSong(song)}
                         onEdit={() => {
                           setEditingSong({
                             ...song,
@@ -489,16 +405,6 @@ export default function SongsList() {
           setEditingScore(null);
         }}
         onSave={handleSaveScore}
-      />
-
-      <AddScoreToSongModal
-        isOpen={isAddFileModalOpen}
-        songName={songForAddFile?.name ?? ""}
-        files={pendingFilesToAdd}
-        existingScores={existingScoresForAddFile}
-        existingSongs={existingSongsForAddFile}
-        onClose={closeAddFileModal}
-        onSave={handleSaveFilesToSong}
       />
 
       <UseAsBaseScoreModal

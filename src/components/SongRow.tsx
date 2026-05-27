@@ -12,7 +12,6 @@ export interface SongRowProps {
   isExpanded: boolean;
   onToggle: () => void;
   onToggleFavorite: () => void;
-  onAddFile: () => void;
   onEdit: () => void;
   onDelete: (songId: string) => Promise<void>;
   menuId: string;
@@ -29,7 +28,6 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(function Son
     isExpanded,
     onToggle,
     onToggleFavorite,
-    onAddFile,
     onEdit,
     onDelete,
     menuId,
@@ -122,11 +120,6 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(function Son
                   <ContextMenuItem
                     label={song.is_favorite ? "Remover de favoritos" : "Adicionar aos favoritos"}
                     onClick={(e) => handleMenuAction(e, onToggleFavorite)}
-                    disabled={isActionLocked}
-                  />
-                  <ContextMenuItem
-                    label="Adicioanar arquivo(s)"
-                    onClick={(e) => handleMenuAction(e, onAddFile)}
                     disabled={isActionLocked}
                   />
                   <ContextMenuItem

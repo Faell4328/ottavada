@@ -111,6 +111,22 @@ export async function createSongWithCategories(
   return invoke("create_song_with_categories", { name, path, categoryIds });
 }
 
+export async function createSongWithMetadata(
+  name: string,
+  path: string,
+  composer: string | null,
+  arranger: string | null,
+  categoryIds: string[]
+): Promise<SongListItem> {
+  return invoke("create_song_with_metadata", {
+    name,
+    path,
+    composer,
+    arranger,
+    categoryIds,
+  });
+}
+
 export async function updateSong(
   songId: string,
   name: string,
@@ -134,20 +150,6 @@ export async function updateScoreStatus(
   status: "main"
 ): Promise<SongListItem> {
   return invoke("update_score_status", { scoreId, status });
-}
-
-export async function addScoreToSong(
-  songId: string,
-  file: IndexedFile
-): Promise<SongListItem> {
-  return invoke("add_score_to_song", { songId, file });
-}
-
-export async function addScoresToSong(
-  songId: string,
-  files: IndexedFile[]
-): Promise<SongListItem> {
-  return invoke("add_scores_to_song", { songId, files });
 }
 
 export async function deleteScore(scoreId: string): Promise<void> {
