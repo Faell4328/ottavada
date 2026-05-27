@@ -8,7 +8,6 @@ export { EditScoreModal } from "./EditScoreModal";
 export { EditMusicModal } from "./EditMusicModal";
 export { EditInstrumentModal } from "./EditInstrumentModal";
 export { AddFilesModal } from "./AddFilesModal";
-export { AddMusicModal } from "./AddMusicModal";
 export { AddScoreToSongModal } from "./AddScoreToSongModal";
 export { ChangeComputerTypeModal } from "./ChangeComputerTypeModal";
 export { RcloneProviderModal } from "./RcloneProviderModal";

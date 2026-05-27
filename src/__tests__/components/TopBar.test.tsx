@@ -17,10 +17,6 @@ vi.mock("../../context/AppContext", () => ({
   useAppState: () => useAppStateMock(),
 }));
 
-vi.mock("../../components/AddMusicModal", () => ({
-  AddMusicModal: () => null,
-}));
-
 vi.mock("../../components/AddFilesModal", () => ({
   AddFilesModal: () => null,
 }));
@@ -32,7 +28,6 @@ vi.mock("@tauri-apps/plugin-dialog", () => ({
 vi.mock("../../api/commands", () => ({
   scanDirectory: vi.fn(),
   getAllSongs: vi.fn(),
-  createSongWithMetadata: vi.fn(),
 }));
 
 describe("TopBar", () => {
@@ -70,6 +65,8 @@ describe("TopBar", () => {
       />
     );
 
-    expect(screen.getAllByRole("button")[2]).toBeDisabled();
+    screen
+      .getAllByTitle("Espere a sincronização terminar para continuar.")
+      .forEach((button) => expect(button).toBeDisabled());
   });
 });

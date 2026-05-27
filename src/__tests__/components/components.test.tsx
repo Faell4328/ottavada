@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 
 // Component tests are now in individual test files:
-// - AddMusicModal.test.tsx
 // - AddFilesModal.test.tsx
 // - EditMusicModal.test.tsx
 // - EditInstrumentModal.test.tsx

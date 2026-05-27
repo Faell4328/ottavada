@@ -1,4 +1,4 @@
-import { Download, Music, FolderSearch, Settings, RefreshCw } from "lucide-react";
+import { Download, FolderSearch, Settings, RefreshCw } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -8,7 +8,6 @@ import toast from "react-hot-toast";
 import type { IndexedFile, SongListItem } from "../types";
 import { isClientComputer } from "../utils/computer";
 import { AddFilesModal } from "./AddFilesModal.tsx";
-import { AddMusicModal } from "./AddMusicModal";
 import { getUpdateActionBlockedMessage } from "../utils/updateLock";
 
 interface TopBarProps {
@@ -36,7 +35,6 @@ export default function TopBar({
   const clientBlockedTitle = "Esse recurso só está disponível no computador principal.";
   const syncBlockedTitle = "Espere a sincronização terminar para continuar.";
   const updateBlockedTitle = getUpdateActionBlockedMessage();
-  const [showAddMusicModal, setShowAddMusicModal] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<IndexedFile[]>([]);
   const [existingSongsForAddFiles, setExistingSongsForAddFiles] = useState<SongListItem[]>([]);
   const [showAddFilesModal, setShowAddFilesModal] = useState(false);
@@ -83,39 +81,6 @@ export default function TopBar({
     }
   }
 
-  function handleAddMusic() {
-    if (isSyncLocked) {
-      toast.error(syncBlockedTitle);
-      return;
-    }
-
-    setShowAddMusicModal(true);
-  }
-
-  async function handleCreateMusic(data: {
-    title: string;
-    path: string;
-    composer: string | null;
-    arranger: string | null;
-    categoryIds: string[];
-  }) {
-    try {
-      await api.createSongWithMetadata(
-        data.title,
-        data.path,
-        data.composer,
-        data.arranger,
-        data.categoryIds
-      );
-      await loadSongs();
-      toast.success("Música adicionada.");
-    } catch (err) {
-      console.error("Failed to create music:", err);
-      toast.error("Não foi possível adicionar a música.");
-      throw err;
-    }
-  }
-
   function handleCloseAddFilesModal() {
     setShowAddFilesModal(false);
     setPendingFiles([]);
@@ -149,12 +114,6 @@ export default function TopBar({
               accent
             />
           )}
-          <ActionButton
-            icon={<Music className="h-4 w-4" />}
-            title={isClient ? clientBlockedTitle : isSyncLocked ? syncBlockedTitle : "Adicionar música"}
-            onClick={handleAddMusic}
-            disabled={isClient || isSyncLocked}
-          />
           <ActionButton
             icon={<FolderSearch className="h-4 w-4" />}
             title={isClient ? clientBlockedTitle : isSyncLocked ? syncBlockedTitle : "Indexar diretório"}
@@ -202,13 +161,6 @@ export default function TopBar({
           />
         </div>
       </header>
-
-      <AddMusicModal
-        isOpen={showAddMusicModal}
-        onClose={() => setShowAddMusicModal(false)}
-        onSave={handleCreateMusic}
-        defaultCategoryIds={selectedCategoryIds}
-      />
 
       <AddFilesModal
         isOpen={showAddFilesModal}

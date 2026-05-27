@@ -111,22 +111,6 @@ export async function createSongWithCategories(
   return invoke("create_song_with_categories", { name, path, categoryIds });
 }
 
-export async function createSongWithMetadata(
-  name: string,
-  path: string,
-  composer: string | null,
-  arranger: string | null,
-  categoryIds: string[]
-): Promise<SongListItem> {
-  return invoke("create_song_with_metadata", {
-    name,
-    path,
-    composer,
-    arranger,
-    categoryIds,
-  });
-}
-
 export async function updateSong(
   songId: string,
   name: string,

@@ -462,7 +462,6 @@ pub fn create_song_with_categories(
     create_song_with_metadata(db, store, name, path, None, None, category_ids)
 }
 
-#[tauri::command]
 pub fn create_song_with_metadata(
     db: State<'_, Database>,
     store: State<'_, SystemStore>,
