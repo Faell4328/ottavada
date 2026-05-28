@@ -68,10 +68,10 @@ describe("ScanReportModal", () => {
     expect(screen.getAllByText((_, element) => element?.textContent === "O compositor Neusom foi deletado da música Eis o Nosso Deus.").length).toBeGreaterThan(0);
     expect(screen.getAllByText((_, element) => element?.textContent === "O arranjador Maria foi modificado na música Eis o Nosso Deus.").length).toBeGreaterThan(0);
     expect(screen.getAllByText((_, element) => element?.textContent === "O arranjador Maria foi deletado da música Eis o Nosso Deus.").length).toBeGreaterThan(0);
-    expect(screen.getAllByText((_, element) => element?.textContent === "A partitura Oboe foi adicionada na música Eis o Nosso Deus.").length).toBeGreaterThan(0);
-    expect(screen.getAllByText((_, element) => element?.textContent === "A partitura Tenor Saxophone foi adicionada na música Eis o Nosso Deus.").length).toBeGreaterThan(0);
+    expect(screen.getAllByText((_, element) => element?.textContent === "A partitura Oboe.musx foi adicionada na música Eis o Nosso Deus.").length).toBeGreaterThan(0);
+    expect(screen.getAllByText((_, element) => element?.textContent === "A partitura Tenor Saxophone.musx foi adicionada na música Eis o Nosso Deus.").length).toBeGreaterThan(0);
     expect(screen.getAllByText((_, element) => element?.textContent === "A partitura Oboes.musx teve o nome alterado.").length).toBeGreaterThan(0);
-    expect(screen.getAllByText((_, element) => element?.textContent === "A partitura Flauta teve a extensão alterada na música Eis o Nosso Deus.").length).toBeGreaterThan(0);
+    expect(screen.getAllByText((_, element) => element?.textContent === "A partitura Flauta.pdf teve a extensão alterada na música Eis o Nosso Deus.").length).toBeGreaterThan(0);
     expect(screen.getAllByText((_, element) => element?.textContent === "A partitura Flauta.musx saiu de draft e voltou para main na música Eis o Nosso Deus.").length).toBeGreaterThan(0);
     expect(screen.getAllByText((_, element) => element?.textContent === "A partitura Clarinete.musx foi deletada.").length).toBeGreaterThan(0);
     expect(screen.queryByText("Arquivos recuperados")).not.toBeInTheDocument();

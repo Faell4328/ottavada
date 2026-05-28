@@ -96,11 +96,17 @@ export default function TopBar({
   return (
     <>
       <header
-        className="fixed top-0 left-0 right-0 w-full flex h-[70px] items-center justify-between bg-gradient-to-b from-[#33465d] to-[#23364b] px-4 text-white border-b border-white/15 z-50"
+        className="fixed top-0 left-0 right-0 z-50 flex h-17.5 w-full items-center justify-between border-b border-white/15 bg-linear-to-b from-[#33465d] to-[#23364b] px-4 text-white"
         data-tauri-drag-region
       >
         <div className="flex items-center gap-3">
-          <img src="/logo.png" alt="Logo" className="h-auto w-[70px] rounded-full" />
+          <img
+            src="/logo.png"
+            alt="Logo"
+            loading="eager"
+            fetchPriority="high"
+            className="h-auto w-17.5 rounded-full"
+          />
           <span className="text-xl font-bold tracking-tight">{title}</span>
         </div>
 

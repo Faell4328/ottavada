@@ -168,6 +168,8 @@ export default function FirstRunPage() {
             <img
               src="/icon.png"
               alt="Score Maestro"
+              loading="eager"
+              fetchPriority="high"
               className="mb-3 h-16 w-16 rounded-2xl object-cover"
             />
             <h1 className="text-2xl font-bold text-[#2f4259]">Score Maestro</h1>

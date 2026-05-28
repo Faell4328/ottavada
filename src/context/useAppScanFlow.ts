@@ -362,6 +362,20 @@ export function useAppScanFlow({
       }
 
       if (isClient) {
+        dispatch({
+          type: "SET_SCANNING_FILES",
+          payload: true,
+        });
+        dispatch({
+          type: "SET_OPERATION_STATUS",
+          payload: {
+            title: "Etapa 1 - Consultando alterações",
+            detail: "Verificando snapshot e events da nuvem",
+            stepCurrent: 1,
+            stepTotal: 1,
+          },
+        });
+
         await runSyncWithProgress({
           direction: "download",
           relativePath: "actions",
@@ -371,6 +385,7 @@ export function useAppScanFlow({
         const hasPendingChanges = await api.hasPendingChanges();
 
         if (!hasPendingChanges) {
+          resetScanState();
           return;
         }
 

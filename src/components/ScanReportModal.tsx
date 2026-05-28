@@ -683,20 +683,19 @@ function parseScoreReference(rawPath: string): { songName: string; scoreName: st
 
   const normalizedPath = rawPath.split("\\").join("/");
   const fileName = normalizedPath.split("/").pop() ?? normalizedPath;
-  const fileNameWithoutExtension = fileName.replace(/\.[^.]+$/, "");
-  const parts = fileNameWithoutExtension.split(" - ");
+  const parts = fileName.split(" - ");
 
   if (parts.length >= 2) {
     const [songName, ...rest] = parts;
     return {
-      songName: songName.trim() || fileNameWithoutExtension,
-      scoreName: rest.join(" - ").trim() || fileNameWithoutExtension,
+      songName: songName.trim() || fileName,
+      scoreName: rest.join(" - ").trim() || fileName,
     };
   }
 
   return {
-    songName: fileNameWithoutExtension,
-    scoreName: fileNameWithoutExtension,
+    songName: fileName,
+    scoreName: fileName,
   };
 }
 
