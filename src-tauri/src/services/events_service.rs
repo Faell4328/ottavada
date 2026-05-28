@@ -1,12 +1,14 @@
+use std::collections::HashMap;
 use std::fs;
 
 use serde::Serialize;
 
 use crate::domain::errors::AppError;
+use crate::domain::models::ScoreStatus;
 use crate::domain::models::OperationGuard;
-use crate::infrastructure::database::Database;
+use crate::infrastructure::database::{ChangedFieldRecord, Database};
 use crate::infrastructure::store::SystemStore;
-use crate::services::cloud_paths::{ensure_actions_cloud_dir, ensure_cloud_root_dir};
+use crate::services::cloud_paths::ensure_actions_cloud_dir;
 use crate::services::msgpack_zstd::{
     compress_zstd_with_threads, serialize_msgpack_named, write_atomic, ZSTD_LEVEL_BALANCED,
 };
@@ -46,6 +48,20 @@ struct EventDataMessagePack {
     value: Option<String>,
 }
 
+#[derive(Debug)]
+struct PlannedEvent {
+    sort_index: usize,
+    event: EventMessagePack,
+}
+
+#[derive(Debug, Default)]
+struct ScoreChangeSummary {
+    sort_index: usize,
+    timestamp: i64,
+    event_id: String,
+    change_type: String,
+}
+
 pub fn generate_events_msgpack(
     db: &Database,
     store: &SystemStore,
@@ -55,26 +71,8 @@ pub fn generate_events_msgpack(
 
     let changed_fields = db.get_changed_fields_ordered()?;
     let actions_dir = ensure_actions_cloud_dir(store.app_data_dir())?;
-    let _cloud_root_dir = ensure_cloud_root_dir(store.app_data_dir())?;
 
-    let mut events = Vec::with_capacity(changed_fields.len());
-    for change in changed_fields.iter() {
-        let data = change.field.as_ref().map(|field| {
-            vec![EventDataMessagePack {
-                field: field.clone(),
-                value: change.value.clone(),
-            }]
-        });
-
-        events.push(EventMessagePack {
-            id: change.id.clone(),
-            timestamp: change.timestamp,
-            event_type: change.change_type.clone(),
-            entity: change.entity.clone(),
-            entity_id: change.entity_id.clone(),
-            data,
-        });
-    }
+    let events = build_events_payload(db, &changed_fields)?;
 
     let payload = EventsMessagePack { events };
 
@@ -140,6 +138,117 @@ pub fn generate_events_msgpack(
     })
 }
 
+fn build_events_payload(
+    db: &Database,
+    changed_fields: &[ChangedFieldRecord],
+) -> Result<Vec<EventMessagePack>, AppError> {
+    let mut planned_events = Vec::<PlannedEvent>::with_capacity(changed_fields.len());
+    let mut score_changes: HashMap<String, ScoreChangeSummary> = HashMap::new();
+
+    for (index, change) in changed_fields.iter().enumerate() {
+        if change.entity == "scores" {
+            let entry = score_changes
+                .entry(change.entity_id.clone())
+                .or_insert_with(ScoreChangeSummary::default);
+
+            if change.timestamp > entry.timestamp || (change.timestamp == entry.timestamp && index >= entry.sort_index) {
+                entry.sort_index = index;
+                entry.timestamp = change.timestamp;
+                entry.event_id = change.id.clone();
+                entry.change_type = change.change_type.clone();
+            }
+
+            continue;
+        }
+
+        planned_events.push(PlannedEvent {
+            sort_index: index,
+            event: EventMessagePack {
+                id: change.id.clone(),
+                timestamp: change.timestamp,
+                event_type: change.change_type.clone(),
+                entity: change.entity.clone(),
+                entity_id: change.entity_id.clone(),
+                data: change.field.as_ref().map(|field| {
+                    vec![EventDataMessagePack {
+                        field: field.clone(),
+                        value: change.value.clone(),
+                    }]
+                }),
+            },
+        });
+    }
+
+    for (score_id, change) in score_changes {
+        let (event_type, data) = build_score_event(db, &score_id, &change.change_type)?;
+
+        planned_events.push(PlannedEvent {
+            sort_index: change.sort_index,
+            event: EventMessagePack {
+                id: change.event_id,
+                timestamp: change.timestamp,
+                event_type,
+                entity: "scores".to_string(),
+                entity_id: score_id,
+                data,
+            },
+        });
+    }
+
+    planned_events.sort_by(|left, right| {
+        left.sort_index
+            .cmp(&right.sort_index)
+            .then(left.event.timestamp.cmp(&right.event.timestamp))
+            .then(left.event.id.cmp(&right.event.id))
+    });
+
+    Ok(planned_events.into_iter().map(|planned| planned.event).collect())
+}
+
+fn build_score_event(
+    db: &Database,
+    score_id: &str,
+    change_type: &str,
+) -> Result<(String, Option<Vec<EventDataMessagePack>>), AppError> {
+    if change_type.eq_ignore_ascii_case("delete") {
+        return Ok(("delete".to_string(), None));
+    }
+
+    let song_id = match db.get_song_id_for_score(score_id) {
+        Ok(song_id) => song_id,
+        Err(_) => return Ok(("delete".to_string(), None)),
+    };
+
+    let scores = db.get_scores_for_song(&song_id)?;
+    let Some(score) = scores.into_iter().find(|score| score.id == score_id) else {
+        return Ok(("delete".to_string(), None));
+    };
+
+    if score.status != ScoreStatus::Main {
+        return Ok(("delete".to_string(), None));
+    }
+
+    let mut data = Vec::with_capacity(4);
+    data.push(EventDataMessagePack {
+        field: "songId".to_string(),
+        value: Some(song_id),
+    });
+    data.push(EventDataMessagePack {
+        field: "name".to_string(),
+        value: score.name.clone(),
+    });
+    data.push(EventDataMessagePack {
+        field: "status".to_string(),
+        value: Some("main".to_string()),
+    });
+    data.push(EventDataMessagePack {
+        field: "extension".to_string(),
+        value: Some(score.file_extension.trim_start_matches('.').to_string()),
+    });
+
+    Ok(("insert".to_string(), Some(data)))
+}
+
 #[cfg(test)]
 mod tests {
     use std::fs;
@@ -199,7 +308,7 @@ mod tests {
     }
 
     #[test]
-    fn keeps_score_status_events_as_they_are() {
+    fn translates_draft_score_status_into_delete_event() {
         let dir = tempdir().expect("temp dir");
         let db_path = dir.path().join("test.db");
         let db = Database::new(&db_path).expect("db init");
@@ -254,56 +363,24 @@ mod tests {
                 chrono::Local::now().timestamp(),
             ],
         )
-        .expect("insert not_found event");
-
-        conn.execute(
-            "INSERT INTO changedField (id, type, entity, entityId, field, value, timestamp)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
-            params![
-                "evt-draft",
-                "update",
-                "scores",
-                "score-1",
-                "status",
-                "draft",
-                chrono::Local::now().timestamp() + 1,
-            ],
-        )
-        .expect("insert draft event");
-
-        conn.execute(
-            "INSERT INTO changedField (id, type, entity, entityId, field, value, timestamp)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
-            params![
-                "evt-song-name",
-                "update",
-                "songs",
-                "song-1",
-                "name",
-                "New Name",
-                chrono::Local::now().timestamp() + 2,
-            ],
-        )
-        .expect("insert allowed event");
+        .expect("insert draft status event");
         drop(conn);
 
         let summary = generate_events_msgpack(&db, &store).expect("generate events");
 
-        assert_eq!(summary.events_count, 3);
+        assert_eq!(summary.events_count, 1);
 
         let raw = fs::read(dir.path().join("cloud").join("actions").join("events.msgpack.zst"))
             .expect("read events file");
         let mut decoder = zstd::stream::read::Decoder::new(raw.as_slice()).expect("decoder");
         let payload: serde_json::Value = rmp_serde::from_read(&mut decoder).expect("decode msgpack");
-        assert!(payload["events"]
-            .as_array()
-            .expect("events array")
-            .iter()
-            .any(|event| event["entity"] == "scores" && event["data"][0]["value"] == "draft"));
+        assert_eq!(payload["events"][0]["type"], "delete");
+        assert_eq!(payload["events"][0]["entity"], "scores");
+        assert_eq!(payload["events"][0]["entityId"], "score-1");
     }
 
     #[test]
-    fn keeps_draft_status_events_when_no_archive_exists() {
+    fn translates_main_score_status_into_insert_event() {
         let dir = tempdir().expect("temp dir");
         let db_path = dir.path().join("test.db");
         let db = Database::new(&db_path).expect("db init");
@@ -340,7 +417,7 @@ mod tests {
                 "score-1.musx",
                 "musx",
                 0,
-                "draft",
+                "main",
             ],
         )
         .expect("insert score");
@@ -358,7 +435,7 @@ mod tests {
                 chrono::Local::now().timestamp(),
             ],
         )
-        .expect("insert draft event");
+        .expect("insert main status event");
         drop(conn);
 
         let summary = generate_events_msgpack(&db, &store).expect("generate events");
@@ -368,7 +445,12 @@ mod tests {
             .expect("read events file");
         let mut decoder = zstd::stream::read::Decoder::new(raw.as_slice()).expect("decoder");
         let payload: serde_json::Value = rmp_serde::from_read(&mut decoder).expect("decode msgpack");
-        assert_eq!(payload["events"][0]["data"][0]["value"], "draft");
+        assert_eq!(payload["events"][0]["type"], "insert");
+        assert_eq!(payload["events"][0]["entity"], "scores");
+        assert_eq!(payload["events"][0]["data"][0]["field"], "songId");
+        assert_eq!(payload["events"][0]["data"][0]["value"], "song-1");
+        assert_eq!(payload["events"][0]["data"][2]["field"], "status");
+        assert_eq!(payload["events"][0]["data"][2]["value"], "main");
     }
 
     #[test]

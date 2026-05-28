@@ -32,7 +32,3 @@ export function getScoreStatusBadgeClass(status: unknown): string {
   const normalized = normalizeScoreStatus(status) as ScoreStatusKey;
   return SCORE_STATUS_BADGE_CLASSES[normalized] ?? "";
 }
-
-export function isScoreAvailableForClient(status: unknown): boolean {
-  return normalizeScoreStatus(status) === "main";
-}

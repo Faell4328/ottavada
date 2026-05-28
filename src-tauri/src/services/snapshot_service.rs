@@ -107,7 +107,7 @@ pub fn generate_snapshot_msgpack(
     let generated_at = chrono::Local::now().timestamp();
 
     let cloud_dir = ensure_actions_cloud_dir(store.app_data_dir())?;
-    let cloud_root_dir = ensure_cloud_root_dir(store.app_data_dir())?;
+    let _cloud_root_dir = ensure_cloud_root_dir(store.app_data_dir())?;
 
     let all_songs = db.get_all_songs()?;
     let all_categories = db.get_all_categories()?;
@@ -128,6 +128,7 @@ pub fn generate_snapshot_msgpack(
             scores: song
                 .scores
                 .iter()
+                .filter(|score| score.status == ScoreStatus::Main)
                 .map(|score| SnapshotScore {
                     id: score.id.clone(),
                     song_id: song.id.clone(),
@@ -137,10 +138,7 @@ pub fn generate_snapshot_msgpack(
                     } else {
                         format!(".{}", score.file_extension.trim_start_matches('.'))
                     },
-                    status: match score.status {
-                        ScoreStatus::Draft => Some("draft".to_string()),
-                        _ => None,
-                    },
+                    status: None,
                 })
                 .collect(),
         })
@@ -328,10 +326,7 @@ fn clear_events_artifacts(cloud_dir: &std::path::Path) -> Result<(), AppError> {
 mod tests {
     use std::fs;
 
-    use std::fs::File;
-
     use serde_json::Value;
-    use tar::Builder;
     use tempfile::tempdir;
 
     use crate::domain::models::{Category, Song};
@@ -339,30 +334,6 @@ mod tests {
     use crate::infrastructure::store::SystemStore;
 
     use super::generate_snapshot_msgpack;
-
-    fn create_tar_zst_with_entry(
-        archive_path: &std::path::Path,
-        file_name: &str,
-        content: &[u8],
-    ) {
-        if let Some(parent) = archive_path.parent() {
-            fs::create_dir_all(parent).expect("create archive dir");
-        }
-
-        let output = File::create(archive_path).expect("create archive file");
-        let encoder = zstd::stream::Encoder::new(output, 5).expect("encoder");
-        let mut tar = Builder::new(encoder);
-
-        let mut header = tar::Header::new_gnu();
-        header.set_path(file_name).expect("set path");
-        header.set_size(content.len() as u64);
-        header.set_mode(0o644);
-        header.set_cksum();
-
-        tar.append(&header, content).expect("append entry");
-        let encoder = tar.into_inner().expect("finish tar");
-        encoder.finish().expect("finish zstd");
-    }
 
     #[test]
     fn generates_snapshot_and_clears_changed_fields() {
@@ -439,7 +410,7 @@ mod tests {
     }
 
     #[test]
-    fn keeps_draft_status_for_draft_score_when_previous_archive_exists() {
+    fn excludes_draft_scores_from_snapshot_even_with_previous_archive_exists() {
         let dir = tempdir().expect("temp dir");
         let db_path = dir.path().join("test.db");
         let db = Database::new(&db_path).expect("db init");
@@ -476,11 +447,6 @@ mod tests {
             .expect("insert song");
 
         conn_execute_draft_score(&db);
-        create_tar_zst_with_entry(
-            &dir.path().join("cloud").join("songs").join("song-1.tar.zst"),
-            "score-1.musx",
-            b"main-version",
-        );
 
         let summary = generate_snapshot_msgpack(&db, &store).expect("generate snapshot");
         assert!(summary.file_size > 0);
@@ -490,7 +456,7 @@ mod tests {
         let mut decoder = zstd::stream::read::Decoder::new(raw.as_slice()).expect("decoder");
         let payload: Value = rmp_serde::from_read(&mut decoder).expect("decode msgpack");
 
-        assert_eq!(payload["songs"][0]["scores"][0]["status"], "draft");
+        assert!(payload["songs"][0]["scores"].as_array().expect("scores array").is_empty());
     }
 
     fn conn_execute_draft_score(db: &Database) {
