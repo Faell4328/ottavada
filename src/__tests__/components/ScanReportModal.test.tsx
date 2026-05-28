@@ -61,6 +61,7 @@ describe("ScanReportModal", () => {
     expect(screen.getAllByText((_, element) => element?.textContent === "A categoria Hinos foi adicionada à música 3 VEZES SANTO.").length).toBeGreaterThan(0);
     expect(screen.getAllByText((_, element) => element?.textContent === "A categoria Hinos foi removida da música 3 VEZES SANTO.").length).toBeGreaterThan(0);
     expect(screen.getAllByText((_, element) => element?.textContent === "A música Hino Nacional foi adicionada.").length).toBeGreaterThan(0);
+    expect(screen.getByText("Hino Nacional").tagName).toBe("STRONG");
     expect(screen.getAllByText((_, element) => element?.textContent === "A música Eis o Nosso Deus teve o nome alterado.").length).toBeGreaterThan(0);
     expect(screen.getAllByText((_, element) => element?.textContent === "A música Hino Antigo foi deletada.").length).toBeGreaterThan(0);
     expect(screen.getAllByText((_, element) => element?.textContent === "O compositor Neusom foi modificado na música Eis o Nosso Deus.").length).toBeGreaterThan(0);

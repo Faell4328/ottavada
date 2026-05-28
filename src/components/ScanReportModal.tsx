@@ -571,16 +571,28 @@ function renderPersonItem(
   );
 }
 
-function formatSongItem(action: ReviewAction, songName: string): string {
+function formatSongItem(action: ReviewAction, songName: string): ReactNode {
   if (action === "adding") {
-    return `A música ${songName} foi adicionada.`;
+    return (
+      <>
+        A música <strong>{songName}</strong> foi adicionada.
+      </>
+    );
   }
 
   if (action === "deleted") {
-    return `A música ${songName} foi deletada.`;
+    return (
+      <>
+        A música <strong>{songName}</strong> foi deletada.
+      </>
+    );
   }
 
-  return `A música ${songName} foi modificada.`;
+  return (
+    <>
+      A música <strong>{songName}</strong> foi modificada.
+    </>
+  );
 }
 
 function renderCustomSongText(text: string): ReactNode {

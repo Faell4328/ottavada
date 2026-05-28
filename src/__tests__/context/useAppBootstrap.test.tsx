@@ -68,7 +68,7 @@ describe("useAppBootstrap", () => {
     const loadCategories: () => Promise<void> = vi.fn().mockResolvedValue(undefined);
     const loadSettings: () => Promise<void> = vi.fn().mockResolvedValue(undefined);
     const dispatch: (action: Action) => void = vi.fn();
-    let resolveStartupScan: (() => void) | null = null;
+    let resolveStartupScan: (() => void) | undefined;
     const startupScan = vi.fn(
       () =>
         new Promise<void>((resolve) => {
@@ -99,7 +99,9 @@ describe("useAppBootstrap", () => {
     await waitFor(() => expect(startupScan).toHaveBeenCalledTimes(1));
     expect(dispatch).not.toHaveBeenCalledWith({ type: "SET_LOADING", payload: false });
 
-    resolveStartupScan?.();
+    if (resolveStartupScan) {
+      resolveStartupScan();
+    }
 
     await waitFor(() => expect(dispatch).toHaveBeenCalledWith({ type: "SET_LOADING", payload: false }));
   });
