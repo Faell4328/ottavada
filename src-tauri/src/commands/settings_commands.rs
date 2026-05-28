@@ -227,10 +227,7 @@ pub fn mark_local_changes_as_applied(
     db: State<'_, Database>,
     store: State<'_, SystemStore>,
 ) -> Result<(), AppError> {
-    let latest_change = db.get_latest_changed_field_timestamp()?.unwrap_or(0);
-    let mut settings = store.get_app_settings()?;
-    settings.last_change_timestamp = Some(latest_change);
-    store.save_app_settings(&settings)
+    mark_local_changes_as_applied_impl(&db, &store)
 }
 
 #[tauri::command]
@@ -247,4 +244,60 @@ pub fn mark_snapshot_as_uploaded(
     }
 
     store.save_app_settings(&settings)
+}
+
+fn mark_local_changes_as_applied_impl(
+    db: &Database,
+    store: &SystemStore,
+) -> Result<(), AppError> {
+    let latest_change = db.get_latest_changed_field_timestamp()?.unwrap_or(0);
+    db.clear_changed_fields()?;
+    let mut settings = store.get_app_settings()?;
+    settings.last_change_timestamp = Some(latest_change);
+    store.save_app_settings(&settings)
+}
+
+#[cfg(test)]
+mod tests {
+    use tempfile::tempdir;
+
+    use crate::domain::models::{AppSettings, Category, ComputerType};
+    use crate::infrastructure::database::Database;
+    use crate::infrastructure::store::SystemStore;
+
+    use super::mark_local_changes_as_applied_impl;
+
+    #[test]
+    fn clears_pending_changes_when_marking_local_changes_as_applied() {
+        let dir = tempdir().expect("temp dir");
+        let db = Database::new(&dir.path().join("test.db")).expect("db");
+        let store = SystemStore::new(dir.path().to_path_buf());
+
+        store
+            .save_app_settings(&AppSettings {
+                computer_id: "server-1".to_string(),
+                computer_name: Some("Servidor".to_string()),
+                computer_type: ComputerType::Server,
+                first_run_completed: true,
+                ..Default::default()
+            })
+            .expect("save settings");
+
+        db.insert_category(&Category {
+            id: "cat-1".to_string(),
+            name: "Teste".to_string(),
+            updated_at: chrono::Local::now().naive_local(),
+            updated_by: "server-1".to_string(),
+        })
+        .expect("insert category");
+
+        assert!(db.has_pending_changes().expect("pending changes"));
+
+        mark_local_changes_as_applied_impl(&db, &store).expect("mark applied");
+
+        assert!(!db.has_pending_changes().expect("pending changes"));
+
+        let settings = store.get_app_settings().expect("reload settings");
+        assert!(settings.last_change_timestamp.is_some());
+    }
 }

@@ -296,6 +296,8 @@ export interface ScanResult {
   not_found_files: string[];
   recovered_files: string[];
   failed_files: Array<[string, string]>;
+  report_items?: string[];
+  database_changes_count?: number;
 }
 
 export interface ImportIndexedFilesResult {
@@ -303,8 +305,8 @@ export interface ImportIndexedFilesResult {
   added_count: number;
 }
 
-export async function scanFilesForChanges(): Promise<ScanResult> {
-  return invoke("scan_files_for_changes");
+export async function scanFilesForChanges(applyMissingDeletions = false): Promise<ScanResult> {
+  return invoke("scan_files_for_changes", { applyMissingDeletions });
 }
 
 export async function previewScanFilesForChanges(): Promise<ScanResult> {

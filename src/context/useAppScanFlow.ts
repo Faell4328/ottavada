@@ -451,7 +451,7 @@ export function useAppScanFlow({
         },
       });
       updateStepProgress(0);
-      const result = await api.scanFilesForChanges();
+      const result = await api.scanFilesForChanges(forceCloudSync);
       completedSteps += 1;
 
       const changedCount = result.changed_files.length;
@@ -459,10 +459,11 @@ export function useAppScanFlow({
       const failedCount = result.failed_files.length;
       const recoveredCount = result.recovered_files?.length ?? 0;
       const notFoundCount = result.not_found_files?.length ?? 0;
+      const reportItemsCount = result.report_items?.length ?? 0;
 
       const hasPendingChanges = await api.hasPendingChanges();
       const hasDetectedFileChanges =
-        changedCount > 0 || addedCount > 0 || recoveredCount > 0 || notFoundCount > 0;
+        changedCount > 0 || addedCount > 0 || recoveredCount > 0 || notFoundCount > 0 || reportItemsCount > 0;
 
       if (!forceCloudSync && !hasPendingChanges && !hasDetectedFileChanges) {
         resetScanState();
@@ -472,7 +473,7 @@ export function useAppScanFlow({
       // Fluxo base do servidor: verificar, compactar, gerar events e subir para a nuvem.
       // Snapshot adiciona uma etapa extra ao total.
       currentTotalSteps = 4;
-      updateStepProgress(changedCount);
+      updateStepProgress(reportItemsCount || changedCount);
 
       dispatch({
         type: "SET_OPERATION_STATUS",
@@ -639,6 +640,7 @@ export function useAppScanFlow({
 
       if (!isAutomatic) {
         const summaryParts: string[] = [];
+        const reportItemsCount = result.report_items?.length ?? 0;
         if (recoveredCount > 0) {
           summaryParts.push(`${recoveredCount} recuperado(s)`);
         }
@@ -648,11 +650,11 @@ export function useAppScanFlow({
         if (notFoundCount > 0) {
           summaryParts.push(`${notFoundCount} não encontrado(s)`);
         }
+        if (reportItemsCount > 0) {
+          summaryParts.push(`${reportItemsCount} alteração(ões) no relatório`);
+        }
         if (generatedArchives > 0) {
           summaryParts.push(`${generatedArchives} arquivo(s) compactado(s)`);
-        }
-        if (hasDatabaseChanges) {
-          summaryParts.push(`${eventsSummary.events_count} alteração(ões) de banco`);
         }
 
         const hasFailures = failedCount > 0 || failedArchives > 0;
@@ -667,7 +669,7 @@ export function useAppScanFlow({
         }
       }
 
-      if (changedCount > 0 || recoveredCount > 0 || notFoundCount > 0) {
+      if (changedCount > 0 || recoveredCount > 0 || notFoundCount > 0 || (result.report_items?.length ?? 0) > 0) {
         await loadSongs();
       }
 

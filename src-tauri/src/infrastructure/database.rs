@@ -1122,12 +1122,12 @@ impl Database {
     pub fn delete_score(&self, score_id: &str) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
 
-        let song_id: String = conn
+        let (song_id, file_name): (String, String) = conn
             .query_row(
-            "SELECT song_id FROM scores WHERE id = ?1",
-            params![score_id],
-            |row| row.get::<_, String>(0),
-        )
+                "SELECT song_id, file_name FROM scores WHERE id = ?1",
+                params![score_id],
+                |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)),
+            )
             .map_err(|e| match e {
                 rusqlite::Error::QueryReturnedNoRows => {
                     AppError::ScoreNotFound(score_id.to_string())
@@ -1140,7 +1140,14 @@ impl Database {
             return Err(AppError::ScoreNotFound(score_id.to_string()));
         }
 
-        Self::insert_changed_field(&conn, "delete", "scores", score_id, None, None)?;
+        Self::insert_changed_field(
+            &conn,
+            "delete",
+            "scores",
+            score_id,
+            Some("file_name"),
+            Some(file_name),
+        )?;
 
         // Deletar uma partitura precisa invalidar o último backup da música,
         // forçando a regeneração do arquivo {songId}.tar.zst no próximo ciclo.
@@ -1406,6 +1413,12 @@ impl Database {
             ));
         }
 
+        let category_name: String = conn.query_row(
+            "SELECT name FROM categories WHERE id = ?1",
+            params![category_id],
+            |row| row.get(0),
+        )?;
+
         let relation_ids: Vec<String> = {
             let mut stmt = conn.prepare("SELECT id FROM categoriesSongs WHERE categoryId = ?1")?;
             let rows = stmt.query_map(params![category_id], |row| row.get::<_, String>(0))?;
@@ -1425,13 +1438,36 @@ impl Database {
             )?;
         }
 
-        Self::insert_changed_field(&conn, "delete", "categories", category_id, None, None)?;
+        Self::insert_changed_field(
+            &conn,
+            "delete",
+            "categories",
+            category_id,
+            Some("name"),
+            Some(category_name),
+        )?;
 
         Ok(())
     }
 
     pub fn delete_song(&self, song_id: &str) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap();
+
+        let (song_name, score_rows): (String, Vec<(String, String)>) = {
+            let song_name: String = conn.query_row(
+                "SELECT name FROM songs WHERE id = ?1",
+                params![song_id],
+                |row| row.get(0),
+            )?;
+
+            let mut stmt = conn.prepare("SELECT id, file_name FROM scores WHERE song_id = ?1")?;
+            let rows = stmt.query_map(params![song_id], |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+            })?;
+
+            let score_rows = rows.filter_map(|row| row.ok()).collect();
+            (song_name, score_rows)
+        };
 
         conn.query_row(
             "SELECT id FROM songs WHERE id = ?1",
@@ -1442,12 +1478,6 @@ impl Database {
             rusqlite::Error::QueryReturnedNoRows => AppError::SongNotFound(song_id.to_string()),
             other => AppError::Database(other),
         })?;
-
-        let score_ids: Vec<String> = {
-            let mut stmt = conn.prepare("SELECT id FROM scores WHERE song_id = ?1")?;
-            let rows = stmt.query_map(params![song_id], |row| row.get::<_, String>(0))?;
-            rows.filter_map(|r| r.ok()).collect()
-        };
 
         let relation_ids: Vec<String> = {
             let mut stmt = conn.prepare("SELECT id FROM categoriesSongs WHERE songId = ?1")?;
@@ -1470,8 +1500,15 @@ impl Database {
             return Err(AppError::Generic("Música não encontrada".into()));
         }
 
-        for score_id in score_ids {
-            Self::insert_changed_field(&conn, "delete", "scores", &score_id, None, None)?;
+        for (score_id, file_name) in score_rows {
+            Self::insert_changed_field(
+                &conn,
+                "delete",
+                "scores",
+                &score_id,
+                Some("file_name"),
+                Some(file_name),
+            )?;
         }
 
         for relation_id in relation_ids {
@@ -1485,7 +1522,14 @@ impl Database {
             )?;
         }
 
-        Self::insert_changed_field(&conn, "delete", "songs", song_id, None, None)?;
+        Self::insert_changed_field(
+            &conn,
+            "delete",
+            "songs",
+            song_id,
+            Some("name"),
+            Some(song_name),
+        )?;
 
         Ok(())
     }
@@ -1721,6 +1765,13 @@ impl Database {
         let conn = self.conn.lock().unwrap();
         let count: i64 = conn.query_row("SELECT COUNT(1) FROM changedField", [], |row| row.get(0))?;
         Ok(count > 0)
+    }
+
+    /// Retorna a quantidade de eventos pendentes em changedField.
+    pub fn get_pending_changes_count(&self) -> Result<usize, AppError> {
+        let conn = self.conn.lock().unwrap();
+        let count: i64 = conn.query_row("SELECT COUNT(1) FROM changedField", [], |row| row.get(0))?;
+        Ok(count as usize)
     }
 
     /// Retorna o timestamp mais recente da tabela changedField.

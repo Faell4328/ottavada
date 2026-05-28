@@ -7,7 +7,7 @@ use tracing::{info, warn};
 use crate::commands::common::run_blocking_with_store;
 use crate::domain::errors::AppError;
 use crate::domain::models::{OperationGuard, Score, ScoreStatus};
-use crate::infrastructure::database::Database;
+use crate::infrastructure::database::{ChangedFieldRecord, Database};
 use crate::infrastructure::store::SystemStore;
 use crate::services::indexer::{
     get_file_metadata, paths_match, scan_directory, split_file_path, FileChangeDetector,
@@ -28,14 +28,16 @@ struct ScoreMetadataEntry {
 pub async fn scan_files_for_changes(
     db: State<'_, Database>,
     store: State<'_, SystemStore>,
+    apply_missing_deletions: Option<bool>,
 ) -> Result<ScanResult, AppError> {
     let db = db.inner().clone();
     let app_data_dir = store.app_data_dir().clone();
+    let apply_missing_deletions = apply_missing_deletions.unwrap_or(false);
 
     run_blocking_with_store(
         app_data_dir,
         "Falha interna ao verificar alterações",
-        move |store| scan_files_for_changes_impl(&db, &store),
+        move |store| scan_files_for_changes_impl(&db, &store, apply_missing_deletions),
     )
     .await
 }
@@ -56,7 +58,11 @@ pub async fn preview_scan_files_for_changes(
     .await
 }
 
-fn scan_files_for_changes_impl(db: &Database, store: &SystemStore) -> Result<ScanResult, AppError> {
+fn scan_files_for_changes_impl(
+    db: &Database,
+    store: &SystemStore,
+    apply_missing_deletions: bool,
+) -> Result<ScanResult, AppError> {
     info!("Iniciando verificação de alterações nos arquivos de partituras");
 
     let settings = store.get_app_settings()?;
@@ -100,6 +106,15 @@ fn scan_files_for_changes_impl(db: &Database, store: &SystemStore) -> Result<Sca
 
             if !path.exists() || !path.is_file() {
                 warn!("Arquivo não encontrado: {}", full_path);
+                if apply_missing_deletions {
+                    if let Err(e) = db.delete_score(&score.score_id) {
+                        warn!("Erro ao remover score ausente do banco: {:?}", e);
+                        failed_files.push((
+                            full_path.clone(),
+                            format!("Erro ao remover do banco: {:?}", e),
+                        ));
+                    }
+                }
                 not_found_files.push(full_path);
                 continue;
             }
@@ -194,12 +209,25 @@ fn scan_files_for_changes_impl(db: &Database, store: &SystemStore) -> Result<Sca
         failed_files.len()
     );
 
+    let changed_fields = db.get_changed_fields_ordered()?;
+    let report_items = build_report_items(
+        &db,
+        &changed_files,
+        &added_files,
+        &not_found_files,
+        &recovered_files,
+        &failed_files,
+        &changed_fields,
+    );
+
     Ok(ScanResult {
         changed_files,
         added_files,
         not_found_files,
         recovered_files,
         failed_files,
+        report_items,
+        database_changes_count: db.get_pending_changes_count()?,
     })
 }
 
@@ -295,13 +323,112 @@ fn preview_scan_files_for_changes_impl(
         failed_files.len()
     );
 
+    let changed_fields = db.get_changed_fields_ordered()?;
+    let report_items = build_report_items(
+        &db,
+        &changed_files,
+        &added_files,
+        &not_found_files,
+        &recovered_files,
+        &failed_files,
+        &changed_fields,
+    );
+
     Ok(ScanResult {
         changed_files,
         added_files,
         not_found_files,
         recovered_files,
         failed_files,
+        report_items,
+        database_changes_count: db.get_pending_changes_count()?,
     })
+}
+
+fn build_report_items(
+    db: &Database,
+    changed_files: &[String],
+    added_files: &[String],
+    not_found_files: &[String],
+    recovered_files: &[String],
+    failed_files: &[(String, String)],
+    changed_fields: &[ChangedFieldRecord],
+) -> Vec<String> {
+    let mut items = Vec::new();
+
+    for item in added_files {
+        items.push(format!("Partitura adicionada: {}", item));
+    }
+
+    for item in changed_files {
+        items.push(format!("Partitura alterada: {}", item));
+    }
+
+    for item in not_found_files {
+        items.push(format!("Partitura removida: {}", item));
+    }
+
+    for item in recovered_files {
+        items.push(format!("Partitura recuperada: {}", item));
+    }
+
+    for (path, error) in failed_files {
+        items.push(format!("Falha ao processar {}: {}", path, error));
+    }
+
+    for change in changed_fields {
+        if let Some(item) = describe_database_change(db, change) {
+            items.push(item);
+        }
+    }
+
+    items
+}
+
+fn describe_database_change(db: &Database, change: &ChangedFieldRecord) -> Option<String> {
+    match change.entity.as_str() {
+        "songs" => describe_song_change(db, change),
+        "categories" => describe_category_change(change),
+        "scores" => describe_score_change(change),
+        _ => None,
+    }
+}
+
+fn describe_song_change(db: &Database, change: &ChangedFieldRecord) -> Option<String> {
+    let song_name = db
+        .get_song_by_id(&change.entity_id)
+        .map(|song| song.name)
+        .unwrap_or_else(|_| change.entity_id.clone());
+
+    match (change.change_type.as_str(), change.field.as_deref()) {
+        ("insert", Some("name")) => Some(format!("Música criada: {}", change.value.clone().unwrap_or(song_name))),
+        ("delete", Some("name")) => Some(format!("Música removida: {}", change.value.clone().unwrap_or(song_name))),
+        (_, Some("name")) => Some(format!("Música alterada: {}", change.value.clone().unwrap_or(song_name))),
+        (_, Some("composer")) => Some(match change.value.clone() {
+            Some(value) => format!("Compositor da música {}: {}", song_name, value),
+            None => format!("Compositor removido da música {}", song_name),
+        }),
+        (_, Some("arranger")) => Some(match change.value.clone() {
+            Some(value) => format!("Arranjador da música {}: {}", song_name, value),
+            None => format!("Arranjador removido da música {}", song_name),
+        }),
+        _ => None,
+    }
+}
+
+fn describe_category_change(change: &ChangedFieldRecord) -> Option<String> {
+    match (change.change_type.as_str(), change.field.as_deref()) {
+        ("insert", Some("name")) => Some(format!("Categoria criada: {}", change.value.clone().unwrap_or_else(|| change.entity_id.clone()))),
+        ("delete", Some("name")) => Some(format!("Categoria removida: {}", change.value.clone().unwrap_or_else(|| change.entity_id.clone()))),
+        _ => None,
+    }
+}
+
+fn describe_score_change(change: &ChangedFieldRecord) -> Option<String> {
+    match (change.change_type.as_str(), change.field.as_deref()) {
+        ("delete", Some("file_name")) => Some(format!("Partitura removida: {}", change.value.clone().unwrap_or_else(|| change.entity_id.clone()))),
+        _ => None,
+    }
 }
 
 fn build_score_full_path(file_path: &str, file_name: &str) -> String {
@@ -338,6 +465,8 @@ pub struct ScanResult {
     pub not_found_files: Vec<String>,
     pub recovered_files: Vec<String>,
     pub failed_files: Vec<(String, String)>,
+    pub report_items: Vec<String>,
+    pub database_changes_count: usize,
 }
 
 /// Faz uma verificação simples de conectividade com a internet usando socket TCP.
@@ -438,11 +567,76 @@ mod tests {
         )
         .expect("set draft");
 
-        let result = scan_files_for_changes_impl(&db, &store).expect("scan");
+        let result = scan_files_for_changes_impl(&db, &store, false).expect("scan");
         let updated_song = db.get_song_list_item_by_id("song-1").expect("updated song");
 
         assert_eq!(updated_song.scores[0].status, ScoreStatus::Draft);
         assert!(result.recovered_files.is_empty());
+    }
+
+    #[test]
+    fn deletes_missing_scores_when_apply_missing_deletions_is_enabled() {
+        let dir = tempdir().expect("temp dir");
+        let db = Database::new(&dir.path().join("scan.db")).expect("db");
+        let store = SystemStore::new(dir.path().to_path_buf());
+
+        store
+            .save_app_settings(&AppSettings {
+                computer_id: "server-1".to_string(),
+                computer_name: Some("Servidor".to_string()),
+                computer_type: ComputerType::Server,
+                first_run_completed: true,
+                ..Default::default()
+            })
+            .expect("save settings");
+
+        let song_dir = dir.path().join("songs").join("song-1");
+        fs::create_dir_all(&song_dir).expect("create song dir");
+
+        let score_path = song_dir.join("Canon - Trompete.musx");
+        fs::write(&score_path, b"score").expect("write score");
+
+        let (file_size, file_modified_at) = get_file_metadata(&score_path).expect("metadata");
+
+        db.insert_song(
+            &Song {
+                id: "song-1".to_string(),
+                name: "CANON".to_string(),
+                composer: None,
+                arranger: None,
+                path: song_dir.to_string_lossy().to_string(),
+                is_favorite: false,
+                status: ScoreStatus::Main,
+                updated_at: now(),
+                updated_by: "server-1".to_string(),
+            },
+            &[],
+        )
+        .expect("insert song");
+
+        db.insert_score(&Score {
+            id: "score-1".to_string(),
+            song_id: "song-1".to_string(),
+            name: Some("Trompete".to_string()),
+            host_id: "server-1".to_string(),
+            file_path: song_dir.to_string_lossy().to_string(),
+            file_name: "Canon - Trompete.musx".to_string(),
+            file_size,
+            file_modified_at,
+            updated_at: now(),
+            status: ScoreStatus::Main,
+            updated_by: "server-1".to_string(),
+        })
+        .expect("insert score");
+
+        fs::remove_file(&score_path).expect("remove score file");
+
+        let result = scan_files_for_changes_impl(&db, &store, true).expect("scan");
+        let scores = db.get_scores_for_song("song-1").expect("scores");
+
+        assert_eq!(result.not_found_files.len(), 1);
+        assert!(result.database_changes_count >= 1);
+        assert_eq!(scores.len(), 0);
     }
 
     #[test]
@@ -525,7 +719,7 @@ mod tests {
         fs::remove_file(&removed_score_path).expect("remove score file");
         fs::write(&new_score_path, b"new-score").expect("write new score");
 
-        let result = scan_files_for_changes_impl(&db, &store).expect("scan");
+        let result = scan_files_for_changes_impl(&db, &store, false).expect("scan");
         let scores = db.get_scores_for_song("song-1").expect("scores");
 
         assert_eq!(result.not_found_files.len(), 1);
