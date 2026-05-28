@@ -20,6 +20,7 @@ type ScanFilesForChangesOptions =
       isAutomatic?: boolean;
       forceCloudSync?: boolean;
       snapshotSummary?: api.SnapshotFileSummary | null;
+      rethrowOnError?: boolean;
     };
 
 type RunSyncWithProgressOptions = {
@@ -274,6 +275,44 @@ export function useAppScanFlow({
     }
   }, [dispatch, dispatchRcloneProgress]);
 
+  const previewScanFilesForChanges = useCallback(async () => {
+    if (scanInProgressRef.current) {
+      toast.error("Já existe uma operação em andamento. Aguarde ela terminar.");
+      return;
+    }
+
+    scanInProgressRef.current = true;
+    dispatch({ type: "RESET_SCAN_REPORT" });
+
+    try {
+      clearScanTimer();
+      dispatch({ type: "SET_SCANNING_FILES", payload: true });
+      dispatch({
+        type: "SET_OPERATION_STATUS",
+        payload: {
+          title: "Etapa 1 - Verificando alterações",
+          detail: "Gerando relatório antes de aplicar",
+          stepCurrent: 1,
+          stepTotal: 1,
+        },
+      });
+      dispatch({
+        type: "SET_SCAN_PROGRESS",
+        payload: { total: 1, completed: 0, changedFiles: 0 },
+      });
+
+      const result = await api.previewScanFilesForChanges();
+      dispatch({ type: "SET_SCAN_REPORT", payload: result });
+      resetScanState();
+    } catch (err) {
+      console.error("Failed to preview files for changes:", err);
+      toast.error(getScanFailureToastMessage(err, getErrorMessage, computerType));
+      resetScanState();
+    } finally {
+      scanInProgressRef.current = false;
+    }
+  }, [clearScanTimer, computerType, dispatch, getErrorMessage, resetScanState]);
+
   const scanFilesForChanges = useCallback(async (options: ScanFilesForChangesOptions = false) => {
     const isAutomatic =
       typeof options === "boolean" ? options : (options.isAutomatic ?? false);
@@ -281,6 +320,7 @@ export function useAppScanFlow({
       typeof options === "boolean" ? false : (options.forceCloudSync ?? false);
     const preGeneratedSnapshotSummary =
       typeof options === "boolean" ? null : (options.snapshotSummary ?? null);
+    const rethrowOnError = typeof options === "boolean" ? false : (options.rethrowOnError ?? false);
 
     if (scanInProgressRef.current) {
       if (!isAutomatic) {
@@ -415,13 +455,14 @@ export function useAppScanFlow({
       completedSteps += 1;
 
       const changedCount = result.changed_files.length;
+      const addedCount = result.added_files.length;
       const failedCount = result.failed_files.length;
       const recoveredCount = result.recovered_files?.length ?? 0;
       const notFoundCount = result.not_found_files?.length ?? 0;
 
       const hasPendingChanges = await api.hasPendingChanges();
       const hasDetectedFileChanges =
-        changedCount > 0 || recoveredCount > 0 || notFoundCount > 0;
+        changedCount > 0 || addedCount > 0 || recoveredCount > 0 || notFoundCount > 0;
 
       if (!forceCloudSync && !hasPendingChanges && !hasDetectedFileChanges) {
         resetScanState();
@@ -601,6 +642,9 @@ export function useAppScanFlow({
         if (recoveredCount > 0) {
           summaryParts.push(`${recoveredCount} recuperado(s)`);
         }
+        if (addedCount > 0) {
+          summaryParts.push(`${addedCount} adicionado(s)`);
+        }
         if (notFoundCount > 0) {
           summaryParts.push(`${notFoundCount} não encontrado(s)`);
         }
@@ -638,6 +682,9 @@ export function useAppScanFlow({
       }
       clearScanTimer();
       resetScanState();
+      if (rethrowOnError) {
+        throw err;
+      }
     } finally {
       scanInProgressRef.current = false;
     }
@@ -656,5 +703,5 @@ export function useAppScanFlow({
     scheduleScanReset,
   ]);
 
-  return { scanFilesForChanges };
+  return { previewScanFilesForChanges, scanFilesForChanges };
 }

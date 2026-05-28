@@ -1,4 +1,4 @@
-import type { SnapshotFileSummary } from "../api/commands";
+import type { ScanResult, SnapshotFileSummary } from "../api/commands";
 import type { AppSettings, ScoreListItem, SidebarView, SongListItem } from "../types";
 import type { State } from "./reducer";
 
@@ -19,6 +19,7 @@ export interface AppContextValue {
     itemTotal?: number | null;
   }) => void;
   resetOperationStatus: () => void;
+  resetScanReport: () => void;
   setSidebarView: (view: SidebarView) => void;
   selectSong: (song: SongListItem | null) => void;
   selectScore: (score: ScoreListItem | null) => void;
@@ -57,7 +58,11 @@ export interface AppContextValue {
       | {
           isAutomatic?: boolean;
           forceCloudSync?: boolean;
-            snapshotSummary?: SnapshotFileSummary | null;
+          snapshotSummary?: SnapshotFileSummary | null;
+          rethrowOnError?: boolean;
         }
   ) => Promise<void>;
+  previewScanFilesForChanges: () => Promise<void>;
 }
+
+export type { ScanResult };

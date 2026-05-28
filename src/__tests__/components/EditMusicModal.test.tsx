@@ -50,7 +50,7 @@ vi.mock("@tauri-apps/api/core", () => ({
           google_service_account: null,
         };
       case "scan_files_for_changes":
-        return { changed_files: [], failed_files: [] };
+          return { changed_files: [], added_files: [], failed_files: [] };
       default:
         return null;
     }

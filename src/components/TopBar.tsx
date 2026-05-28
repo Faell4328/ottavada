@@ -25,7 +25,7 @@ export default function TopBar({
   hasAvailableUpdate,
   isUpdateActionLocked,
 }: TopBarProps) {
-  const { loadSongs, loadCategories, state, scanFilesForChanges } = useAppState();
+  const { loadSongs, loadCategories, state, scanFilesForChanges, previewScanFilesForChanges } = useAppState();
   const navigate = useNavigate();
   const isClient = isClientComputer(state.settings?.computer_type);
   const isSyncLocked =
@@ -142,7 +142,7 @@ export default function TopBar({
                 return;
               }
 
-              void scanFilesForChanges(isClient ? undefined : { forceCloudSync: true });
+              void (isClient ? scanFilesForChanges() : previewScanFilesForChanges());
             }}
             disabled={isSyncLocked || isUpdateActionLocked}
           />

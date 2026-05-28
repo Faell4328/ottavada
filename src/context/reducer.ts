@@ -5,6 +5,7 @@ import type {
   AppSettings,
   SidebarView,
 } from "../types";
+import type { ScanResult } from "../api/commands";
 
 // ── State ──
 
@@ -28,6 +29,7 @@ export interface State {
     completed: number;
     changedFiles: number;
   };
+  scanReport: ScanResult | null;
   rcloneProgress: {
     active: boolean;
     direction: "upload" | "download" | null;
@@ -67,6 +69,7 @@ export const initialState: State = {
     completed: 0,
     changedFiles: 0,
   },
+  scanReport: null,
   rcloneProgress: {
     active: false,
     direction: null,
@@ -102,6 +105,8 @@ export type Action =
   | { type: "TOGGLE_FAVORITE"; payload: { songId: string; isFavorite: boolean } }
   | { type: "UPDATE_SELECTED_SONG"; payload: SongListItem }
   | { type: "SET_SCANNING_FILES"; payload: boolean }
+  | { type: "SET_SCAN_REPORT"; payload: ScanResult | null }
+  | { type: "RESET_SCAN_REPORT" }
   | {
       type: "SET_SCAN_PROGRESS";
       payload: { total: number; completed: number; changedFiles: number };
@@ -199,6 +204,10 @@ export function reducer(state: State, action: Action): State {
       };
     case "SET_SCANNING_FILES":
       return { ...state, isScanningFiles: action.payload };
+    case "SET_SCAN_REPORT":
+      return { ...state, scanReport: action.payload };
+    case "RESET_SCAN_REPORT":
+      return { ...state, scanReport: null };
     case "SET_SCAN_PROGRESS":
       return { ...state, scanProgress: action.payload };
     case "SET_RCLONE_PROGRESS":

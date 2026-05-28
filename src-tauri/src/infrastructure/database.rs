@@ -1228,6 +1228,32 @@ impl Database {
         Ok(scores)
     }
 
+    /// Helper: busca metadados de scores com song_id e nome do arquivo.
+    fn query_score_metadata_with_song_id(
+        conn: &Connection,
+        sql: &str,
+        params: &[&dyn rusqlite::ToSql],
+    ) -> Result<Vec<(String, String, String, String, u64, String)>, AppError> {
+        let mut stmt = conn.prepare(sql)?;
+        let scores = stmt
+            .query_map(rusqlite::params_from_iter(params), |row| {
+                let dir_path: String = row.get(2)?;
+                let file_name: String = row.get(3)?;
+                let file_path = Self::build_score_full_path(&dir_path, &file_name);
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    file_path,
+                    file_name,
+                    row.get::<_, u64>(4)?,
+                    row.get::<_, String>(5)?,
+                ))
+            })?
+            .filter_map(|r| r.ok())
+            .collect();
+        Ok(scores)
+    }
+
     /// Obtém todos os scores com metadados para detecção de alterações
     #[allow(dead_code)]
     pub fn get_all_scores_with_metadata(
@@ -1246,11 +1272,11 @@ impl Database {
     pub fn get_all_scores_with_metadata_by_host(
         &self,
         host_id: &str,
-    ) -> Result<Vec<(String, String, u64, String)>, AppError> {
+    ) -> Result<Vec<(String, String, String, String, u64, String)>, AppError> {
         let conn = self.conn.lock().unwrap();
-        Self::query_score_metadata(
+        Self::query_score_metadata_with_song_id(
             &conn,
-            "SELECT s.id, s.file_path, s.file_name, s.file_size, s.file_modified_at
+            "SELECT s.song_id, s.id, s.file_path, s.file_name, s.file_size, s.file_modified_at
              FROM scores s
              WHERE s.host_id = ?1",
             &[&host_id as &dyn rusqlite::ToSql],
@@ -1261,12 +1287,12 @@ impl Database {
     pub fn get_not_found_scores_by_host(
         &self,
         host_id: &str,
-    ) -> Result<Vec<(String, String, u64, String)>, AppError> {
+    ) -> Result<Vec<(String, String, String, String, u64, String)>, AppError> {
         let conn = self.conn.lock().unwrap();
         let status = ScoreStatus::NotFound.as_str();
-        Self::query_score_metadata(
+        Self::query_score_metadata_with_song_id(
             &conn,
-            "SELECT s.id, s.file_path, s.file_name, s.file_size, s.file_modified_at
+            "SELECT s.song_id, s.id, s.file_path, s.file_name, s.file_size, s.file_modified_at
              FROM scores s
              WHERE s.status = ?1 AND s.host_id = ?2",
             &[

@@ -5,6 +5,7 @@ import {
   shouldDispatchRcloneProgressUpdate,
   shouldRunStartupServerScan,
   shouldUseFullCloudSync,
+  // preview path is exercised through the new helper below
 } from "../../context/useAppScanFlow";
 
 describe("shouldUseFullCloudSync", () => {
@@ -154,3 +155,4 @@ describe("getScanFailureToastMessage", () => {
     );
   });
 });
+

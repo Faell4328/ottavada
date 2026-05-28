@@ -237,7 +237,24 @@ O sistema deve abstrair completamente a utilização do `rclone`.
 
 O sistema deve exibir o progresso de todas as etapas executadas.
 
-## 11.1. Etapas upload para nuvem
+### 11.1 Verificar alterações
+
+ Após a verificação de alteração, deve abrir um modal informando tudo que foi alterado.
+
+O usuário deve poder escolher continuar ou cancelar.
+
+- Caso o usuário cancele, deve alterar nada internamente (como se não tivesse feito).
+
+## 11.2. Empacotamento com tar e compactar
+
+Ao agrupar partituras:
+
+- os arquivos devem permanecer na raiz do pacote;
+- não devem existir subdiretórios;
+- os arquivos devem ser renomeados utilizando o ID da partitura.
+- deve compactar também
+
+## 11.3. Etapas upload para nuvem
 
 Etapas:
 
@@ -246,7 +263,7 @@ Etapas:
 3. Agrupar e compactar arquivos alterados;
 4. Enviar arquivos novos ou modificados.
 
-## 11.2. Etapas download da nuvem
+## 11.4. Etapas download da nuvem
 
 Etapas:
 
@@ -254,7 +271,7 @@ Etapas:
 2. Aplicar eventos e/ou snapshot;
 3. Baixar arquivos novos ou modificados.
 
-## 11.3. Restrições durante sincronização
+## 11.5. Restrições durante sincronização
 
 Durante sincronizações, o usuário poderá apenas:
 
@@ -265,15 +282,7 @@ Durante sincronizações, o usuário poderá apenas:
 
 Demais operações devem permanecer bloqueadas.
 
-## 11.4. Empacotamento com `tar`
-
-Ao agrupar partituras:
-
-- os arquivos devem permanecer na raiz do pacote;
-- não devem existir subdiretórios;
-- os arquivos devem ser renomeados utilizando o ID da partitura.
-
-### 11.5. Snapshot
+### 11.6. Snapshot
 
 Um snapshot deve ser gerado quando o arquivo de eventos ultrapassar **2 MB**.
 
@@ -284,7 +293,7 @@ Após a geração do snapshot:
 3. O estado deve ser restaurado a partir do novo snapshot;
 4. O arquivo de eventos do servidor deve ser reinicializado, removendo os eventos já consolidados no snapshot.
 
-## 11.6. Persistência
+## 11.7. Persistência
 
 Durante a geração dos arquivos agrupados (`tar`) e sua compactação (`zst`), caso a partitura esteja nos estados `draft` ou `not_found`, o sistema deve manter a última versão disponível marcada como `main`.
 

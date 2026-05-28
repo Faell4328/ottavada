@@ -300,6 +300,7 @@ export async function refreshLibrarySummaryCache(): Promise<LibrarySummary> {
 
 export interface ScanResult {
   changed_files: string[];
+  added_files: string[];
   not_found_files: string[];
   recovered_files: string[];
   failed_files: Array<[string, string]>;
@@ -312,6 +313,10 @@ export interface ImportIndexedFilesResult {
 
 export async function scanFilesForChanges(): Promise<ScanResult> {
   return invoke("scan_files_for_changes");
+}
+
+export async function previewScanFilesForChanges(): Promise<ScanResult> {
+  return invoke("preview_scan_files_for_changes");
 }
 
 export async function hasInternetConnection(): Promise<boolean> {

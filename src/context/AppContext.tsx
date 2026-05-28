@@ -108,6 +108,10 @@ export function AppProvider({ children, disableBootstrap = false }: AppProviderP
     dispatch({ type: "RESET_OPERATION_STATUS" });
   }, [dispatch]);
 
+  const resetScanReport = useCallback(() => {
+    dispatch({ type: "RESET_SCAN_REPORT" });
+  }, [dispatch]);
+
   useAppBootstrap({
     state,
     dispatch,
@@ -144,7 +148,7 @@ export function AppProvider({ children, disableBootstrap = false }: AppProviderP
     getErrorMessage,
   });
 
-  const { scanFilesForChanges } = useAppScanFlow({
+  const { previewScanFilesForChanges, scanFilesForChanges } = useAppScanFlow({
     dispatch,
     computerType: state.settings?.computer_type,
     loadSongs,
@@ -187,6 +191,7 @@ export function AppProvider({ children, disableBootstrap = false }: AppProviderP
       refreshSelectedSong,
       setOperationStatus,
       resetOperationStatus,
+      resetScanReport,
       setSidebarView,
       selectSong,
       selectScore,
@@ -203,6 +208,7 @@ export function AppProvider({ children, disableBootstrap = false }: AppProviderP
       useScoreAsBase,
       saveSettings,
       completeFirstRun,
+      previewScanFilesForChanges,
       scanFilesForChanges,
     }),
     [
@@ -213,6 +219,7 @@ export function AppProvider({ children, disableBootstrap = false }: AppProviderP
       refreshSelectedSong,
       setOperationStatus,
       resetOperationStatus,
+      resetScanReport,
       setSidebarView,
       selectSong,
       selectScore,
@@ -228,6 +235,7 @@ export function AppProvider({ children, disableBootstrap = false }: AppProviderP
       useScoreAsBase,
       saveSettings,
       completeFirstRun,
+      previewScanFilesForChanges,
       scanFilesForChanges,
     ]
   );

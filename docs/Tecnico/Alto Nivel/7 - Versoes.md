@@ -328,3 +328,4 @@
 - removendo inconsistências no status `draft`.
 - removendo o criar música.
 - corrigindo o indexar diretório para o novo padrão.
+- removendo a opção "adicionar arquivo(s)".

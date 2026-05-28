@@ -11,6 +11,7 @@ import {
   SettingsPage,
   FirstRunPage,
   UpdateModal,
+  ScanReportModal,
 } from "./components";
 import { AppProvider, useAppState } from "./context/AppContext";
 import * as api from "./api/commands";
@@ -155,7 +156,7 @@ interface AppContentProps {
 }
 
 function AppContent({ startupUpdate }: AppContentProps) {
-  const { state } = useAppState();
+  const { state, resetScanReport, scanFilesForChanges } = useAppState();
   const [showExitModal, setShowExitModal] = useState(false);
   const [exitMessage, setExitMessage] = useState("");
   const [isExitProcessing, setIsExitProcessing] = useState(false);
@@ -163,6 +164,7 @@ function AppContent({ startupUpdate }: AppContentProps) {
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const [isInstallingUpdate, setIsInstallingUpdate] = useState(false);
+  const [isConfirmingScanReport, setIsConfirmingScanReport] = useState(false);
 
   const isAppBusy =
     state.isLoading ||
@@ -251,6 +253,23 @@ function AppContent({ startupUpdate }: AppContentProps) {
       setIsInstallingUpdate(false);
     }
   }, [availableUpdate]);
+
+  const handleConfirmScanReport = useCallback(async () => {
+    if (isConfirmingScanReport) {
+      return;
+    }
+
+    setIsConfirmingScanReport(true);
+
+    try {
+      await scanFilesForChanges({ forceCloudSync: true, rethrowOnError: true });
+      resetScanReport();
+    } catch (error) {
+      console.error("Failed to apply confirmed scan report:", error);
+    } finally {
+      setIsConfirmingScanReport(false);
+    }
+  }, [isConfirmingScanReport, resetScanReport, scanFilesForChanges]);
 
   useEffect(() => {
     let disposed = false;
@@ -370,6 +389,15 @@ function AppContent({ startupUpdate }: AppContentProps) {
         onCancel={() => setIsUpdateModalOpen(false)}
         onConfirm={() => {
           void handleInstallUpdate();
+        }}
+      />
+      <ScanReportModal
+        isOpen={state.scanReport !== null}
+        report={state.scanReport}
+        isConfirming={isConfirmingScanReport}
+        onClose={resetScanReport}
+        onConfirm={() => {
+          void handleConfirmScanReport();
         }}
       />
       <ConfirmationModal

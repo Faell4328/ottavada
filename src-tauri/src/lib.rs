@@ -303,6 +303,7 @@ pub fn run() {
             commands::update_commands::check_for_updates,
             commands::update_commands::install_update,
             // Scan
+            commands::scan_commands::preview_scan_files_for_changes,
             commands::scan_commands::scan_files_for_changes,
             commands::scan_commands::has_internet_connection,
             // Backup songs archives
