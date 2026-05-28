@@ -371,17 +371,21 @@ fn apply_snapshot(db: &Database, payload: &SnapshotMessagePack) -> Result<(), Ap
                 ],
             )?;
 
-            if payload.categories_songs.is_empty() {
+            let snapshot_category_relations: Vec<&SnapshotCategorySong> = payload
+                .categories_songs
+                .iter()
+                .filter(|relation| relation.song_id == song.id)
+                .collect();
+
+            if snapshot_category_relations.is_empty() {
                 for category_id in &song.categories_id {
                     tx.execute(
                         "INSERT OR IGNORE INTO categoriesSongs (id, categoryId, songId) VALUES (?1, ?2, ?3)",
                         params![uuid::Uuid::new_v4().to_string(), category_id, song.id],
                     )?;
                 }
-            }
-
-            if song.categories_id.is_empty() && payload.categories_songs.is_empty() {
-                for relation in payload.categories_songs.iter().filter(|relation| relation.song_id == song.id) {
+            } else {
+                for relation in snapshot_category_relations {
                     tx.execute(
                         "INSERT OR IGNORE INTO categoriesSongs (id, categoryId, songId) VALUES (?1, ?2, ?3)",
                         params![relation.id.clone(), relation.category_id.clone(), song.id],
@@ -412,13 +416,6 @@ fn apply_snapshot(db: &Database, payload: &SnapshotMessagePack) -> Result<(), Ap
                     ],
                 )?;
             }
-        }
-
-        for relation in &payload.categories_songs {
-            tx.execute(
-                "INSERT INTO categoriesSongs (id, categoryId, songId) VALUES (?1, ?2, ?3)",
-                params![relation.id, relation.category_id, relation.song_id],
-            )?;
         }
 
         for relation in &payload.composer_songs {
@@ -798,6 +795,7 @@ fn resolve_cloud_dir(app_data_dir: &std::path::Path) -> Result<std::path::PathBu
 #[cfg(test)]
 mod tests {
     use tempfile::tempdir;
+    use rusqlite::params;
 
     use crate::domain::models::{AppSettings, ComputerType};
     use crate::infrastructure::database::Database;
@@ -978,6 +976,7 @@ mod tests {
         assert_eq!(songs[0].name, "Musica 1 Atualizada");
         assert_eq!(songs[0].scores.len(), 1);
         assert_eq!(songs[0].scores[0].file_extension, "musx");
+        assert_eq!(songs[0].category_ids, vec!["cat-1".to_string()]);
 
         let categories = db.get_all_categories().expect("get categories");
         assert_eq!(categories.len(), 2);
@@ -985,6 +984,79 @@ mod tests {
         assert!(categories
             .iter()
             .any(|category| category.name == "Sem categoria"));
+    }
+
+    #[test]
+    fn removes_category_relations_when_snapshot_no_longer_contains_them() {
+        let dir = tempdir().expect("temp dir");
+        let db_path = dir.path().join("test.db");
+        let db = Database::new(&db_path).expect("db init");
+        let store = SystemStore::new(dir.path().to_path_buf());
+
+        let settings = AppSettings {
+            computer_id: "client-1".to_string(),
+            computer_name: Some("Cliente".to_string()),
+            computer_type: ComputerType::Client,
+            first_run_completed: true,
+            last_snapshot_timestamp: Some(0),
+            last_change_timestamp: Some(0),
+            ..Default::default()
+        };
+
+        store.save_app_settings(&settings).expect("save settings");
+
+        let conn = db.conn.lock().expect("lock db");
+        conn.execute(
+            "INSERT INTO categories (id, name) VALUES (?1, ?2)",
+            params!["cat-1", "Harpa"],
+        )
+        .expect("insert category");
+        conn.execute(
+            "INSERT INTO songs (id, name, composer, arranger, path, is_favorite, last_score_file_modified_at)
+             VALUES (?1, ?2, NULL, NULL, ?3, 0, 0)",
+            params!["song-1", "Musica 1", "/songs/song-1"],
+        )
+        .expect("insert song");
+        conn.execute(
+            "INSERT INTO categoriesSongs (id, categoryId, songId) VALUES (?1, ?2, ?3)",
+            params!["cat-song-1", "cat-1", "song-1"],
+        )
+        .expect("insert category relation");
+        drop(conn);
+
+        let cloud_dir = dir.path().join("cloud");
+        std::fs::create_dir_all(cloud_dir.join("actions")).expect("create dirs");
+
+        let snapshot_payload = SnapshotTestPayload {
+            generated_at: 100,
+            categories: vec![SnapshotCategoryTestPayload {
+                id: "cat-1".to_string(),
+                name: "Harpa".to_string(),
+            }],
+            categories_songs: vec![],
+            composers: Vec::new(),
+            composer_songs: Vec::new(),
+            arrangers: Vec::new(),
+            arranger_songs: Vec::new(),
+            songs: vec![SnapshotSongTestPayload {
+                id: "song-1".to_string(),
+                name: "Musica 1".to_string(),
+                scores: vec![],
+            }],
+        };
+
+        write_zstd_msgpack(
+            &cloud_dir.join("actions").join("snapshot.msgpack.zst"),
+            &snapshot_payload,
+        );
+
+        let summary = apply_server_changes_for_client(&db, &store).expect("sync client");
+
+        assert!(summary.snapshot_applied);
+
+        let song = db.get_song_list_item_by_id("song-1").expect("get song");
+        assert_eq!(song.category_ids.len(), 1);
+        assert!(!song.category_ids.iter().any(|category_id| category_id == "cat-1"));
     }
 
     #[test]

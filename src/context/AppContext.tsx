@@ -1,11 +1,9 @@
 import {
   createContext,
   useContext,
-  useEffect,
   useReducer,
   useCallback,
   useMemo,
-  useRef,
   type ReactNode,
 } from "react";
 import * as api from "../api/commands";
@@ -34,7 +32,6 @@ interface AppProviderProps {
 
 export function AppProvider({ children, disableBootstrap = false }: AppProviderProps) {
   const [state, dispatch] = useReducer(reducer, initialState);
-  const startupScanTriggeredRef = useRef(false);
 
   const getErrorMessage = useCallback((err: unknown, fallback: string) => {
     const message = extractErrorMessage(err);
@@ -111,12 +108,23 @@ export function AppProvider({ children, disableBootstrap = false }: AppProviderP
     dispatch({ type: "RESET_SCAN_REPORT" });
   }, [dispatch]);
 
+  const { previewScanFilesForChanges, scanFilesForChanges } = useAppScanFlow({
+    dispatch,
+    computerType: state.settings?.computer_type,
+    loadSongs,
+    loadCategories,
+    loadSettings,
+    refreshSelectedSong,
+    getErrorMessage,
+  });
+
   useAppBootstrap({
     state,
     dispatch,
     loadSongs,
     loadCategories,
     loadSettings,
+    startupScan: () => scanFilesForChanges({ isAutomatic: true }),
     enabled: !disableBootstrap,
   });
 
@@ -146,40 +154,6 @@ export function AppProvider({ children, disableBootstrap = false }: AppProviderP
     refreshSelectedSong,
     getErrorMessage,
   });
-
-  const { previewScanFilesForChanges, scanFilesForChanges } = useAppScanFlow({
-    dispatch,
-    computerType: state.settings?.computer_type,
-    loadSongs,
-    loadCategories,
-    loadSettings,
-    refreshSelectedSong,
-    getErrorMessage,
-  });
-
-  useEffect(() => {
-    if (startupScanTriggeredRef.current) {
-      return;
-    }
-
-    if (state.isLoading || state.isFirstRun || !state.settings) {
-      return;
-    }
-
-    if (state.settings.computer_type !== "Server" && state.settings.computer_type !== "Client") {
-      return;
-    }
-
-    startupScanTriggeredRef.current = true;
-
-    if (state.settings.computer_type === "Server") {
-      return;
-    }
-
-    void (async () => {
-      void scanFilesForChanges({ isAutomatic: true });
-    })();
-  }, [state.isLoading, state.isFirstRun, state.settings, scanFilesForChanges]);
 
   const value: AppContextValue = useMemo(
     () => ({

@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import * as api from "../api/commands";
 import type { Action, State } from "./reducer";
 import { formatBackupTimestamp } from "../utils/formatters";
+import { shouldRunStartupServerScan } from "./useAppScanFlow";
 
 interface UseAppBootstrapParams {
   state: State;
@@ -11,6 +12,7 @@ interface UseAppBootstrapParams {
   loadSongs: () => Promise<void>;
   loadCategories: () => Promise<void>;
   loadSettings: () => Promise<void>;
+  startupScan?: () => Promise<void>;
   enabled?: boolean;
 }
 
@@ -22,6 +24,7 @@ export function useAppBootstrap({
   loadSongs,
   loadCategories,
   loadSettings,
+  startupScan,
   enabled = true,
 }: UseAppBootstrapParams) {
   const skipNextAutoSongReloadRef = useRef(false);
@@ -41,13 +44,26 @@ export function useAppBootstrap({
           skipNextAutoSongReloadRef.current = true;
           await Promise.all([loadSongs(), loadCategories(), loadSettings()]);
 
+          const currentSettings = await api.getSettings();
+          const hasPendingChanges = await api.hasPendingChanges();
+          const hasInterruptedApply = await api.hasServerApplyChangesInProgress();
+
+          if (
+            startupScan &&
+            shouldRunStartupServerScan(
+              currentSettings.computer_type,
+              hasPendingChanges,
+              hasInterruptedApply
+            )
+          ) {
+            await startupScan();
+          }
+
           if (!automaticBackupStarted) {
             automaticBackupStarted = true;
 
             void (async () => {
               try {
-                const currentSettings = await api.getSettings();
-
                 if (
                   currentSettings.computer_type === "Server" &&
                   currentSettings.rclone_config
