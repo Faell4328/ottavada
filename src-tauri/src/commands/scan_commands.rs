@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::path::Path;
 use std::time::Duration;
+use rusqlite::params;
 use tauri::State;
 use tracing::{info, warn};
 
@@ -365,7 +366,7 @@ fn build_report_items(
     }
 
     for item in not_found_files {
-        items.push(format!("Partitura removida: {}", item));
+        items.push(format!("A partitura {} foi deletada.", item));
     }
 
     for item in recovered_files {
@@ -388,30 +389,79 @@ fn build_report_items(
 fn describe_database_change(db: &Database, change: &ChangedFieldRecord) -> Option<String> {
     match change.entity.as_str() {
         "songs" => describe_song_change(db, change),
+        "categoriesSongs" => describe_song_category_change(db, change),
         "categories" => describe_category_change(change),
-        "scores" => describe_score_change(change),
+        "scores" => describe_score_change(db, change),
+        _ => None,
+    }
+}
+
+fn describe_song_category_change(db: &Database, change: &ChangedFieldRecord) -> Option<String> {
+    if change.field.as_deref() != Some("categoryId") {
+        return None;
+    }
+
+    let conn = db.conn.lock().ok()?;
+    let category_id = change.value.clone()?;
+
+    let category_name = conn
+        .query_row(
+            "SELECT name FROM categories WHERE id = ?1",
+            params![category_id],
+            |row| row.get::<_, String>(0),
+        )
+        .unwrap_or_else(|_| category_id.clone());
+
+    let song_name = match change.change_type.as_str() {
+        "insert" => conn
+            .query_row(
+                "SELECT s.name
+                 FROM categoriesSongs cs
+                 JOIN songs s ON s.id = cs.songId
+                 WHERE cs.id = ?1",
+                params![change.entity_id],
+                |row| row.get::<_, String>(0),
+            )
+            .unwrap_or_else(|_| change.entity_id.clone()),
+        "delete" => conn
+            .query_row(
+                "SELECT name FROM songs WHERE id = ?1",
+                params![change.entity_id],
+                |row| row.get::<_, String>(0),
+            )
+            .unwrap_or_else(|_| change.entity_id.clone()),
+        _ => change.entity_id.clone(),
+    };
+
+    match change.change_type.as_str() {
+        "insert" => Some(format!("A categoria {} foi adicionada à música {}.", category_name, song_name)),
+        "delete" => Some(format!("A categoria {} foi removida da música {}.", category_name, song_name)),
         _ => None,
     }
 }
 
 fn describe_song_change(db: &Database, change: &ChangedFieldRecord) -> Option<String> {
-    let song_name = db
-        .get_song_by_id(&change.entity_id)
-        .map(|song| song.name)
-        .unwrap_or_else(|_| change.entity_id.clone());
+    let song = db.get_song_by_id(&change.entity_id).ok();
+    let song_name = song.as_ref().map(|song| song.name.clone()).unwrap_or_else(|| change.entity_id.clone());
 
     match (change.change_type.as_str(), change.field.as_deref()) {
         ("insert", Some("name")) => Some(format!("Música criada: {}", change.value.clone().unwrap_or(song_name))),
-        ("delete", Some("name")) => Some(format!("Música removida: {}", change.value.clone().unwrap_or(song_name))),
-        (_, Some("name")) => Some(format!("Música alterada: {}", change.value.clone().unwrap_or(song_name))),
-        (_, Some("composer")) => Some(match change.value.clone() {
-            Some(value) => format!("Compositor da música {}: {}", song_name, value),
-            None => format!("Compositor removido da música {}", song_name),
-        }),
-        (_, Some("arranger")) => Some(match change.value.clone() {
-            Some(value) => format!("Arranjador da música {}: {}", song_name, value),
-            None => format!("Arranjador removido da música {}", song_name),
-        }),
+        ("delete", Some("name")) => Some(format!("A música {} foi deletada.", change.value.clone().unwrap_or(song_name))),
+        ("update", Some("name")) => Some(format!("A música {} teve o nome alterado.", change.value.clone().unwrap_or(song_name))),
+        ("insert", Some("composer")) => change.value.as_ref().map(|value| format!("O compositor {} foi adicionado à música {}.", value, song_name)),
+        (_, Some("composer")) => match (change.value.clone(), song.as_ref().and_then(|song| song.composer.clone())) {
+            (Some(value), Some(current_value)) if current_value == value => Some(format!("O compositor {} foi modificado na música {}.", value, song_name)),
+            (Some(value), None) => Some(format!("O compositor {} foi deletado da música {}.", value, song_name)),
+            (Some(value), Some(current_value)) if current_value != value => Some(format!("O compositor {} foi modificado na música {}.", current_value, song_name)),
+            _ => None,
+        },
+        ("insert", Some("arranger")) => change.value.as_ref().map(|value| format!("O arranjador {} foi adicionado à música {}.", value, song_name)),
+        (_, Some("arranger")) => match (change.value.clone(), song.as_ref().and_then(|song| song.arranger.clone())) {
+            (Some(value), Some(current_value)) if current_value == value => Some(format!("O arranjador {} foi modificado na música {}.", value, song_name)),
+            (Some(value), None) => Some(format!("O arranjador {} foi deletado da música {}.", value, song_name)),
+            (Some(value), Some(current_value)) if current_value != value => Some(format!("O arranjador {} foi modificado na música {}.", current_value, song_name)),
+            _ => None,
+        },
         _ => None,
     }
 }
@@ -419,16 +469,72 @@ fn describe_song_change(db: &Database, change: &ChangedFieldRecord) -> Option<St
 fn describe_category_change(change: &ChangedFieldRecord) -> Option<String> {
     match (change.change_type.as_str(), change.field.as_deref()) {
         ("insert", Some("name")) => Some(format!("Categoria criada: {}", change.value.clone().unwrap_or_else(|| change.entity_id.clone()))),
-        ("delete", Some("name")) => Some(format!("Categoria removida: {}", change.value.clone().unwrap_or_else(|| change.entity_id.clone()))),
+        ("delete", Some("name")) => Some(format!("A categoria {} foi deletada.", change.value.clone().unwrap_or_else(|| change.entity_id.clone()))),
         _ => None,
     }
 }
 
-fn describe_score_change(change: &ChangedFieldRecord) -> Option<String> {
+fn describe_score_change(db: &Database, change: &ChangedFieldRecord) -> Option<String> {
     match (change.change_type.as_str(), change.field.as_deref()) {
-        ("delete", Some("file_name")) => Some(format!("Partitura removida: {}", change.value.clone().unwrap_or_else(|| change.entity_id.clone()))),
+        ("delete", Some("file_name")) => Some(format!("A partitura {} foi deletada.", change.value.clone().unwrap_or_else(|| change.entity_id.clone()))),
+        ("update", Some("name")) => Some(format!("A partitura {} teve o nome alterado.", change.value.clone().unwrap_or_else(|| change.entity_id.clone()))),
+        ("update", Some("status")) if change.value.as_deref() == Some("main") => describe_score_recovered_from_draft(db, change),
         _ => None,
     }
+}
+
+fn describe_score_recovered_from_draft(db: &Database, change: &ChangedFieldRecord) -> Option<String> {
+    let conn = db.conn.lock().ok()?;
+
+    let result = conn
+        .query_row(
+            "SELECT s.file_path, s.file_name, songs.name
+             FROM scores s
+             JOIN songs ON songs.id = s.song_id
+             WHERE s.id = ?1",
+            params![change.entity_id],
+            |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                ))
+            },
+        )
+        .ok()?;
+
+    let full_path = build_score_full_path(&result.0, &result.1);
+    let file_name = Path::new(&full_path)
+        .file_name()
+        .and_then(|value| value.to_str())
+        .unwrap_or(&result.1);
+    let file_stem = Path::new(file_name)
+        .file_stem()
+        .and_then(|value| value.to_str())
+        .unwrap_or(file_name)
+        .to_string();
+    let file_extension = Path::new(file_name)
+        .extension()
+        .and_then(|value| value.to_str())
+        .map(|value| format!(".{}", value))
+        .unwrap_or_default();
+    let song_name = result.2;
+
+    let score_name = if file_stem.to_ascii_lowercase().starts_with(&song_name.to_ascii_lowercase()) {
+        file_stem
+            .strip_prefix(&song_name)
+            .map(|value| value.trim_start_matches(" - ").trim().to_string())
+            .filter(|value| !value.is_empty())
+            .unwrap_or(file_stem)
+    } else {
+        file_stem
+    };
+    let score_name_with_extension = format!("{}{}", score_name, file_extension);
+
+    Some(format!(
+        "A partitura {} saiu de draft e voltou para main na música {}.",
+        score_name_with_extension, song_name
+    ))
 }
 
 fn build_score_full_path(file_path: &str, file_name: &str) -> String {
@@ -498,6 +604,7 @@ mod tests {
 
     use super::scan_files_for_changes_impl;
     use crate::domain::models::{AppSettings, ComputerType, Score, ScoreStatus, Song};
+    use crate::infrastructure::database::ChangedFieldRecord;
     use crate::infrastructure::database::Database;
     use crate::infrastructure::store::SystemStore;
     use crate::services::indexer::get_file_metadata;
@@ -637,6 +744,56 @@ mod tests {
         assert_eq!(result.not_found_files.len(), 1);
         assert!(result.database_changes_count >= 1);
         assert_eq!(scores.len(), 0);
+    }
+
+    #[test]
+    fn describes_composer_and_arranger_changes_with_terminal_punctuation() {
+        let db = Database::new_in_memory().expect("db");
+
+        db.insert_song(
+            &Song {
+                id: "song-1".to_string(),
+                name: "Eis o Nosso Deus".to_string(),
+                composer: None,
+                arranger: None,
+                path: "/music/song-1".to_string(),
+                is_favorite: false,
+                status: ScoreStatus::Main,
+                updated_at: now(),
+                updated_by: "server-1".to_string(),
+            },
+            &[],
+        )
+        .expect("insert song");
+
+        let composer_added = ChangedFieldRecord {
+            id: "change-1".to_string(),
+            change_type: "insert".to_string(),
+            entity: "songs".to_string(),
+            entity_id: "song-1".to_string(),
+            field: Some("composer".to_string()),
+            value: Some("Neusom".to_string()),
+            timestamp: 0,
+        };
+
+        let arranger_added = ChangedFieldRecord {
+            id: "change-2".to_string(),
+            change_type: "insert".to_string(),
+            entity: "songs".to_string(),
+            entity_id: "song-1".to_string(),
+            field: Some("arranger".to_string()),
+            value: Some("Maria".to_string()),
+            timestamp: 0,
+        };
+
+        assert_eq!(
+            super::describe_song_change(&db, &composer_added),
+            Some("O compositor Neusom foi adicionado à música Eis o Nosso Deus.".to_string())
+        );
+        assert_eq!(
+            super::describe_song_change(&db, &arranger_added),
+            Some("O arranjador Maria foi adicionado à música Eis o Nosso Deus.".to_string())
+        );
     }
 
     #[test]

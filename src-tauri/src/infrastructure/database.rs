@@ -393,22 +393,28 @@ impl Database {
             Some("name"),
             Some(song.name.clone()),
         )?;
-        Self::insert_changed_field(
-            &conn,
-            "insert",
-            "songs",
-            &song.id,
-            Some("composer"),
-            song.composer.clone(),
-        )?;
-        Self::insert_changed_field(
-            &conn,
-            "insert",
-            "songs",
-            &song.id,
-            Some("arranger"),
-            song.arranger.clone(),
-        )?;
+
+        if let Some(composer) = song.composer.clone() {
+            Self::insert_changed_field(
+                &conn,
+                "insert",
+                "songs",
+                &song.id,
+                Some("composer"),
+                Some(composer),
+            )?;
+        }
+
+        if let Some(arranger) = song.arranger.clone() {
+            Self::insert_changed_field(
+                &conn,
+                "insert",
+                "songs",
+                &song.id,
+                Some("arranger"),
+                Some(arranger),
+            )?;
+        }
         Ok(())
     }
 
@@ -521,9 +527,9 @@ impl Database {
                     &conn,
                     "delete",
                     "categoriesSongs",
-                    &uuid::Uuid::new_v4().to_string(),
+                    &song.id,
                     Some("categoryId"),
-                    None,
+                    Some(old_category_id.clone()),
                 )?;
             }
         }

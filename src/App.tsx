@@ -397,6 +397,7 @@ function AppContent({ startupUpdate }: AppContentProps) {
         isConfirming={isConfirmingScanReport}
         onClose={resetScanReport}
         onConfirm={() => {
+          resetScanReport();
           void handleConfirmScanReport();
         }}
       />
