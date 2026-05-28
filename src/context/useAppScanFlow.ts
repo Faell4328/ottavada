@@ -342,7 +342,8 @@ export function useAppScanFlow({
         return;
       }
 
-      const isClient = computerType === "Client";
+      const currentSettings = await api.getSettings();
+      const isClient = currentSettings.computer_type === "Client";
 
       if (!isClient) {
         dispatch({ type: "SET_SCANNING_FILES", payload: true });
@@ -707,7 +708,6 @@ export function useAppScanFlow({
     }
   }, [
     clearScanTimer,
-    computerType,
     dispatch,
     getErrorMessage,
     loadCategories,

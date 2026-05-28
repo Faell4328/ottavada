@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::ffi::OsString;
 use std::fs::{self, File};
 use std::path::{Path, PathBuf};
@@ -56,45 +56,13 @@ struct ArchiveJob {
     entries: Vec<ScoreArchiveEntry>,
 }
 
-#[derive(Debug, Clone, Default)]
-pub struct DraftNotFoundMainVersionSummary {
-    pub with_previous_main: HashSet<String>,
-    pub without_previous_main: HashSet<String>,
-}
-
-impl DraftNotFoundMainVersionSummary {
-    pub fn has_previous_main(&self, score_id: &str) -> bool {
-        self.with_previous_main.contains(score_id)
-    }
-}
-
-#[derive(Debug, Clone, Default)]
-struct PreparedDraftNotFoundMainVersions {
-    summary: DraftNotFoundMainVersionSummary,
-    preserved_files: HashMap<(String, String), PathBuf>,
-}
-
-#[derive(Debug, Clone)]
-struct DraftScoreCandidate {
-    song_id: String,
-    score_id: String,
-    file_path: String,
-    file_name: String,
-}
-
-fn should_generate_archive(
-    row: &SongBackupRow,
-    songs_dir: &Path,
-    preserved_scores_count: usize,
-) -> bool {
+fn should_generate_archive(row: &SongBackupRow, songs_dir: &Path) -> bool {
     let archive_exists = songs_dir.join(format!("{}.tar.zst", row.song_id)).is_file();
 
     if !archive_exists {
-        return row.last_uploadable_score_modified_at.is_some() || preserved_scores_count > 0;
+        return row.last_uploadable_score_modified_at.is_some();
     }
 
-    // Se não existe partitura elegível para nuvem (main),
-    // nunca deve regerar o arquivo com conteúdo draft/not_found.
     let Some(last_uploadable_modified_at) = row.last_uploadable_score_modified_at else {
         return false;
     };
@@ -168,11 +136,7 @@ fn list_song_backup_rows(db: &Database, songs_dir: &Path) -> Result<Vec<SongBack
     Ok(rows?)
 }
 
-fn list_scores_for_archive(
-    db: &Database,
-    song_id: &str,
-    prepared_versions: &PreparedDraftNotFoundMainVersions,
-) -> Result<Vec<ScoreArchiveEntry>, AppError> {
+fn list_scores_for_archive(db: &Database, song_id: &str) -> Result<Vec<ScoreArchiveEntry>, AppError> {
     let conn = db.conn.lock().unwrap();
     let mut stmt = conn.prepare(
         "SELECT id, file_path, file_name, status
@@ -187,30 +151,7 @@ fn list_scores_for_archive(
         let file_name: String = row.get(2)?;
         let status: String = row.get(3)?;
 
-        let normalized_status = status.to_ascii_lowercase();
-
-        if normalized_status.as_str() == "draft" {
-            let Some(preserved_source_path) = prepared_versions
-                .preserved_files
-                .get(&(song_id.to_string(), score_id.clone()))
-            else {
-                return Ok(None);
-            };
-
-            let tar_name = preserved_source_path
-                .file_name()
-                .and_then(|name| name.to_str())
-                .map(|name| name.to_string())
-                .unwrap_or_else(|| score_id.clone());
-
-            return Ok(Some(ScoreArchiveEntry {
-                score_id,
-                source_path: preserved_source_path.clone(),
-                tar_name,
-            }));
-        }
-
-        if !matches!(normalized_status.as_str(), "main" | "draft") {
+        if !status.eq_ignore_ascii_case("main") {
             return Ok(None);
         }
 
@@ -241,219 +182,6 @@ fn list_scores_for_archive(
     }
 
     Ok(entries)
-}
-
-fn list_draft_not_found_scores_by_song(
-    db: &Database,
-) -> Result<HashMap<String, Vec<DraftScoreCandidate>>, AppError> {
-    let conn = db.conn.lock().unwrap();
-    let mut stmt = conn.prepare(
-        "SELECT song_id, id, file_path, file_name
-         FROM scores
-            WHERE status = 'draft'
-         ORDER BY song_id, id",
-    )?;
-
-    let mut grouped = HashMap::<String, Vec<DraftScoreCandidate>>::new();
-    let rows = stmt.query_map([], |row| {
-        let song_id: String = row.get(0)?;
-        let score_id: String = row.get(1)?;
-        let file_path: String = row.get(2)?;
-        let file_name: String = row.get(3)?;
-        Ok(DraftScoreCandidate {
-            song_id,
-            score_id,
-            file_path,
-            file_name,
-        })
-    })?;
-
-    for row in rows {
-        let candidate = row?;
-        grouped.entry(candidate.song_id.clone()).or_default().push(candidate);
-    }
-
-    Ok(grouped)
-}
-
-fn find_score_file_in_dir(dir: &Path, score_id: &str) -> Option<PathBuf> {
-    let entries = fs::read_dir(dir).ok()?;
-    for entry in entries.filter_map(|entry| entry.ok()) {
-        let path = entry.path();
-        if !path.is_file() {
-            continue;
-        }
-
-        let stem_matches = path
-            .file_stem()
-            .and_then(|stem| stem.to_str())
-            .map(|stem| stem.eq_ignore_ascii_case(score_id))
-            .unwrap_or(false);
-
-        if stem_matches {
-            return Some(path);
-        }
-    }
-
-    None
-}
-
-fn extract_previous_main_versions_for_song(
-    archive_path: &Path,
-    target_score_ids: &HashSet<&str>,
-    output_dir: &Path,
-) -> Result<(), AppError> {
-    if !archive_path.is_file() {
-        return Ok(());
-    }
-
-    let archive_file = File::open(archive_path).map_err(|e| {
-        AppError::Generic(format!(
-            "Erro ao abrir arquivo de backup {}: {}",
-            archive_path.display(),
-            e
-        ))
-    })?;
-
-    let decoder = zstd::stream::read::Decoder::new(archive_file).map_err(|e| {
-        AppError::Generic(format!(
-            "Erro ao descompactar arquivo {}: {}",
-            archive_path.display(),
-            e
-        ))
-    })?;
-
-    let mut archive = tar::Archive::new(decoder);
-    let entries = archive.entries().map_err(|e| {
-        AppError::Generic(format!(
-            "Erro ao listar entradas do arquivo {}: {}",
-            archive_path.display(),
-            e
-        ))
-    })?;
-
-    fs::create_dir_all(output_dir)?;
-
-    for entry_result in entries {
-        let mut entry = entry_result.map_err(|e| {
-            AppError::Generic(format!(
-                "Erro ao ler entrada de {}: {}",
-                archive_path.display(),
-                e
-            ))
-        })?;
-
-        let maybe_file_name = match entry.path() {
-            Ok(path) => path
-                .file_name()
-                .and_then(|name| name.to_str())
-                .map(|name| name.to_string()),
-            Err(_) => None,
-        };
-
-        let Some(file_name) = maybe_file_name else {
-            continue;
-        };
-
-        let Some(stem) = Path::new(&file_name).file_stem().and_then(|s| s.to_str()) else {
-            continue;
-        };
-
-        if !target_score_ids.contains(stem) {
-            continue;
-        }
-
-        let output_file = output_dir.join(&file_name);
-        let mut output = File::create(&output_file).map_err(|e| {
-            AppError::Generic(format!(
-                "Erro ao criar arquivo temporário {}: {}",
-                output_file.display(),
-                e
-            ))
-        })?;
-
-        std::io::copy(&mut entry, &mut output).map_err(|e| {
-            AppError::Generic(format!(
-                "Erro ao extrair arquivo {} de {}: {}",
-                file_name,
-                archive_path.display(),
-                e
-            ))
-        })?;
-    }
-
-    Ok(())
-}
-
-fn prepare_draft_not_found_main_versions(
-    db: &Database,
-    app_data_dir: &Path,
-    cloud_root_dir: &Path,
-) -> Result<PreparedDraftNotFoundMainVersions, AppError> {
-    let draft_or_not_found = list_draft_not_found_scores_by_song(db)?;
-    if draft_or_not_found.is_empty() {
-        return Ok(PreparedDraftNotFoundMainVersions::default());
-    }
-
-    let temp_root = app_data_dir
-        .join(TMP_DIR_NAME)
-        .join("songs")
-        .join("preserved-main");
-    remove_dir_if_exists(&temp_root);
-    fs::create_dir_all(&temp_root)?;
-
-    let songs_dir = cloud_root_dir.join(SONGS_DIR_NAME);
-    let mut prepared = PreparedDraftNotFoundMainVersions::default();
-
-    for (song_id, score_candidates) in draft_or_not_found {
-        let target_score_ids: HashSet<&str> = score_candidates
-            .iter()
-            .map(|candidate| candidate.score_id.as_str())
-            .collect();
-        let song_temp_dir = temp_root.join(&song_id);
-        fs::create_dir_all(&song_temp_dir)?;
-
-        let archive_path = songs_dir.join(format!("{}.tar.zst", song_id));
-        if archive_path.is_file() {
-            extract_previous_main_versions_for_song(&archive_path, &target_score_ids, &song_temp_dir)?;
-        }
-
-        for candidate in score_candidates {
-            let current_file_path = Path::new(&candidate.file_path).join(&candidate.file_name);
-            if !current_file_path.is_file() {
-                prepared
-                    .summary
-                    .without_previous_main
-                    .insert(candidate.score_id.clone());
-                continue;
-            }
-
-            if let Some(path) = find_score_file_in_dir(&song_temp_dir, &candidate.score_id) {
-                prepared
-                    .summary
-                    .with_previous_main
-                    .insert(candidate.score_id.clone());
-                prepared
-                    .preserved_files
-                    .insert((song_id.clone(), candidate.score_id.clone()), path);
-            } else {
-                prepared
-                    .summary
-                    .without_previous_main
-                    .insert(candidate.score_id.clone());
-            }
-        }
-    }
-
-    Ok(prepared)
-}
-
-pub fn list_draft_not_found_scores_with_previous_main(
-    db: &Database,
-    app_data_dir: &Path,
-    cloud_root_dir: &Path,
-) -> Result<DraftNotFoundMainVersionSummary, AppError> {
-    Ok(prepare_draft_not_found_main_versions(db, app_data_dir, cloud_root_dir)?.summary)
 }
 
 fn create_song_temp_dir(temp_root: &Path, song_id: &str) -> Result<PathBuf, AppError> {
@@ -850,7 +578,6 @@ fn generate_song_archives_with_prepared_versions(
     db: &Database,
     app_data_dir: &Path,
     cloud_root_dir: &Path,
-    prepared_versions: &PreparedDraftNotFoundMainVersions,
     song_ids_filter: Option<&HashSet<String>>,
 ) -> Result<SongArchiveSummary, AppError> {
     let songs_dir = cloud_root_dir.join(SONGS_DIR_NAME);
@@ -906,13 +633,7 @@ fn generate_song_archives_with_prepared_versions(
             continue;
         }
 
-        let preserved_scores_count = prepared_versions
-            .preserved_files
-            .keys()
-            .filter(|(song_id, _)| song_id == &row.song_id)
-            .count();
-
-        let should_generate = should_generate_archive(&row, &songs_dir, preserved_scores_count);
+        let should_generate = should_generate_archive(&row, &songs_dir);
 
         if !should_generate {
             if let Err(err) = update_backup_status(db, &row.song_id, "ok") {
@@ -933,7 +654,7 @@ fn generate_song_archives_with_prepared_versions(
             continue;
         }
 
-        let entries = match list_scores_for_archive(db, &row.song_id, prepared_versions) {
+        let entries = match list_scores_for_archive(db, &row.song_id) {
             Ok(entries) => entries,
             Err(err) => {
                 let error_text = err.to_string();
@@ -1034,15 +755,7 @@ pub fn generate_song_archives(
     app_data_dir: &Path,
     cloud_root_dir: &Path,
 ) -> Result<SongArchiveSummary, AppError> {
-    let prepared_versions =
-        prepare_draft_not_found_main_versions(db, app_data_dir, cloud_root_dir)?;
-    generate_song_archives_with_prepared_versions(
-        db,
-        app_data_dir,
-        cloud_root_dir,
-        &prepared_versions,
-        None,
-    )
+    generate_song_archives_with_prepared_versions(db, app_data_dir, cloud_root_dir, None)
 }
 
 pub fn generate_song_archives_for_song_ids(
@@ -1061,17 +774,9 @@ pub fn generate_song_archives_for_song_ids(
         });
     }
 
-    let prepared_versions =
-        prepare_draft_not_found_main_versions(db, app_data_dir, cloud_root_dir)?;
     let song_ids_filter = song_ids.iter().cloned().collect::<HashSet<_>>();
 
-    generate_song_archives_with_prepared_versions(
-        db,
-        app_data_dir,
-        cloud_root_dir,
-        &prepared_versions,
-        Some(&song_ids_filter),
-    )
+    generate_song_archives_with_prepared_versions(db, app_data_dir, cloud_root_dir, Some(&song_ids_filter))
 }
 
 pub fn regenerate_all_song_archives(
@@ -1079,22 +784,13 @@ pub fn regenerate_all_song_archives(
     app_data_dir: &Path,
     cloud_root_dir: &Path,
 ) -> Result<SongArchiveSummary, AppError> {
-    let prepared_versions =
-        prepare_draft_not_found_main_versions(db, app_data_dir, cloud_root_dir)?;
-
     let songs_dir = cloud_root_dir.join(SONGS_DIR_NAME);
     remove_dir_if_exists(&songs_dir);
     fs::create_dir_all(&songs_dir)?;
 
     db.mark_all_song_archives_for_regeneration()?;
 
-    generate_song_archives_with_prepared_versions(
-        db,
-        app_data_dir,
-        cloud_root_dir,
-        &prepared_versions,
-        None,
-    )
+    generate_song_archives_with_prepared_versions(db, app_data_dir, cloud_root_dir, None)
 }
 
 #[cfg(test)]
@@ -1104,34 +800,13 @@ mod tests {
     use chrono::Local;
     use crate::domain::models::{Score, ScoreStatus, Song};
     use crate::infrastructure::database::Database;
-    use tar::Builder;
     use tempfile::tempdir;
 
     use super::{
         archive_worker_count_for, cleanup_orphan_archives, copy_and_rename_scores_parallel,
-        copy_worker_count_for, generate_song_archives, list_draft_not_found_scores_with_previous_main,
-        should_generate_archive, SongBackupRow, ScoreArchiveEntry,
+        copy_worker_count_for, generate_song_archives, should_generate_archive, SongBackupRow,
+        ScoreArchiveEntry,
     };
-
-    fn create_tar_zst_with_entry(archive_path: &std::path::Path, file_name: &str, content: &[u8]) {
-        if let Some(parent) = archive_path.parent() {
-            std::fs::create_dir_all(parent).expect("create archive dir");
-        }
-
-        let output = File::create(archive_path).expect("create archive file");
-        let encoder = zstd::stream::Encoder::new(output, 5).expect("encoder");
-        let mut tar = Builder::new(encoder);
-
-        let mut header = tar::Header::new_gnu();
-        header.set_path(file_name).expect("set path");
-        header.set_size(content.len() as u64);
-        header.set_mode(0o644);
-        header.set_cksum();
-
-        tar.append(&header, content).expect("append entry");
-        let encoder = tar.into_inner().expect("finish tar");
-        encoder.finish().expect("finish zstd");
-    }
 
     #[test]
     fn generates_when_archive_is_missing_even_if_last_backup_is_up_to_date() {
@@ -1146,7 +821,7 @@ mod tests {
             last_backup_at: Some(100),
         };
 
-        assert!(should_generate_archive(&row, &songs_dir, 0));
+        assert!(should_generate_archive(&row, &songs_dir));
     }
 
     #[test]
@@ -1164,7 +839,7 @@ mod tests {
 
         let archive_path = songs_dir.join("song-2.tar.zst");
         std::fs::write(&archive_path, b"already generated").expect("create archive placeholder");
-        assert!(!should_generate_archive(&row, &songs_dir, 0));
+        assert!(!should_generate_archive(&row, &songs_dir));
     }
 
     #[test]
@@ -1238,7 +913,7 @@ mod tests {
         let archive_path = songs_dir.join("song-3.tar.zst");
         std::fs::write(&archive_path, b"old archive").expect("create archive placeholder");
 
-        assert!(should_generate_archive(&row, &songs_dir, 0));
+        assert!(should_generate_archive(&row, &songs_dir));
     }
 
     #[test]
@@ -1258,7 +933,7 @@ mod tests {
         std::fs::write(&archive_path, b"existing main archive")
             .expect("create archive placeholder");
 
-        assert!(!should_generate_archive(&row, &songs_dir, 0));
+        assert!(!should_generate_archive(&row, &songs_dir));
     }
 
     #[test]
@@ -1320,19 +995,98 @@ mod tests {
     }
 
     #[test]
-    fn regenerates_when_archive_missing_but_has_preserved_scores() {
+    fn archives_only_main_scores_when_song_has_mixed_statuses() {
         let temp = tempdir().expect("temp dir");
-        let songs_dir = temp.path().join("songs");
-        std::fs::create_dir_all(&songs_dir).expect("create songs dir");
+        let app_data_dir = temp.path().join("app-data");
+        let cloud_root_dir = temp.path().join("cloud");
+        let db_path = temp.path().join("database.sqlite");
 
-        let row = SongBackupRow {
-            song_id: "song-5".to_string(),
-            song_name: "Musica".to_string(),
-            last_uploadable_score_modified_at: None,
-            last_backup_at: Some(100),
-        };
+        std::fs::create_dir_all(&app_data_dir).expect("create app data dir");
+        std::fs::create_dir_all(cloud_root_dir.join("songs")).expect("create cloud songs dir");
 
-        assert!(should_generate_archive(&row, &songs_dir, 1));
+        let db = Database::new(&db_path).expect("create db");
+
+        let song_dir = temp.path().join("songs").join("song-1");
+        std::fs::create_dir_all(&song_dir).expect("create song dir");
+        let main_score_file = song_dir.join("main-score.musx");
+        let draft_score_file = song_dir.join("draft-score.musx");
+        std::fs::write(&main_score_file, b"main content").expect("write main score");
+        std::fs::write(&draft_score_file, b"draft content").expect("write draft score");
+
+        db.insert_song(
+            &Song {
+                id: "song-1".to_string(),
+                name: "Musica".to_string(),
+                composer: None,
+                arranger: None,
+                path: song_dir.to_string_lossy().to_string(),
+                is_favorite: false,
+                status: ScoreStatus::Main,
+                updated_at: Local::now().naive_local(),
+                updated_by: "server-1".to_string(),
+            },
+            &[],
+        )
+        .expect("insert song");
+
+        db.insert_score(&Score {
+            id: "score-main".to_string(),
+            song_id: "song-1".to_string(),
+            name: Some("Piano".to_string()),
+            host_id: "server-1".to_string(),
+            file_path: song_dir.to_string_lossy().to_string(),
+            file_name: "main-score.musx".to_string(),
+            file_size: 12,
+            file_modified_at: Local::now().naive_local(),
+            updated_at: Local::now().naive_local(),
+            status: ScoreStatus::Main,
+            updated_by: "server-1".to_string(),
+        })
+        .expect("insert main score");
+
+        db.insert_score(&Score {
+            id: "score-draft".to_string(),
+            song_id: "song-1".to_string(),
+            name: Some("Flute".to_string()),
+            host_id: "server-1".to_string(),
+            file_path: song_dir.to_string_lossy().to_string(),
+            file_name: "draft-score.musx".to_string(),
+            file_size: 13,
+            file_modified_at: Local::now().naive_local(),
+            updated_at: Local::now().naive_local(),
+            status: ScoreStatus::Draft,
+            updated_by: "server-1".to_string(),
+        })
+        .expect("insert draft score");
+
+        let summary = generate_song_archives(&db, &app_data_dir, &cloud_root_dir)
+            .expect("generate archives");
+
+        assert_eq!(summary.total, 1);
+        assert_eq!(summary.generated, 1);
+        assert_eq!(summary.failed, 0);
+
+        let archive_path = cloud_root_dir.join("songs").join("song-1.tar.zst");
+        assert!(archive_path.exists());
+
+        let archive_file = File::open(&archive_path).expect("open archive");
+        let decoder = zstd::stream::read::Decoder::new(archive_file).expect("decoder");
+        let mut archive = tar::Archive::new(decoder);
+        let mut names = Vec::new();
+
+        for entry in archive.entries().expect("entries") {
+            let entry = entry.expect("read entry");
+            let name = entry
+                .path()
+                .expect("path")
+                .file_name()
+                .and_then(|value| value.to_str())
+                .expect("name")
+                .to_string();
+            names.push(name);
+        }
+
+        assert_eq!(names, vec!["score-main.musx"]);
     }
 
     #[test]
@@ -1375,125 +1129,4 @@ mod tests {
         assert!(songs_dir.join("notes.txt").is_file());
     }
 
-    #[test]
-    fn finds_previous_main_version_from_cloud_songs_archive() {
-        let temp = tempdir().expect("temp dir");
-        let db_path = temp.path().join("test.db");
-        let db = crate::infrastructure::database::Database::new(&db_path).expect("db init");
-        let cloud_root_dir = temp.path().join("cloud");
-        let draft_score_dir = temp.path().join("song-1");
-        std::fs::create_dir_all(&draft_score_dir).expect("create draft score dir");
-        let draft_score_file = draft_score_dir.join("score-1.musx");
-        std::fs::write(&draft_score_file, b"draft-version").expect("write draft score file");
-
-        db.insert_song(
-            &crate::domain::models::Song {
-                id: "song-1".to_string(),
-                name: "Musica".to_string(),
-                composer: None,
-                arranger: None,
-                path: "/music/song-1".to_string(),
-                is_favorite: false,
-                status: crate::domain::models::ScoreStatus::Main,
-                updated_at: chrono::Local::now().naive_local(),
-                updated_by: "server-1".to_string(),
-            },
-            &[],
-        )
-        .expect("insert song");
-
-        let conn = db.conn.lock().expect("lock db");
-        conn.execute(
-            "INSERT INTO scores (id, song_id, name, host_id, file_path, file_name, file_extension, file_size, file_modified_at, status)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, datetime('now'), ?9)",
-            rusqlite::params![
-                "score-1",
-                "song-1",
-                "flauta",
-                "server",
-                draft_score_dir.to_string_lossy().as_ref(),
-                "score-1.musx",
-                "musx",
-                0,
-                "draft",
-            ],
-        )
-        .expect("insert draft score");
-        drop(conn);
-
-        create_tar_zst_with_entry(
-            &cloud_root_dir.join("songs").join("song-1.tar.zst"),
-            "score-1.musx",
-            b"main-version",
-        );
-
-        let summary = list_draft_not_found_scores_with_previous_main(
-            &db,
-            temp.path(),
-            &cloud_root_dir,
-        )
-        .expect("list preserved versions");
-
-        assert!(summary.has_previous_main("score-1"));
-    }
-
-    #[test]
-    fn does_not_preserve_previous_main_for_missing_draft_score_file() {
-        let temp = tempdir().expect("temp dir");
-        let db_path = temp.path().join("test.db");
-        let db = crate::infrastructure::database::Database::new(&db_path).expect("db init");
-        let cloud_root_dir = temp.path().join("cloud");
-
-        db.insert_song(
-            &crate::domain::models::Song {
-                id: "song-1".to_string(),
-                name: "Musica".to_string(),
-                composer: None,
-                arranger: None,
-                path: "/music/song-1".to_string(),
-                is_favorite: false,
-                status: crate::domain::models::ScoreStatus::Main,
-                updated_at: chrono::Local::now().naive_local(),
-                updated_by: "server-1".to_string(),
-            },
-            &[],
-        )
-        .expect("insert song");
-
-        let missing_score_dir = temp.path().join("missing-song-1");
-        let conn = db.conn.lock().expect("lock db");
-        conn.execute(
-            "INSERT INTO scores (id, song_id, name, host_id, file_path, file_name, file_extension, file_size, file_modified_at, status)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, datetime('now'), ?9)",
-            rusqlite::params![
-                "score-1",
-                "song-1",
-                "flauta",
-                "server",
-                missing_score_dir.to_string_lossy().as_ref(),
-                "score-1.musx",
-                "musx",
-                0,
-                "draft",
-            ],
-        )
-        .expect("insert draft score");
-        drop(conn);
-
-        create_tar_zst_with_entry(
-            &cloud_root_dir.join("songs").join("song-1.tar.zst"),
-            "score-1.musx",
-            b"main-version",
-        );
-
-        let summary = list_draft_not_found_scores_with_previous_main(
-            &db,
-            temp.path(),
-            &cloud_root_dir,
-        )
-        .expect("list preserved versions");
-
-        assert!(!summary.has_previous_main("score-1"));
-        assert!(summary.without_previous_main.contains("score-1"));
-    }
 }

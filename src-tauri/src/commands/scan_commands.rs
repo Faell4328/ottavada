@@ -488,7 +488,7 @@ fn describe_score_recovered_from_draft(db: &Database, change: &ChangedFieldRecor
 
     let result = conn
         .query_row(
-            "SELECT s.file_path, s.file_name, songs.name
+            "SELECT s.file_path, s.file_name, s.name, songs.name
              FROM scores s
              JOIN songs ON songs.id = s.song_id
              WHERE s.id = ?1",
@@ -497,7 +497,8 @@ fn describe_score_recovered_from_draft(db: &Database, change: &ChangedFieldRecor
                 Ok((
                     row.get::<_, String>(0)?,
                     row.get::<_, String>(1)?,
-                    row.get::<_, String>(2)?,
+                    row.get::<_, Option<String>>(2)?,
+                    row.get::<_, String>(3)?,
                 ))
             },
         )
@@ -518,14 +519,22 @@ fn describe_score_recovered_from_draft(db: &Database, change: &ChangedFieldRecor
         .and_then(|value| value.to_str())
         .map(|value| format!(".{}", value))
         .unwrap_or_default();
-    let song_name = result.2;
+    let song_name = result.3;
 
-    let score_name = if file_stem.to_ascii_lowercase().starts_with(&song_name.to_ascii_lowercase()) {
+    let score_name = if let Some(score_name) = result.2
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        score_name.to_string()
+    } else if file_stem.eq_ignore_ascii_case(&song_name) {
+        "Sem instrumento".to_string()
+    } else if file_stem.to_ascii_lowercase().starts_with(&song_name.to_ascii_lowercase()) {
         file_stem
             .strip_prefix(&song_name)
             .map(|value| value.trim_start_matches(" - ").trim().to_string())
             .filter(|value| !value.is_empty())
-            .unwrap_or(file_stem)
+            .unwrap_or_else(|| "Sem instrumento".to_string())
     } else {
         file_stem
     };
@@ -744,6 +753,58 @@ mod tests {
         assert_eq!(result.not_found_files.len(), 1);
         assert!(result.database_changes_count >= 1);
         assert_eq!(scores.len(), 0);
+    }
+
+    #[test]
+    fn describes_recovered_draft_score_without_instrument_as_sem_instrumento() {
+        let dir = tempdir().expect("temp dir");
+        let db = Database::new_in_memory().expect("db");
+
+        db.insert_song(
+            &Song {
+                id: "song-1".to_string(),
+                name: "CANON".to_string(),
+                composer: None,
+                arranger: None,
+                path: dir.path().join("songs").join("song-1").to_string_lossy().to_string(),
+                is_favorite: false,
+                status: ScoreStatus::Main,
+                updated_at: now(),
+                updated_by: "server-1".to_string(),
+            },
+            &[],
+        )
+        .expect("insert song");
+
+        db.insert_score(&Score {
+            id: "score-1".to_string(),
+            song_id: "song-1".to_string(),
+            name: None,
+            host_id: "server-1".to_string(),
+            file_path: dir.path().join("songs").join("song-1").to_string_lossy().to_string(),
+            file_name: "CANON.musx".to_string(),
+            file_size: 1024,
+            file_modified_at: now(),
+            updated_at: now(),
+            status: ScoreStatus::Draft,
+            updated_by: "server-1".to_string(),
+        })
+        .expect("insert score");
+
+        let change = ChangedFieldRecord {
+            id: "change-1".to_string(),
+            change_type: "update".to_string(),
+            entity: "scores".to_string(),
+            entity_id: "score-1".to_string(),
+            field: Some("status".to_string()),
+            value: Some("main".to_string()),
+            timestamp: 0,
+        };
+
+        let text = super::describe_score_change(&db, &change).expect("description");
+
+        assert!(text.contains("Sem instrumento"));
+        assert!(!text.contains("CANON.musx"));
     }
 
     #[test]

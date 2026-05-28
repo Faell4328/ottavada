@@ -11,7 +11,6 @@ use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
 use crate::services::cloud_paths::ensure_actions_cloud_dir;
 use crate::services::cloud_paths::ensure_cloud_root_dir;
-use crate::services::backup_songs_service::list_draft_not_found_scores_with_previous_main;
 use crate::services::msgpack_zstd::{
     compress_zstd_with_threads, serialize_msgpack_named, write_atomic, ZSTD_LEVEL_BALANCED,
 };
@@ -110,9 +109,6 @@ pub fn generate_snapshot_msgpack(
     let cloud_dir = ensure_actions_cloud_dir(store.app_data_dir())?;
     let cloud_root_dir = ensure_cloud_root_dir(store.app_data_dir())?;
 
-    let previous_main_versions =
-        list_draft_not_found_scores_with_previous_main(db, store.app_data_dir(), &cloud_root_dir)?;
-
     let all_songs = db.get_all_songs()?;
     let all_categories = db.get_all_categories()?;
 
@@ -142,13 +138,7 @@ pub fn generate_snapshot_msgpack(
                         format!(".{}", score.file_extension.trim_start_matches('.'))
                     },
                     status: match score.status {
-                        ScoreStatus::Draft => Some(
-                            if previous_main_versions.has_previous_main(&score.id) {
-                                "main".to_string()
-                            } else {
-                                "draft".to_string()
-                            },
-                        ),
+                        ScoreStatus::Draft => Some("draft".to_string()),
                         _ => None,
                     },
                 })
@@ -449,7 +439,7 @@ mod tests {
     }
 
     #[test]
-    fn keeps_main_status_for_draft_score_when_previous_archive_exists() {
+    fn keeps_draft_status_for_draft_score_when_previous_archive_exists() {
         let dir = tempdir().expect("temp dir");
         let db_path = dir.path().join("test.db");
         let db = Database::new(&db_path).expect("db init");
@@ -500,7 +490,7 @@ mod tests {
         let mut decoder = zstd::stream::read::Decoder::new(raw.as_slice()).expect("decoder");
         let payload: Value = rmp_serde::from_read(&mut decoder).expect("decode msgpack");
 
-        assert_eq!(payload["songs"][0]["scores"][0]["status"], "main");
+        assert_eq!(payload["songs"][0]["scores"][0]["status"], "draft");
     }
 
     fn conn_execute_draft_score(db: &Database) {

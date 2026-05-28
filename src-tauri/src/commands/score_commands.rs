@@ -344,7 +344,6 @@ fn extract_score_file_from_archive(
 
 fn resolve_openable_score_path(
     db: &Database,
-    app_data_dir: &Path,
     score_id: &str,
 ) -> Result<std::path::PathBuf, AppError> {
     let file_path = db.get_score_file_path(score_id)?;
@@ -353,16 +352,6 @@ fn resolve_openable_score_path(
     if direct_path.exists() && direct_path.is_file() {
         ensure_supported_score_file(direct_path)?;
         return Ok(direct_path.to_path_buf());
-    }
-
-    let song_id = db.get_song_id_for_score(score_id)?;
-    let archive_path = app_data_dir
-        .join("cloud")
-        .join("songs")
-        .join(format!("{}.tar.zst", song_id));
-
-    if archive_path.is_file() {
-        return Ok(archive_path);
     }
 
     Err(AppError::Generic(format!(
@@ -480,31 +469,7 @@ pub async fn open_file(
         return open_path_on_system(&extracted_path_str);
     }
 
-    let resolved_path = resolve_openable_score_path(&db, store.app_data_dir(), &score_id)?;
-
-    if resolved_path.extension().and_then(|ext| ext.to_str()) == Some("zst") {
-        let song_id = db.get_song_id_for_score(&score_id)?;
-        let song = db.get_song_list_item_by_id(&song_id)?;
-        let score = song
-            .scores
-            .iter()
-            .find(|item| item.id == score_id)
-            .ok_or_else(|| AppError::ScoreNotFound(score_id.clone()))?;
-
-        let output_file_stem = build_client_extracted_score_name(&song.name, score.name.as_deref());
-        let temp_dir = store
-            .app_data_dir()
-            .join("tmp")
-            .join("scores");
-        let extracted_path = extract_score_file_from_archive(
-            &resolved_path,
-            &score_id,
-            &output_file_stem,
-            &temp_dir,
-        )?;
-        return open_path_on_system(&extracted_path.to_string_lossy());
-    }
-
+    let resolved_path = resolve_openable_score_path(&db, &score_id)?;
     open_path_on_system(&resolved_path.to_string_lossy())
 }
 
@@ -830,7 +795,52 @@ mod tests {
     }
 
     #[test]
-    fn resolves_archive_path_when_direct_file_is_missing() {
+    fn resolves_direct_file_path_when_available() {
+        let dir = tempdir().expect("temp dir");
+        let db = Database::new_in_memory().expect("db");
+
+        db.insert_song(
+            &crate::domain::models::Song {
+                id: "song-1".to_string(),
+                name: "HINO NACIONAL".to_string(),
+                composer: None,
+                arranger: None,
+                path: dir.path().join("songs").join("song-1").to_string_lossy().to_string(),
+                is_favorite: false,
+                status: ScoreStatus::Main,
+                updated_at: chrono::Local::now().naive_local(),
+                updated_by: "test".to_string(),
+            },
+            &[],
+        )
+        .expect("insert song");
+
+        db.insert_score(&Score {
+            id: "score-1".to_string(),
+            song_id: "song-1".to_string(),
+            name: Some("Flauta".to_string()),
+            host_id: "test".to_string(),
+            file_path: dir.path().join("scores").to_string_lossy().to_string(),
+            file_name: "flauta.musx".to_string(),
+            file_size: 10,
+            file_modified_at: chrono::Local::now().naive_local(),
+            updated_at: chrono::Local::now().naive_local(),
+            status: ScoreStatus::Main,
+            updated_by: "test".to_string(),
+        })
+        .expect("insert score");
+
+        let direct_path = dir.path().join("scores").join("flauta.musx");
+        fs::create_dir_all(direct_path.parent().expect("direct parent")).expect("create dirs");
+        fs::write(&direct_path, b"X").expect("write direct file");
+
+        let resolved = resolve_openable_score_path(&db, "score-1").expect("resolve");
+
+        assert_eq!(resolved, direct_path);
+    }
+
+    #[test]
+    fn returns_error_when_direct_file_is_missing() {
         let dir = tempdir().expect("temp dir");
         let db = Database::new_in_memory().expect("db");
 
@@ -865,12 +875,8 @@ mod tests {
         })
         .expect("insert score");
 
-        let archive_path = dir.path().join("cloud").join("songs").join("song-1.tar.zst");
-        fs::create_dir_all(archive_path.parent().expect("archive parent")).expect("create dirs");
-        write_test_tar_zst(&archive_path, &[("score-1.musx", b"X")]);
+        let err = resolve_openable_score_path(&db, "score-1").expect_err("missing file");
 
-        let resolved = resolve_openable_score_path(&db, dir.path(), "score-1").expect("resolve");
-
-        assert_eq!(resolved, archive_path);
+        assert!(err.to_string().contains("Arquivo da partitura não encontrado"));
     }
 }

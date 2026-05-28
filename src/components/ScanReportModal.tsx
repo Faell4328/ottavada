@@ -269,7 +269,17 @@ function parseReviewItem(raw: string): ReviewItem | null {
   const recoveredMatch = raw.match(/^Partitura recuperada:\s*(.+)$/);
   if (recoveredMatch) {
     const parsed = parseScoreReference(recoveredMatch[1].trim());
-    return { action: "modified", entity: "score", songName: parsed.songName, scoreName: parsed.scoreName, customText: `A partitura ${parsed.scoreName} saiu de draft e voltou para main na música ${parsed.songName}.`, raw };
+    const isStandaloneScoreName = parsed.songName === parsed.scoreName;
+    return {
+      action: "modified",
+      entity: "score",
+      songName: parsed.songName,
+      scoreName: parsed.scoreName,
+      customText: isStandaloneScoreName
+        ? `A partitura ${parsed.scoreName} saiu de draft e voltou para main.`
+        : `A partitura ${parsed.scoreName} saiu de draft e voltou para main na música ${parsed.songName}.`,
+      raw,
+    };
   }
 
   const draftToMainMatch = raw.match(/^A partitura\s+(.+?)\s+saiu de draft e voltou para main na música\s+(.+)\.$/);
@@ -609,7 +619,17 @@ function renderCustomSongText(text: string): ReactNode {
 }
 
 function renderScoreItem(action: ReviewAction, scoreName: string, songName: string): ReactNode {
+  const isStandaloneScoreName = normalizeKey(scoreName) === normalizeKey(songName);
+
   if (action === "adding") {
+    if (isStandaloneScoreName) {
+      return (
+        <>
+          A partitura <strong>{scoreName}</strong> foi adicionada.
+        </>
+      );
+    }
+
     return (
       <>
         A partitura <strong>{scoreName}</strong> foi adicionada na música <strong>{songName}</strong>.
@@ -618,9 +638,25 @@ function renderScoreItem(action: ReviewAction, scoreName: string, songName: stri
   }
 
   if (action === "deleted") {
+    if (isStandaloneScoreName) {
+      return (
+        <>
+          A partitura <strong>{scoreName}</strong> foi deletada.
+        </>
+      );
+    }
+
     return (
       <>
         A partitura <strong>{scoreName}</strong> foi deletada na música <strong>{songName}</strong>.
+      </>
+    );
+  }
+
+  if (isStandaloneScoreName) {
+    return (
+      <>
+        A partitura <strong>{scoreName}</strong> foi alterada.
       </>
     );
   }
@@ -635,6 +671,15 @@ function renderScoreItem(action: ReviewAction, scoreName: string, songName: stri
 function renderCustomScoreText(text: string): ReactNode {
   const extensionOnlyMatch = text.match(/^A partitura\s+(.+?)\s+teve a extensão alterada na música\s+(.+)\.$/);
   if (extensionOnlyMatch) {
+    const isStandaloneScoreName = normalizeKey(extensionOnlyMatch[1]) === normalizeKey(extensionOnlyMatch[2]);
+    if (isStandaloneScoreName) {
+      return (
+        <>
+          A partitura <strong>{extensionOnlyMatch[1]}</strong> teve a extensão alterada.
+        </>
+      );
+    }
+
     return (
       <>
         A partitura <strong>{extensionOnlyMatch[1]}</strong> teve a extensão alterada na música <strong>{extensionOnlyMatch[2]}</strong>.
@@ -653,6 +698,15 @@ function renderCustomScoreText(text: string): ReactNode {
 
   const recoveryMatch = text.match(/^A partitura\s+(.+?)\s+saiu de draft e voltou para main na música\s+(.+)\.$/);
   if (recoveryMatch) {
+    const isStandaloneScoreName = normalizeKey(recoveryMatch[1]) === normalizeKey(recoveryMatch[2]);
+    if (isStandaloneScoreName) {
+      return (
+        <>
+          A partitura <strong>{recoveryMatch[1]}</strong> saiu de draft e voltou para main.
+        </>
+      );
+    }
+
     return (
       <>
         A partitura <strong>{recoveryMatch[1]}</strong> saiu de draft e voltou para main na música <strong>{recoveryMatch[2]}</strong>.

@@ -812,9 +812,42 @@ mod tests {
     }
 
     #[test]
-    // ── Score Metadata for Scanning ──
+    fn test_update_score_status_main_marks_song_backup_processing() {
+        let db = make_db();
+        db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
+        db.insert_score(&make_score(&db, "sc1", "s1", Some("Violino")))
+            .unwrap();
+
+        db.update_score_status("sc1", ScoreStatus::Draft, "test-computer", None)
+            .unwrap();
+
+        {
+            let conn = db.conn.lock().unwrap();
+            conn.execute(
+                "UPDATE songsBackup SET status = 'ok' WHERE songId = ?1",
+                ["s1"],
+            )
+            .unwrap();
+        }
+
+        db.update_score_status("sc1", ScoreStatus::Main, "test-computer", None)
+            .unwrap();
+
+        let conn = db.conn.lock().unwrap();
+        let status: String = conn
+            .query_row(
+                "SELECT status FROM songsBackup WHERE songId = ?1",
+                ["s1"],
+                |row| row.get(0),
+            )
+            .unwrap();
+
+        assert_eq!(status, "processing");
+    }
 
     #[test]
+    // ── Score Metadata for Scanning ──
+
     fn test_get_all_scores_with_metadata() {
         let db = make_db();
         db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();

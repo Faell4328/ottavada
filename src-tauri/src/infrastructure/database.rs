@@ -1340,6 +1340,16 @@ impl Database {
             )?;
         }
 
+        if old_status != status.as_str() && status == ScoreStatus::Main {
+            conn.execute(
+                "INSERT INTO songsBackup (songId, status)
+                 VALUES (?1, 'processing')
+                 ON CONFLICT(songId) DO UPDATE SET
+                    status = 'processing'",
+                params![song_id],
+            )?;
+        }
+
         Ok(())
     }
 

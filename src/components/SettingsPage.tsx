@@ -135,7 +135,7 @@ export default function SettingsPage() {
       );
     } catch (error) {
       toast.error(
-        getFriendlyRcloneErrorMessage(error, "Não consegui configurar a conexão com a nuvem")
+        getFriendlyRcloneErrorMessage(error, "Não foi possível configurar a conexão com a nuvem")
       );
       throw error;
     }
@@ -154,8 +154,8 @@ export default function SettingsPage() {
         getFriendlyRcloneErrorMessage(
           error,
           provider === "google_drive"
-            ? "Não consegui testar o Google Drive"
-            : "Não consegui testar o Koofr"
+            ? "Não foi possível testar o Google Drive"
+            : "Não foi possível testar o Koofr"
         )
       );
       throw error;

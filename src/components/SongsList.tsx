@@ -16,6 +16,7 @@ import { compareInstrumentNames } from "../utils/instrumentOrder";
 import { getSidebarViewLabel } from "../utils/sidebarView";
 import { normalizeSearchText, songMatchesAuthorFilter, songMatchesSearchQuery } from "../utils/songSearch";
 import type { ScoreListItem, SongListItem } from "../types";
+import { isScoreAvailableForClient } from "../utils/scoreStatus";
 import { EditMusicModal } from "./EditMusicModal";
 import { EditScoreModal } from "./EditScoreModal";
 import { UseAsBaseScoreModal } from "./UseAsBaseScoreModal";
@@ -118,7 +119,9 @@ export default function SongsList() {
   );
 
   const sortScoresForDisplay = useCallback((scores: ScoreListItem[]) => {
-    return [...scores].sort((a, b) => compareInstrumentNames(a.name, b.name));
+    return scores
+      .filter((score) => isScoreAvailableForClient(score.status))
+      .sort((a, b) => compareInstrumentNames(a.name, b.name));
   }, []);
 
   const refreshScoresForSong = useCallback(
@@ -241,10 +244,12 @@ export default function SongsList() {
       const cachedScores = scoresBySongId[song.id];
 
       if (cachedScores) {
-        return cachedScores;
+        return cachedScores.filter((score) => isScoreAvailableForClient(score.status));
       }
 
-      return [...song.scores].sort((a, b) => compareInstrumentNames(a.name, b.name));
+      return song.scores
+        .filter((score) => isScoreAvailableForClient(score.status))
+        .sort((a, b) => compareInstrumentNames(a.name, b.name));
     },
     [scoresBySongId]
   );

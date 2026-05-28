@@ -7,7 +7,6 @@ use crate::domain::models::OperationGuard;
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
 use crate::services::cloud_paths::{ensure_actions_cloud_dir, ensure_cloud_root_dir};
-use crate::services::backup_songs_service::list_draft_not_found_scores_with_previous_main;
 use crate::services::msgpack_zstd::{
     compress_zstd_with_threads, serialize_msgpack_named, write_atomic, ZSTD_LEVEL_BALANCED,
 };
@@ -56,21 +55,14 @@ pub fn generate_events_msgpack(
 
     let changed_fields = db.get_changed_fields_ordered()?;
     let actions_dir = ensure_actions_cloud_dir(store.app_data_dir())?;
-    let cloud_root_dir = ensure_cloud_root_dir(store.app_data_dir())?;
-    let previous_main_versions =
-        list_draft_not_found_scores_with_previous_main(db, store.app_data_dir(), &cloud_root_dir)?;
+    let _cloud_root_dir = ensure_cloud_root_dir(store.app_data_dir())?;
 
     let mut events = Vec::with_capacity(changed_fields.len());
     for change in changed_fields.iter() {
-        let Some(status_override) = normalize_score_status_for_client(change, &previous_main_versions)
-        else {
-            continue;
-        };
-
         let data = change.field.as_ref().map(|field| {
             vec![EventDataMessagePack {
                 field: field.clone(),
-                value: status_override.clone().or_else(|| change.value.clone()),
+                value: change.value.clone(),
             }]
         });
 
@@ -148,34 +140,11 @@ pub fn generate_events_msgpack(
     })
 }
 
-fn normalize_score_status_for_client(
-    change: &crate::infrastructure::database::ChangedFieldRecord,
-    previous_main_versions: &crate::services::backup_songs_service::DraftNotFoundMainVersionSummary,
-) -> Option<Option<String>> {
-    if change.entity != "scores" || change.field.as_deref() != Some("status") {
-        return Some(None);
-    }
-
-    if change.value.as_deref() != Some("draft") {
-        return None;
-    }
-
-    if previous_main_versions.without_previous_main.contains(&change.entity_id) {
-        // Sem versão main anterior na nuvem, o cliente continua vendo draft.
-        return Some(Some("draft".to_string()));
-    }
-
-    // Com versão main anterior, o cliente deve continuar vendo main.
-    Some(Some("main".to_string()))
-}
-
 #[cfg(test)]
 mod tests {
     use std::fs;
-    use std::fs::File;
 
     use rusqlite::params;
-    use tar::Builder;
     use tempfile::tempdir;
 
     use crate::domain::models::{Category, Song};
@@ -183,8 +152,6 @@ mod tests {
     use crate::infrastructure::store::SystemStore;
 
     use super::generate_events_msgpack;
-    use crate::services::backup_songs_service::list_draft_not_found_scores_with_previous_main;
-
     #[test]
     fn generates_events_msgpack_file() {
         let dir = tempdir().expect("temp dir");
@@ -232,7 +199,7 @@ mod tests {
     }
 
     #[test]
-    fn skips_not_found_status_events_when_generating_events_file() {
+    fn keeps_score_status_events_as_they_are() {
         let dir = tempdir().expect("temp dir");
         let db_path = dir.path().join("test.db");
         let db = Database::new(&db_path).expect("db init");
@@ -318,36 +285,25 @@ mod tests {
             ],
         )
         .expect("insert allowed event");
-
-        create_tar_zst_with_entry(
-            &dir.path().join("cloud").join("songs").join("song-1.tar.zst"),
-            "score-1.musx",
-            b"v1",
-        );
-
         drop(conn);
-
-        let preserved_versions = list_draft_not_found_scores_with_previous_main(
-            &db,
-            dir.path(),
-            &dir.path().join("cloud"),
-        )
-        .expect("list preserved versions");
-        assert!(preserved_versions.has_previous_main("score-1"));
 
         let summary = generate_events_msgpack(&db, &store).expect("generate events");
 
-        assert_eq!(summary.events_count, 2);
+        assert_eq!(summary.events_count, 3);
 
         let raw = fs::read(dir.path().join("cloud").join("actions").join("events.msgpack.zst"))
             .expect("read events file");
         let mut decoder = zstd::stream::read::Decoder::new(raw.as_slice()).expect("decoder");
         let payload: serde_json::Value = rmp_serde::from_read(&mut decoder).expect("decode msgpack");
-        assert_eq!(payload["events"][0]["data"][0]["value"], "main");
+        assert!(payload["events"]
+            .as_array()
+            .expect("events array")
+            .iter()
+            .any(|event| event["entity"] == "scores" && event["data"][0]["value"] == "draft"));
     }
 
     #[test]
-    fn keeps_draft_when_no_previous_main_exists() {
+    fn keeps_draft_status_events_when_no_archive_exists() {
         let dir = tempdir().expect("temp dir");
         let db_path = dir.path().join("test.db");
         let db = Database::new(&db_path).expect("db init");
@@ -413,26 +369,6 @@ mod tests {
         let mut decoder = zstd::stream::read::Decoder::new(raw.as_slice()).expect("decoder");
         let payload: serde_json::Value = rmp_serde::from_read(&mut decoder).expect("decode msgpack");
         assert_eq!(payload["events"][0]["data"][0]["value"], "draft");
-    }
-
-    fn create_tar_zst_with_entry(archive_path: &std::path::Path, file_name: &str, content: &[u8]) {
-        if let Some(parent) = archive_path.parent() {
-            fs::create_dir_all(parent).expect("create archive dir");
-        }
-
-        let output = File::create(archive_path).expect("create archive file");
-        let encoder = zstd::stream::Encoder::new(output, 5).expect("encoder");
-        let mut tar = Builder::new(encoder);
-
-        let mut header = tar::Header::new_gnu();
-        header.set_path(file_name).expect("set path");
-        header.set_size(content.len() as u64);
-        header.set_mode(0o644);
-        header.set_cksum();
-
-        tar.append(&header, content).expect("append entry");
-        let encoder = tar.into_inner().expect("finish tar");
-        encoder.finish().expect("finish zstd");
     }
 
     #[test]

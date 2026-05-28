@@ -7,27 +7,27 @@ const FRIENDLY_MESSAGES: Array<{
   {
     patterns: ["invalid_grant", "authentication failed", "unauthorized", "401", "wrong password"],
     message:
-      "Não consegui acessar sua conta. Confira o email e a senha de aplicativo e tente de novo.",
+      "Não foi possível acessar sua conta. Verifique o email e a senha de aplicativo.",
   },
   {
     patterns: ["not found", "remote not found", "couldn't find remote", "didn't find section in config file"],
     message:
-      "Não encontrei a pasta da nuvem configurada. Gere a configuração novamente e tente outra vez.",
+      "Não foi possível localizar a pasta da nuvem configurada. Gere a configuração novamente.",
   },
   {
     patterns: ["permission denied", "forbidden", "403"],
     message:
-      "Essa conta não tem acesso a esse local da nuvem. Verifique a permissão e tente novamente.",
+      "Não foi possível acessar esse local da nuvem. Verifique as permissões.",
   },
   {
     patterns: ["timeout", "no such host", "network is unreachable", "connection refused", "dial tcp"],
     message:
-      "Não consegui falar com a nuvem. Verifique sua internet e tente novamente.",
+      "Não foi possível falar com a nuvem. Verifique sua internet.",
   },
   {
     patterns: ["quota", "rate limit", "insufficient storage", "storage full"],
     message:
-      "A conta da nuvem está sem espaço suficiente. Libere espaço e tente novamente.",
+      "Não foi possível concluir a operação. Libere espaço na conta da nuvem e tente novamente.",
   },
 ];
 

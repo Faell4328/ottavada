@@ -42,11 +42,10 @@ export function useAppBootstrap({
 
         if (!firstRun) {
           skipNextAutoSongReloadRef.current = true;
-          await Promise.all([loadSongs(), loadCategories(), loadSettings()]);
-
           const currentSettings = await api.getSettings();
           const hasPendingChanges = await api.hasPendingChanges();
           const hasInterruptedApply = await api.hasServerApplyChangesInProgress();
+          await Promise.all([loadSongs(), loadCategories(), loadSettings()]);
 
           if (
             startupScan &&
@@ -56,7 +55,9 @@ export function useAppBootstrap({
               hasInterruptedApply
             )
           ) {
-            await startupScan();
+            void startupScan().catch((error) => {
+              console.error("Failed to run startup scan:", error);
+            });
           }
 
           if (!automaticBackupStarted) {

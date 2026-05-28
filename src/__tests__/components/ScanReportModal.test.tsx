@@ -30,6 +30,7 @@ const report = {
     "O arranjador Maria foi deletado da música Eis o Nosso Deus.",
     "A partitura Flauta.musx foi deletada.",
     "A partitura Flauta.musx saiu de draft e voltou para main na música Eis o Nosso Deus.",
+    "Partitura alterada: /music/CANON.musx",
   ],
 };
 
@@ -73,6 +74,7 @@ describe("ScanReportModal", () => {
     expect(screen.getAllByText((_, element) => element?.textContent === "A partitura Oboes.musx teve o nome alterado.").length).toBeGreaterThan(0);
     expect(screen.getAllByText((_, element) => element?.textContent === "A partitura Flauta.pdf teve a extensão alterada na música Eis o Nosso Deus.").length).toBeGreaterThan(0);
     expect(screen.getAllByText((_, element) => element?.textContent === "A partitura Flauta.musx saiu de draft e voltou para main na música Eis o Nosso Deus.").length).toBeGreaterThan(0);
+    expect(screen.getAllByText((_, element) => element?.textContent === "A partitura CANON.musx foi alterada.").length).toBeGreaterThan(0);
     expect(screen.getAllByText((_, element) => element?.textContent === "A partitura Clarinete.musx foi deletada.").length).toBeGreaterThan(0);
     expect(screen.queryByText("Arquivos recuperados")).not.toBeInTheDocument();
     expect(screen.queryByText("Arquivos com erro")).not.toBeInTheDocument();

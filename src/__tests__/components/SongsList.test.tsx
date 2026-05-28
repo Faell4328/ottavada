@@ -64,6 +64,14 @@ const updatedSampleSong: SongListItem = {
       updated_at: "2026-04-16T00:10:00.000Z",
       status: "main",
     },
+    {
+      id: "score-2",
+      name: "Sopro",
+      file_path: "/music/Canon - Sopro.musx",
+      file_extension: "musx",
+      updated_at: "2026-04-16T00:11:00.000Z",
+      status: "draft",
+    },
   ],
 };
 
@@ -86,6 +94,14 @@ const sampleScores: ScoreListItem[] = [
     file_extension: "musx",
     updated_at: "2026-04-16T00:00:00.000Z",
     status: "main",
+  },
+  {
+    id: "score-2",
+    name: "Sopro",
+    file_path: "/music/Canon - Sopro.musx",
+    file_extension: "musx",
+    updated_at: "2026-04-16T00:01:00.000Z",
+    status: "draft",
   },
 ];
 
@@ -142,6 +158,7 @@ describe("SongsList", () => {
     resolveScores?.(sampleScores);
 
     expect(await screen.findByText("Flauta")).toBeInTheDocument();
+    expect(screen.queryByText("Sopro")).not.toBeInTheDocument();
 
     expect(requestAnimationFrameSpy).toHaveBeenCalledTimes(1);
 

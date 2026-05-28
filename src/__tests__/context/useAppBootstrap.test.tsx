@@ -63,17 +63,13 @@ describe("useAppBootstrap", () => {
     vi.clearAllMocks();
   });
 
-  it("keeps loading active until the startup scan resolves", async () => {
+  it("releases loading after the initial startup work and runs the scan in background", async () => {
     const loadSongs: () => Promise<void> = vi.fn().mockResolvedValue(undefined);
     const loadCategories: () => Promise<void> = vi.fn().mockResolvedValue(undefined);
     const loadSettings: () => Promise<void> = vi.fn().mockResolvedValue(undefined);
     const dispatch: (action: Action) => void = vi.fn();
-    let resolveStartupScan: (() => void) | undefined;
     const startupScan = vi.fn(
-      () =>
-        new Promise<void>((resolve) => {
-          resolveStartupScan = resolve;
-        })
+      () => Promise.resolve(undefined)
     );
 
     render(
@@ -97,11 +93,6 @@ describe("useAppBootstrap", () => {
     await waitFor(() => expect(loadCategories).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(loadSettings).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(startupScan).toHaveBeenCalledTimes(1));
-    expect(dispatch).not.toHaveBeenCalledWith({ type: "SET_LOADING", payload: false });
-
-    if (resolveStartupScan) {
-      resolveStartupScan();
-    }
 
     await waitFor(() => expect(dispatch).toHaveBeenCalledWith({ type: "SET_LOADING", payload: false }));
   });
