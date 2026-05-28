@@ -17,7 +17,7 @@ export interface ScoreListItem {
   file_path: string;
   file_extension: string;
   updated_at: string;
-  status: "main" | "draft" | "not_found";
+  status: "main" | "draft";
 }
 
 export interface Category {
@@ -58,7 +58,6 @@ export interface LibraryStatusSummary {
 export interface LibrarySummary {
   main: LibraryStatusSummary;
   draft: LibraryStatusSummary;
-  not_found: LibraryStatusSummary;
 }
 
 export interface GoogleServiceAccount {
@@ -131,7 +130,6 @@ export type SidebarView =
   | "all"
   | "favorites"
   | "drafts"
-  | "not_found"
   | { type: "category"; id: string; name: string };
 
 export interface AppState {

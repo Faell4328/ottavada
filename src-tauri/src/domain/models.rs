@@ -22,7 +22,6 @@ pub struct Song {
 pub enum ScoreStatus {
     Main,
     Draft,
-    NotFound,
 }
 
 impl ScoreStatus {
@@ -30,7 +29,6 @@ impl ScoreStatus {
         match self {
             ScoreStatus::Main => "main",
             ScoreStatus::Draft => "draft",
-            ScoreStatus::NotFound => "not_found",
         }
     }
 
@@ -38,7 +36,6 @@ impl ScoreStatus {
         match s.to_ascii_lowercase().as_str() {
             "main" => ScoreStatus::Main,
             "draft" => ScoreStatus::Draft,
-            "not_found" => ScoreStatus::NotFound,
             _ => ScoreStatus::Main,
         }
     }
@@ -169,7 +166,6 @@ pub struct LibraryStatusSummary {
 pub struct LibrarySummary {
     pub main: LibraryStatusSummary,
     pub draft: LibraryStatusSummary,
-    pub not_found: LibraryStatusSummary,
 }
 
 /// Trait para validar permissões de operação baseado na configuração do computador

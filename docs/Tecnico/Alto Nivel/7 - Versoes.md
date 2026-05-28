@@ -324,8 +324,15 @@
 ## Correções
 
 - removendo duplicações e padronizando os campos no `tauri-store`.
+
 - removendo completamente o status `pedding` do código.
+
 - removendo inconsistências no status `draft`.
+
 - removendo o criar música.
+
 - corrigindo o indexar diretório para o novo padrão.
+
 - removendo a opção "adicionar arquivo(s)".
+
+- removendo o status `not_found`.

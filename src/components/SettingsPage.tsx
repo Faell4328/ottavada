@@ -839,13 +839,11 @@ export default function SettingsPage() {
                   label="Músicas"
                   main={librarySummary.main.songs_count}
                   draft={librarySummary.draft.songs_count}
-                  notFound={librarySummary.not_found.songs_count}
                 />
                 <SummaryColumn
                   label="Partituras"
                   main={librarySummary.main.scores_count}
                   draft={librarySummary.draft.scores_count}
-                  notFound={librarySummary.not_found.scores_count}
                 />
               </div>
             </div>
@@ -964,12 +962,10 @@ function SummaryColumn({
   label,
   main,
   draft,
-  notFound,
 }: {
   label: string;
   main: number;
   draft: number;
-  notFound: number;
 }) {
   return (
     <div className="rounded-lg border border-[#e1e7ef] bg-[#f8fafd] p-3">
@@ -982,10 +978,6 @@ function SummaryColumn({
         <div className="flex items-center justify-between">
           <span>Rascunho</span>
           <strong>{draft}</strong>
-        </div>
-        <div className="flex items-center justify-between">
-          <span>Not found</span>
-          <strong>{notFound}</strong>
         </div>
       </div>
     </div>

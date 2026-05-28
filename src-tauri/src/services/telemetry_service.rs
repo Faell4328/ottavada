@@ -16,11 +16,9 @@ pub struct TelemetrySummaryCounts {
     pub music_count: u64,
     pub music_main: u64,
     pub music_draft: u64,
-    pub music_not_found: u64,
     pub scores_count: u64,
     pub scores_main: u64,
     pub scores_draft: u64,
-    pub scores_not_found: u64,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
@@ -45,11 +43,9 @@ pub struct TelemetryPayload {
     pub musicCount: u64,
     pub musicMain: u64,
     pub musicDraft: u64,
-    pub musicNotFound: u64,
     pub scoresCount: u64,
     pub scoresMain: u64,
     pub scoresDraft: u64,
-    pub scoresNotFound: u64,
     pub errors: Vec<TelemetryErrorPayload>,
 }
 
@@ -93,11 +89,9 @@ fn build_payload(
         musicCount: counts.music_count,
         musicMain: counts.music_main,
         musicDraft: counts.music_draft,
-        musicNotFound: counts.music_not_found,
         scoresCount: counts.scores_count,
         scoresMain: counts.scores_main,
         scoresDraft: counts.scores_draft,
-        scoresNotFound: counts.scores_not_found,
         errors,
     }
 }
@@ -196,11 +190,9 @@ mod tests {
                 music_count: 10,
                 music_main: 7,
                 music_draft: 2,
-                music_not_found: 1,
                 scores_count: 30,
                 scores_main: 20,
                 scores_draft: 5,
-                scores_not_found: 5,
             },
             vec![TelemetryErrorPayload {
                 id: "err-1".to_string(),
@@ -217,7 +209,6 @@ mod tests {
         assert_eq!(payload.computerName, "Maestro");
         assert_eq!(payload.organizationName, "Orquestra");
         assert_eq!(payload.r#type, "server");
-        assert_eq!(payload.musicNotFound, 1);
         assert_eq!(payload.scoresDraft, 5);
         assert_eq!(payload.errors.len(), 1);
     }

@@ -71,17 +71,17 @@ Tabela responsável por armazenar as informações das músicas.
 
 Tabela responsável por armazenar as informações das partituras.
 
-| Campo          | Tipo                             | PK  | FK  | Referência  | Obrigatório? | Onde?              |
-| -------------- | -------------------------------- | --- | --- | ----------- | ------------ | ------------------ |
-| id             | text (`uuid`)                    | Sim | Não | Não         | Sim          | Cliente / Servidor |
-| songId         | text (`uuid`)                    | Não | Sim | songs.id    | Sim          | Cliente / Servidor |
-| name           | text                             | Não | Não | Não         | Sim          | Cliente / Servidor |
-| hostId         | text                             | Não | Sim | computer.id | Sim          | Servidor           |
-| fileName       | text                             | Não | Não | Não         | Sim          | Servidor           |
-| fileExtension  | text                             | Não | Não | Não         | Sim          | Cliente / Servidor |
-| fileModifiedAt | integer                          | Não | Não | Não         | Sim          | Servidor           |
-| fileSize       | integer                          | Não | Não | Não         | Sim          | Servidor           |
-| status         | (`main`, `draft` ou `not_found`) | Não | Não | Não         | Sim          | Servidor           |
+| Campo          | Tipo                | PK  | FK  | Referência  | Obrigatório? | Onde?              |
+| -------------- | ------------------- | --- | --- | ----------- | ------------ | ------------------ |
+| id             | text (`uuid`)       | Sim | Não | Não         | Sim          | Cliente / Servidor |
+| songId         | text (`uuid`)       | Não | Sim | songs.id    | Sim          | Cliente / Servidor |
+| name           | text                | Não | Não | Não         | Sim          | Cliente / Servidor |
+| hostId         | text                | Não | Sim | computer.id | Sim          | Servidor           |
+| fileName       | text                | Não | Não | Não         | Sim          | Servidor           |
+| fileExtension  | text                | Não | Não | Não         | Sim          | Cliente / Servidor |
+| fileModifiedAt | integer             | Não | Não | Não         | Sim          | Servidor           |
+| fileSize       | integer             | Não | Não | Não         | Sim          | Servidor           |
+| status         | (`main` ou `draft`) | Não | Não | Não         | Sim          | Servidor           |
 
 - `hostId` - Id do computador que contém o arquivo original localmente (indexado).
 
@@ -95,15 +95,15 @@ Tabela responsável por armazenar as informações das partituras.
 
 Tabela responsável por armazenar todas as alterações até gerar o arquivo `events.msgpack`.
 
-| Campo     | Tipo                                                   | PK  | FK  | Referência | Obrigatório? | Onde?    |
-| --------- | ------------------------------------------------------ | --- | --- | ---------- | ------------ | -------- |
-| id        | text (`uuid`)                                          | Sim | Não | Não        | Sim          | Servidor |
-| type      | (`insert`, `update` ou `delete`)                       | Não | Não | Não        | Sim          | Servidor |
+| Campo     | Tipo                                                                                                               | PK  | FK  | Referência | Obrigatório? | Onde?    |
+| --------- | ------------------------------------------------------------------------------------------------------------------ | --- | --- | ---------- | ------------ | -------- |
+| id        | text (`uuid`)                                                                                                      | Sim | Não | Não        | Sim          | Servidor |
+| type      | (`insert`, `update` ou `delete`)                                                                                   | Não | Não | Não        | Sim          | Servidor |
 | entity    | (`categories`, `categoriesSongs`, `composers`, `composerSongs`, `arrangers`, `arrangerSongs`, `songs` ou `scores`) | Não | Não | Não        | Sim          | Servidor |
-| entityId  | text (`uuid`)                                          | Não | Sim | entity.id  | Sim          | Servidor |
-| field     | text                                                   | Não | Não | Não        | Não          | Servidor |
-| value     | text                                                   | Não | Não | Não        | Não          | Servidor |
-| timestamp | integer                                                | Não | Não | Não        | Sim          | Servidor |
+| entityId  | text (`uuid`)                                                                                                      | Não | Sim | entity.id  | Sim          | Servidor |
+| field     | text                                                                                                               | Não | Não | Não        | Não          | Servidor |
+| value     | text                                                                                                               | Não | Não | Não        | Não          | Servidor |
+| timestamp | integer                                                                                                            | Não | Não | Não        | Sim          | Servidor |
 
 - `type` - é o que foi feito: inserido, atualizado ou deletado.
 

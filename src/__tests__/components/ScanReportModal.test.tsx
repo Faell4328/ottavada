@@ -7,6 +7,8 @@ const report = {
   changed_files: ["/music/Canon - Flauta.musx"],
   added_files: ["/music/Canon - Oboe.musx"],
   not_found_files: ["/music/Canon - Trompete.musx"],
+  recovered_files: [],
+  failed_files: [],
 };
 
 describe("ScanReportModal", () => {

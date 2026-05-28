@@ -156,13 +156,13 @@ fn normalize_score_status_for_client(
         return Some(None);
     }
 
-    if !matches!(change.value.as_deref(), Some("draft") | Some("not_found")) {
-        return Some(None);
+    if change.value.as_deref() != Some("draft") {
+        return None;
     }
 
     if previous_main_versions.without_previous_main.contains(&change.entity_id) {
-        // Sem versão main anterior na nuvem, cliente deve ver not_found.
-        return Some(Some("not_found".to_string()));
+        // Sem versão main anterior na nuvem, o cliente continua vendo draft.
+        return Some(Some("draft".to_string()));
     }
 
     // Com versão main anterior, o cliente deve continuar vendo main.
@@ -337,17 +337,17 @@ mod tests {
 
         let summary = generate_events_msgpack(&db, &store).expect("generate events");
 
-        assert_eq!(summary.events_count, 3);
+        assert_eq!(summary.events_count, 2);
 
         let raw = fs::read(dir.path().join("cloud").join("actions").join("events.msgpack.zst"))
             .expect("read events file");
         let mut decoder = zstd::stream::read::Decoder::new(raw.as_slice()).expect("decoder");
         let payload: serde_json::Value = rmp_serde::from_read(&mut decoder).expect("decode msgpack");
-        assert_eq!(payload["events"][0]["data"][0]["newValue"], "main");
+        assert_eq!(payload["events"][0]["data"][0]["value"], "main");
     }
 
     #[test]
-    fn converts_draft_or_not_found_to_not_found_when_no_previous_main_exists() {
+    fn keeps_draft_when_no_previous_main_exists() {
         let dir = tempdir().expect("temp dir");
         let db_path = dir.path().join("test.db");
         let db = Database::new(&db_path).expect("db init");
@@ -412,7 +412,7 @@ mod tests {
             .expect("read events file");
         let mut decoder = zstd::stream::read::Decoder::new(raw.as_slice()).expect("decoder");
         let payload: serde_json::Value = rmp_serde::from_read(&mut decoder).expect("decode msgpack");
-        assert_eq!(payload["events"][0]["data"][0]["newValue"], "not_found");
+        assert_eq!(payload["events"][0]["data"][0]["value"], "draft");
     }
 
     fn create_tar_zst_with_entry(archive_path: &std::path::Path, file_name: &str, content: &[u8]) {

@@ -142,11 +142,11 @@ pub fn generate_snapshot_msgpack(
                         format!(".{}", score.file_extension.trim_start_matches('.'))
                     },
                     status: match score.status {
-                        ScoreStatus::Draft | ScoreStatus::NotFound => Some(
+                        ScoreStatus::Draft => Some(
                             if previous_main_versions.has_previous_main(&score.id) {
                                 "main".to_string()
                             } else {
-                                "not_found".to_string()
+                                "draft".to_string()
                             },
                         ),
                         _ => None,

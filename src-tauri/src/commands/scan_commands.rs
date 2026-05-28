@@ -22,11 +22,8 @@ struct ScoreMetadataEntry {
     stored_modified_at_str: String,
 }
 
-/// Verifica se há alterações nos arquivos de partituras
-/// Se um arquivo foi alterado, o status é mudado para draft
-/// Se um arquivo não foi encontrado, o status é mudado para not_found
-/// Se um arquivo not_found é encontrado novamente, o status volta para draft/main
-/// com base no último estado conhecido e nos metadados atuais.
+/// Verifica se há alterações nos arquivos de partituras.
+/// Arquivos alterados passam para draft e arquivos ausentes aparecem apenas no relatório.
 #[tauri::command]
 pub async fn scan_files_for_changes(
     db: State<'_, Database>,
@@ -103,21 +100,7 @@ fn scan_files_for_changes_impl(db: &Database, store: &SystemStore) -> Result<Sca
 
             if !path.exists() || !path.is_file() {
                 warn!("Arquivo não encontrado: {}", full_path);
-
-                if let Err(e) = db.update_score_status(
-                    &score.score_id,
-                    ScoreStatus::NotFound,
-                    &updated_by,
-                    None,
-                ) {
-                    warn!("Erro ao atualizar status para not_found: {:?}", e);
-                    failed_files.push((
-                        full_path.clone(),
-                        format!("Erro ao marcar como não encontrado: {:?}", e),
-                    ));
-                } else {
-                    not_found_files.push(full_path);
-                }
+                not_found_files.push(full_path);
                 continue;
             }
 
@@ -197,57 +180,6 @@ fn scan_files_for_changes_impl(db: &Database, store: &SystemStore) -> Result<Sca
                 Err(e) => {
                     warn!("Erro ao obter metadados do novo arquivo {}: {:?}", current_path, e);
                     failed_files.push((current_path.clone(), format!("Erro ao ler: {}", e)));
-                }
-            }
-        }
-    }
-
-    if let Ok(not_found_scores) = db.get_not_found_scores_by_host(host_id) {
-        info!(
-            "Verificando {} arquivo(s) marcado(s) como not_found",
-            not_found_scores.len()
-        );
-
-        for (_song_id, score_id, file_path, file_name, stored_size, stored_modified_at_str) in not_found_scores {
-            let full_path = build_score_full_path(&file_path, &file_name);
-            let path = Path::new(&full_path);
-
-            if path.exists() && path.is_file() {
-                info!("✓ Arquivo encontrado novamente: {}", full_path);
-
-                match get_file_metadata(path) {
-                    Ok((current_size, current_modified_at)) => {
-                        let recovered_status = resolve_recovered_score_status(
-                            db,
-                            &score_id,
-                            current_size,
-                            current_modified_at,
-                            stored_size,
-                            &stored_modified_at_str,
-                        )?;
-
-                        if let Err(e) = db.update_score_status(
-                            &score_id,
-                            recovered_status,
-                            &updated_by,
-                            Some((current_size, current_modified_at)),
-                        ) {
-                            warn!("Erro ao recuperar arquivo: {:?}", e);
-                            failed_files.push((
-                                full_path.clone(),
-                                format!("Erro ao recuperar: {:?}", e),
-                            ));
-                        } else {
-                            recovered_files.push(full_path);
-                        }
-                    }
-                    Err(e) => {
-                        warn!(
-                            "Erro ao obter metadados do arquivo recuperado {}: {:?}",
-                            full_path, e
-                        );
-                        failed_files.push((full_path, format!("Erro ao ler metadados: {}", e)));
-                    }
                 }
             }
         }
@@ -354,17 +286,6 @@ fn preview_scan_files_for_changes_impl(
         }
     }
 
-    if let Ok(not_found_scores) = db.get_not_found_scores_by_host(host_id) {
-        for (_song_id, _score_id, file_path, file_name, _stored_size, _stored_modified_at_str) in not_found_scores {
-            let full_path = build_score_full_path(&file_path, &file_name);
-            let path = Path::new(&full_path);
-
-            if path.exists() && path.is_file() {
-                recovered_files.push(full_path);
-            }
-        }
-    }
-
     info!(
         "Prévia concluída. {} alterados, {} adicionados, {} não encontrados, {} recuperados, {} erros",
         changed_files.len(),
@@ -408,34 +329,6 @@ fn score_directory(file_path: &str, file_name: &str) -> Option<String> {
 fn parse_stored_modified_at(stored_modified_at_str: &str) -> chrono::NaiveDateTime {
     chrono::NaiveDateTime::parse_from_str(stored_modified_at_str, "%Y-%m-%d %H:%M:%S")
         .unwrap_or_else(|_| chrono::Local::now().naive_local())
-}
-
-fn resolve_recovered_score_status(
-    db: &Database,
-    score_id: &str,
-    current_size: u64,
-    current_modified_at: chrono::NaiveDateTime,
-    stored_size: u64,
-    stored_modified_at_str: &str,
-) -> Result<ScoreStatus, AppError> {
-    let stored_modified_at = parse_stored_modified_at(stored_modified_at_str);
-    let detector = FileChangeDetector::new(
-        current_size,
-        current_modified_at,
-        stored_size,
-        stored_modified_at,
-    );
-
-    let previous_status = db.get_previous_status_before_latest_not_found(score_id)?;
-    if previous_status == Some(ScoreStatus::Draft) || detector.has_changed() {
-        return Ok(ScoreStatus::Draft);
-    }
-
-    Ok(match previous_status {
-        Some(ScoreStatus::Draft) => ScoreStatus::Draft,
-        Some(ScoreStatus::Main) => ScoreStatus::Main,
-        _ => ScoreStatus::Main,
-    })
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
@@ -544,14 +437,12 @@ mod tests {
             Some((file_size, file_modified_at)),
         )
         .expect("set draft");
-        db.update_score_status("score-1", ScoreStatus::NotFound, "server-1", None)
-            .expect("set not found");
 
         let result = scan_files_for_changes_impl(&db, &store).expect("scan");
         let updated_song = db.get_song_list_item_by_id("song-1").expect("updated song");
 
         assert_eq!(updated_song.scores[0].status, ScoreStatus::Draft);
-        assert_eq!(result.recovered_files.len(), 1);
+        assert!(result.recovered_files.is_empty());
     }
 
     #[test]
@@ -642,6 +533,10 @@ mod tests {
         assert!(result.not_found_files[0].ends_with("Canon - Trompete.musx"));
         assert!(result.added_files[0].ends_with("Canon - Clarinete.musx"));
         assert!(scores.iter().any(|score| score.file_path.ends_with("Canon - Clarinete.musx")));
-        assert!(scores.iter().any(|score| score.status == ScoreStatus::NotFound));
+        assert!(
+            scores
+                .iter()
+                .any(|score| score.file_path.ends_with("Canon - Trompete.musx") && score.status == ScoreStatus::Main)
+        );
     }
 }

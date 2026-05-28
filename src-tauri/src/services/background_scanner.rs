@@ -64,13 +64,8 @@ pub fn run_initial_scan(db: &Database, host_id: &str) {
             let path = Path::new(&full_path);
 
             if !path.exists() || !path.is_file() {
-                if db
-                    .update_score_status(&score.score_id, ScoreStatus::NotFound, host_id, None)
-                    .is_ok()
-                {
-                    not_found_count += 1;
-                    info!("✓ Status atualizado para not_found: {}", full_path);
-                }
+                not_found_count += 1;
+                info!("✓ Arquivo não encontrado: {}", full_path);
                 continue;
             }
 
@@ -137,59 +132,9 @@ pub fn run_initial_scan(db: &Database, host_id: &str) {
         }
     }
 
-    if let Ok(not_found_scores) = db.get_not_found_scores_by_host(host_id) {
-        info!(
-            "Verificando {} arquivo(s) marcado(s) como not_found no boot",
-            not_found_scores.len()
-        );
-
-        for (_song_id, score_id, file_path, file_name, stored_size, stored_modified_at_str) in not_found_scores {
-            let full_path = build_score_full_path(&file_path, &file_name);
-            let path = Path::new(&full_path);
-
-            if !path.exists() || !path.is_file() {
-                continue;
-            }
-
-            match get_file_metadata(path) {
-                Ok((current_size, current_modified_at)) => {
-                    let recovered_status = resolve_recovered_score_status(
-                        db,
-                        &score_id,
-                        current_size,
-                        current_modified_at,
-                        stored_size,
-                        &stored_modified_at_str,
-                    );
-
-                    if db
-                        .update_score_status(
-                            &score_id,
-                            recovered_status,
-                            host_id,
-                            Some((current_size, current_modified_at)),
-                        )
-                        .is_ok()
-                    {
-                        recovered_count += 1;
-                        info!("✓ Status recuperado: {}", full_path);
-                    } else {
-                        warn!("Erro ao recuperar status: {}", full_path);
-                    }
-                }
-                Err(e) => {
-                    warn!(
-                        "Erro ao obter metadados do arquivo recuperado {}: {:?}",
-                        full_path, e
-                    );
-                }
-            }
-        }
-    }
-
     info!(
-        "Verificação inicial concluída: {} alterações, {} adicionados, {} não encontrados, {} recuperados",
-        changed_count, added_count, not_found_count, recovered_count
+        "Verificação inicial concluída: {} alterações, {} adicionados, {} não encontrados",
+        changed_count, added_count, not_found_count
     );
 }
 
@@ -221,33 +166,12 @@ fn parse_stored_modified_at(stored_modified_at_str: &str) -> chrono::NaiveDateTi
 }
 
 fn resolve_recovered_score_status(
-    db: &Database,
-    score_id: &str,
-    current_size: u64,
-    current_modified_at: chrono::NaiveDateTime,
-    stored_size: u64,
-    stored_modified_at_str: &str,
+    _db: &Database,
+    _score_id: &str,
+    _current_size: u64,
+    _current_modified_at: chrono::NaiveDateTime,
+    _stored_size: u64,
+    _stored_modified_at_str: &str,
 ) -> ScoreStatus {
-    let stored_modified_at = parse_stored_modified_at(stored_modified_at_str);
-    let detector = FileChangeDetector::new(
-        current_size,
-        current_modified_at,
-        stored_size,
-        stored_modified_at,
-    );
-
-    let previous_status = db
-        .get_previous_status_before_latest_not_found(score_id)
-        .ok()
-        .flatten();
-
-    if previous_status == Some(ScoreStatus::Draft) || detector.has_changed() {
-        return ScoreStatus::Draft;
-    }
-
-    match previous_status {
-        Some(ScoreStatus::Draft) => ScoreStatus::Draft,
-        Some(ScoreStatus::Main) => ScoreStatus::Main,
-        _ => ScoreStatus::Main,
-    }
+    ScoreStatus::Draft
 }

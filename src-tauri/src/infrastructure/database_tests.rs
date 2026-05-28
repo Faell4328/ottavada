@@ -85,11 +85,9 @@ mod tests {
         assert_eq!(counts.music_count, 0);
         assert_eq!(counts.music_main, 0);
         assert_eq!(counts.music_draft, 0);
-        assert_eq!(counts.music_not_found, 0);
         assert_eq!(counts.scores_count, 0);
         assert_eq!(counts.scores_main, 0);
         assert_eq!(counts.scores_draft, 0);
-        assert_eq!(counts.scores_not_found, 0);
     }
 
     // ── Paths ──
@@ -455,7 +453,7 @@ mod tests {
     }
 
     #[test]
-    fn test_get_library_summary_counts_includes_draft_and_not_found() {
+    fn test_get_library_summary_counts_includes_main_and_draft() {
         let db = make_db();
         db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
         db.insert_song(&make_song("s2", "Ave Maria"), &[]).unwrap();
@@ -468,18 +466,16 @@ mod tests {
         draft_score.status = ScoreStatus::Draft;
         db.insert_score(&draft_score).unwrap();
 
-        let mut not_found_score = make_score(&db, "sc3", "s2", Some("Trompete"));
-        not_found_score.status = ScoreStatus::NotFound;
-        db.insert_score(&not_found_score).unwrap();
+        let mut second_draft_score = make_score(&db, "sc3", "s2", Some("Trompete"));
+        second_draft_score.status = ScoreStatus::Draft;
+        db.insert_score(&second_draft_score).unwrap();
 
         let summary = db.get_library_summary_counts().unwrap();
 
         assert_eq!(summary.main.scores_count, 1);
         assert_eq!(summary.main.songs_count, 1);
-        assert_eq!(summary.draft.scores_count, 1);
-        assert_eq!(summary.draft.songs_count, 1);
-        assert_eq!(summary.not_found.scores_count, 1);
-        assert_eq!(summary.not_found.songs_count, 1);
+        assert_eq!(summary.draft.scores_count, 2);
+        assert_eq!(summary.draft.songs_count, 2);
     }
 
     #[test]
@@ -792,29 +788,6 @@ mod tests {
         assert!(status_events > 0);
     }
 
-        #[test]
-        fn test_update_score_status_not_found_creates_changed_field_event() {
-            let db = make_db();
-            db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
-            db.insert_score(&make_score(&db, "sc1", "s1", Some("Violino")))
-                .unwrap();
-
-            db.update_score_status("sc1", ScoreStatus::NotFound, "test-computer", None)
-                .unwrap();
-
-            let conn = db.conn.lock().unwrap();
-            let not_found_events: i64 = conn
-                .query_row(
-                    "SELECT COUNT(*) FROM changedField
-                     WHERE entity = 'scores' AND field = 'status' AND value = 'not_found'",
-                    [],
-                    |row| row.get(0),
-                )
-                .unwrap();
-
-            assert_eq!(not_found_events, 1);
-        }
-
     #[test]
     fn test_update_score_status_draft_creates_changed_field_event() {
         let db = make_db();
@@ -839,24 +812,6 @@ mod tests {
     }
 
     #[test]
-    fn test_get_previous_status_before_latest_not_found() {
-        let db = make_db();
-        db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
-        db.insert_score(&make_score(&db, "sc1", "s1", Some("Violino")))
-            .unwrap();
-
-        db.update_score_status("sc1", ScoreStatus::Draft, "test-computer", None)
-            .unwrap();
-        db.update_score_status("sc1", ScoreStatus::NotFound, "test-computer", None)
-            .unwrap();
-
-        let previous_status = db
-            .get_previous_status_before_latest_not_found("sc1")
-            .unwrap();
-
-        assert_eq!(previous_status, Some(ScoreStatus::Draft));
-    }
-
     // ── Score Metadata for Scanning ──
 
     #[test]

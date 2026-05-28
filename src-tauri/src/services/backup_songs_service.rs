@@ -181,7 +181,7 @@ fn list_scores_for_archive(
 
         let normalized_status = status.to_ascii_lowercase();
 
-        if matches!(normalized_status.as_str(), "draft" | "not_found") {
+        if normalized_status.as_str() == "draft" {
             let Some(preserved_source_path) = prepared_versions
                 .preserved_files
                 .get(&(song_id.to_string(), score_id.clone()))
@@ -242,7 +242,7 @@ fn list_draft_not_found_scores_by_song(
     let mut stmt = conn.prepare(
         "SELECT song_id, id
          FROM scores
-         WHERE status IN ('draft', 'not_found')
+            WHERE status = 'draft'
          ORDER BY song_id, id",
     )?;
 

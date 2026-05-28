@@ -710,7 +710,7 @@ impl Database {
         let mut stmt = conn.prepare(
                         r#"SELECT status, COUNT(*) AS scores_count, COUNT(DISTINCT song_id) AS songs_count
                          FROM scores
-                             WHERE status IN ('main', 'draft', 'not_found')
+                             WHERE status IN ('main', 'draft')
                          GROUP BY status"#,
         )?;
 
@@ -732,7 +732,6 @@ impl Database {
             match status.as_str() {
                 "main" => summary.main = bucket,
                 "draft" => summary.draft = bucket,
-                "not_found" => summary.not_found = bucket,
                 _ => {}
             }
         }
@@ -893,35 +892,6 @@ impl Database {
              FROM songs s
              INNER JOIN scores sc ON sc.song_id = s.id
              WHERE sc.status = 'draft'
-             ORDER BY s.name COLLATE NOCASE ASC, s.id ASC",
-            &[],
-            false,
-        )
-    }
-
-    #[allow(dead_code)]
-    pub fn get_songs_with_not_found(&self) -> Result<Vec<SongListItem>, AppError> {
-        let conn = self.conn.lock().unwrap();
-        Self::query_song_list_items(
-            &conn,
-            "SELECT DISTINCT s.id, s.name, s.composer, s.arranger, datetime('now') AS updated_at, s.is_favorite
-             FROM songs s
-             INNER JOIN scores sc ON sc.song_id = s.id
-             WHERE sc.status = 'not_found'
-             ORDER BY s.name COLLATE NOCASE ASC, s.id ASC",
-            &[],
-            true,
-        )
-    }
-
-    pub fn get_song_summaries_with_not_found(&self) -> Result<Vec<SongListItem>, AppError> {
-        let conn = self.conn.lock().unwrap();
-        Self::query_song_list_items(
-            &conn,
-            "SELECT DISTINCT s.id, s.name, s.composer, s.arranger, datetime('now') AS updated_at, s.is_favorite
-             FROM songs s
-             INNER JOIN scores sc ON sc.song_id = s.id
-             WHERE sc.status = 'not_found'
              ORDER BY s.name COLLATE NOCASE ASC, s.id ASC",
             &[],
             false,
@@ -1280,39 +1250,6 @@ impl Database {
              FROM scores s
              WHERE s.host_id = ?1",
             &[&host_id as &dyn rusqlite::ToSql],
-        )
-    }
-
-    /// Obtém todos os scores com status "not_found" de um host específico
-    pub fn get_not_found_scores_by_host(
-        &self,
-        host_id: &str,
-    ) -> Result<Vec<(String, String, String, String, u64, String)>, AppError> {
-        let conn = self.conn.lock().unwrap();
-        let status = ScoreStatus::NotFound.as_str();
-        Self::query_score_metadata_with_song_id(
-            &conn,
-            "SELECT s.song_id, s.id, s.file_path, s.file_name, s.file_size, s.file_modified_at
-             FROM scores s
-             WHERE s.status = ?1 AND s.host_id = ?2",
-            &[
-                &status as &dyn rusqlite::ToSql,
-                &host_id as &dyn rusqlite::ToSql,
-            ],
-        )
-    }
-
-    /// Obtém todos os scores com status "not_found"
-    #[allow(dead_code)]
-    pub fn get_not_found_scores(&self) -> Result<Vec<(String, String, u64, String)>, AppError> {
-        let conn = self.conn.lock().unwrap();
-        let status = ScoreStatus::NotFound.as_str();
-        Self::query_score_metadata(
-            &conn,
-            "SELECT s.id, s.file_path, s.file_name, s.file_size, s.file_modified_at
-             FROM scores s
-             WHERE s.status = ?1",
-            &[&status as &dyn rusqlite::ToSql],
         )
     }
 
@@ -1747,50 +1684,6 @@ impl Database {
         }
     }
 
-    pub fn get_previous_status_before_latest_not_found(
-        &self,
-        score_id: &str,
-    ) -> Result<Option<ScoreStatus>, AppError> {
-        let conn = self.conn.lock().unwrap();
-        let latest_not_found_rowid: Option<i64> = conn
-            .query_row(
-                "SELECT rowid
-                 FROM changedField
-                 WHERE entity = 'scores'
-                   AND entityId = ?1
-                   AND field = 'status'
-                   AND value = 'not_found'
-                 ORDER BY timestamp DESC, rowid DESC
-                 LIMIT 1",
-                params![score_id],
-                |row| row.get(0),
-            )
-            .optional()?;
-
-        let Some(latest_not_found_rowid) = latest_not_found_rowid else {
-            return Ok(None);
-        };
-
-        let previous_status = conn.query_row(
-            "SELECT value
-             FROM changedField
-             WHERE entity = 'scores'
-               AND entityId = ?1
-               AND field = 'status'
-               AND rowid < ?2
-             ORDER BY rowid DESC
-             LIMIT 1",
-            params![score_id, latest_not_found_rowid],
-            |row| row.get::<_, Option<String>>(0),
-        );
-
-        match previous_status {
-            Ok(value) => Ok(value.map(|status| ScoreStatus::from_str(&status))),
-            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
-            Err(other) => Err(AppError::Database(other)),
-        }
-    }
-
     /// Lista todas as alterações registradas em changedField em ordem cronológica.
     pub fn get_changed_fields_ordered(&self) -> Result<Vec<ChangedFieldRecord>, AppError> {
         let conn = self.conn.lock().unwrap();
@@ -1849,11 +1742,9 @@ impl Database {
                     song_id,
                     MAX(CASE WHEN status = 'main' THEN 1 ELSE 0 END) AS has_main,
                     MAX(CASE WHEN status = 'draft' THEN 1 ELSE 0 END) AS has_draft,
-                    MAX(CASE WHEN status = 'not found' THEN 1 ELSE 0 END) AS has_not_found,
                     COUNT(*) AS scores_count,
                     SUM(CASE WHEN status = 'main' THEN 1 ELSE 0 END) AS scores_main,
-                    SUM(CASE WHEN status = 'draft' THEN 1 ELSE 0 END) AS scores_draft,
-                    SUM(CASE WHEN status = 'not found' THEN 1 ELSE 0 END) AS scores_not_found
+                    SUM(CASE WHEN status = 'draft' THEN 1 ELSE 0 END) AS scores_draft
                 FROM scores
                 GROUP BY song_id
             )
@@ -1861,11 +1752,9 @@ impl Database {
                 COUNT(s.id) AS music_count,
                 COALESCE(SUM(CASE WHEN COALESCE(ss.has_main, 0) = 1 THEN 1 ELSE 0 END), 0) AS music_main,
                 COALESCE(SUM(CASE WHEN COALESCE(ss.has_main, 0) = 0 AND COALESCE(ss.has_draft, 0) = 1 THEN 1 ELSE 0 END), 0) AS music_draft,
-                COALESCE(SUM(CASE WHEN COALESCE(ss.has_main, 0) = 0 AND COALESCE(ss.has_draft, 0) = 0 AND COALESCE(ss.has_not_found, 0) = 1 THEN 1 ELSE 0 END), 0) AS music_not_found,
                 COALESCE(SUM(ss.scores_count), 0) AS scores_count,
                 COALESCE(SUM(ss.scores_main), 0) AS scores_main,
-                COALESCE(SUM(ss.scores_draft), 0) AS scores_draft,
-                COALESCE(SUM(ss.scores_not_found), 0) AS scores_not_found
+                COALESCE(SUM(ss.scores_draft), 0) AS scores_draft
             FROM songs s
             LEFT JOIN score_status_by_song ss ON ss.song_id = s.id",
         )?;
@@ -1875,11 +1764,9 @@ impl Database {
                 music_count: row.get::<_, i64>(0)? as u64,
                 music_main: row.get::<_, i64>(1)? as u64,
                 music_draft: row.get::<_, i64>(2)? as u64,
-                music_not_found: row.get::<_, i64>(3)? as u64,
-                scores_count: row.get::<_, i64>(4)? as u64,
-                scores_main: row.get::<_, i64>(5)? as u64,
-                scores_draft: row.get::<_, i64>(6)? as u64,
-                scores_not_found: row.get::<_, i64>(7)? as u64,
+                scores_count: row.get::<_, i64>(3)? as u64,
+                scores_main: row.get::<_, i64>(4)? as u64,
+                scores_draft: row.get::<_, i64>(5)? as u64,
             })
         })?;
 

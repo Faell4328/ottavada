@@ -52,10 +52,6 @@ function ScoreRow({
   const rowBackgroundClass = displayIndex % 2 === 0 ? "bg-[#f4f7fb]" : "bg-[#fff]";
 
   const openScoreFile = async () => {
-    if (statusKey === "not_found") {
-      toast.error("Arquivo não encontrado");
-      return;
-    }
     setIsOpening(true);
     try {
       await api.openFile(score.id);
@@ -111,14 +107,8 @@ function ScoreRow({
           e.stopPropagation();
           onSelectScore();
         }}
-        onDoubleClick={statusKey === "not_found" ? undefined : handleDoubleClick}
-        title={
-          isOpening
-            ? "Abrindo arquivo..."
-            : statusKey === "not_found"
-            ? "Arquivo não encontrado"
-            : "Duplo clique para abrir"
-        }
+        onDoubleClick={handleDoubleClick}
+        title={isOpening ? "Abrindo arquivo..." : "Duplo clique para abrir"}
         style={{
           contentVisibility: "auto",
           containIntrinsicSize: "34px",
@@ -155,7 +145,7 @@ function ScoreRow({
                       void openScoreFile();
                       onMenuClose();
                     }}
-                    disabled={statusKey === "not_found" || isActionLocked}
+                    disabled={isActionLocked}
                     isLast
                   />
                 ) : (
@@ -167,7 +157,7 @@ function ScoreRow({
                       void openScoreFile();
                       onMenuClose();
                     }}
-                    disabled={statusKey === "not_found" || isActionLocked}
+                    disabled={isActionLocked}
                   />
                   {statusKey === "draft" && (
                     <ContextMenuItem

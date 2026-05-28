@@ -20,8 +20,6 @@ Para a música ser definida automaticamente como:
 
 - **rascunho** (`draft`) - quando todas as partituras estiverem definidas como rascunho;
 
-- **não encontrada** (`not_found`) - quando todas as partituras estiverem definidas como não encontradas.
-
 O usuário deve poder mudar a música de **principal** -> **rascunho** ou **rascunho** -> **principal**.
 
 ## 2.2. Partitura
@@ -29,8 +27,6 @@ O usuário deve poder mudar a música de **principal** -> **rascunho** ou **rasc
 Para uma partitura ser definida automaticamente como:
 
 - **rascunho** (`draft`) - a partitura precisa ser alteradas ou ser substituída ou mudar de extensão;
-
-- **não encontrado** (`not_found`) - a partitura precisa ser renomeada ou deletada, ou o diretório ser alterado ou deletado (alterado TODAS as partituras para esse status).
 
 O usuário deve poder mudar a música de **principal** -> **rascunho** ou **rascunho** -> **principal**.
 
@@ -295,7 +291,7 @@ Após a geração do snapshot:
 
 ## 11.7. Persistência
 
-Durante a geração dos arquivos agrupados (`tar`) e sua compactação (`zst`), caso a partitura esteja nos estados `draft` ou `not_found`, o sistema deve manter a última versão disponível marcada como `main`.
+Durante a geração dos arquivos agrupados (`tar`) e sua compactação (`zst`), caso a partitura esteja no estado `draft`, o sistema deve manter a última versão disponível marcada como `main`.
 
 ---
 

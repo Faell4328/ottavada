@@ -6,7 +6,6 @@ import {
   FolderOpen,
   Plus,
   Trash2,
-  AlertCircle,
 } from "lucide-react";
 import { useAppState } from "../context/AppContext";
 import type { SidebarView } from "../types";
@@ -49,11 +48,6 @@ export default function Sidebar() {
       view: "drafts",
       label: "Rascunhos Ativos",
       icon: <FileEdit className="h-3.5 w-3.5" />,
-    },
-    {
-      view: "not_found",
-      label: "Partituras não encontradas",
-      icon: <AlertCircle className="h-3.5 w-3.5" />,
     },
   ];
 
@@ -120,7 +114,7 @@ export default function Sidebar() {
         </div>
         <nav className="flex flex-col">
           {libraryViews
-            .filter(({ view }) => !isClient || (view !== "drafts" && view !== "not_found"))
+            .filter(({ view }) => !isClient || view !== "drafts")
             .map(({ view, label, icon }) => (
               <SidebarItem
                 key={typeof view === "string" ? view : view.id}

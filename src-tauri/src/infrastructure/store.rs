@@ -394,10 +394,6 @@ mod tests {
                     songs_count: 1,
                     scores_count: 1,
                 },
-                not_found: LibraryStatusSummary {
-                    songs_count: 0,
-                    scores_count: 0,
-                },
             }),
             ..Default::default()
         };
