@@ -523,6 +523,25 @@ pub fn open_file_location(
 }
 
 #[tauri::command]
+pub fn open_song_location(file_path: String) -> Result<(), AppError> {
+    let path = Path::new(&file_path);
+
+    if path.is_dir() {
+        return open_path_on_system(&file_path);
+    }
+
+    if path.is_file() {
+        let parent = path.parent().ok_or_else(|| {
+            AppError::Generic("Não foi possível identificar o diretório da música".into())
+        })?;
+
+        return open_path_on_system(&parent.to_string_lossy());
+    }
+
+    Err(AppError::Generic("Arquivo não encontrado".into()))
+}
+
+#[tauri::command]
 pub fn get_scores_for_song(
     db: State<'_, Database>,
     song_id: String,

@@ -63,6 +63,18 @@ function ScoreRow({
     }
   };
 
+  const openSongFolder = async () => {
+    setIsOpening(true);
+    try {
+      await api.openSongLocation(score.file_path);
+    } catch (err) {
+      console.error("Failed to open song folder:", err);
+      toast.error("Erro ao abrir local da música");
+    } finally {
+      setIsOpening(false);
+    }
+  };
+
   const handleDoubleClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
     await openScoreFile();
@@ -94,27 +106,27 @@ function ScoreRow({
       return (
         <>
           <ContextMenuItem
-            label="Definir como Rascunho"
+            label="Definir como rascunho"
             onClick={(e) => {
               e.stopPropagation();
               requestStatusChange(
                 "draft",
-                "Definir como Rascunho",
+                "Definir como rascunho",
                 'Você realmente deseja mudar o arquivo para "Rascunho"?',
-                "Erro ao definir como Rascunho"
+                "Erro ao definir como rascunho"
               );
             }}
             disabled={isActionLocked}
           />
           <ContextMenuItem
-            label="Definir como Ignorar"
+            label="Definir para ignorar"
             onClick={(e) => {
               e.stopPropagation();
               requestStatusChange(
                 "ignored",
-                "Definir como Ignorar",
+                "Definir como ignorar",
                 'Você realmente deseja marcar esta partitura como "Ignorada"?',
-                "Erro ao definir como Ignorar"
+                "Erro ao definir para ignorar"
               );
             }}
             disabled={isActionLocked}
@@ -127,27 +139,27 @@ function ScoreRow({
       return (
         <>
           <ContextMenuItem
-            label="Definir como Principal"
+            label="Definir como principal"
             onClick={(e) => {
               e.stopPropagation();
               requestStatusChange(
                 "main",
-                "Definir como Principal",
+                "Definir como principal",
                 'Você realmente deseja mudar o arquivo para "Principal"?',
-                "Erro ao definir como Principal"
+                "Erro ao definir como principal"
               );
             }}
             disabled={isActionLocked}
           />
           <ContextMenuItem
-            label="Definir como Ignorar"
+            label="Definir como ignorar"
             onClick={(e) => {
               e.stopPropagation();
               requestStatusChange(
                 "ignored",
-                "Definir como Ignorar",
+                "Definir como ignorar",
                 'Você realmente deseja marcar esta partitura como "Ignorada"?',
-                "Erro ao definir como Ignorar"
+                "Erro ao definir como ignorar"
               );
             }}
             disabled={isActionLocked}
@@ -159,27 +171,27 @@ function ScoreRow({
     return (
       <>
         <ContextMenuItem
-          label="Definir como Principal"
+          label="Definir como principal"
           onClick={(e) => {
             e.stopPropagation();
             requestStatusChange(
               "main",
-              "Definir como Principal",
+              "Definir como principal",
               'Você realmente deseja mudar o arquivo para "Principal"?',
-              "Erro ao definir como Principal"
+              "Erro ao definir como principal"
             );
           }}
           disabled={isActionLocked}
         />
         <ContextMenuItem
-          label="Definir como Rascunho"
+          label="Definir como rascunho"
           onClick={(e) => {
             e.stopPropagation();
             requestStatusChange(
               "draft",
-              "Definir como Rascunho",
+              "Definir como rascunho",
               'Você realmente deseja reativar esta partitura como "Rascunho"?',
-              "Erro ao definir como Rascunho"
+              "Erro ao definir como rascunho"
             );
           }}
           disabled={isActionLocked}
@@ -263,7 +275,15 @@ function ScoreRow({
                       }}
                       disabled={isActionLocked}
                     />
-                    {renderStatusAction()}
+                    <ContextMenuItem
+                      label="Abrir local"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void openSongFolder();
+                        onMenuClose();
+                      }}
+                      disabled={isActionLocked}
+                    />
                     <ContextMenuItem
                       label="Editar"
                       onClick={(e) => {
@@ -282,6 +302,7 @@ function ScoreRow({
                       }}
                       disabled={isActionLocked}
                     />
+                    {renderStatusAction()}
                     <ContextMenuItem
                       label="Deletar"
                       onClick={(e) => {
