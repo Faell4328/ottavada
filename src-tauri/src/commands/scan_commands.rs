@@ -476,11 +476,33 @@ fn describe_category_change(change: &ChangedFieldRecord) -> Option<String> {
 
 fn describe_score_change(db: &Database, change: &ChangedFieldRecord) -> Option<String> {
     match (change.change_type.as_str(), change.field.as_deref()) {
+        ("insert", Some("name")) => describe_score_added(db, change),
         ("delete", Some("file_name")) => Some(format!("A partitura {} foi deletada.", change.value.clone().unwrap_or_else(|| change.entity_id.clone()))),
         ("update", Some("name")) => Some(format!("A partitura {} teve o nome alterado.", change.value.clone().unwrap_or_else(|| change.entity_id.clone()))),
         ("update", Some("status")) if change.value.as_deref() == Some("main") => describe_score_recovered_from_draft(db, change),
         _ => None,
     }
+}
+
+fn describe_score_added(db: &Database, change: &ChangedFieldRecord) -> Option<String> {
+    let conn = db.conn.lock().ok()?;
+
+    let result = conn
+        .query_row(
+            "SELECT s.file_path, s.file_name
+             FROM scores s
+             WHERE s.id = ?1",
+            params![change.entity_id],
+            |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                ))
+            },
+        )
+        .ok()?;
+
+    Some(format!("Partitura adicionada: {}", build_score_full_path(&result.0, &result.1)))
 }
 
 fn describe_score_recovered_from_draft(db: &Database, change: &ChangedFieldRecord) -> Option<String> {
@@ -805,6 +827,67 @@ mod tests {
 
         assert!(text.contains("Sem instrumento"));
         assert!(!text.contains("CANON.musx"));
+    }
+
+    #[test]
+    fn describes_inserted_score_as_added() {
+        let dir = tempdir().expect("temp dir");
+        let db = Database::new_in_memory().expect("db");
+
+        let song_dir = dir.path().join("songs").join("song-1");
+
+        db.insert_song(
+            &Song {
+                id: "song-1".to_string(),
+                name: "08 H.C. CRISTO, O FIEL AMIGO".to_string(),
+                composer: None,
+                arranger: None,
+                path: song_dir.to_string_lossy().to_string(),
+                is_favorite: false,
+                status: ScoreStatus::Main,
+                updated_at: now(),
+                updated_by: "server-1".to_string(),
+            },
+            &[],
+        )
+        .expect("insert song");
+
+        db.insert_score(&Score {
+            id: "score-1".to_string(),
+            song_id: "song-1".to_string(),
+            name: Some("Flute2".to_string()),
+            host_id: "server-1".to_string(),
+            file_path: song_dir.to_string_lossy().to_string(),
+            file_name: "08 H.C. CRISTO, O FIEL AMIGO - Flute2.musx".to_string(),
+            file_size: 1024,
+            file_modified_at: now(),
+            updated_at: now(),
+            status: ScoreStatus::Main,
+            updated_by: "server-1".to_string(),
+        })
+        .expect("insert score");
+
+        let change = ChangedFieldRecord {
+            id: "change-1".to_string(),
+            change_type: "insert".to_string(),
+            entity: "scores".to_string(),
+            entity_id: "score-1".to_string(),
+            field: Some("name".to_string()),
+            value: Some("Flute2".to_string()),
+            timestamp: 0,
+        };
+
+        let text = super::describe_score_change(&db, &change).expect("description");
+
+        assert_eq!(
+            text,
+            format!(
+                "Partitura adicionada: {}",
+                song_dir
+                    .join("08 H.C. CRISTO, O FIEL AMIGO - Flute2.musx")
+                    .to_string_lossy()
+            )
+        );
     }
 
     #[test]

@@ -86,14 +86,8 @@ export default function StatusBar() {
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <div className="flex items-center text-[12px] gap-2 font-semibold text-[#21476c]">
-              {stageLabel ? (
-                <>
-                  <Metronome />
-                  <span className="truncate">{stageLabel}</span>
-                </>
-              ) : (
-                <span className="truncate">Processando</span>
-              )}
+              <Metronome />
+              <span className="truncate">{stageLabel ?? "Processando"}</span>
               {isRcloneActive && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-[#eaf3ff] px-2 py-0.5 text-[11px] font-semibold text-[#23558b]">
                   <Cloud className="h-3 w-3" />

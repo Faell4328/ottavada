@@ -145,6 +145,7 @@ impl Database {
                 arranger TEXT,
                 path TEXT NOT NULL,
                 is_favorite BOOLEAN NOT NULL DEFAULT 0,
+                status TEXT NOT NULL DEFAULT 'main',
                 last_score_file_modified_at INTEGER NOT NULL DEFAULT 0
             );
 
@@ -170,6 +171,22 @@ impl Database {
             );
         ",
         )?;
+
+        let song_status_exists = conn
+            .query_row(
+                "SELECT 1 FROM pragma_table_info('songs') WHERE name = 'status' LIMIT 1",
+                [],
+                |_| Ok(()),
+            )
+            .optional()?
+            .is_some();
+
+        if !song_status_exists {
+            conn.execute(
+                "ALTER TABLE songs ADD COLUMN status TEXT NOT NULL DEFAULT 'main'",
+                [],
+            )?;
+        }
 
         // Schema canônico pré-v1 para scores: file_path + file_name (sem tabela directories).
         conn.execute_batch(
@@ -346,8 +363,8 @@ impl Database {
         }
 
         conn.execute(
-            "INSERT INTO songs (id, name, composer, arranger, path, is_favorite, last_score_file_modified_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            "INSERT INTO songs (id, name, composer, arranger, path, is_favorite, status, last_score_file_modified_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
             params![
                 song.id,
                 song.name,
@@ -355,6 +372,7 @@ impl Database {
                 song.arranger,
                 song.path,
                 song.is_favorite,
+                song.status.as_str(),
                 now_ts,
             ],
         )?;
@@ -541,7 +559,7 @@ impl Database {
         let conn = self.conn.lock().unwrap();
 
         conn.query_row(
-            "SELECT id, name, composer, arranger, path, is_favorite FROM songs WHERE id = ?1",
+            "SELECT id, name, composer, arranger, path, is_favorite, status FROM songs WHERE id = ?1",
             params![song_id],
             |row| {
                 Ok(Song {
@@ -551,7 +569,7 @@ impl Database {
                     arranger: row.get(3)?,
                     path: row.get(4)?,
                     is_favorite: row.get::<_, bool>(5)?,
-                    status: ScoreStatus::Main,
+                    status: ScoreStatus::from_str(&row.get::<_, String>(6)?),
                     updated_at: chrono::Local::now().naive_local(),
                     updated_by: String::new(),
                 })

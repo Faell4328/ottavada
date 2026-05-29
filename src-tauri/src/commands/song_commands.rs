@@ -178,6 +178,7 @@ fn import_files_core(
     category_ids: &[String],
     composer: Option<&str>,
     arranger: Option<&str>,
+    new_song_status: ScoreStatus,
 ) -> Result<ImportIndexedFilesResult, AppError> {
     let now = Local::now().naive_local();
 
@@ -292,7 +293,7 @@ fn import_files_core(
                 arranger: normalized_optional_text_ref(arranger),
                 path: song_path,
                 is_favorite: false,
-                status: ScoreStatus::Main,
+                status: new_song_status.clone(),
                 updated_at: now,
                 updated_by: host_id.to_string(),
             };
@@ -346,6 +347,7 @@ pub fn import_indexed_files(
         &category_ids,
         None,
         None,
+        ScoreStatus::Main,
     )
     .map(|result| {
         let _ = refresh_library_summary_cache(&db, &store);
@@ -379,6 +381,7 @@ pub fn import_indexed_files_with_metadata(
         &category_ids,
         composer.as_deref(),
         arranger.as_deref(),
+        ScoreStatus::Draft,
     )
     .map(|result| {
         let _ = refresh_library_summary_cache(&db, &store);
@@ -587,7 +590,7 @@ mod tests {
     use tempfile::tempdir;
 
     use super::import_files_core;
-    use crate::domain::models::{AppSettings, ComputerType, IndexedFile};
+    use crate::domain::models::{AppSettings, ComputerType, IndexedFile, ScoreStatus};
     use crate::infrastructure::database::Database;
     use crate::infrastructure::store::SystemStore;
 
@@ -627,6 +630,7 @@ mod tests {
             &[],
             None,
             None,
+            ScoreStatus::Main,
         )
         .expect("import files");
 
@@ -638,5 +642,48 @@ mod tests {
                 .join(format!("{}.tar.zst", song_id))
                 .is_file()
         );
+    }
+
+    #[test]
+    fn importing_indexed_files_with_metadata_creates_new_song_as_draft() {
+        let dir = tempdir().expect("temp dir");
+        let db = Database::new(&dir.path().join("songs.db")).expect("db");
+        let store = SystemStore::new(dir.path().to_path_buf());
+
+        store
+            .save_app_settings(&AppSettings {
+                computer_id: "server-1".to_string(),
+                computer_name: Some("Servidor".to_string()),
+                computer_type: ComputerType::Server,
+                first_run_completed: true,
+                ..Default::default()
+            })
+            .expect("save settings");
+
+        let source_dir = dir.path().join("import");
+        fs::create_dir_all(&source_dir).expect("create source dir");
+        let score_path = source_dir.join("score-1.musx");
+        fs::write(&score_path, b"score-contents").expect("write score");
+
+        let files = vec![IndexedFile {
+            path: score_path.to_string_lossy().to_string(),
+            name: "CANON".to_string(),
+            instrument: Some("flauta".to_string()),
+            extension: "musx".to_string(),
+        }];
+
+        let result = import_files_core(
+            &db,
+            &store,
+            "server-1",
+            &files,
+            &[],
+            Some("Neusom"),
+            Some("Maria"),
+            ScoreStatus::Draft,
+        )
+        .expect("import files");
+
+        assert_eq!(db.get_song_by_id(&result.songs[0].id).expect("song").status, ScoreStatus::Draft);
     }
 }
