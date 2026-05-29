@@ -386,11 +386,6 @@ export function AddFilesModal({
                 selectedIds={selectedCategories}
                 onToggle={toggleCategory}
               />
-              {selectedCategoryNames.length > 0 && (
-                <p className="mt-2 text-xs text-[#5d738b]">
-                  Categorias selecionadas: {selectedCategoryNames.join(", ")}
-                </p>
-              )}
             </FormField>
           )}
         </>

@@ -22,6 +22,7 @@ pub struct Song {
 pub enum ScoreStatus {
     Main,
     Draft,
+    Ignored,
 }
 
 impl ScoreStatus {
@@ -29,6 +30,7 @@ impl ScoreStatus {
         match self {
             ScoreStatus::Main => "main",
             ScoreStatus::Draft => "draft",
+            ScoreStatus::Ignored => "ignored",
         }
     }
 
@@ -36,6 +38,7 @@ impl ScoreStatus {
         match s.to_ascii_lowercase().as_str() {
             "main" => ScoreStatus::Main,
             "draft" => ScoreStatus::Draft,
+            "ignored" => ScoreStatus::Ignored,
             _ => ScoreStatus::Main,
         }
     }
@@ -153,6 +156,17 @@ impl Default for AppSettings {
             last_change_timestamp: None,
             last_backup_timestamp: None,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ScoreStatus;
+
+    #[test]
+    fn score_status_roundtrips_ignored() {
+        assert_eq!(ScoreStatus::from_str("ignored"), ScoreStatus::Ignored);
+        assert_eq!(ScoreStatus::Ignored.as_str(), "ignored");
     }
 }
 

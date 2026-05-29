@@ -1,12 +1,14 @@
-export type ScoreStatusKey = "draft" | "main";
+export type ScoreStatusKey = "draft" | "ignored" | "main";
 
 const SCORE_STATUS_LABELS: Record<ScoreStatusKey, string> = {
   draft: "Rascunho",
+  ignored: "Ignorada",
   main: "Principal",
 };
 
 const SCORE_STATUS_BADGE_CLASSES: Record<ScoreStatusKey, string> = {
   draft: "bg-orange-100 p-2 rounded-full",
+  ignored: "bg-slate-100 p-2 rounded-full",
   main: "bg-green-100 p-2 rounded-full",
 };
 

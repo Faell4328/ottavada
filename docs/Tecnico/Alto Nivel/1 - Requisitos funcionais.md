@@ -1,40 +1,6 @@
-# 1. Manipulação de diretórios e arquivos
+# 1. I/O de Arquivos e Diretórios
 
-## 1.1. Renomear arquivos
-
-O sistema só pode mudar o nome com o novo nome sugerido pelo usuário e sua autorização, apenas em caso de conflito.
-
-## 1.2. Remoção de diretórios e arquivos
-
-O sistema só pode deletar o diretório ou arquivo com autorização do usuário.
-
----
-
-# 2. Status
-
-## 2.1. Música
-
-Para a música ser definida automaticamente como:
-
-- **principal** (`main`) - quando possuir ao menos uma partitura definida como principal;
-
-- **rascunho** (`draft`) - quando todas as partituras estiverem definidas como rascunho;
-
-O usuário deve poder mudar a música de **principal** -> **rascunho** ou **rascunho** -> **principal**.
-
-## 2.2. Partitura
-
-Para uma partitura ser definida automaticamente como:
-
-- **rascunho** (`draft`) - a partitura precisa ser alteradas ou ser substituída ou mudar de extensão;
-
-O usuário deve poder mudar a música de **principal** -> **rascunho** ou **rascunho** -> **principal**.
-
----
-
-# 3. Músicas
-
-## 3.1. Indexação
+## 1.1. Indexação de músicas
 
 O sistema deve permitir a indexação de diretórios que contenham partituras.
 
@@ -44,7 +10,42 @@ Durante o processo de indexação, o sistema deve:
 - identificar os instrumentos com base nos nomes dos arquivos encontrados;
 - sugerir automaticamente ao usuário os instrumentos detectados.
 
-## 3.2. Operações disponíveis
+## 1.2. Identificação de um novo arquivo no diretório já indexado
+
+Os novos arquivos encontrados na "verificação de alterações" deve ser adicionados com **status draft** ao Score Maestro.
+
+## 1.3. Renomear arquivos
+
+O sistema só pode mudar o nome com o novo nome sugerido pelo usuário e sua autorização, apenas em caso de conflito.
+
+## 1.4. Remoção de diretórios e arquivos
+
+O sistema só pode deletar o diretório ou arquivo com autorização do usuário.
+
+## 1.5. Diretório indisponível
+
+Caso o diretório seja movido, renomeado ou removido, o sistema deve:
+
+- notificar o usuário;
+- disponibilizar as opções:
+  - reindexação;
+  - exclusão da música.
+
+---
+
+# 2. Status
+
+## 2.1. Partitura - automaticamente
+
+Para uma partitura ser definida automaticamente como:
+
+- **rascunho** (`draft`) - a partitura precisa ser alteradas ou ser substituída ou mudar de extensão.
+
+---
+
+# 3. Músicas
+
+## 3.1. Operações disponíveis
 
 O usuário deve poder:
 
@@ -60,18 +61,9 @@ O usuário deve poder:
 - interromper a indexação do diretório, removendo a música e suas partituras apenas do Score Maestro, mantendo os arquivos no computador;
 - excluir definitivamente o diretório da música, interrompendo também sua indexação.
 
-## 3.3. Visualização expandida
+## 3.2. Visualização expandida
 
 Quando uma música estiver expandida e exibindo suas partituras, o sistema deve monitorar continuamente o diretório indexado e atualizar a interface sempre que alterações forem identificadas.
-
-## 3.4. Diretório indisponível
-
-Caso o diretório seja movido, renomeado ou removido, o sistema deve:
-
-- notificar o usuário;
-- disponibilizar as opções: 
-  - reindexação;
-  - exclusão da música.
 
 ---
 
@@ -288,10 +280,6 @@ Após a geração do snapshot:
 2. Os clientes devem descartar o estado local existente;
 3. O estado deve ser restaurado a partir do novo snapshot;
 4. O arquivo de eventos do servidor deve ser reinicializado, removendo os eventos já consolidados no snapshot.
-
-## 11.7. Persistência
-
-Durante a geração dos arquivos agrupados (`tar`) e sua compactação (`zst`), caso a partitura esteja no estado `draft`, o sistema deve manter a última versão disponível marcada como `main`.
 
 ---
 

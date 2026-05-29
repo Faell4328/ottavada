@@ -71,17 +71,17 @@ Tabela responsável por armazenar as informações das músicas.
 
 Tabela responsável por armazenar as informações das partituras.
 
-| Campo          | Tipo                | PK  | FK  | Referência  | Obrigatório? | Onde?              |
-| -------------- | ------------------- | --- | --- | ----------- | ------------ | ------------------ |
-| id             | text (`uuid`)       | Sim | Não | Não         | Sim          | Cliente / Servidor |
-| songId         | text (`uuid`)       | Não | Sim | songs.id    | Sim          | Cliente / Servidor |
-| name           | text                | Não | Não | Não         | Sim          | Cliente / Servidor |
-| hostId         | text                | Não | Sim | computer.id | Sim          | Servidor           |
-| fileName       | text                | Não | Não | Não         | Sim          | Servidor           |
-| fileExtension  | text                | Não | Não | Não         | Sim          | Cliente / Servidor |
-| fileModifiedAt | integer             | Não | Não | Não         | Sim          | Servidor           |
-| fileSize       | integer             | Não | Não | Não         | Sim          | Servidor           |
-| status         | (`main` ou `draft`) | Não | Não | Não         | Sim          | Servidor           |
+| Campo          | Tipo                           | PK  | FK  | Referência  | Obrigatório? | Onde?              |
+| -------------- | ------------------------------ | --- | --- | ----------- | ------------ | ------------------ |
+| id             | text (`uuid`)                  | Sim | Não | Não         | Sim          | Cliente / Servidor |
+| songId         | text (`uuid`)                  | Não | Sim | songs.id    | Sim          | Cliente / Servidor |
+| name           | text                           | Não | Não | Não         | Sim          | Cliente / Servidor |
+| hostId         | text                           | Não | Sim | computer.id | Sim          | Servidor           |
+| fileName       | text                           | Não | Não | Não         | Sim          | Servidor           |
+| fileExtension  | text                           | Não | Não | Não         | Sim          | Cliente / Servidor |
+| fileModifiedAt | integer                        | Não | Não | Não         | Sim          | Servidor           |
+| fileSize       | integer                        | Não | Não | Não         | Sim          | Servidor           |
+| status         | (`main`, `draft` ou `ignored`) | Não | Não | Não         | Sim          | Servidor           |
 
 - `hostId` - Id do computador que contém o arquivo original localmente (indexado).
 

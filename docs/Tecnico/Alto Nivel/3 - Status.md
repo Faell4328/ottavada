@@ -1,4 +1,9 @@
-Os status **principal** (`main`) e **rascunho** (`draft`) são utilizados nas músicas e partituras com o objetivo de orientar o usuário e controlar o que vai ou não para a nuvem.
+# Partituras
 
-- `main` - Indica que a música/partitura está pronta para ser enviada e sincronizada com a nuvem.
-- `draft` - Indica que a música/partitura foi modificada recentemente. Nesse estado, o sistema ainda não tem confirmação se ela deve ser enviada para a nuvem.
+- Arquivos **principal** (`main`) são enviados ao provedor de nuvem e disponibilizados aos clientes.
+
+- Arquivos **rascunho** (`draft`) não são enviados ao provedor de nuvem.
+
+- Arquivos **ignoradas** (`ignored`) são mantidas na interface, não participam da verificação de alterações e não são enviadas ao provedor de nuvem.
+
+! Quando uma partitura passa de `main` para `draft`, sua última versão `main` não é mantida. Ela simplesmente não existe mais no provedor de nuvem/cliente.
