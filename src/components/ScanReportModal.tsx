@@ -282,13 +282,13 @@ function parseReviewItem(raw: string): ReviewItem | null {
     };
   }
 
-  const draftToMainMatch = raw.match(/^A partitura\s+(.+?)\s+saiu de draft e voltou para main na música\s+(.+)\.$/);
-  if (draftToMainMatch) {
+  const statusChangeMatch = raw.match(/^A partitura\s+(.+?)\s+saiu de\s+(.+?)\s+e\s+(?:voltou para main|foi para\s+(.+?))\s+na música\s+(.+)\.$/);
+  if (statusChangeMatch) {
     return {
       action: "modified",
       entity: "score",
-      songName: draftToMainMatch[2].trim(),
-      scoreName: draftToMainMatch[1].trim(),
+      songName: statusChangeMatch[4].trim(),
+      scoreName: statusChangeMatch[1].trim(),
       customText: raw,
       raw,
     };
@@ -696,20 +696,49 @@ function renderCustomScoreText(text: string): ReactNode {
     );
   }
 
-  const recoveryMatch = text.match(/^A partitura\s+(.+?)\s+saiu de draft e voltou para main na música\s+(.+)\.$/);
-  if (recoveryMatch) {
-    const isStandaloneScoreName = normalizeKey(recoveryMatch[1]) === normalizeKey(recoveryMatch[2]);
+  const statusChangeMatch = text.match(/^A partitura\s+(.+?)\s+saiu de\s+(.+?)\s+e\s+(?:voltou para main|foi para\s+(.+?))\s+na música\s+(.+)\.$/);
+  if (statusChangeMatch) {
+    const scoreName = statusChangeMatch[1];
+    const previousStatus = statusChangeMatch[2];
+    const nextStatus = statusChangeMatch[3] ?? "main";
+    const songName = statusChangeMatch[4];
+    const isStandaloneScoreName = normalizeKey(scoreName) === normalizeKey(songName);
+
+    const labelForStatus = (value: string) => {
+      if (value === "ignored") {
+        return "ignorada";
+      }
+
+      if (value === "draft") {
+        return "rascunho";
+      }
+
+      if (value === "main") {
+        return "main";
+      }
+
+      return value;
+    };
+
     if (isStandaloneScoreName) {
+      if (nextStatus === "main") {
+        return (
+          <>
+            A partitura <strong>{scoreName}</strong> saiu de {labelForStatus(previousStatus)} e voltou para main.
+          </>
+        );
+      }
+
       return (
         <>
-          A partitura <strong>{recoveryMatch[1]}</strong> saiu de draft e voltou para main.
+          A partitura <strong>{scoreName}</strong> saiu de {labelForStatus(previousStatus)} e foi para {labelForStatus(nextStatus)}.
         </>
       );
     }
 
     return (
       <>
-        A partitura <strong>{recoveryMatch[1]}</strong> saiu de draft e voltou para main na música <strong>{recoveryMatch[2]}</strong>.
+        A partitura <strong>{scoreName}</strong> saiu de {labelForStatus(previousStatus)} e {nextStatus === "main" ? "voltou para main" : `foi para ${labelForStatus(nextStatus)}`} na música <strong>{songName}</strong>.
       </>
     );
   }

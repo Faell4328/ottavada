@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::time::Duration;
 use rusqlite::params;
@@ -21,6 +21,7 @@ struct ScoreMetadataEntry {
     file_name: String,
     stored_size: u64,
     stored_modified_at_str: String,
+    status: ScoreStatus,
 }
 
 /// Verifica se há alterações nos arquivos de partituras.
@@ -79,13 +80,14 @@ fn scan_files_for_changes_impl(
     let mut failed_files = Vec::new();
 
     let mut scores_by_song: HashMap<String, Vec<ScoreMetadataEntry>> = HashMap::new();
-    for (song_id, score_id, file_path, file_name, stored_size, stored_modified_at_str) in scores {
+    for (song_id, score_id, file_path, file_name, stored_size, stored_modified_at_str, status) in scores {
         scores_by_song.entry(song_id).or_default().push(ScoreMetadataEntry {
             score_id,
             file_path,
             file_name,
             stored_size,
             stored_modified_at_str,
+            status: ScoreStatus::from_str(&status),
         });
     }
 
@@ -94,14 +96,23 @@ fn scan_files_for_changes_impl(
             continue;
         }
 
-        let song_directory = match score_directory(&song_scores[0].file_path, &song_scores[0].file_name) {
+        let scanable_scores: Vec<&ScoreMetadataEntry> = song_scores
+            .iter()
+            .filter(|score| score.status != ScoreStatus::Ignored)
+            .collect();
+
+        if scanable_scores.is_empty() {
+            continue;
+        }
+
+        let song_directory = match score_directory(&scanable_scores[0].file_path, &scanable_scores[0].file_name) {
             Some(directory) => directory,
             None => continue,
         };
 
         let current_files = scan_directory(Path::new(&song_directory));
 
-        for score in &song_scores {
+        for score in &scanable_scores {
             let full_path = build_score_full_path(&score.file_path, &score.file_name);
             let path = Path::new(&full_path);
 
@@ -250,29 +261,39 @@ fn preview_scan_files_for_changes_impl(
     let mut failed_files = Vec::new();
 
     let mut scores_by_song: HashMap<String, Vec<ScoreMetadataEntry>> = HashMap::new();
-    for (song_id, score_id, file_path, file_name, stored_size, stored_modified_at_str) in scores {
+    for (song_id, score_id, file_path, file_name, stored_size, stored_modified_at_str, status) in scores {
         scores_by_song.entry(song_id).or_default().push(ScoreMetadataEntry {
             score_id,
             file_path,
             file_name,
             stored_size,
             stored_modified_at_str,
+            status: ScoreStatus::from_str(&status),
         });
     }
 
-    for (_song_id, song_scores) in scores_by_song {
+    for (song_id, song_scores) in scores_by_song {
         if song_scores.is_empty() {
             continue;
         }
 
-        let song_directory = match score_directory(&song_scores[0].file_path, &song_scores[0].file_name) {
+        let scanable_scores: Vec<&ScoreMetadataEntry> = song_scores
+            .iter()
+            .filter(|score| score.status != ScoreStatus::Ignored)
+            .collect();
+
+        if scanable_scores.is_empty() {
+            continue;
+        }
+
+        let song_directory = match score_directory(&scanable_scores[0].file_path, &scanable_scores[0].file_name) {
             Some(directory) => directory,
             None => continue,
         };
 
         let current_files = scan_directory(Path::new(&song_directory));
 
-        for score in &song_scores {
+        for score in &scanable_scores {
             let full_path = build_score_full_path(&score.file_path, &score.file_name);
             let path = Path::new(&full_path);
 
@@ -356,8 +377,46 @@ fn build_report_items(
     changed_fields: &[ChangedFieldRecord],
 ) -> Vec<String> {
     let mut items = Vec::new();
+    let mut category_names_by_id: HashMap<String, String> = HashMap::new();
+    let created_song_ids: HashSet<String> = changed_fields
+        .iter()
+        .filter(|change| {
+            change.entity == "songs"
+                && change.change_type == "insert"
+                && change.field.as_deref() == Some("name")
+        })
+        .map(|change| change.entity_id.clone())
+        .collect();
+    let score_song_ids_by_full_path = collect_score_song_ids_by_full_path(db);
+    let mut status_changes_by_score_id: HashMap<String, Vec<&ChangedFieldRecord>> = HashMap::new();
+    let mut status_change_order: Vec<String> = Vec::new();
+
+    for change in changed_fields {
+        if change.entity == "categories" && change.change_type == "insert" {
+            if let (Some(field), Some(value)) = (change.field.as_deref(), change.value.as_ref()) {
+                if field == "name" {
+                    category_names_by_id.insert(change.entity_id.clone(), value.clone());
+                }
+            }
+        }
+
+        if change.entity == "scores" && change.change_type == "update" && change.field.as_deref() == Some("status") {
+            if !status_changes_by_score_id.contains_key(&change.entity_id) {
+                status_change_order.push(change.entity_id.clone());
+            }
+
+            status_changes_by_score_id.entry(change.entity_id.clone()).or_default().push(change);
+        }
+    }
 
     for item in added_files {
+        if score_song_ids_by_full_path
+            .get(item)
+            .is_some_and(|song_id| created_song_ids.contains(song_id))
+        {
+            continue;
+        }
+
         items.push(format!("Partitura adicionada: {}", item));
     }
 
@@ -378,25 +437,80 @@ fn build_report_items(
     }
 
     for change in changed_fields {
-        if let Some(item) = describe_database_change(db, change) {
+        if change.entity == "scores"
+            && change.change_type == "insert"
+            && change.field.as_deref() == Some("name")
+            && db
+                .get_song_id_for_score(&change.entity_id)
+                .map(|song_id| created_song_ids.contains(&song_id))
+                .unwrap_or(false)
+        {
+            continue;
+        }
+
+        if change.entity == "scores" && change.change_type == "update" && change.field.as_deref() == Some("status") {
+            continue;
+        }
+
+        if let Some(item) = describe_database_change(db, &category_names_by_id, change) {
             items.push(item);
+        }
+    }
+
+    for score_id in status_change_order {
+        if let Some(changes) = status_changes_by_score_id.get(&score_id) {
+            if let Some(item) = describe_score_status_change_summary(db, changes) {
+                items.push(item);
+            }
         }
     }
 
     items
 }
 
-fn describe_database_change(db: &Database, change: &ChangedFieldRecord) -> Option<String> {
+fn describe_database_change(
+    db: &Database,
+    category_names_by_id: &HashMap<String, String>,
+    change: &ChangedFieldRecord,
+) -> Option<String> {
     match change.entity.as_str() {
         "songs" => describe_song_change(db, change),
-        "categoriesSongs" => describe_song_category_change(db, change),
+        "categoriesSongs" => describe_song_category_change(db, category_names_by_id, change),
         "categories" => describe_category_change(change),
         "scores" => describe_score_change(db, change),
         _ => None,
     }
 }
 
-fn describe_song_category_change(db: &Database, change: &ChangedFieldRecord) -> Option<String> {
+fn collect_score_song_ids_by_full_path(db: &Database) -> HashMap<String, String> {
+    let conn = match db.conn.lock() {
+        Ok(conn) => conn,
+        Err(_) => return HashMap::new(),
+    };
+
+    let mut stmt = match conn.prepare("SELECT song_id, file_path, file_name FROM scores") {
+        Ok(stmt) => stmt,
+        Err(_) => return HashMap::new(),
+    };
+
+    let rows = match stmt.query_map([], |row| {
+        let song_id: String = row.get(0)?;
+        let file_path: String = row.get(1)?;
+        let file_name: String = row.get(2)?;
+        Ok((build_score_full_path(&file_path, &file_name), song_id))
+    }) {
+        Ok(rows) => rows,
+        Err(_) => return HashMap::new(),
+    };
+
+    rows.filter_map(|row| row.ok()).collect()
+}
+
+fn describe_song_category_change(
+    db: &Database,
+    category_names_by_id: &HashMap<String, String>,
+    change: &ChangedFieldRecord,
+) -> Option<String> {
     if change.field.as_deref() != Some("categoryId") {
         return None;
     }
@@ -410,6 +524,7 @@ fn describe_song_category_change(db: &Database, change: &ChangedFieldRecord) -> 
             params![category_id],
             |row| row.get::<_, String>(0),
         )
+        .or_else(|_| category_names_by_id.get(&category_id).cloned().ok_or(rusqlite::Error::QueryReturnedNoRows))
         .unwrap_or_else(|_| category_id.clone());
 
     let song_name = match change.change_type.as_str() {
@@ -479,38 +594,17 @@ fn describe_score_change(db: &Database, change: &ChangedFieldRecord) -> Option<S
         ("insert", Some("name")) => describe_score_added(db, change),
         ("delete", Some("file_name")) => Some(format!("A partitura {} foi deletada.", change.value.clone().unwrap_or_else(|| change.entity_id.clone()))),
         ("update", Some("name")) => Some(format!("A partitura {} teve o nome alterado.", change.value.clone().unwrap_or_else(|| change.entity_id.clone()))),
-        ("update", Some("status")) if change.value.as_deref() == Some("main") => describe_score_recovered_from_draft(db, change),
+        ("update", Some("status")) => describe_score_status_change(db, change),
         _ => None,
     }
 }
 
-fn describe_score_added(db: &Database, change: &ChangedFieldRecord) -> Option<String> {
+fn describe_score_status_change(db: &Database, change: &ChangedFieldRecord) -> Option<String> {
     let conn = db.conn.lock().ok()?;
 
     let result = conn
         .query_row(
-            "SELECT s.file_path, s.file_name
-             FROM scores s
-             WHERE s.id = ?1",
-            params![change.entity_id],
-            |row| {
-                Ok((
-                    row.get::<_, String>(0)?,
-                    row.get::<_, String>(1)?,
-                ))
-            },
-        )
-        .ok()?;
-
-    Some(format!("Partitura adicionada: {}", build_score_full_path(&result.0, &result.1)))
-}
-
-fn describe_score_recovered_from_draft(db: &Database, change: &ChangedFieldRecord) -> Option<String> {
-    let conn = db.conn.lock().ok()?;
-
-    let result = conn
-        .query_row(
-            "SELECT s.file_path, s.file_name, s.name, songs.name
+            "SELECT s.file_path, s.file_name, s.name, songs.name, s.status
              FROM scores s
              JOIN songs ON songs.id = s.song_id
              WHERE s.id = ?1",
@@ -521,6 +615,7 @@ fn describe_score_recovered_from_draft(db: &Database, change: &ChangedFieldRecor
                     row.get::<_, String>(1)?,
                     row.get::<_, Option<String>>(2)?,
                     row.get::<_, String>(3)?,
+                    row.get::<_, String>(4)?,
                 ))
             },
         )
@@ -542,6 +637,21 @@ fn describe_score_recovered_from_draft(db: &Database, change: &ChangedFieldRecor
         .map(|value| format!(".{}", value))
         .unwrap_or_default();
     let song_name = result.3;
+    let previous_status_label = match change.value.as_deref() {
+        Some("ignored") => "ignorada",
+        Some("draft") => "rascunho",
+        Some("main") => "principal",
+        Some(other) => other,
+        None => "rascunho",
+    };
+
+    let current_status = result.4.as_str();
+    let current_status_label = match current_status {
+        "ignored" => "ignorada",
+        "draft" => "rascunho",
+        "main" => "main",
+        other => other,
+    };
 
     let score_name = if let Some(score_name) = result.2
         .as_deref()
@@ -562,10 +672,51 @@ fn describe_score_recovered_from_draft(db: &Database, change: &ChangedFieldRecor
     };
     let score_name_with_extension = format!("{}{}", score_name, file_extension);
 
-    Some(format!(
-        "A partitura {} saiu de draft e voltou para main na música {}.",
-        score_name_with_extension, song_name
-    ))
+    if current_status == "main" {
+        Some(format!(
+            "A partitura {} saiu de {} e voltou para main na música {}.",
+            score_name_with_extension, previous_status_label, song_name
+        ))
+    } else {
+        Some(format!(
+            "A partitura {} saiu de {} e foi para {} na música {}.",
+            score_name_with_extension, previous_status_label, current_status_label, song_name
+        ))
+    }
+}
+
+fn describe_score_status_change_summary(
+    db: &Database,
+    changes: &[&ChangedFieldRecord],
+) -> Option<String> {
+    let first_change = changes.first()?;
+    describe_score_status_change(db, first_change)
+}
+
+fn describe_score_added(db: &Database, change: &ChangedFieldRecord) -> Option<String> {
+    let conn = db.conn.lock().ok()?;
+
+    let result = conn
+        .query_row(
+            "SELECT s.file_path, s.file_name, s.status
+             FROM scores s
+             WHERE s.id = ?1",
+            params![change.entity_id],
+            |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                ))
+            },
+        )
+        .ok()?;
+
+    if ScoreStatus::from_str(&result.2) == ScoreStatus::Ignored {
+        return None;
+    }
+
+    Some(format!("Partitura adicionada: {}", build_score_full_path(&result.0, &result.1)))
 }
 
 fn build_score_full_path(file_path: &str, file_name: &str) -> String {
@@ -630,7 +781,9 @@ fn has_internet_connection_impl() -> bool {
 #[cfg(test)]
 mod tests {
     use std::fs;
+    use std::path::Path;
 
+    use rusqlite::params;
     use tempfile::tempdir;
 
     use super::scan_files_for_changes_impl;
@@ -710,6 +863,56 @@ mod tests {
 
         assert_eq!(updated_song.scores[0].status, ScoreStatus::Draft);
         assert!(result.recovered_files.is_empty());
+    }
+
+    #[test]
+    fn ignores_scores_marked_as_ignored_during_scan() {
+        let dir = tempdir().expect("temp dir");
+        let db = Database::new(&dir.path().join("scan.db")).expect("db");
+
+        db.insert_song(
+            &Song {
+                id: "song-1".to_string(),
+                name: "CANON".to_string(),
+                composer: None,
+                arranger: None,
+                path: dir.path().join("songs").join("song-1").to_string_lossy().to_string(),
+                is_favorite: false,
+                status: ScoreStatus::Main,
+                updated_at: now(),
+                updated_by: "server-1".to_string(),
+            },
+            &[],
+        )
+        .expect("insert song");
+
+        let score_dir = dir.path().join("scores");
+        fs::create_dir_all(&score_dir).expect("create score dir");
+        let score_path = score_dir.join("score-ignored.musx");
+        fs::write(&score_path, b"ignored-version").expect("write score");
+
+        let (file_size, file_modified_at) = get_file_metadata(&score_path).expect("metadata");
+        db.insert_score(&Score {
+            id: "score-ignored".to_string(),
+            song_id: "song-1".to_string(),
+            name: Some("flauta".to_string()),
+            host_id: "server-1".to_string(),
+            file_path: score_dir.to_string_lossy().to_string(),
+            file_name: "score-ignored.musx".to_string(),
+            file_size,
+            file_modified_at,
+            updated_at: now(),
+            status: ScoreStatus::Ignored,
+            updated_by: "server-1".to_string(),
+        })
+        .expect("insert score");
+
+        let store = SystemStore::new(dir.path().to_path_buf());
+        let result = scan_files_for_changes_impl(&db, &store, false).expect("scan");
+
+        assert!(result.changed_files.is_empty());
+        assert!(result.added_files.is_empty());
+        assert!(result.not_found_files.is_empty());
     }
 
     #[test]
@@ -830,6 +1033,169 @@ mod tests {
     }
 
     #[test]
+    fn describes_recovered_score_from_ignored_as_ignored() {
+        let dir = tempdir().expect("temp dir");
+        let db = Database::new_in_memory().expect("db");
+
+        db.insert_song(
+            &Song {
+                id: "song-1".to_string(),
+                name: "CANON".to_string(),
+                composer: None,
+                arranger: None,
+                path: dir.path().join("songs").join("song-1").to_string_lossy().to_string(),
+                is_favorite: false,
+                status: ScoreStatus::Main,
+                updated_at: now(),
+                updated_by: "server-1".to_string(),
+            },
+            &[],
+        )
+        .expect("insert song");
+
+        db.insert_score(&Score {
+            id: "score-1".to_string(),
+            song_id: "song-1".to_string(),
+            name: Some("Flute2".to_string() ),
+            host_id: "server-1".to_string(),
+            file_path: dir.path().join("songs").join("song-1").to_string_lossy().to_string(),
+            file_name: "CANON - Flute2.musx".to_string(),
+            file_size: 1024,
+            file_modified_at: now(),
+            updated_at: now(),
+            status: ScoreStatus::Main,
+            updated_by: "server-1".to_string(),
+        })
+        .expect("insert score");
+
+        {
+            let conn = db.conn.lock().expect("lock db");
+            conn.execute(
+                "INSERT INTO changedField (id, type, entity, entityId, field, value, timestamp)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+                params![
+                    "prev-status",
+                    "update",
+                    "scores",
+                    "score-1",
+                    "status",
+                    "ignored",
+                    10i64,
+                ],
+            )
+            .expect("insert previous status");
+        }
+
+        let change = ChangedFieldRecord {
+            id: "change-1".to_string(),
+            change_type: "update".to_string(),
+            entity: "scores".to_string(),
+            entity_id: "score-1".to_string(),
+            field: Some("status".to_string()),
+            value: Some("main".to_string()),
+            timestamp: 20,
+        };
+
+        let text = super::describe_score_change(&db, &change).expect("description");
+
+        assert!(text.contains("ignorada"));
+        assert!(text.contains("voltou para main"));
+    }
+
+    #[test]
+    fn describes_score_status_change_from_ignored_to_draft() {
+        let text = describe_score_status_change_for_previous_and_current_status("ignored", "draft");
+
+        assert!(text.contains("ignorada"));
+        assert!(text.contains("rascunho"));
+        assert!(text.contains("foi para rascunho"));
+    }
+
+    #[test]
+    fn describes_score_status_change_from_draft_to_ignored() {
+        let text = describe_score_status_change_for_previous_and_current_status("draft", "ignored");
+
+        assert!(text.contains("rascunho"));
+        assert!(text.contains("ignorada"));
+        assert!(text.contains("foi para ignorada"));
+    }
+
+    #[test]
+    fn describes_score_status_change_from_main_to_ignored() {
+        let text = describe_score_status_change_for_previous_and_current_status("main", "ignored");
+
+        assert!(text.contains("principal"));
+        assert!(text.contains("ignorada"));
+        assert!(text.contains("foi para ignorada"));
+    }
+
+    fn describe_score_status_change_for_previous_and_current_status(previous_status: &str, current_status: &str) -> String {
+        let dir = tempdir().expect("temp dir");
+        let db = Database::new_in_memory().expect("db");
+
+        db.insert_song(
+            &Song {
+                id: "song-1".to_string(),
+                name: "CANON".to_string(),
+                composer: None,
+                arranger: None,
+                path: dir.path().join("songs").join("song-1").to_string_lossy().to_string(),
+                is_favorite: false,
+                status: ScoreStatus::Main,
+                updated_at: now(),
+                updated_by: "server-1".to_string(),
+            },
+            &[],
+        )
+        .expect("insert song");
+
+        db.insert_score(&Score {
+            id: "score-1".to_string(),
+            song_id: "song-1".to_string(),
+            name: Some("Flute2".to_string()),
+            host_id: "server-1".to_string(),
+            file_path: dir.path().join("songs").join("song-1").to_string_lossy().to_string(),
+            file_name: "CANON - Flute2.musx".to_string(),
+            file_size: 1024,
+            file_modified_at: now(),
+            updated_at: now(),
+            status: ScoreStatus::from_str(current_status),
+            updated_by: "server-1".to_string(),
+        })
+        .expect("insert score");
+
+        {
+            let conn = db.conn.lock().expect("lock db");
+            conn.execute(
+                "INSERT INTO changedField (id, type, entity, entityId, field, value, timestamp)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+                params![
+                    "prev-status",
+                    "update",
+                    "scores",
+                    "score-1",
+                    "status",
+                    previous_status,
+                    10i64,
+                ],
+            )
+            .expect("insert previous status");
+        }
+
+        let change = ChangedFieldRecord {
+            id: "change-1".to_string(),
+            change_type: "update".to_string(),
+            entity: "scores".to_string(),
+            entity_id: "score-1".to_string(),
+            field: Some("status".to_string()),
+            value: Some(previous_status.to_string()),
+            timestamp: 20,
+        };
+
+        super::describe_score_change(&db, &change).expect("description")
+    }
+
+    #[test]
     fn describes_inserted_score_as_added() {
         let dir = tempdir().expect("temp dir");
         let db = Database::new_in_memory().expect("db");
@@ -891,6 +1257,57 @@ mod tests {
     }
 
     #[test]
+    fn does_not_describe_ignored_score_as_added() {
+        let dir = tempdir().expect("temp dir");
+        let db = Database::new_in_memory().expect("db");
+
+        let song_dir = dir.path().join("songs").join("song-1");
+
+        db.insert_song(
+            &Song {
+                id: "song-1".to_string(),
+                name: "08 H.C. CRISTO, O FIEL AMIGO".to_string(),
+                composer: None,
+                arranger: None,
+                path: song_dir.to_string_lossy().to_string(),
+                is_favorite: false,
+                status: ScoreStatus::Main,
+                updated_at: now(),
+                updated_by: "server-1".to_string(),
+            },
+            &[],
+        )
+        .expect("insert song");
+
+        db.insert_score(&Score {
+            id: "score-ignored".to_string(),
+            song_id: "song-1".to_string(),
+            name: Some("Flute2".to_string()),
+            host_id: "server-1".to_string(),
+            file_path: song_dir.to_string_lossy().to_string(),
+            file_name: "08 H.C. CRISTO, O FIEL AMIGO - Flute2.musx".to_string(),
+            file_size: 1024,
+            file_modified_at: now(),
+            updated_at: now(),
+            status: ScoreStatus::Ignored,
+            updated_by: "server-1".to_string(),
+        })
+        .expect("insert score");
+
+        let change = ChangedFieldRecord {
+            id: "change-1".to_string(),
+            change_type: "insert".to_string(),
+            entity: "scores".to_string(),
+            entity_id: "score-ignored".to_string(),
+            field: Some("name".to_string()),
+            value: Some("Flute2".to_string()),
+            timestamp: 0,
+        };
+
+        assert_eq!(super::describe_score_change(&db, &change), None);
+    }
+
+    #[test]
     fn describes_composer_and_arranger_changes_with_terminal_punctuation() {
         let db = Database::new_in_memory().expect("db");
 
@@ -938,6 +1355,239 @@ mod tests {
             super::describe_song_change(&db, &arranger_added),
             Some("O arranjador Maria foi adicionado à música Eis o Nosso Deus.".to_string())
         );
+    }
+
+    #[test]
+    fn preview_scan_ignores_ignored_scores_when_listing_added_files() {
+        let dir = tempdir().expect("temp dir");
+        let db = Database::new(&dir.path().join("scan.db")).expect("db");
+        let store = SystemStore::new(dir.path().to_path_buf());
+
+        store
+            .save_app_settings(&AppSettings {
+                computer_id: "server-1".to_string(),
+                computer_name: Some("Servidor".to_string()),
+                computer_type: ComputerType::Server,
+                first_run_completed: true,
+                ..Default::default()
+            })
+            .expect("save settings");
+
+        let song_dir = dir.path().join("songs").join("song-1");
+        fs::create_dir_all(&song_dir).expect("create song dir");
+
+        let main_score_path = song_dir.join("08 H.C. CRISTO, O FIEL AMIGO - Flauta.musx");
+        let ignored_score_path = song_dir.join("08 H.C. CRISTO, O FIEL AMIGO - Flute2.musx");
+
+        fs::write(&main_score_path, b"main-score").expect("write main score");
+        fs::write(&ignored_score_path, b"ignored-score").expect("write ignored score");
+
+        let (main_file_size, main_file_modified_at) = get_file_metadata(&main_score_path).expect("main metadata");
+        let (ignored_file_size, ignored_file_modified_at) = get_file_metadata(&ignored_score_path).expect("ignored metadata");
+
+        db.insert_song(
+            &Song {
+                id: "song-1".to_string(),
+                name: "08 H.C. CRISTO, O FIEL AMIGO".to_string(),
+                composer: None,
+                arranger: None,
+                path: song_dir.to_string_lossy().to_string(),
+                is_favorite: false,
+                status: ScoreStatus::Main,
+                updated_at: now(),
+                updated_by: "server-1".to_string(),
+            },
+            &[],
+        )
+        .expect("insert song");
+
+        db.insert_score(&Score {
+            id: "score-main".to_string(),
+            song_id: "song-1".to_string(),
+            name: Some("Flauta".to_string()),
+            host_id: "server-1".to_string(),
+            file_path: song_dir.to_string_lossy().to_string(),
+            file_name: "08 H.C. CRISTO, O FIEL AMIGO - Flauta.musx".to_string(),
+            file_size: main_file_size,
+            file_modified_at: main_file_modified_at,
+            updated_at: now(),
+            status: ScoreStatus::Main,
+            updated_by: "server-1".to_string(),
+        })
+        .expect("insert main score");
+
+        db.insert_score(&Score {
+            id: "score-ignored".to_string(),
+            song_id: "song-1".to_string(),
+            name: Some("Flute2".to_string()),
+            host_id: "server-1".to_string(),
+            file_path: song_dir.to_string_lossy().to_string(),
+            file_name: "08 H.C. CRISTO, O FIEL AMIGO - Flute2.musx".to_string(),
+            file_size: ignored_file_size,
+            file_modified_at: ignored_file_modified_at,
+            updated_at: now(),
+            status: ScoreStatus::Ignored,
+            updated_by: "server-1".to_string(),
+        })
+        .expect("insert ignored score");
+
+        let result = super::preview_scan_files_for_changes_impl(&db, &store).expect("preview scan");
+
+        assert!(result.added_files.is_empty());
+        assert!(result.report_items.iter().all(|item| !item.contains("Flute2.musx")));
+    }
+
+    #[test]
+    fn build_report_items_hides_score_additions_for_new_songs_but_keeps_later_score_updates() {
+        let db = Database::new_in_memory().expect("db");
+        let song_dir = Path::new("/music/song-1").to_path_buf();
+
+        db.insert_song(
+            &Song {
+                id: "song-1".to_string(),
+                name: "HINO NOVO".to_string(),
+                composer: None,
+                arranger: None,
+                path: song_dir.to_string_lossy().to_string(),
+                is_favorite: false,
+                status: ScoreStatus::Main,
+                updated_at: now(),
+                updated_by: "server-1".to_string(),
+            },
+            &[],
+        )
+        .expect("insert song");
+
+        db.insert_score(&Score {
+            id: "score-1".to_string(),
+            song_id: "song-1".to_string(),
+            name: Some("Flauta".to_string()),
+            host_id: "server-1".to_string(),
+            file_path: song_dir.to_string_lossy().to_string(),
+            file_name: "HINO NOVO - Flauta.musx".to_string(),
+            file_size: 1024,
+            file_modified_at: now(),
+            updated_at: now(),
+            status: ScoreStatus::Main,
+            updated_by: "server-1".to_string(),
+        })
+        .expect("insert score");
+
+        db.update_score_status(&"score-1".to_string(), ScoreStatus::Draft, "server-1", None)
+            .expect("update score status");
+
+        let added_files = vec![song_dir.join("HINO NOVO - Flauta.musx").to_string_lossy().to_string()];
+        let changed_fields = db.get_changed_fields_ordered().expect("changed fields");
+
+        let report_items = super::build_report_items(&db, &[], &added_files, &[], &[], &[], &changed_fields);
+
+        assert!(report_items.iter().any(|item| item.contains("Música criada: HINO NOVO")));
+        assert!(report_items.iter().any(|item| item.contains("foi para rascunho")));
+        assert!(report_items.iter().all(|item| !item.contains("Partitura adicionada: /music/song-1/HINO NOVO - Flauta.musx")));
+    }
+
+    #[test]
+    fn category_song_report_uses_category_name_from_pending_changes() {
+        let dir = tempdir().expect("temp dir");
+        let db = Database::new(&dir.path().join("scan.db")).expect("db");
+
+        db.insert_song(
+            &Song {
+                id: "song-1".to_string(),
+                name: "08 H.C. CRISTO, O FIEL AMIGO".to_string(),
+                composer: None,
+                arranger: None,
+                path: dir.path().join("songs").join("song-1").to_string_lossy().to_string(),
+                is_favorite: false,
+                status: ScoreStatus::Main,
+                updated_at: now(),
+                updated_by: "server-1".to_string(),
+            },
+            &[],
+        )
+        .expect("insert song");
+
+        let category_id = "category-1".to_string();
+        let relation_id = "relation-1".to_string();
+
+        {
+            let conn = db.conn.lock().expect("lock db");
+            conn.execute("PRAGMA foreign_keys = OFF", [])
+                .expect("disable foreign keys for test");
+            conn.execute(
+                "INSERT INTO categoriesSongs (id, categoryId, songId) VALUES (?1, ?2, ?3)",
+                rusqlite::params![&relation_id, &category_id, "song-1"],
+            )
+            .expect("insert relation");
+        }
+
+        let changed_fields = vec![
+            ChangedFieldRecord {
+                id: "cat-event-1".to_string(),
+                change_type: "insert".to_string(),
+                entity: "categories".to_string(),
+                entity_id: category_id.clone(),
+                field: Some("name".to_string()),
+                value: Some("Coral".to_string()),
+                timestamp: 1,
+            },
+            ChangedFieldRecord {
+                id: "rel-event-1".to_string(),
+                change_type: "insert".to_string(),
+                entity: "categoriesSongs".to_string(),
+                entity_id: relation_id,
+                field: Some("categoryId".to_string()),
+                value: Some(category_id),
+                timestamp: 2,
+            },
+        ];
+
+        let report_items = super::build_report_items(&db, &[], &[], &[], &[], &[], &changed_fields);
+
+        assert!(report_items.iter().any(|item| item.contains("Coral")));
+        assert!(report_items.iter().all(|item| !item.contains("category-1")));
+    }
+
+    #[test]
+    fn category_song_report_ignores_song_id_relation_events() {
+        let db = Database::new_in_memory().expect("db");
+        db.insert_category(&crate::domain::models::Category {
+            id: "category-1".to_string(),
+            name: "Coral".to_string(),
+            updated_at: now(),
+            updated_by: "server-1".to_string(),
+        })
+        .expect("insert category");
+
+        db.insert_song(
+            &Song {
+                id: "song-1".to_string(),
+                name: "08 H.C. CRISTO, O FIEL AMIGO".to_string(),
+                composer: None,
+                arranger: None,
+                path: "/music/song-1".to_string(),
+                is_favorite: false,
+                status: ScoreStatus::Main,
+                updated_at: now(),
+                updated_by: "server-1".to_string(),
+            },
+            &[],
+        )
+        .expect("insert song");
+
+        let changed_fields = vec![ChangedFieldRecord {
+            id: "rel-event-1".to_string(),
+            change_type: "insert".to_string(),
+            entity: "categoriesSongs".to_string(),
+            entity_id: "relation-1".to_string(),
+            field: Some("songId".to_string()),
+            value: Some("song-1".to_string()),
+            timestamp: 2,
+        }];
+
+        let report_items = super::build_report_items(&db, &[], &[], &[], &[], &[], &changed_fields);
+
+        assert!(report_items.is_empty());
     }
 
     #[test]

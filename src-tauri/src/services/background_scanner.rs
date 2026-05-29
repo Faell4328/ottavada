@@ -15,6 +15,7 @@ struct ScoreMetadataEntry {
     file_name: String,
     stored_size: u64,
     stored_modified_at_str: String,
+    status: ScoreStatus,
 }
 
 /// Executa a verificação inicial de alterações nos arquivos de partituras
@@ -35,13 +36,14 @@ pub fn run_initial_scan(db: &Database, host_id: &str) {
     let mut recovered_count = 0;
 
     let mut scores_by_song: HashMap<String, Vec<ScoreMetadataEntry>> = HashMap::new();
-    for (song_id, score_id, file_path, file_name, stored_size, stored_modified_at_str) in scores {
+    for (song_id, score_id, file_path, file_name, stored_size, stored_modified_at_str, status) in scores {
         scores_by_song.entry(song_id).or_default().push(ScoreMetadataEntry {
             score_id,
             file_path,
             file_name,
             stored_size,
             stored_modified_at_str,
+            status: ScoreStatus::from_str(&status),
         });
     }
 
@@ -52,14 +54,23 @@ pub fn run_initial_scan(db: &Database, host_id: &str) {
             continue;
         }
 
-        let song_directory = match score_directory(&song_scores[0].file_path, &song_scores[0].file_name) {
+        let scanable_scores: Vec<&ScoreMetadataEntry> = song_scores
+            .iter()
+            .filter(|score| score.status != ScoreStatus::Ignored)
+            .collect();
+
+        if scanable_scores.is_empty() {
+            continue;
+        }
+
+        let song_directory = match score_directory(&scanable_scores[0].file_path, &scanable_scores[0].file_name) {
             Some(directory) => directory,
             None => continue,
         };
 
         let current_files = scan_directory(Path::new(&song_directory));
 
-        for score in &song_scores {
+        for score in &scanable_scores {
             let full_path = build_score_full_path(&score.file_path, &score.file_name);
             let path = Path::new(&full_path);
 

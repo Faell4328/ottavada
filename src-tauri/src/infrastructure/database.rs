@@ -1234,7 +1234,7 @@ impl Database {
         conn: &Connection,
         sql: &str,
         params: &[&dyn rusqlite::ToSql],
-    ) -> Result<Vec<(String, String, String, String, u64, String)>, AppError> {
+    ) -> Result<Vec<(String, String, String, String, u64, String, String)>, AppError> {
         let mut stmt = conn.prepare(sql)?;
         let scores = stmt
             .query_map(rusqlite::params_from_iter(params), |row| {
@@ -1248,6 +1248,7 @@ impl Database {
                     file_name,
                     row.get::<_, u64>(4)?,
                     row.get::<_, String>(5)?,
+                    row.get::<_, String>(6)?,
                 ))
             })?
             .filter_map(|r| r.ok())
@@ -1273,11 +1274,11 @@ impl Database {
     pub fn get_all_scores_with_metadata_by_host(
         &self,
         host_id: &str,
-    ) -> Result<Vec<(String, String, String, String, u64, String)>, AppError> {
+    ) -> Result<Vec<(String, String, String, String, u64, String, String)>, AppError> {
         let conn = self.conn.lock().unwrap();
         Self::query_score_metadata_with_song_id(
             &conn,
-            "SELECT s.song_id, s.id, s.file_path, s.file_name, s.file_size, s.file_modified_at
+            "SELECT s.song_id, s.id, s.file_path, s.file_name, s.file_size, s.file_modified_at, s.status
              FROM scores s
              WHERE s.host_id = ?1",
             &[&host_id as &dyn rusqlite::ToSql],
@@ -1354,7 +1355,7 @@ impl Database {
                 "scores",
                 score_id,
                 Some("status"),
-                Some(status.as_str().to_string()),
+                Some(old_status.clone()),
             )?;
         }
 
@@ -1791,6 +1792,20 @@ impl Database {
     pub fn clear_changed_fields(&self) -> Result<usize, AppError> {
         let conn = self.conn.lock().unwrap();
         let deleted = conn.execute("DELETE FROM changedField", [])?;
+        Ok(deleted)
+    }
+
+    /// Remove registros pendentes de changedField para uma entidade específica.
+    pub fn clear_changed_fields_for_entity(
+        &self,
+        entity: &str,
+        entity_id: &str,
+    ) -> Result<usize, AppError> {
+        let conn = self.conn.lock().unwrap();
+        let deleted = conn.execute(
+            "DELETE FROM changedField WHERE entity = ?1 AND entityId = ?2",
+            params![entity, entity_id],
+        )?;
         Ok(deleted)
     }
 

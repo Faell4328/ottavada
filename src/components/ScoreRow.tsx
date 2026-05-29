@@ -22,7 +22,7 @@ export interface ScoreRowProps {
   onMenuOpen: (id: string) => void;
   onMenuClose: () => void;
   onEdit: () => void;
-  onStatusChange: (scoreId: string, status: "main") => Promise<void>;
+  onStatusChange: (scoreId: string, status: "main" | "draft" | "ignored") => Promise<void>;
   onDelete: (scoreId: string) => Promise<void>;
   onUseAsBase: () => void;
   computerType?: string;
@@ -68,19 +68,123 @@ function ScoreRow({
     await openScoreFile();
   };
 
-  const handleSetAsMain = () => {
+  const requestStatusChange = (
+    nextStatus: "main" | "draft" | "ignored",
+    title: string,
+    message: string,
+    errorMessage: string
+  ) => {
     confirmation.requestConfirmation(
-      "Definir como Principal",
-      "Você realmente deseja mudar o arquivo para \"Principal\"?",
+      title,
+      message,
       async () => {
         try {
-          await onStatusChange(score.id, "main");
+          await onStatusChange(score.id, nextStatus);
           onMenuClose();
         } catch (err) {
-          console.error("Failed to set score as main:", err);
-          toast.error("Erro ao definir como Principal");
+          console.error("Failed to change score status:", err);
+          toast.error(errorMessage);
         }
       }
+    );
+  };
+
+  const renderStatusAction = () => {
+    if (statusKey === "main") {
+      return (
+        <>
+          <ContextMenuItem
+            label="Definir como Rascunho"
+            onClick={(e) => {
+              e.stopPropagation();
+              requestStatusChange(
+                "draft",
+                "Definir como Rascunho",
+                'Você realmente deseja mudar o arquivo para "Rascunho"?',
+                "Erro ao definir como Rascunho"
+              );
+            }}
+            disabled={isActionLocked}
+          />
+          <ContextMenuItem
+            label="Definir como Ignorar"
+            onClick={(e) => {
+              e.stopPropagation();
+              requestStatusChange(
+                "ignored",
+                "Definir como Ignorar",
+                'Você realmente deseja marcar esta partitura como "Ignorada"?',
+                "Erro ao definir como Ignorar"
+              );
+            }}
+            disabled={isActionLocked}
+          />
+        </>
+      );
+    }
+
+    if (statusKey === "draft") {
+      return (
+        <>
+          <ContextMenuItem
+            label="Definir como Principal"
+            onClick={(e) => {
+              e.stopPropagation();
+              requestStatusChange(
+                "main",
+                "Definir como Principal",
+                'Você realmente deseja mudar o arquivo para "Principal"?',
+                "Erro ao definir como Principal"
+              );
+            }}
+            disabled={isActionLocked}
+          />
+          <ContextMenuItem
+            label="Definir como Ignorar"
+            onClick={(e) => {
+              e.stopPropagation();
+              requestStatusChange(
+                "ignored",
+                "Definir como Ignorar",
+                'Você realmente deseja marcar esta partitura como "Ignorada"?',
+                "Erro ao definir como Ignorar"
+              );
+            }}
+            disabled={isActionLocked}
+          />
+        </>
+      );
+    }
+
+    return (
+      <>
+        <ContextMenuItem
+          label="Definir como Principal"
+          onClick={(e) => {
+            e.stopPropagation();
+            requestStatusChange(
+              "main",
+              "Definir como Principal",
+              'Você realmente deseja mudar o arquivo para "Principal"?',
+              "Erro ao definir como Principal"
+            );
+          }}
+          disabled={isActionLocked}
+        />
+        <ContextMenuItem
+          label="Definir como Rascunho"
+          onClick={(e) => {
+            e.stopPropagation();
+            requestStatusChange(
+              "draft",
+              "Definir como Rascunho",
+              'Você realmente deseja reativar esta partitura como "Rascunho"?',
+              "Erro ao definir como Rascunho"
+            );
+          }}
+          disabled={isActionLocked}
+        />
+      </>
     );
   };
 
@@ -150,52 +254,43 @@ function ScoreRow({
                   />
                 ) : (
                   <>
-                  <ContextMenuItem
-                    label="Abrir"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      void openScoreFile();
-                      onMenuClose();
-                    }}
-                    disabled={isActionLocked}
-                  />
-                  {statusKey === "draft" && (
                     <ContextMenuItem
-                      label="Definir como Principal"
+                      label="Abrir"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleSetAsMain();
+                        void openScoreFile();
+                        onMenuClose();
                       }}
                       disabled={isActionLocked}
                     />
-                  )}
-                  <ContextMenuItem
-                    label="Editar"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onEdit();
-                      onMenuClose();
-                    }}
-                    disabled={isActionLocked}
-                  />
-                  <ContextMenuItem
-                    label="Usar Como Base"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onUseAsBase();
-                      onMenuClose();
-                    }}
-                    disabled={isActionLocked}
-                  />
-                  <ContextMenuItem
-                    label="Deletar"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete();
-                    }}
-                    disabled={isActionLocked}
-                    isLast
-                  />
+                    {renderStatusAction()}
+                    <ContextMenuItem
+                      label="Editar"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEdit();
+                        onMenuClose();
+                      }}
+                      disabled={isActionLocked}
+                    />
+                    <ContextMenuItem
+                      label="Usar Como Base"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onUseAsBase();
+                        onMenuClose();
+                      }}
+                      disabled={isActionLocked}
+                    />
+                    <ContextMenuItem
+                      label="Deletar"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete();
+                      }}
+                      disabled={isActionLocked}
+                      isLast
+                    />
                   </>
                 )}
               </ContextMenu>

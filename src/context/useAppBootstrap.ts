@@ -43,17 +43,11 @@ export function useAppBootstrap({
         if (!firstRun) {
           skipNextAutoSongReloadRef.current = true;
           const currentSettings = await api.getSettings();
-          const hasPendingChanges = await api.hasPendingChanges();
-          const hasInterruptedApply = await api.hasServerApplyChangesInProgress();
           await Promise.all([loadSongs(), loadCategories(), loadSettings()]);
 
           if (
             startupScan &&
-            shouldRunStartupServerScan(
-              currentSettings.computer_type,
-              hasPendingChanges,
-              hasInterruptedApply
-            )
+            shouldRunStartupServerScan(currentSettings.computer_type)
           ) {
             void startupScan().catch((error) => {
               console.error("Failed to run startup scan:", error);

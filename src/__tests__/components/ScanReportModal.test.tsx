@@ -30,6 +30,7 @@ const report = {
     "O arranjador Maria foi deletado da música Eis o Nosso Deus.",
     "A partitura Flauta.musx foi deletada.",
     "A partitura Flauta.musx saiu de draft e voltou para main na música Eis o Nosso Deus.",
+    "A partitura Flute2.musx saiu de ignored e foi para draft na música Eis o Nosso Deus.",
     "Partitura alterada: /music/CANON.musx",
   ],
 };
@@ -73,7 +74,8 @@ describe("ScanReportModal", () => {
     expect(screen.getAllByText((_, element) => element?.textContent === "A partitura Tenor Saxophone.musx foi adicionada na música Eis o Nosso Deus.").length).toBeGreaterThan(0);
     expect(screen.getAllByText((_, element) => element?.textContent === "A partitura Oboes.musx teve o nome alterado.").length).toBeGreaterThan(0);
     expect(screen.getAllByText((_, element) => element?.textContent === "A partitura Flauta.pdf teve a extensão alterada na música Eis o Nosso Deus.").length).toBeGreaterThan(0);
-    expect(screen.getAllByText((_, element) => element?.textContent === "A partitura Flauta.musx saiu de draft e voltou para main na música Eis o Nosso Deus.").length).toBeGreaterThan(0);
+    expect(screen.getAllByText((_, element) => element?.textContent?.includes("A partitura Flauta.musx saiu de rascunho e voltou para main") ?? false).length).toBeGreaterThan(0);
+    expect(screen.getAllByText((_, element) => element?.textContent?.includes("A partitura Flute2.musx saiu de ignorada e foi para rascunho") ?? false).length).toBeGreaterThan(0);
     expect(screen.getAllByText((_, element) => element?.textContent === "A partitura CANON.musx foi alterada.").length).toBeGreaterThan(0);
     expect(screen.getAllByText((_, element) => element?.textContent === "A partitura Clarinete.musx foi deletada.").length).toBeGreaterThan(0);
     expect(screen.queryByText("Arquivos recuperados")).not.toBeInTheDocument();

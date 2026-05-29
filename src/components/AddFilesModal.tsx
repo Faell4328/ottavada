@@ -58,13 +58,6 @@ export function AddFilesModal({
   const [openingScorePath, setOpeningScorePath] = useState<string | null>(null);
   const [openingLocationPath, setOpeningLocationPath] = useState<string | null>(null);
   const normalizedTitle = useMemo(() => normalizeSongNameForSave(title), [title]);
-  const selectedCategoryNames = useMemo(
-    () =>
-      selectedCategories
-        .map((categoryId) => state.categories.find((category) => category.id === categoryId)?.name)
-        .filter((name): name is string => Boolean(name)),
-    [selectedCategories, state.categories]
-  );
   const existingSong = useMemo(
     () => findSongByName(songsForDuplicateCheck, normalizedTitle),
     [normalizedTitle, songsForDuplicateCheck]

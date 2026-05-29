@@ -114,19 +114,19 @@ describe("shouldDispatchRcloneProgressUpdate", () => {
 
 describe("shouldRunStartupServerScan", () => {
   it("skips the startup scan on the server when there are no pending changes", () => {
-    expect(shouldRunStartupServerScan("Server", false, false)).toBe(false);
+    expect(shouldRunStartupServerScan("Server")).toBe(false);
   });
 
-  it("runs the startup scan on the server when there are pending changes", () => {
-    expect(shouldRunStartupServerScan("Server", true, false)).toBe(true);
+  it("skips the startup scan on the server when there are pending changes", () => {
+    expect(shouldRunStartupServerScan("Server")).toBe(false);
   });
 
-  it("runs the startup scan on the server when an apply was interrupted", () => {
-    expect(shouldRunStartupServerScan("Server", false, true)).toBe(true);
+  it("skips the startup scan on the server when an apply was interrupted", () => {
+    expect(shouldRunStartupServerScan("Server")).toBe(false);
   });
 
   it("keeps the client startup scan enabled", () => {
-    expect(shouldRunStartupServerScan("Client", false, false)).toBe(true);
+    expect(shouldRunStartupServerScan("Client")).toBe(true);
   });
 });
 

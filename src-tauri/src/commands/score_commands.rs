@@ -113,6 +113,31 @@ fn ensure_supported_score_file(path: &Path) -> Result<(), AppError> {
     Ok(())
 }
 
+fn resolve_manual_score_status(current_status: ScoreStatus, requested_status: &str) -> Result<ScoreStatus, AppError> {
+    match requested_status.to_lowercase().as_str() {
+        "draft" => Ok(ScoreStatus::Draft),
+        "ignored" => Ok(ScoreStatus::Ignored),
+        "main" => {
+            if current_status != ScoreStatus::Draft && current_status != ScoreStatus::Ignored {
+                warn!(
+                    "Tentativa de definir score como main fora do fluxo draft/ignored -> main"
+                );
+                return Err(AppError::Generic(
+                    "A partitura precisa estar como 'draft' ou 'ignored' para ser definida como 'main'".into(),
+                ));
+            }
+
+            Ok(ScoreStatus::Main)
+        }
+        _ => {
+            warn!("Fluxo inválido de status manual solicitado: {}", requested_status);
+            Err(AppError::Generic(
+                "Apenas as mudanças para 'draft', 'main' ou 'ignored' são permitidas manualmente".into(),
+            ))
+        }
+    }
+}
+
 fn read_score_file_metadata(path: &Path) -> Result<(u64, chrono::NaiveDateTime), AppError> {
     get_file_metadata(path).map_err(|e| {
         error!("Erro ao obter metadados do arquivo: {:?}", e);
@@ -526,30 +551,12 @@ pub fn update_score_status(
         .find(|sc| sc.id == score_id)
         .ok_or_else(|| AppError::ScoreNotFound(score_id.clone()))?;
 
-    if status.to_lowercase() != "main" {
-        warn!("Fluxo inválido de status manual solicitado: {}", status);
-        return Err(AppError::Generic(
-            "Apenas a mudança para 'main' é permitida manualmente".into(),
-        ));
-    }
+    let next_status = resolve_manual_score_status(current_score.status.clone(), &status)?;
 
-    if current_score.status != ScoreStatus::Draft {
-        warn!(
-            "Tentativa de definir score {} como main fora do fluxo draft -> main",
-            score_id
-        );
-        return Err(AppError::Generic(
-            "A partitura precisa estar como 'draft' para ser definida como 'main'".into(),
-        ));
-    }
-
-    db.update_score_status(&score_id, ScoreStatus::Main, &settings.computer_id, None)?;
+    db.update_score_status(&score_id, next_status, &settings.computer_id, None)?;
     let _ = refresh_library_summary_cache(&db, &store);
 
-    info!(
-        "Status da partitura {} atualizado com sucesso para {}",
-        score_id, status
-    );
+    info!("Status da partitura {} atualizado com sucesso para {}", score_id, status);
     db.get_song_list_item_by_id(&song_id)
 }
 
@@ -693,6 +700,7 @@ mod tests {
 
     use super::{
         build_client_extracted_score_name, extract_score_file_from_archive,
+        resolve_manual_score_status,
         resolve_openable_score_path,
         sanitize_file_name_component,
     };
@@ -837,6 +845,22 @@ mod tests {
         let resolved = resolve_openable_score_path(&db, "score-1").expect("resolve");
 
         assert_eq!(resolved, direct_path);
+    }
+
+    #[test]
+    fn resolves_manual_score_status_for_ignored_to_draft() {
+        assert_eq!(
+            resolve_manual_score_status(ScoreStatus::Ignored, "draft").expect("status"),
+            ScoreStatus::Draft
+        );
+    }
+
+    #[test]
+    fn resolves_manual_score_status_for_ignored_to_main() {
+        assert_eq!(
+            resolve_manual_score_status(ScoreStatus::Ignored, "main").expect("status"),
+            ScoreStatus::Main
+        );
     }
 
     #[test]

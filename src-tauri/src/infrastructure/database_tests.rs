@@ -802,13 +802,49 @@ mod tests {
         let draft_events: i64 = conn
             .query_row(
                 "SELECT COUNT(*) FROM changedField
-                 WHERE entity = 'scores' AND field = 'status' AND value = 'draft'",
+                 WHERE entity = 'scores' AND field = 'status' AND value = 'main' AND type = 'update'",
                 [],
                 |row| row.get(0),
             )
             .unwrap();
 
         assert_eq!(draft_events, 1);
+    }
+
+    #[test]
+    fn test_update_score_status_ignored_does_not_create_pending_change() {
+        let db = make_db();
+        db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
+        db.insert_score(&make_score(&db, "sc1", "s1", Some("Violino")))
+            .unwrap();
+
+        db.clear_changed_fields().unwrap();
+
+        db.update_score_status("sc1", ScoreStatus::Ignored, "test-computer", None)
+            .unwrap();
+
+        assert!(db.has_pending_changes().unwrap());
+
+        let conn = db.conn.lock().unwrap();
+        let ignored_events: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM changedField WHERE entity = 'scores' AND field = 'status' AND value = 'ignored' AND type = 'update'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+
+        assert_eq!(ignored_events, 0);
+
+        let previous_main_events: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM changedField WHERE entity = 'scores' AND field = 'status' AND value = 'main' AND type = 'update'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+
+        assert_eq!(previous_main_events, 1);
     }
 
     #[test]

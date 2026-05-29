@@ -42,11 +42,9 @@ export interface RcloneProgressSnapshot {
 const SNAPSHOT_AUTO_THRESHOLD_BYTES = 2 * 1024 * 1024;
 
 export function shouldRunStartupServerScan(
-  computerType: "Server" | "Client" | undefined,
-  hasPendingChanges: boolean,
-  hasInterruptedApply: boolean
+  computerType: "Server" | "Client" | undefined
 ) {
-  return computerType !== "Server" || hasPendingChanges || hasInterruptedApply;
+  return computerType === "Client";
 }
 
 function normalizeRcloneProgressForUi(progress: RcloneProgressSnapshot) {

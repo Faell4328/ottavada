@@ -139,7 +139,7 @@ export async function updateScore(
 
 export async function updateScoreStatus(
   scoreId: string,
-  status: "main"
+  status: "main" | "draft" | "ignored"
 ): Promise<SongListItem> {
   return invoke("update_score_status", { scoreId, status });
 }

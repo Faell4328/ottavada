@@ -221,7 +221,7 @@ export default function SongsList() {
   );
 
   const handleToggleScoreStatus = useCallback(
-    async (songId: string, scoreId: string, status: "main") => {
+    async (songId: string, scoreId: string, status: "main" | "draft" | "ignored") => {
       await updateScoreStatus(scoreId, status);
       await refreshScoresForSong(songId);
     },

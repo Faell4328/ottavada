@@ -175,7 +175,7 @@ export function useAppCrudActions({
 
   const updateScoreStatus = useCallback(async (
     scoreId: string,
-    status: "main"
+    status: "main" | "draft" | "ignored"
   ) => {
     try {
       const updatedSong = await api.updateScoreStatus(scoreId, status);
@@ -189,7 +189,7 @@ export function useAppCrudActions({
       await refreshSelectedSong();
       await loadSettings();
 
-      toast.success("Partitura marcada como principal.");
+      toast.success("Status da partitura atualizado.");
     } catch (err) {
       console.error("Failed to update score status:", err);
       toast.error("Não foi possível mudar o status da partitura.");
