@@ -1,4 +1,5 @@
-use std::path::PathBuf;
+use std::fs;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use crate::domain::errors::AppError;
@@ -50,6 +51,23 @@ pub fn regenerate_song_archives_for_song_ids(
     let cloud_root = ensure_cloud_root_dir(store.app_data_dir())?;
     generate_song_archives_for_song_ids_service(db, store.app_data_dir(), &cloud_root, song_ids)
         .map(|_| ())
+}
+
+pub fn remove_path_if_exists(path: &Path) -> Result<(), AppError> {
+    match fs::metadata(path) {
+        Ok(metadata) if metadata.is_dir() => match fs::remove_dir_all(path) {
+            Ok(()) => Ok(()),
+            Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(()),
+            Err(err) => Err(AppError::Io(err)),
+        },
+        Ok(_) => match fs::remove_file(path) {
+            Ok(()) => Ok(()),
+            Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(()),
+            Err(err) => Err(AppError::Io(err)),
+        },
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(err) => Err(AppError::Io(err)),
+    }
 }
 
 #[cfg(target_os = "windows")]

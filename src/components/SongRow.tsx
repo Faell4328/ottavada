@@ -1,10 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import toast from "react-hot-toast";
 import type { SongListItem } from "../types";
 import { ContextMenu, ContextMenuItem } from "./ui/ContextMenu";
-import { ConfirmationModal } from "./ui/ConfirmationModal";
-import { useConfirmation } from "../hooks/useConfirmation";
 import { isClientComputer } from "../utils/computer";
 import * as api from "../api/commands";
 
@@ -40,7 +39,8 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(function Son
   }: SongRowProps,
   ref
 ) {
-  const confirmation = useConfirmation();
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleteLoading, setIsDeleteLoading] = useState(false);
   const author = [song.composer, song.arranger].filter(Boolean).join(" / ");
   const isClient = isClientComputer(computerType);
   const isActionLocked = isClient || isLocked;
@@ -65,19 +65,27 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(function Son
   };
 
   const handleDelete = () => {
-    confirmation.requestConfirmation(
-      "Deletar Música",
-      "Você realmente deseja deletar esta música? Seu arquivo irá continuar localmente, será removido apenas do sistema.",
-      async () => {
-        try {
-          await onDelete(song.id);
-          onMenuClose();
-        } catch (err) {
-          console.error("Failed to delete song:", err);
-          toast.error("Erro ao deletar música");
-        }
-      }
-    );
+    setIsDeleteModalOpen(true);
+  };
+
+  const closeDeleteModal = () => {
+    if (!isDeleteLoading) {
+      setIsDeleteModalOpen(false);
+    }
+  };
+
+  const runDeleteAction = async (action: () => Promise<void>) => {
+    setIsDeleteLoading(true);
+    try {
+      await action();
+      setIsDeleteModalOpen(false);
+      onMenuClose();
+    } catch (err) {
+      console.error("Failed to delete song:", err);
+      toast.error("Erro ao deletar música");
+    } finally {
+      setIsDeleteLoading(false);
+    }
   };
 
   return (
@@ -173,14 +181,46 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(function Son
         </td>
       </tr>
 
-      <ConfirmationModal
-        isOpen={confirmation.isOpen}
-        title={confirmation.title}
-        message={confirmation.message}
-        isLoading={confirmation.isLoading}
-        onConfirm={confirmation.confirm}
-        onCancel={confirmation.cancel}
-      />
+      {isDeleteModalOpen && typeof document !== "undefined"
+        ? createPortal(
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+              <div className="w-full max-w-md rounded-lg border border-[#c5cfdb] bg-[#f8fafd] p-6 shadow-xl">
+                <h2 className="mb-3 text-lg font-semibold text-[#2f4259]">Deletar Música</h2>
+                <p className="mb-6 text-sm text-[#4a6278]">
+                  O que você quer fazer com o diretório desta música?
+                </p>
+                <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+                  <button
+                    onClick={closeDeleteModal}
+                    disabled={isDeleteLoading}
+                    className="rounded-lg border border-[#c5cfdb] px-4 py-2 text-sm font-medium text-[#344b61] transition-colors hover:bg-[#eef2f6] disabled:opacity-50"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={() => {
+                      void runDeleteAction(() => onDelete(song.id));
+                    }}
+                    disabled={isDeleteLoading}
+                    className="rounded-lg border border-[#4f84d7] px-4 py-2 text-sm font-medium text-[#4f84d7] transition-colors hover:bg-[#edf4ff] disabled:opacity-50"
+                  >
+                    Parar de indexar diretório
+                  </button>
+                  <button
+                    onClick={() => {
+                      void runDeleteAction(() => api.deleteSongWithFiles(song.id));
+                    }}
+                    disabled={isDeleteLoading}
+                    className="rounded-lg bg-[#c04b4b] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#a93b3b] disabled:opacity-50"
+                  >
+                    {isDeleteLoading ? "Processando..." : "Deletar diretório e arquivos"}
+                  </button>
+                </div>
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
     </>
   );
 });

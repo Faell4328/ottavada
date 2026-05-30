@@ -200,7 +200,7 @@ function ScoreRow({
   const handleDelete = () => {
     confirmation.requestConfirmation(
       "Deletar Partitura",
-      "Você realmente deseja deletar esta partitura? Seu arquivo irá continuar localmente, será removido apenas do sistema.",
+      "Você realmente deseja deletar esta partitura? O arquivo será removido do computador e do Score Maestro.",
       async () => {
         try {
           await onDelete(score.id);

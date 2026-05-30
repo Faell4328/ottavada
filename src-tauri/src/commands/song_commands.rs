@@ -4,8 +4,9 @@ use tauri::State;
 use tracing::{error, info, warn};
 use serde::Serialize;
 
-use crate::commands::common::require_server_settings;
 use crate::commands::common::regenerate_song_archives_for_song_ids;
+use crate::commands::common::remove_path_if_exists;
+use crate::commands::common::require_server_settings;
 use crate::domain::errors::AppError;
 use crate::domain::models::*;
 use crate::infrastructure::database::Database;
@@ -79,6 +80,38 @@ fn refresh_library_summary_cache(
     _store: &SystemStore,
 ) -> Result<(), AppError> {
     Ok(())
+}
+
+fn delete_song_core(db: &Database, store: &SystemStore, song_id: &str) -> Result<(), AppError> {
+    db.delete_song(song_id)?;
+    let _ = refresh_library_summary_cache(db, store);
+
+    let archive_path = store
+        .app_data_dir()
+        .join("cloud")
+        .join("songs")
+        .join(format!("{}.tar.zst", song_id));
+    if archive_path.is_file() {
+        std::fs::remove_file(&archive_path).map_err(|e| {
+            AppError::Generic(format!(
+                "Erro ao deletar arquivo compactado da música '{}': {}",
+                archive_path.display(),
+                e
+            ))
+        })?;
+    }
+
+    Ok(())
+}
+
+fn delete_song_with_files_core(
+    db: &Database,
+    store: &SystemStore,
+    song_id: &str,
+) -> Result<(), AppError> {
+    let song = db.get_song_list_item_by_id(song_id)?;
+    remove_path_if_exists(std::path::Path::new(&song.path))?;
+    delete_song_core(db, store, song_id)
 }
 
 #[tauri::command]
@@ -561,25 +594,25 @@ pub fn delete_song(
 
     info!("Deletando música: {}", song_id);
 
-    db.delete_song(&song_id)?;
-    let _ = refresh_library_summary_cache(&db, &store);
-
-    let archive_path = store
-        .app_data_dir()
-        .join("cloud")
-        .join("songs")
-        .join(format!("{}.tar.zst", song_id));
-    if archive_path.is_file() {
-        std::fs::remove_file(&archive_path).map_err(|e| {
-            AppError::Generic(format!(
-                "Erro ao deletar arquivo compactado da música '{}': {}",
-                archive_path.display(),
-                e
-            ))
-        })?;
-    }
+    delete_song_core(&db, &store, &song_id)?;
 
     info!("Música deletada com sucesso: {}", song_id);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn delete_song_with_files(
+    db: State<'_, Database>,
+    store: State<'_, SystemStore>,
+    song_id: String,
+) -> Result<(), AppError> {
+    require_server_settings(&store)?;
+
+    info!("Deletando diretório da música: {}", song_id);
+
+    delete_song_with_files_core(&db, &store, &song_id)?;
+
+    info!("Diretório da música deletado com sucesso: {}", song_id);
     Ok(())
 }
 
@@ -589,7 +622,7 @@ mod tests {
 
     use tempfile::tempdir;
 
-    use super::import_files_core;
+    use super::{delete_song_core, delete_song_with_files_core, import_files_core};
     use crate::domain::models::{AppSettings, ComputerType, IndexedFile, ScoreStatus};
     use crate::infrastructure::database::Database;
     use crate::infrastructure::store::SystemStore;
@@ -685,5 +718,88 @@ mod tests {
         .expect("import files");
 
         assert_eq!(db.get_song_by_id(&result.songs[0].id).expect("song").status, ScoreStatus::Draft);
+    }
+
+    #[test]
+    fn deleting_song_with_files_removes_the_indexed_directory() {
+        let dir = tempdir().expect("temp dir");
+        let db = Database::new(&dir.path().join("songs.db")).expect("db");
+        let store = SystemStore::new(dir.path().to_path_buf());
+
+        store
+            .save_app_settings(&AppSettings {
+                computer_id: "server-1".to_string(),
+                computer_name: Some("Servidor".to_string()),
+                computer_type: ComputerType::Server,
+                first_run_completed: true,
+                ..Default::default()
+            })
+            .expect("save settings");
+
+        let song_dir = dir.path().join("repertoire").join("song-1");
+        fs::create_dir_all(&song_dir).expect("create song dir");
+        fs::write(song_dir.join("score.musx"), b"score").expect("write score file");
+
+        db.insert_song(
+            &crate::domain::models::Song {
+                id: "song-1".to_string(),
+                name: "CANON".to_string(),
+                composer: None,
+                arranger: None,
+                path: song_dir.to_string_lossy().to_string(),
+                is_favorite: false,
+                status: ScoreStatus::Main,
+                updated_at: chrono::Local::now().naive_local(),
+                updated_by: "server-1".to_string(),
+            },
+            &[],
+        )
+        .expect("insert song");
+
+        delete_song_with_files_core(&db, &store, "song-1").expect("delete song with files");
+
+        assert!(!song_dir.exists());
+        assert!(db.get_song_by_id("song-1").is_err());
+    }
+
+    #[test]
+    fn delete_song_core_keeps_files_when_only_unindexing() {
+        let dir = tempdir().expect("temp dir");
+        let db = Database::new(&dir.path().join("songs.db")).expect("db");
+        let store = SystemStore::new(dir.path().to_path_buf());
+
+        store
+            .save_app_settings(&AppSettings {
+                computer_id: "server-1".to_string(),
+                computer_name: Some("Servidor".to_string()),
+                computer_type: ComputerType::Server,
+                first_run_completed: true,
+                ..Default::default()
+            })
+            .expect("save settings");
+
+        let song_dir = dir.path().join("repertoire").join("song-2");
+        fs::create_dir_all(&song_dir).expect("create song dir");
+
+        db.insert_song(
+            &crate::domain::models::Song {
+                id: "song-2".to_string(),
+                name: "CANON 2".to_string(),
+                composer: None,
+                arranger: None,
+                path: song_dir.to_string_lossy().to_string(),
+                is_favorite: false,
+                status: ScoreStatus::Main,
+                updated_at: chrono::Local::now().naive_local(),
+                updated_by: "server-1".to_string(),
+            },
+            &[],
+        )
+        .expect("insert song");
+
+        delete_song_core(&db, &store, "song-2").expect("delete song core");
+
+        assert!(song_dir.exists());
+        assert!(db.get_song_by_id("song-2").is_err());
     }
 }

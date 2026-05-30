@@ -6,6 +6,7 @@ import * as api from "../../api/commands";
 
 vi.mock("../../api/commands", () => ({
   openFileLocation: vi.fn(),
+  deleteSongWithFiles: vi.fn(),
 }));
 
 const song: SongListItem = {
@@ -60,6 +61,42 @@ describe("SongRow menu", () => {
 
     await waitFor(() => {
       expect(openFileLocationSpy).toHaveBeenCalledWith(song.path);
+    });
+  });
+
+  it("shows both delete options and deletes the directory when requested", async () => {
+    const deleteSongWithFilesSpy = vi.spyOn(api, "deleteSongWithFiles").mockResolvedValue(undefined);
+
+    render(
+      <table>
+        <tbody>
+          <MemoizedSongRow
+            song={song}
+            isExpanded={true}
+            onToggle={onToggle}
+            onToggleFavorite={onToggleFavorite}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            menuId="song-1"
+            isMenuOpen={true}
+            onMenuOpen={onMenuOpen}
+            onMenuClose={onMenuClose}
+            computerType="Server"
+            isLocked={false}
+          />
+        </tbody>
+      </table>
+    );
+
+    fireEvent.click(screen.getByText("Deletar"));
+
+    expect(screen.getByText("Parar de indexar diretório")).toBeInTheDocument();
+    expect(screen.getByText("Deletar diretório e arquivos")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("Deletar diretório e arquivos"));
+
+    await waitFor(() => {
+      expect(deleteSongWithFilesSpy).toHaveBeenCalledWith(song.id);
     });
   });
 });

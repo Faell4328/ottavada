@@ -8,7 +8,7 @@ use tracing::{error, info, warn};
 use crate::commands::common::configure_no_window_command;
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
-use crate::commands::common::{regenerate_song_archives_for_song_ids, require_server_settings};
+use crate::commands::common::{regenerate_song_archives_for_song_ids, remove_path_if_exists, require_server_settings};
 use crate::domain::errors::AppError;
 use crate::domain::models::ComputerType;
 use crate::domain::models::*;
@@ -136,6 +136,12 @@ fn resolve_manual_score_status(current_status: ScoreStatus, requested_status: &s
             ))
         }
     }
+}
+
+fn delete_score_core(db: &Database, score_id: &str) -> Result<(), AppError> {
+    let score_path = db.get_score_file_path(score_id)?;
+    remove_path_if_exists(Path::new(&score_path))?;
+    db.delete_score(score_id)
 }
 
 fn read_score_file_metadata(path: &Path) -> Result<(u64, chrono::NaiveDateTime), AppError> {
@@ -584,7 +590,7 @@ pub fn delete_score(
     require_server_settings(&store)?;
 
     info!("Deletando partitura: {}", score_id);
-    db.delete_score(&score_id)
+    delete_score_core(&db, &score_id)
         .map(|_| {
             info!("Partitura deletada com sucesso: {}", score_id);
             let _ = refresh_library_summary_cache(&db, &store);
@@ -703,6 +709,7 @@ pub fn use_score_as_base(
     db.get_song_list_item_by_id(song_id)
 }
 
+
 #[cfg(test)]
 mod tests {
     use std::fs;
@@ -710,11 +717,12 @@ mod tests {
 
     use tempfile::tempdir;
 
+    use crate::commands::common::remove_path_if_exists;
     use crate::domain::models::{Score, ScoreStatus};
     use crate::infrastructure::database::Database;
 
     use super::{
-        build_client_extracted_score_name, extract_score_file_from_archive,
+        build_client_extracted_score_name, delete_score_core, extract_score_file_from_archive,
         resolve_manual_score_status,
         resolve_openable_score_path,
         sanitize_file_name_component,
@@ -815,6 +823,61 @@ mod tests {
         assert!(new_file_path.exists());
         assert_eq!(fs::read(&new_file_path).expect("read new file"), b"test content");
         assert_eq!(new_file_path.file_name().and_then(|n| n.to_str()), Some("copy.musx"));
+    }
+
+    #[test]
+    fn removes_score_file_from_disk_before_deleting_record() {
+        let dir = tempdir().expect("temp dir");
+        let db = Database::new(&dir.path().join("scores.db")).expect("db");
+
+        let song_dir = dir.path().join("songs").join("song-1");
+        fs::create_dir_all(&song_dir).expect("create song dir");
+        let score_path = song_dir.join("score-1.musx");
+        fs::write(&score_path, b"score content").expect("write score file");
+
+        db.insert_song(
+            &crate::domain::models::Song {
+                id: "song-1".to_string(),
+                name: "CANON".to_string(),
+                composer: None,
+                arranger: None,
+                path: song_dir.to_string_lossy().to_string(),
+                is_favorite: false,
+                status: ScoreStatus::Main,
+                updated_at: chrono::Local::now().naive_local(),
+                updated_by: "server-1".to_string(),
+            },
+            &[],
+        )
+        .expect("insert song");
+
+        db.insert_score(&Score {
+            id: "score-1".to_string(),
+            song_id: "song-1".to_string(),
+            name: Some("Flauta".to_string()),
+            host_id: "server-1".to_string(),
+            file_path: song_dir.to_string_lossy().to_string(),
+            file_name: "score-1.musx".to_string(),
+            file_size: 13,
+            file_modified_at: chrono::Local::now().naive_local(),
+            updated_at: chrono::Local::now().naive_local(),
+            status: ScoreStatus::Main,
+            updated_by: "server-1".to_string(),
+        })
+        .expect("insert score");
+
+        delete_score_core(&db, "score-1").expect("delete score");
+
+        assert!(!score_path.exists());
+        assert!(db.get_score_file_path("score-1").is_err());
+    }
+
+    #[test]
+    fn remove_path_if_exists_ignores_missing_paths() {
+        let dir = tempdir().expect("temp dir");
+        let missing_path = dir.path().join("missing.txt");
+
+        remove_path_if_exists(&missing_path).expect("ignore missing");
     }
 
     #[test]

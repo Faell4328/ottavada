@@ -1,3 +1,5 @@
+import { createPortal } from "react-dom";
+
 interface ConfirmationModalProps {
   isOpen: boolean;
   title: string;
@@ -15,9 +17,9 @@ export function ConfirmationModal({
   onConfirm,
   onCancel,
 }: ConfirmationModalProps) {
-  if (!isOpen) return null;
+  if (!isOpen || typeof document === "undefined") return null;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
       <div className="bg-[#f8fafd] rounded-lg shadow-xl border border-[#c5cfdb] p-6 max-w-sm w-full mx-4">
         <h2 className="text-lg font-semibold text-[#2f4259] mb-3">{title}</h2>
@@ -39,6 +41,7 @@ export function ConfirmationModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

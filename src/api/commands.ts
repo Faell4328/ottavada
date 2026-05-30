@@ -166,6 +166,10 @@ export async function deleteSong(songId: string): Promise<void> {
   return invoke("delete_song", { songId });
 }
 
+export async function deleteSongWithFiles(songId: string): Promise<void> {
+  return invoke("delete_song_with_files", { songId });
+}
+
 export async function getScoresForSong(songId: string): Promise<ScoreListItem[]> {
   return invoke("get_scores_for_song", { songId });
 }

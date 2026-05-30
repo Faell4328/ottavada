@@ -266,6 +266,7 @@ pub fn run() {
             commands::song_commands::create_song_with_categories,
             commands::song_commands::update_song,
             commands::song_commands::delete_song,
+            commands::song_commands::delete_song_with_files,
             // Scores
             commands::score_commands::update_score,
             commands::score_commands::get_scores_for_song,
