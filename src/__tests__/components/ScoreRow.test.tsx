@@ -1,90 +1,104 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-
+import { describe, expect, it, vi, beforeEach } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoizedScoreRow } from "../../components/ScoreRow";
 import type { ScoreListItem } from "../../types";
-
-const mocks = vi.hoisted(() => ({
-  openFileMock: vi.fn(),
-  openSongLocationMock: vi.fn(),
-}));
+import * as api from "../../api/commands";
 
 vi.mock("../../api/commands", () => ({
-  openFile: mocks.openFileMock,
-  openSongLocation: mocks.openSongLocationMock,
-}));
-
-vi.mock("react-hot-toast", () => ({
-  default: {
-    error: vi.fn(),
-  },
+  openFile: vi.fn(),
+  openFileLocation: vi.fn(),
 }));
 
 const score: ScoreListItem = {
   id: "score-1",
   name: "Flauta",
-  file_path: "C:/music/Amazing Grace/flauta.musx",
+  file_path: "/music/HINO NACIONAL - Flauta.musx",
   file_extension: "musx",
-  updated_at: "2026-04-08T10:00:00Z",
-  status: "draft",
+  updated_at: "2024-01-01 12:00:00",
+  status: "main",
 };
 
-function renderScoreRow() {
-  return render(
-    <table>
-      <tbody>
-        <MemoizedScoreRow
-          score={score}
-          displayIndex={0}
-          onSelectScore={vi.fn()}
-          menuId="score-1"
-          isMenuOpen={true}
-          onMenuOpen={vi.fn()}
-          onMenuClose={vi.fn()}
-          onEdit={vi.fn()}
-          onStatusChange={vi.fn().mockResolvedValue(undefined)}
-          onDelete={vi.fn().mockResolvedValue(undefined)}
-          onUseAsBase={vi.fn()}
-          computerType="Server"
-          isLocked={false}
-        />
-      </tbody>
-    </table>
-  );
-}
+describe("ScoreRow menu", () => {
+  const onSelectScore = vi.fn();
+  const onMenuOpen = vi.fn();
+  const onMenuClose = vi.fn();
+  const onEdit = vi.fn();
+  const onStatusChange = vi.fn();
+  const onDelete = vi.fn();
+  const onUseAsBase = vi.fn();
 
-beforeEach(() => {
-  mocks.openFileMock.mockReset();
-  mocks.openSongLocationMock.mockReset();
-});
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
-describe("ScoreRow", () => {
-  it("keeps the status actions below the base action and exposes open local", () => {
-    renderScoreRow();
+  it("places status actions after use as base", () => {
+    render(
+      <table>
+        <tbody>
+          <MemoizedScoreRow
+            score={score}
+            displayIndex={0}
+            onSelectScore={onSelectScore}
+            menuId="score-1"
+            isMenuOpen={true}
+            onMenuOpen={onMenuOpen}
+            onMenuClose={onMenuClose}
+            onEdit={onEdit}
+            onStatusChange={onStatusChange}
+            onDelete={onDelete}
+            onUseAsBase={onUseAsBase}
+            computerType="Server"
+            isLocked={false}
+          />
+        </tbody>
+      </table>
+    );
 
-    const menuButtons = screen
+    const menuLabels = screen
       .getAllByRole("button")
       .map((button) => button.textContent?.trim())
-      .filter(Boolean);
+      .filter((label): label is string => Boolean(label));
 
-    expect(menuButtons).toEqual([
+    expect(menuLabels).toEqual([
       "Abrir",
       "Abrir local",
       "Editar",
-      "Usar Como Base",
-      "Definir como principal",
-      "Definir como ignorar",
+      "Usar como base",
+      "Definir como rascunho",
+      "Definir para ignorar",
       "Deletar",
     ]);
   });
 
-  it("opens the song folder from the overflow menu", async () => {
-    renderScoreRow();
+  it("opens the score location from the overflow menu", async () => {
+    const openFileLocationSpy = vi.spyOn(api, "openFileLocation").mockResolvedValue(undefined);
 
-    await act(async () => {
-      fireEvent.click(screen.getByText("Abrir local"));
+    render(
+      <table>
+        <tbody>
+          <MemoizedScoreRow
+            score={score}
+            displayIndex={0}
+            onSelectScore={onSelectScore}
+            menuId="score-1"
+            isMenuOpen={true}
+            onMenuOpen={onMenuOpen}
+            onMenuClose={onMenuClose}
+            onEdit={onEdit}
+            onStatusChange={onStatusChange}
+            onDelete={onDelete}
+            onUseAsBase={onUseAsBase}
+            computerType="Server"
+            isLocked={false}
+          />
+        </tbody>
+      </table>
+    );
+
+    fireEvent.click(screen.getByText("Abrir local"));
+
+    await waitFor(() => {
+      expect(openFileLocationSpy).toHaveBeenCalledWith(score.file_path);
     });
-
-    expect(mocks.openSongLocationMock).toHaveBeenCalledWith(score.file_path);
   });
 });

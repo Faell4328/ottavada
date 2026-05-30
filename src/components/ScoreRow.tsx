@@ -63,21 +63,18 @@ function ScoreRow({
     }
   };
 
-  const openSongFolder = async () => {
-    setIsOpening(true);
-    try {
-      await api.openSongLocation(score.file_path);
-    } catch (err) {
-      console.error("Failed to open song folder:", err);
-      toast.error("Erro ao abrir local da música");
-    } finally {
-      setIsOpening(false);
-    }
-  };
-
   const handleDoubleClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
     await openScoreFile();
+  };
+
+  const openScoreLocation = async () => {
+    try {
+      await api.openFileLocation(score.file_path);
+    } catch (err) {
+      console.error("Failed to open score location:", err);
+      toast.error("Erro ao abrir local da partitura");
+    }
   };
 
   const requestStatusChange = (
@@ -279,7 +276,7 @@ function ScoreRow({
                       label="Abrir local"
                       onClick={(e) => {
                         e.stopPropagation();
-                        void openSongFolder();
+                        void openScoreLocation();
                         onMenuClose();
                       }}
                       disabled={isActionLocked}
@@ -294,7 +291,7 @@ function ScoreRow({
                       disabled={isActionLocked}
                     />
                     <ContextMenuItem
-                      label="Usar Como Base"
+                      label="Usar como base"
                       onClick={(e) => {
                         e.stopPropagation();
                         onUseAsBase();

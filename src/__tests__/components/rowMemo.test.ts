@@ -17,6 +17,7 @@ const baseSong = {
   name: "HINO NACIONAL",
   composer: "JOEL",
   arranger: null,
+  path: "/songs/hino-nacional",
   updated_at: "2026-04-08T10:00:00Z",
   is_favorite: false,
   category_ids: ["cat-1"],
@@ -78,6 +79,18 @@ describe("row memo comparators", () => {
   it("re-renders song rows when lock state changes", () => {
     const prev = buildSongRowProps();
     const next = buildSongRowProps({ isLocked: true });
+
+    expect(areSongRowPropsEqual(prev, next)).toBe(false);
+  });
+
+  it("re-renders song rows when the selected score changes", () => {
+    const prev = buildSongRowProps();
+    const next = buildSongRowProps({
+      song: {
+        ...baseSong,
+        path: "/songs/novo-caminho",
+      },
+    });
 
     expect(areSongRowPropsEqual(prev, next)).toBe(false);
   });

@@ -586,7 +586,7 @@ impl Database {
         let conn = self.conn.lock().unwrap();
         let mut items = Self::query_song_list_items(
             &conn,
-            r#"SELECT id, name, composer, arranger, datetime('now') AS updated_at, is_favorite FROM songs WHERE id = ?1"#,
+            r#"SELECT id, name, composer, arranger, path, datetime('now') AS updated_at, is_favorite FROM songs WHERE id = ?1"#,
             &[&song_id as &dyn rusqlite::ToSql],
             true,
         )?;
@@ -611,8 +611,9 @@ impl Database {
                     name: row.get(1)?,
                     composer: row.get(2)?,
                     arranger: row.get(3)?,
-                    updated_at: parse_datetime(&row.get::<_, String>(4)?),
-                    is_favorite: row.get::<_, i32>(5)? != 0,
+                    path: row.get(4)?,
+                    updated_at: parse_datetime(&row.get::<_, String>(5)?),
+                    is_favorite: row.get::<_, i32>(6)? != 0,
                     category_ids: Vec::new(),
                     scores: Vec::new(),
                 })
@@ -767,7 +768,7 @@ impl Database {
         let conn = self.conn.lock().unwrap();
         Self::query_song_list_items(
             &conn,
-            r#"SELECT id, name, composer, arranger, datetime('now') AS updated_at, is_favorite
+            r#"SELECT id, name, composer, arranger, path, datetime('now') AS updated_at, is_favorite
              FROM songs
              ORDER BY name COLLATE NOCASE ASC, id ASC"#,
             &[],
@@ -779,7 +780,7 @@ impl Database {
         let conn = self.conn.lock().unwrap();
         Self::query_song_list_items(
             &conn,
-            r#"SELECT id, name, composer, arranger, datetime('now') AS updated_at, is_favorite
+            r#"SELECT id, name, composer, arranger, path, datetime('now') AS updated_at, is_favorite
              FROM songs
              ORDER BY name COLLATE NOCASE ASC, id ASC"#,
             &[],
@@ -791,7 +792,7 @@ impl Database {
         let conn = self.conn.lock().unwrap();
         Self::query_song_list_items(
             &conn,
-            r#"SELECT id, name, composer, arranger, datetime('now') AS updated_at, is_favorite
+            r#"SELECT id, name, composer, arranger, path, datetime('now') AS updated_at, is_favorite
              FROM songs
              WHERE is_favorite = 1
              ORDER BY name COLLATE NOCASE ASC, id ASC"#,
@@ -804,7 +805,7 @@ impl Database {
         let conn = self.conn.lock().unwrap();
         Self::query_song_list_items(
             &conn,
-            r#"SELECT id, name, composer, arranger, datetime('now') AS updated_at, is_favorite
+            r#"SELECT id, name, composer, arranger, path, datetime('now') AS updated_at, is_favorite
              FROM songs
              WHERE is_favorite = 1
              ORDER BY name COLLATE NOCASE ASC, id ASC"#,
@@ -835,7 +836,7 @@ impl Database {
         let like_query = format!("%{}%", query.trim());
         Self::query_song_list_items(
             &conn,
-            r#"SELECT s.id, s.name, s.composer, s.arranger, datetime('now') AS updated_at, s.is_favorite
+            r#"SELECT s.id, s.name, s.composer, s.arranger, s.path, datetime('now') AS updated_at, s.is_favorite
              FROM songs s
              WHERE s.name LIKE ?1
                 OR COALESCE(s.composer, '') LIKE ?1
@@ -852,7 +853,7 @@ impl Database {
         let like_query = format!("%{}%", query.trim());
         Self::query_song_list_items(
             &conn,
-            r#"SELECT s.id, s.name, s.composer, s.arranger, datetime('now') AS updated_at, s.is_favorite
+            r#"SELECT s.id, s.name, s.composer, s.arranger, s.path, datetime('now') AS updated_at, s.is_favorite
              FROM songs s
              WHERE s.name LIKE ?1
                 OR COALESCE(s.composer, '') LIKE ?1
@@ -867,7 +868,7 @@ impl Database {
         let conn = self.conn.lock().unwrap();
         Self::query_song_list_items(
             &conn,
-            "SELECT s.id, s.name, s.composer, s.arranger, datetime('now') AS updated_at, s.is_favorite
+            "SELECT s.id, s.name, s.composer, s.arranger, s.path, datetime('now') AS updated_at, s.is_favorite
              FROM songs s
              INNER JOIN categoriesSongs cs ON cs.songId = s.id
              WHERE cs.categoryId = ?1
@@ -884,7 +885,7 @@ impl Database {
         let conn = self.conn.lock().unwrap();
         Self::query_song_list_items(
             &conn,
-            "SELECT s.id, s.name, s.composer, s.arranger, datetime('now') AS updated_at, s.is_favorite
+            "SELECT s.id, s.name, s.composer, s.arranger, s.path, datetime('now') AS updated_at, s.is_favorite
              FROM songs s
              INNER JOIN categoriesSongs cs ON cs.songId = s.id
              WHERE cs.categoryId = ?1
@@ -898,7 +899,7 @@ impl Database {
         let conn = self.conn.lock().unwrap();
         Self::query_song_list_items(
             &conn,
-            "SELECT DISTINCT s.id, s.name, s.composer, s.arranger, datetime('now') AS updated_at, s.is_favorite
+            "SELECT DISTINCT s.id, s.name, s.composer, s.arranger, s.path, datetime('now') AS updated_at, s.is_favorite
              FROM songs s
              INNER JOIN scores sc ON sc.song_id = s.id
              WHERE sc.status = 'draft'
@@ -912,7 +913,7 @@ impl Database {
         let conn = self.conn.lock().unwrap();
         Self::query_song_list_items(
             &conn,
-            "SELECT DISTINCT s.id, s.name, s.composer, s.arranger, datetime('now') AS updated_at, s.is_favorite
+            "SELECT DISTINCT s.id, s.name, s.composer, s.arranger, s.path, datetime('now') AS updated_at, s.is_favorite
              FROM songs s
              INNER JOIN scores sc ON sc.song_id = s.id
              WHERE sc.status = 'draft'

@@ -272,7 +272,6 @@ pub fn run() {
             commands::score_commands::open_file,
             commands::score_commands::open_file_path,
             commands::score_commands::open_file_location,
-            commands::score_commands::open_song_location,
             commands::score_commands::update_score_status,
             commands::score_commands::delete_score,
             commands::score_commands::use_score_as_base,

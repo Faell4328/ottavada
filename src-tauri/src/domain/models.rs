@@ -378,6 +378,7 @@ pub struct SongListItem {
     pub name: String,
     pub composer: Option<String>,
     pub arranger: Option<String>,
+    pub path: String,
     pub updated_at: NaiveDateTime,
     pub is_favorite: bool,
     pub category_ids: Vec<String>,

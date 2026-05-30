@@ -5,6 +5,7 @@ export interface SongListItem {
   name: string;
   composer: string | null;
   arranger: string | null;
+  path: string;
   updated_at: string;
   is_favorite: boolean;
   category_ids: string[];

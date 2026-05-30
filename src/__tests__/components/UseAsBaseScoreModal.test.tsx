@@ -60,7 +60,7 @@ describe("UseAsBaseScoreModal", () => {
       />
     );
 
-    expect(screen.getByText("Usar Como Base")).toBeInTheDocument();
+    expect(screen.getByText("Usar como base")).toBeInTheDocument();
     expect(screen.getByDisplayValue("Flauta")).toBeInTheDocument();
   });
 

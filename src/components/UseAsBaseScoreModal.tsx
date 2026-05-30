@@ -82,7 +82,7 @@ export function UseAsBaseScoreModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Usar Como Base"
+      title="Usar como base"
       footer={
         <ModalFooterButtons
           onCancel={onClose}

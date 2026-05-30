@@ -6,6 +6,7 @@ import { ContextMenu, ContextMenuItem } from "./ui/ContextMenu";
 import { ConfirmationModal } from "./ui/ConfirmationModal";
 import { useConfirmation } from "../hooks/useConfirmation";
 import { isClientComputer } from "../utils/computer";
+import * as api from "../api/commands";
 
 export interface SongRowProps {
   song: SongListItem;
@@ -43,10 +44,24 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(function Son
   const author = [song.composer, song.arranger].filter(Boolean).join(" / ");
   const isClient = isClientComputer(computerType);
   const isActionLocked = isClient || isLocked;
+  const openLocalTarget = song.path.trim();
   const handleMenuAction = (e: React.MouseEvent, action: () => void) => {
     e.stopPropagation();
     action();
     onMenuClose();
+  };
+
+  const handleOpenLocal = async () => {
+    if (!openLocalTarget) {
+      return;
+    }
+
+    try {
+      await api.openFileLocation(openLocalTarget);
+    } catch (err) {
+      console.error("Failed to open song location:", err);
+      toast.error("Erro ao abrir local da música");
+    }
   };
 
   const handleDelete = () => {
@@ -106,16 +121,31 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(function Son
                 e.stopPropagation();
                 isMenuOpen ? onMenuClose() : onMenuOpen(menuId);
               }}
-              disabled={isActionLocked}
+              disabled={false}
             >
               {isClient ? (
                 <ContextMenuItem
                   label="Abrir"
                   onClick={(e) => handleMenuAction(e, onToggle)}
-                  disabled={isActionLocked}
-                  isLast
+                  isLast={!openLocalTarget}
                 />
               ) : (
+                <ContextMenuItem
+                  label="Abrir"
+                  onClick={(e) => handleMenuAction(e, onToggle)}
+                  disabled={isActionLocked}
+                />
+              )}
+              <ContextMenuItem
+                label="Abrir local"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void handleOpenLocal();
+                  onMenuClose();
+                }}
+                    disabled={!openLocalTarget}
+              />
+              {!isClient && (
                 <>
                   <ContextMenuItem
                     label={song.is_favorite ? "Remover de favoritos" : "Adicionar aos favoritos"}
@@ -164,6 +194,7 @@ export function areSongRowPropsEqual(prev: SongRowProps, next: SongRowProps) {
     prev.song.composer === next.song.composer &&
     prev.song.arranger === next.song.arranger &&
     prev.song.is_favorite === next.song.is_favorite &&
+    prev.song.path === next.song.path &&
     prev.song.scores.length === next.song.scores.length &&
     prev.song.category_ids.length === next.song.category_ids.length &&
     prev.isExpanded === next.isExpanded &&

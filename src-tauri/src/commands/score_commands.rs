@@ -214,16 +214,27 @@ fn open_file_location_on_system(file_path: &str) -> Result<(), AppError> {
     #[cfg(target_os = "windows")]
     {
         let mut cmd = configure_no_window_command(std::process::Command::new("explorer"));
-        cmd.args(["/select,", &normalized_path])
-            .spawn()
-            .map_err(|e| AppError::Generic(format!("Erro ao abrir local do arquivo: {}", e)))?;
+        if path.is_dir() {
+            cmd.arg(&normalized_path)
+                .spawn()
+                .map_err(|e| AppError::Generic(format!("Erro ao abrir local do diretório: {}", e)))?;
+        } else {
+            cmd.args(["/select,", &normalized_path])
+                .spawn()
+                .map_err(|e| AppError::Generic(format!("Erro ao abrir local do arquivo: {}", e)))?;
+        }
     }
 
     #[cfg(target_os = "macos")]
     {
-        std::process::Command::new("open")
-            .arg("-R")
-            .arg(path)
+        let mut command = std::process::Command::new("open");
+        if path.is_dir() {
+            command.arg(path);
+        } else {
+            command.arg("-R").arg(path);
+        }
+
+        command
             .spawn()
             .map_err(|e| AppError::Generic(format!("Erro ao abrir local do arquivo: {}", e)))?;
     }
@@ -511,6 +522,10 @@ pub fn open_file_location(
     file_path: String,
 ) -> Result<(), AppError> {
     let path = Path::new(&file_path);
+    if path.exists() && path.is_dir() {
+        return open_file_location_on_system(&file_path);
+    }
+
     if path.exists() && path.is_file() {
         ensure_supported_score_file(path)?;
         return open_file_location_on_system(&file_path);
@@ -520,25 +535,6 @@ pub fn open_file_location(
     let resolved = Path::new(&resolved_path);
     ensure_supported_score_file(resolved)?;
     open_file_location_on_system(&resolved_path)
-}
-
-#[tauri::command]
-pub fn open_song_location(file_path: String) -> Result<(), AppError> {
-    let path = Path::new(&file_path);
-
-    if path.is_dir() {
-        return open_path_on_system(&file_path);
-    }
-
-    if path.is_file() {
-        let parent = path.parent().ok_or_else(|| {
-            AppError::Generic("Não foi possível identificar o diretório da música".into())
-        })?;
-
-        return open_path_on_system(&parent.to_string_lossy());
-    }
-
-    Err(AppError::Generic("Arquivo não encontrado".into()))
 }
 
 #[tauri::command]
