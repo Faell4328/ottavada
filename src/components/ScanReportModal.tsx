@@ -971,9 +971,11 @@ function ActionSectionCard({
   title: string;
   groups: EntityGroup[];
 }) {
+  const sectionStyles = getActionSectionStyles(title);
+
   return (
-    <section className="rounded-xl border border-[#dbe5f0] bg-white p-4">
-      <div className="text-sm font-semibold text-[#2f4259]">{title}</div>
+    <section className={`rounded-xl border p-4 ${sectionStyles.container}`}>
+      <div className={`text-sm font-semibold ${sectionStyles.title}`}>{title}</div>
       <div className="mt-3 space-y-3">
         {groups.map((group) => (
           <EntityGroupCard key={`${title}-${group.title}`} title={group.title} items={group.items} />
@@ -981,6 +983,27 @@ function ActionSectionCard({
       </div>
     </section>
   );
+}
+
+function getActionSectionStyles(title: string): { container: string; title: string } {
+  if (title === "Adicionando") {
+    return {
+      container: "border-emerald-200 bg-emerald-50",
+      title: "text-emerald-800",
+    };
+  }
+
+  if (title === "Modificado") {
+    return {
+      container: "border-amber-200 bg-amber-50",
+      title: "text-amber-800",
+    };
+  }
+
+  return {
+    container: "border-red-200 bg-red-50",
+    title: "text-red-800",
+  };
 }
 
 function EntityGroupCard({

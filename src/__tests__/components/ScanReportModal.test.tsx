@@ -97,6 +97,22 @@ describe("ScanReportModal", () => {
     expect(screen.queryByText("Arquivos com erro")).not.toBeInTheDocument();
   });
 
+  it("uses different colors for the action containers", () => {
+    render(
+      <ScanReportModal
+        isOpen={true}
+        report={report}
+        isConfirming={false}
+        onClose={() => undefined}
+        onConfirm={() => undefined}
+      />
+    );
+
+    expect(screen.getByText("Adicionando").closest("section")).toHaveClass("border-emerald-200", "bg-emerald-50");
+    expect(screen.getByText("Modificado").closest("section")).toHaveClass("border-amber-200", "bg-amber-50");
+    expect(screen.getByText("Deletado").closest("section")).toHaveClass("border-red-200", "bg-red-50");
+  });
+
   it("hides score additions that are actually score renames", () => {
     render(
       <ScanReportModal
