@@ -561,6 +561,56 @@ fn describe_score_change(db: &Database, change: &ChangedFieldRecord) -> Option<S
     }
 }
 
+fn resolve_score_display_name(file_name: &str, song_name: &str, score_name: Option<&str>) -> String {
+    if let Some(score_name) = score_name
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        return score_name.to_string();
+    }
+
+    let file_stem = Path::new(file_name)
+        .file_stem()
+        .and_then(|value| value.to_str())
+        .unwrap_or(file_name)
+        .trim();
+
+    if file_stem.is_empty() {
+        return "Sem Instrumento".to_string();
+    }
+
+    let normalized_song_score_name = normalize_score_name(song_name);
+    let normalized_file_stem = normalize_score_name(file_stem);
+
+    if normalized_file_stem.eq_ignore_ascii_case(&normalized_song_score_name) {
+        return "Sem Instrumento".to_string();
+    }
+
+    if file_stem.to_ascii_lowercase().starts_with(&song_name.to_ascii_lowercase()) {
+        if let Some(score_suffix) = file_stem.strip_prefix(song_name) {
+            let score_suffix = score_suffix.trim_start_matches(" - ").trim();
+            if !score_suffix.is_empty() {
+                return score_suffix.to_string();
+            }
+        }
+
+        return "Sem Instrumento".to_string();
+    }
+
+    file_stem.to_string()
+}
+
+fn normalize_score_name(value: &str) -> String {
+    value
+        .trim()
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .trim_start_matches(|character: char| character.is_ascii_digit())
+        .trim_start()
+        .to_string()
+}
+
 fn describe_score_status_change(db: &Database, change: &ChangedFieldRecord) -> Option<String> {
     let conn = db.conn.lock().ok()?;
 
@@ -615,23 +665,7 @@ fn describe_score_status_change(db: &Database, change: &ChangedFieldRecord) -> O
         other => other,
     };
 
-    let score_name = if let Some(score_name) = result.2
-        .as_deref()
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-    {
-        score_name.to_string()
-    } else if file_stem.eq_ignore_ascii_case(&song_name) {
-        "Sem instrumento".to_string()
-    } else if file_stem.to_ascii_lowercase().starts_with(&song_name.to_ascii_lowercase()) {
-        file_stem
-            .strip_prefix(&song_name)
-            .map(|value| value.trim_start_matches(" - ").trim().to_string())
-            .filter(|value| !value.is_empty())
-            .unwrap_or_else(|| "Sem instrumento".to_string())
-    } else {
-        file_stem
-    };
+    let score_name = resolve_score_display_name(&result.1, &song_name, result.2.as_deref());
     let score_name_with_extension = format!("{}{}", score_name, file_extension);
 
     if current_status == "main" {
@@ -660,25 +694,37 @@ fn describe_score_added(db: &Database, change: &ChangedFieldRecord) -> Option<St
 
     let result = conn
         .query_row(
-            "SELECT s.file_path, s.file_name, s.status
+            "SELECT s.name, s.file_name, songs.name, s.status
              FROM scores s
+             JOIN songs ON songs.id = s.song_id
              WHERE s.id = ?1",
             params![change.entity_id],
             |row| {
                 Ok((
-                    row.get::<_, String>(0)?,
+                    row.get::<_, Option<String>>(0)?,
                     row.get::<_, String>(1)?,
                     row.get::<_, String>(2)?,
+                    row.get::<_, String>(3)?,
                 ))
             },
         )
         .ok()?;
 
-    if ScoreStatus::from_str(&result.2) == ScoreStatus::Ignored {
+    if ScoreStatus::from_str(&result.3) == ScoreStatus::Ignored {
         return None;
     }
 
-    Some(format!("Partitura adicionada: {}", build_score_full_path(&result.0, &result.1)))
+    let score_name = resolve_score_display_name(&result.1, &result.2, result.0.as_deref());
+    let score_extension = Path::new(&result.1)
+        .extension()
+        .and_then(|value| value.to_str())
+        .map(|value| format!(".{}", value))
+        .unwrap_or_default();
+
+    Some(format!(
+        "Partitura adicionada: {}{} na música {}.",
+        score_name, score_extension, result.2
+    ))
 }
 
 fn build_score_full_path(file_path: &str, file_name: &str) -> String {
@@ -943,7 +989,7 @@ mod tests {
     }
 
     #[test]
-    fn describes_recovered_draft_score_without_instrument_as_sem_instrumento() {
+    fn describes_recovered_draft_score_without_instrument_uses_file_name() {
         let dir = tempdir().expect("temp dir");
         let db = Database::new_in_memory().expect("db");
 
@@ -990,8 +1036,8 @@ mod tests {
 
         let text = super::describe_score_change(&db, &change).expect("description");
 
-        assert!(text.contains("Sem instrumento"));
-        assert!(!text.contains("CANON.musx"));
+        assert!(text.contains("CANON.musx"));
+        assert!(!text.contains("Sem instrumento"));
     }
 
     #[test]
@@ -1446,6 +1492,57 @@ mod tests {
         assert!(report_items.iter().any(|item| item.contains("Música criada: HINO NOVO")));
         assert!(report_items.iter().any(|item| item.contains("foi para rascunho")));
         assert!(report_items.iter().any(|item| item.contains("Partitura adicionada:") && item.contains("HINO NOVO - Flauta.musx")));
+    }
+
+    #[test]
+    fn describe_score_added_uses_sem_instrumento_when_file_matches_song_name() {
+        let db = Database::new_in_memory().expect("db");
+        let song_dir = Path::new("/music/song-1").to_path_buf();
+
+        db.insert_song(
+            &Song {
+                id: "song-1".to_string(),
+                name: "03 VEZES SANTO".to_string(),
+                composer: None,
+                arranger: None,
+                path: song_dir.to_string_lossy().to_string(),
+                is_favorite: false,
+                status: ScoreStatus::Main,
+                updated_at: now(),
+                updated_by: "server-1".to_string(),
+            },
+            &[],
+        )
+        .expect("insert song");
+
+        db.insert_score(&Score {
+            id: "score-1".to_string(),
+            song_id: "song-1".to_string(),
+            name: None,
+            host_id: "server-1".to_string(),
+            file_path: song_dir.to_string_lossy().to_string(),
+            file_name: "VEZES SANTO.MUS".to_string(),
+            file_size: 1024,
+            file_modified_at: now(),
+            updated_at: now(),
+            status: ScoreStatus::Main,
+            updated_by: "server-1".to_string(),
+        })
+        .expect("insert score");
+
+        let change = ChangedFieldRecord {
+            id: "change-1".to_string(),
+            change_type: "insert".to_string(),
+            entity: "scores".to_string(),
+            entity_id: "score-1".to_string(),
+            field: Some("name".to_string()),
+            value: None,
+            timestamp: 0,
+        };
+
+        let description = super::describe_score_change(&db, &change).expect("description");
+
+        assert_eq!(description, "Partitura adicionada: Sem Instrumento.MUS na música 03 VEZES SANTO.");
     }
 
     #[test]

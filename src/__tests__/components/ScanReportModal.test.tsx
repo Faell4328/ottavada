@@ -16,12 +16,15 @@ const report = {
     "Partitura adicionada: /music/Eis o Nosso Deus - Oboe.musx",
     "Partitura adicionada: /music/Eis o Nosso Deus - Tenor Saxophone.musx",
     "Partitura adicionada: /music/Eis o Nosso Deus - Flauta.pdf",
-    "Partitura adicionada: /music/3 VEZES SANTO.pdf",
-    "Partitura adicionada: /music/3 VEZES SANTO.MUS",
+    "Partitura adicionada: Score.pdf na música 03 VEZES SANTO.",
+    "Partitura adicionada: Score.MUS na música 03 VEZES SANTO.",
+    "Partitura adicionada: VEZES SANTO.MUS na música 03 VEZES SANTO.",
     "Partitura alterada: /music/Eis o Nosso Deus - Oboes.musx",
     "Partitura alterada: /music/Eis o Nosso Deus - Clarinete.musx",
     "A partitura /music/Eis o Nosso Deus - Trompete.musx foi deletada.",
     "A partitura /music/Eis o Nosso Deus - Trombone.musx foi deletada.",
+    "Partitura alterada: /music/03 VEZES SANTO/03 VEZES SANTO.musx",
+    "A partitura /music/03 VEZES SANTO/03 VEZES SANTO.musx foi deletada.",
     "Categoria criada: Coral",
     "A categoria Juventude foi deletada.",
     "A categoria Sem categoria foi adicionada à música 03 VEZES SANTO.",
@@ -76,14 +79,18 @@ describe("ScanReportModal", () => {
     expect(screen.getAllByText((_, element) => element?.textContent === "As partituras Flauta.pdf, Oboe.musx e Tenor Saxophone.musx foram adicionadas na música Eis o Nosso Deus.").length).toBeGreaterThan(0);
     expect(
       screen.getAllByText((_, element) =>
-            element?.textContent?.includes("Sem instrumento (.pdf)") &&
-            element?.textContent?.includes("Sem instrumento (.MUS)") &&
+        element?.textContent?.includes("Score.pdf") &&
+        element?.textContent?.includes("Score.MUS") &&
+        element?.textContent?.includes("Sem Instrumento.MUS") &&
         element?.textContent?.includes("03 VEZES SANTO") &&
         element?.textContent?.includes("foram adicionadas")
       ).length
     ).toBeGreaterThan(0);
     expect(screen.getAllByText((_, element) => element?.textContent === "As partituras Clarinete.musx, CANON.musx e Oboes.musx foram alteradas na música Eis o Nosso Deus.").length).toBeGreaterThan(0);
     expect(screen.getAllByText((_, element) => element?.textContent === "As partituras Trompete.musx e Trombone.musx foram deletadas na música Eis o Nosso Deus.").length).toBeGreaterThan(0);
+    expect(screen.queryAllByText((_, element) => element?.textContent?.includes("Sem Instrumento") ?? false).length).toBeGreaterThan(0);
+    expect(screen.queryAllByText((_, element) => element?.textContent?.includes("03 VEZES SANTO.musx") ?? false).length).toBe(0);
+    expect(screen.queryAllByText((_, element) => element?.textContent?.includes("VEZES SANTO.MUS foi adicionada") ?? false).length).toBe(0);
     expect(screen.getAllByText((_, element) => element?.textContent?.includes("A partitura /music/Eis o Nosso Deus - Flauta.musx saiu de rascunho e voltou para main na música Eis o Nosso Deus") ?? false).length).toBeGreaterThan(0);
     expect(screen.getAllByText((_, element) => element?.textContent?.includes("A partitura /music/Eis o Nosso Deus - Flute2.musx saiu de ignorada e foi para rascunho na música Eis o Nosso Deus") ?? false).length).toBeGreaterThan(0);
     expect(screen.queryByText("Arquivos recuperados")).not.toBeInTheDocument();

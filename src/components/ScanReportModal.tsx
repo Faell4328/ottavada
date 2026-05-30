@@ -231,7 +231,7 @@ function parseReviewItem(raw: string): ReviewItem | null {
 
   const scoreAddedMatch = raw.match(/^Partitura adicionada:\s*(.+)$/);
   if (scoreAddedMatch) {
-    const parsed = parseScoreReference(scoreAddedMatch[1].trim());
+    const parsed = parseScoreAdditionReference(scoreAddedMatch[1].trim());
     return { action: "adding", entity: "score", songName: parsed.songName, scoreName: parsed.scoreName, raw };
   }
 
@@ -697,21 +697,21 @@ function renderCustomSongText(text: string): ReactNode {
 }
 
 function renderScoreItem(action: ReviewAction, scoreName: string, songName: string): ReactNode {
-  scoreName = formatScoreDisplayName(scoreName);
-  const isStandaloneScoreName = normalizeKey(scoreName) === normalizeKey(songName);
+  const displayScoreName = formatScoreDisplayName(scoreName, songName);
+  const isStandaloneScoreName = normalizeKey(displayScoreName) === normalizeKey(songName);
 
   if (action === "adding") {
     if (isStandaloneScoreName) {
       return (
         <>
-          A partitura <strong>{scoreName}</strong> foi adicionada.
+          A partitura <strong>{displayScoreName}</strong> foi adicionada.
         </>
       );
     }
 
     return (
       <>
-        A partitura <strong>{scoreName}</strong> foi adicionada na música <strong>{songName}</strong>.
+        A partitura <strong>{displayScoreName}</strong> foi adicionada na música <strong>{songName}</strong>.
       </>
     );
   }
@@ -720,14 +720,14 @@ function renderScoreItem(action: ReviewAction, scoreName: string, songName: stri
     if (isStandaloneScoreName) {
       return (
         <>
-          A partitura <strong>{scoreName}</strong> foi deletada.
+          A partitura <strong>{displayScoreName}</strong> foi deletada.
         </>
       );
     }
 
     return (
       <>
-        A partitura <strong>{scoreName}</strong> foi deletada na música <strong>{songName}</strong>.
+        A partitura <strong>{displayScoreName}</strong> foi deletada na música <strong>{songName}</strong>.
       </>
     );
   }
@@ -735,20 +735,20 @@ function renderScoreItem(action: ReviewAction, scoreName: string, songName: stri
   if (isStandaloneScoreName) {
     return (
       <>
-        A partitura <strong>{scoreName}</strong> foi alterada.
+        A partitura <strong>{displayScoreName}</strong> foi alterada.
       </>
     );
   }
 
   return (
     <>
-      A partitura <strong>{scoreName}</strong> foi alterada na música <strong>{songName}</strong>.
+      A partitura <strong>{displayScoreName}</strong> foi alterada na música <strong>{songName}</strong>.
     </>
   );
 }
 
 function renderGroupedScoreItem(action: ReviewAction, songName: string, scoreNames: string[]): ReactNode {
-  const scoreList = joinStrongList(scoreNames.map(formatScoreDisplayName));
+  const scoreList = joinStrongList(scoreNames.map((value) => formatScoreDisplayName(value, songName)));
   const noun = scoreNames.length === 1 ? "A partitura" : "As partituras";
 
   if (action === "adding") {
@@ -828,9 +828,10 @@ function renderCustomScoreText(text: string): ReactNode {
 
   const deleteMatch = text.match(/^A partitura\s+(.+?)\s+foi deletada\.$/);
   if (deleteMatch) {
+    const parsed = parseScoreReference(deleteMatch[1]);
     return (
       <>
-        A partitura <strong>{formatScoreDisplayName(deleteMatch[1])}</strong> foi deletada.
+        A partitura <strong>{formatScoreDisplayName(parsed.scoreName, parsed.songName)}</strong> foi deletada.
       </>
     );
   }
@@ -914,6 +915,8 @@ function parseScoreReference(rawPath: string): { songName: string; scoreName: st
 
   const normalizedPath = rawPath.split("\\").join("/");
   const fileName = normalizedPath.split("/").pop() ?? normalizedPath;
+  const pathSegments = normalizedPath.split("/").filter(Boolean);
+  const parentDirectoryName = pathSegments.length >= 2 ? pathSegments[pathSegments.length - 2].trim() : "";
   const parts = fileName.split(" - ");
 
   if (parts.length >= 2) {
@@ -924,22 +927,41 @@ function parseScoreReference(rawPath: string): { songName: string; scoreName: st
     };
   }
 
-  const extensionMatch = fileName.match(/(\.[^.]+)$/);
-
   return {
-    songName: normalizeSongNameForSave(stripFileExtension(fileName)) ?? stripFileExtension(fileName),
-    scoreName: `Sem instrumento${extensionMatch ? ` (${extensionMatch[1]})` : ""}`,
+    songName: parentDirectoryName || (normalizeSongNameForSave(stripFileExtension(fileName)) ?? stripFileExtension(fileName)),
+    scoreName: fileName,
   };
 }
 
-function formatScoreDisplayName(value: string): string {
-  const normalized = normalizeScoreNameForSave(value) ?? value.trim();
+function formatScoreDisplayName(value: string, songName?: string): string {
+  const trimmedValue = value.trim();
+  const extensionMatch = trimmedValue.match(/(\.[^.]+)$/);
+  const fileExtension = extensionMatch?.[1] ?? "";
+  const rawScoreStem = fileExtension ? trimmedValue.slice(0, -fileExtension.length).trim() : trimmedValue;
+  const normalized = normalizeScoreNameForSave(rawScoreStem) ?? rawScoreStem;
+  const normalizedSongName = songName ? normalizeScoreNameForSave(songName) ?? songName.trim() : null;
 
-  if (normalizeKey(normalized) === normalizeKey("Score")) {
-    return "Score";
+  if (normalizedSongName && normalizeKey(normalized) === normalizeKey(normalizedSongName)) {
+    return `Sem Instrumento${fileExtension}`;
   }
 
-  return normalized;
+  if (normalizeKey(normalized) === normalizeKey("Score")) {
+    return `Score${fileExtension}`;
+  }
+
+  return `${normalized}${fileExtension}`;
+}
+
+function parseScoreAdditionReference(rawText: string): { songName: string; scoreName: string } {
+  const additionWithSongMatch = rawText.match(/^(.+?)\s+na música\s+(.+)\.$/);
+  if (additionWithSongMatch) {
+    return {
+      scoreName: additionWithSongMatch[1].trim(),
+      songName: additionWithSongMatch[2].trim(),
+    };
+  }
+
+  return parseScoreReference(rawText);
 }
 
 function ActionSectionCard({
