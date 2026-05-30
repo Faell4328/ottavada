@@ -123,6 +123,7 @@ export interface IndexedFile {
   name: string;
   instrument: string | null;
   extension: string;
+  status?: "main" | "draft" | "ignored";
 }
 
 // ── UI State types ──

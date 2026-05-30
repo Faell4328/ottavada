@@ -403,6 +403,7 @@ pub struct IndexedFile {
     pub name: String,
     pub instrument: Option<String>,
     pub extension: String,
+    pub status: Option<ScoreStatus>,
 }
 
 // ── REMOVIDO: Estruturas para exportação MessagePack (database completo) ──

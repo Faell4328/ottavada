@@ -292,6 +292,7 @@ fn import_files_core(
 
             let normalized_file = IndexedFile {
                 instrument: normalized_instrument.clone(),
+                status: indexed_file.status.clone(),
                 ..(*indexed_file).clone()
             };
 
@@ -335,6 +336,10 @@ fn import_files_core(
         };
 
         for (normalized_file, score_file_path, file_name, file_size, file_modified_at) in files_to_add {
+            let score_status = normalized_file
+                .status
+                .clone()
+                .unwrap_or_else(|| new_song_status.clone());
             let score = Score::new_from_file(
                 song_id.clone(),
                 host_id.to_string(),
@@ -343,6 +348,9 @@ fn import_files_core(
                 file_name,
                 (file_size, file_modified_at),
             );
+
+            let mut score = score;
+            score.status = score_status;
 
             db.insert_score(&score)?;
             added_count += 1;
@@ -414,7 +422,7 @@ pub fn import_indexed_files_with_metadata(
         &category_ids,
         composer.as_deref(),
         arranger.as_deref(),
-        ScoreStatus::Draft,
+        ScoreStatus::Main,
     )
     .map(|result| {
         let _ = refresh_library_summary_cache(&db, &store);
@@ -653,6 +661,7 @@ mod tests {
             name: "CANON".to_string(),
             instrument: Some("flauta".to_string()),
             extension: "musx".to_string(),
+            status: None,
         }];
 
         let result = import_files_core(
@@ -678,7 +687,7 @@ mod tests {
     }
 
     #[test]
-    fn importing_indexed_files_with_metadata_creates_new_song_as_draft() {
+    fn importing_indexed_files_with_metadata_creates_new_song_as_main() {
         let dir = tempdir().expect("temp dir");
         let db = Database::new(&dir.path().join("songs.db")).expect("db");
         let store = SystemStore::new(dir.path().to_path_buf());
@@ -703,6 +712,7 @@ mod tests {
             name: "CANON".to_string(),
             instrument: Some("flauta".to_string()),
             extension: "musx".to_string(),
+            status: None,
         }];
 
         let result = import_files_core(
@@ -713,11 +723,59 @@ mod tests {
             &[],
             Some("Neusom"),
             Some("Maria"),
-            ScoreStatus::Draft,
+            ScoreStatus::Main,
         )
         .expect("import files");
 
-        assert_eq!(db.get_song_by_id(&result.songs[0].id).expect("song").status, ScoreStatus::Draft);
+        assert_eq!(db.get_song_by_id(&result.songs[0].id).expect("song").status, ScoreStatus::Main);
+    }
+
+    #[test]
+    fn importing_indexed_files_with_metadata_keeps_ignored_scores() {
+        let dir = tempdir().expect("temp dir");
+        let db = Database::new(&dir.path().join("songs.db")).expect("db");
+        let store = SystemStore::new(dir.path().to_path_buf());
+
+        store
+            .save_app_settings(&AppSettings {
+                computer_id: "server-1".to_string(),
+                computer_name: Some("Servidor".to_string()),
+                computer_type: ComputerType::Server,
+                first_run_completed: true,
+                ..Default::default()
+            })
+            .expect("save settings");
+
+        let source_dir = dir.path().join("import");
+        fs::create_dir_all(&source_dir).expect("create source dir");
+        let score_path = source_dir.join("score-ignored.musx");
+        fs::write(&score_path, b"score-contents").expect("write score");
+
+        let files = vec![IndexedFile {
+            path: score_path.to_string_lossy().to_string(),
+            name: "CANON".to_string(),
+            instrument: Some("flauta".to_string()),
+            extension: "musx".to_string(),
+            status: Some(ScoreStatus::Ignored),
+        }];
+
+        let result = import_files_core(
+            &db,
+            &store,
+            "server-1",
+            &files,
+            &[],
+            Some("Neusom"),
+            Some("Maria"),
+            ScoreStatus::Main,
+        )
+        .expect("import files");
+
+        let song = db.get_song_by_id(&result.songs[0].id).expect("song");
+        let score = db.get_scores_for_song(&song.id).expect("scores")[0].clone();
+
+        assert_eq!(score.status, ScoreStatus::Ignored);
+        assert_eq!(song.status, ScoreStatus::Main);
     }
 
     #[test]

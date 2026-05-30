@@ -60,6 +60,7 @@ pub fn scan_directory(dir_path: &Path) -> Vec<IndexedFile> {
             name,
             instrument,
             extension,
+            status: None,
         });
     }
 

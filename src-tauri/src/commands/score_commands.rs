@@ -65,6 +65,7 @@ fn build_score_from_indexed_file(
 ) -> Result<Score, AppError> {
     let normalized_file = IndexedFile {
         instrument: normalize_optional_score_name(file.instrument.as_deref()),
+        status: file.status.clone(),
         ..file.clone()
     };
 

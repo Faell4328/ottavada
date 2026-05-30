@@ -167,6 +167,54 @@ describe("AddFilesModal", () => {
     expect(screen.getByText("Instrumentos a adicionar (1)")).toBeInTheDocument();
   });
 
+  it("should allow ignoring and restoring files", () => {
+    renderWithAppProvider(
+      <AddFilesModal isOpen={true} files={sampleFiles} onClose={mockOnClose} onSuccess={mockOnSuccess} />
+    );
+
+    expect(screen.getByText("Instrumentos a adicionar (2)")).toBeInTheDocument();
+
+    fireEvent.click(screen.getAllByTitle("Ignorar arquivo")[0]);
+
+    expect(screen.getByText("Instrumentos a adicionar (2)")).toBeInTheDocument();
+    expect(screen.getByText("Ignorada")).toBeInTheDocument();
+    expect(screen.getByTitle("Designorar arquivo")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTitle("Designorar arquivo"));
+
+    expect(screen.getByText("Instrumentos a adicionar (2)")).toBeInTheDocument();
+    expect(screen.queryByText("Ignorada")).not.toBeInTheDocument();
+  });
+
+  it("should save ignored files with ignored status", async () => {
+    const importSpy = vi.spyOn(api, "importIndexedFilesWithMetadata").mockResolvedValue({
+      songs: [],
+      added_count: 1,
+    });
+
+    renderWithAppProvider(
+      <AddFilesModal isOpen={true} files={sampleFiles} onClose={mockOnClose} onSuccess={mockOnSuccess} />
+    );
+
+    fireEvent.click(screen.getAllByTitle("Ignorar arquivo")[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
+
+    await waitFor(() => {
+      expect(importSpy).toHaveBeenCalledTimes(1);
+    });
+
+    const [filesArg] = importSpy.mock.calls[0];
+    expect(filesArg).toHaveLength(2);
+    expect(filesArg[0]).toMatchObject({
+      path: sampleFiles[0].path,
+      status: "ignored",
+    });
+    expect(filesArg[1]).toMatchObject({
+      path: sampleFiles[1].path,
+      status: "main",
+    });
+  });
+
   it("should allow editing instrument names", () => {
     renderWithAppProvider(
       <AddFilesModal isOpen={true} files={sampleFiles} onClose={mockOnClose} onSuccess={mockOnSuccess} />

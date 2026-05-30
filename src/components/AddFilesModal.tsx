@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { ExternalLink, FolderOpen, Loader2, Trash2 } from "lucide-react";
+import { Ban, ExternalLink, FolderOpen, Loader2, RotateCcw, Trash2 } from "lucide-react";
 import { useAppState } from "../context/AppContext";
 import type { IndexedFile, SongListItem } from "../types";
 import * as api from "../api/commands";
@@ -55,6 +55,7 @@ export function AddFilesModal({
   const [instrumentNames, setInstrumentNames] = useState<Record<number, string>>({});
   const [reviewInstrumentNames, setReviewInstrumentNames] = useState<Record<number, string>>({});
   const [removedFileIndices, setRemovedFileIndices] = useState<Set<number>>(new Set());
+  const [ignoredFileIndices, setIgnoredFileIndices] = useState<Set<number>>(new Set());
   const [openingScorePath, setOpeningScorePath] = useState<string | null>(null);
   const [openingLocationPath, setOpeningLocationPath] = useState<string | null>(null);
   const normalizedTitle = useMemo(() => normalizeSongNameForSave(title), [title]);
@@ -62,27 +63,30 @@ export function AddFilesModal({
     () => findSongByName(songsForDuplicateCheck, normalizedTitle),
     [normalizedTitle, songsForDuplicateCheck]
   );
-  const activeFileEntries = useMemo(
+  const fileEntries = useMemo(
     () => files.map((file, idx) => ({ file, idx })).filter(({ idx }) => !removedFileIndices.has(idx)),
     [files, removedFileIndices]
+  );
+  const reviewableFileEntries = useMemo(
+    () => fileEntries.filter(({ idx }) => !ignoredFileIndices.has(idx)),
+    [fileEntries, ignoredFileIndices]
   );
   const {
     normalizedInstrumentNames,
     normalizedInstrumentCounts,
     duplicateMap,
     duplicateEntries,
-    addableEntries,
   } = useMemo(
     () =>
       analyzeAddFilesReview(
-        activeFileEntries,
+        reviewableFileEntries,
         reviewInstrumentNames,
         songsForDuplicateCheck,
         normalizedTitle
       ),
-    [activeFileEntries, normalizedTitle, reviewInstrumentNames, songsForDuplicateCheck]
+    [normalizedTitle, reviewInstrumentNames, reviewableFileEntries, songsForDuplicateCheck]
   );
-  const hasAddableFiles = addableEntries.length > 0;
+  const hasFilesToImport = fileEntries.length > 0;
   const isDuplicateSong = existingSong !== null;
   const hasPendingIssues = isDuplicateSong || duplicateEntries.length > 0;
 
@@ -94,6 +98,7 @@ export function AddFilesModal({
       setSelectedCategories([...defaultCategoryIds]);
       setError("");
       setRemovedFileIndices(new Set());
+      setIgnoredFileIndices(new Set());
       setOpeningScorePath(null);
       setOpeningLocationPath(null);
       
@@ -144,6 +149,18 @@ export function AddFilesModal({
     });
   };
 
+  const toggleIgnoreFile = (idx: number) => {
+    setIgnoredFileIndices((prev) => {
+      const next = new Set(prev);
+      if (next.has(idx)) {
+        next.delete(idx);
+      } else {
+        next.add(idx);
+      }
+      return next;
+    });
+  };
+
   const handleOpenScore = async (path: string) => {
     setOpeningScorePath(path);
     setError("");
@@ -176,13 +193,8 @@ export function AddFilesModal({
       return;
     }
 
-    if (activeFileEntries.length === 0) {
+    if (fileEntries.length === 0) {
       setError("Adicione pelo menos um arquivo");
-      return;
-    }
-
-    if (!hasAddableFiles) {
-      setError("Nenhuma partitura nova para adicionar");
       return;
     }
 
@@ -195,7 +207,9 @@ export function AddFilesModal({
     setError("");
 
     try {
-      const filteredFiles = addableEntries.map(({ file, idx }) => {
+      const filteredFiles = fileEntries.map(({ file, idx }) => {
+        const status: IndexedFile["status"] = ignoredFileIndices.has(idx) ? "ignored" : "main";
+
         return {
           path: file.path,
           name: normalizedTitle,
@@ -203,6 +217,7 @@ export function AddFilesModal({
             instrumentNames[idx] ?? file.instrument
           ),
           extension: file.extension,
+          status,
         };
       });
 
@@ -223,8 +238,8 @@ export function AddFilesModal({
     }
   };
 
-  const instrumentCount = activeFileEntries.length;
-  const visibleFiles = sortIndexedFileEntriesForReview(activeFileEntries, reviewInstrumentNames);
+  const instrumentCount = fileEntries.length;
+  const visibleFiles = sortIndexedFileEntriesForReview(fileEntries, reviewInstrumentNames);
 
   const reviewItems = useMemo(() => {
     const items: Array<
@@ -235,6 +250,7 @@ export function AddFilesModal({
           conflict: ScoreConflict | null;
           conflictMessage: string | null;
           isLocked: boolean;
+          isIgnored: boolean;
         }
       | {
           kind: "group";
@@ -245,8 +261,9 @@ export function AddFilesModal({
     const batchGroups = new Map<string, { normalizedInstrument: string; entries: Array<{ file: IndexedFile; idx: number }> }>();
 
     visibleFiles.forEach(({ file, idx }) => {
-      const conflict = duplicateMap.get(idx) ?? null;
-      const normalizedInstrument = normalizedInstrumentNames.get(idx);
+      const isIgnored = ignoredFileIndices.has(idx);
+      const conflict = isIgnored ? null : duplicateMap.get(idx) ?? null;
+      const normalizedInstrument = isIgnored ? null : normalizedInstrumentNames.get(idx);
       const isBatchDuplicate =
         normalizedInstrument !== null &&
         normalizedInstrument !== undefined &&
@@ -275,11 +292,12 @@ export function AddFilesModal({
         conflict,
         conflictMessage: conflict ? describeScoreConflict(conflict, normalizedTitle) : null,
         isLocked: conflict !== null,
+        isIgnored,
       });
     });
 
     return items;
-  }, [duplicateMap, normalizedInstrumentCounts, normalizedInstrumentNames, normalizedTitle, visibleFiles]);
+  }, [duplicateMap, ignoredFileIndices, normalizedInstrumentCounts, normalizedInstrumentNames, normalizedTitle, visibleFiles]);
 
   const pendingIssueMessages = useMemo(() => {
     const messages: string[] = [];
@@ -329,7 +347,7 @@ export function AddFilesModal({
           onCancel={onClose}
           onConfirm={handleSave}
           isSaving={isSaving}
-          confirmDisabled={hasPendingIssues || !hasAddableFiles}
+          confirmDisabled={hasPendingIssues || !hasFilesToImport}
         />
       }
     >
@@ -407,14 +425,24 @@ export function AddFilesModal({
                                 {directoryPath}
                               </p>
                             </div>
-                            <button
-                              type="button"
-                              onClick={() => removeFile(idx)}
-                              className="p-1 text-[#8b9db2] hover:text-red-500 transition-colors"
-                              title="Remover arquivo"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => toggleIgnoreFile(idx)}
+                                className="p-1 text-[#8b9db2] hover:text-[#4f84d7] transition-colors"
+                                title="Ignorar arquivo"
+                              >
+                                <Ban className="h-4 w-4" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => removeFile(idx)}
+                                className="p-1 text-[#8b9db2] hover:text-red-500 transition-colors"
+                                title="Remover arquivo"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
                           </div>
 
                           <div className="flex items-center gap-2 flex-wrap mt-2">
@@ -489,16 +517,34 @@ export function AddFilesModal({
                         {directoryPath}
                       </p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => removeFile(item.idx)}
-                      disabled={item.isLocked}
-                      className="p-1 text-[#8b9db2] hover:text-red-500 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-                      title="Remover arquivo"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => toggleIgnoreFile(item.idx)}
+                        className={`p-1 transition-colors ${item.isIgnored ? "text-[#4f84d7] hover:text-[#345f9e]" : "text-[#8b9db2] hover:text-[#4f84d7]"}`}
+                        title={item.isIgnored ? "Designorar arquivo" : "Ignorar arquivo"}
+                      >
+                        {item.isIgnored ? <RotateCcw className="h-4 w-4" /> : <Ban className="h-4 w-4" />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeFile(item.idx)}
+                        disabled={item.isLocked}
+                        className="p-1 text-[#8b9db2] hover:text-red-500 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                        title="Remover arquivo"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
+
+                  {item.isIgnored && (
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700">
+                        Ignorada
+                      </span>
+                    </div>
+                  )}
 
                   <div className="flex items-center gap-2">
                     <button
@@ -539,7 +585,7 @@ export function AddFilesModal({
                       commitInstrumentName(item.idx);
                     }}
                     placeholder="Nome do instrumento"
-                    autoFocus={visibleFiles[0]?.idx === item.idx}
+                      autoFocus={visibleFiles[0]?.idx === item.idx}
                     readOnly={item.isLocked}
                   />
                 </div>
