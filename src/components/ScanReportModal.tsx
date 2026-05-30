@@ -513,10 +513,13 @@ function buildActionGroups(
     }
   }
 
-  const scoreItems: ReactNode[] = [];
+  const scoreItems: Array<{ songName: string | null; content: ReactNode }> = [];
   for (const entry of scoreOrder) {
     if (entry.kind === "custom") {
-      scoreItems.push(renderCustomScoreText(entry.item.customText ?? entry.item.raw));
+      scoreItems.push({
+        songName: entry.item.songName ?? getScoreReviewSongNameFromText(entry.item.customText ?? entry.item.raw),
+        content: renderCustomScoreText(entry.item.customText ?? entry.item.raw),
+      });
       continue;
     }
 
@@ -526,11 +529,17 @@ function buildActionGroups(
     }
 
     if (group.scoreNames.length === 1) {
-      scoreItems.push(renderScoreItem(action, group.scoreNames[0], group.songName));
+      scoreItems.push({
+        songName: group.songName,
+        content: renderScoreItem(action, group.scoreNames[0], group.songName),
+      });
       continue;
     }
 
-    scoreItems.push(renderGroupedScoreItem(action, group.songName, group.scoreNames));
+    scoreItems.push({
+      songName: group.songName,
+      content: renderGroupedScoreItem(action, group.songName, group.scoreNames),
+    });
   }
 
   const groups: EntityGroup[] = [];
@@ -552,10 +561,40 @@ function buildActionGroups(
   }
 
   if (scoreItems.length > 0) {
-    groups.push({ title: "Partituras", items: scoreItems });
+    const scoreGroupItemsBySong = new Map<string, ReactNode[]>();
+    const scoreGroupOrder: string[] = [];
+
+    for (const item of scoreItems) {
+      const groupTitle = item.songName ? `Partituras · ${item.songName}` : "Partituras";
+
+      if (!scoreGroupItemsBySong.has(groupTitle)) {
+        scoreGroupOrder.push(groupTitle);
+        scoreGroupItemsBySong.set(groupTitle, []);
+      }
+
+      scoreGroupItemsBySong.get(groupTitle)?.push(item.content);
+    }
+
+    for (const groupTitle of scoreGroupOrder) {
+      groups.push({ title: groupTitle, items: scoreGroupItemsBySong.get(groupTitle) ?? [] });
+    }
   }
 
   return groups;
+}
+
+function getScoreReviewSongNameFromText(text: string): string | null {
+  const directMatch = text.match(/\bna música\s+(.+)\.$/);
+  if (directMatch) {
+    return directMatch[1].trim();
+  }
+
+  const statusChangeMatch = text.match(/\bna música\s+(.+)\.$/);
+  if (statusChangeMatch) {
+    return statusChangeMatch[1].trim();
+  }
+
+  return null;
 }
 
 function resolveEntityAction(

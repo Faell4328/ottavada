@@ -62,7 +62,7 @@ describe("ScanReportModal", () => {
     expect(screen.getAllByText("Compositores").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Arranjadores").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Músicas").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Partituras").length).toBeGreaterThan(0);
+    expect(screen.getAllByText((_, element) => element?.textContent?.includes("Partituras") ?? false).length).toBeGreaterThan(0);
     expect(screen.getAllByText((_, element) => element?.textContent === "A categoria Coral foi adicionada.").length).toBeGreaterThan(0);
     expect(screen.getAllByText((_, element) => element?.textContent === "A categoria Juventude foi deletada.").length).toBeGreaterThan(0);
     expect(screen.queryAllByText((_, element) => element?.textContent?.includes("Sem categoria") ?? false).length).toBe(0);
@@ -77,6 +77,8 @@ describe("ScanReportModal", () => {
     expect(screen.getAllByText((_, element) => element?.textContent === "O arranjador Maria foi modificado na música Eis o Nosso Deus.").length).toBeGreaterThan(0);
     expect(screen.getAllByText((_, element) => element?.textContent === "O arranjador Maria foi deletado da música Eis o Nosso Deus.").length).toBeGreaterThan(0);
     expect(screen.getAllByText((_, element) => element?.textContent === "As partituras Flauta.pdf, Oboe.musx e Tenor Saxophone.musx foram adicionadas na música Eis o Nosso Deus.").length).toBeGreaterThan(0);
+    expect(screen.getAllByText((_, element) => element?.textContent?.includes("Partituras · Eis o Nosso Deus") ?? false).length).toBeGreaterThan(0);
+    expect(screen.getAllByText((_, element) => element?.textContent?.includes("Partituras · 03 VEZES SANTO") ?? false).length).toBeGreaterThan(0);
     expect(
       screen.getAllByText((_, element) =>
         element?.textContent?.includes("Score.pdf") &&
