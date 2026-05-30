@@ -538,10 +538,24 @@ fn describe_category_change(change: &ChangedFieldRecord) -> Option<String> {
 }
 
 fn describe_score_change(db: &Database, change: &ChangedFieldRecord) -> Option<String> {
+    let score_song_name = db
+        .get_song_id_for_score(&change.entity_id)
+        .ok()
+        .and_then(|song_id| db.get_song_list_item_by_id(&song_id).ok())
+        .map(|song| song.name)
+        .unwrap_or_default();
+
     match (change.change_type.as_str(), change.field.as_deref()) {
         ("insert", Some("name")) => describe_score_added(db, change),
         ("delete", Some("file_name")) => Some(format!("A partitura {} foi deletada.", change.value.clone().unwrap_or_else(|| change.entity_id.clone()))),
-        ("update", Some("name")) => Some(format!("A partitura {} teve o nome alterado.", change.value.clone().unwrap_or_else(|| change.entity_id.clone()))),
+        ("update", Some("name")) => {
+            let score_name = change.value.clone().unwrap_or_else(|| change.entity_id.clone());
+            if score_song_name.is_empty() {
+                Some(format!("A partitura {} teve o nome alterado.", score_name))
+            } else {
+                Some(format!("A partitura {} teve o nome alterado na música {}.", score_name, score_song_name))
+            }
+        }
         ("update", Some("status")) => describe_score_status_change(db, change),
         _ => None,
     }

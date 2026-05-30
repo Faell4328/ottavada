@@ -76,9 +76,9 @@ describe("ScanReportModal", () => {
     expect(screen.getAllByText((_, element) => element?.textContent === "As partituras Flauta.pdf, Oboe.musx e Tenor Saxophone.musx foram adicionadas na música Eis o Nosso Deus.").length).toBeGreaterThan(0);
     expect(
       screen.getAllByText((_, element) =>
-        element?.textContent?.includes("Score.pdf") &&
-        element?.textContent?.includes("Score.MUS") &&
-        element?.textContent?.includes("3 VEZES SANTO") &&
+            element?.textContent?.includes("Sem instrumento (.pdf)") &&
+            element?.textContent?.includes("Sem instrumento (.MUS)") &&
+        element?.textContent?.includes("03 VEZES SANTO") &&
         element?.textContent?.includes("foram adicionadas")
       ).length
     ).toBeGreaterThan(0);
@@ -88,5 +88,30 @@ describe("ScanReportModal", () => {
     expect(screen.getAllByText((_, element) => element?.textContent?.includes("A partitura /music/Eis o Nosso Deus - Flute2.musx saiu de ignorada e foi para rascunho na música Eis o Nosso Deus") ?? false).length).toBeGreaterThan(0);
     expect(screen.queryByText("Arquivos recuperados")).not.toBeInTheDocument();
     expect(screen.queryByText("Arquivos com erro")).not.toBeInTheDocument();
+  });
+
+  it("hides score additions that are actually score renames", () => {
+    render(
+      <ScanReportModal
+        isOpen={true}
+        report={{
+          changed_files: [],
+          added_files: [],
+          deleted_files: [],
+          recovered_files: [],
+          failed_files: [],
+          report_items: [
+            "A partitura Score teve o nome alterado na música 03 VEZES SANTO.",
+            "Partitura adicionada: /music/03 VEZES SANTO/03 VEZES SANTO - Score.MUS",
+          ],
+        }}
+        isConfirming={false}
+        onClose={() => undefined}
+        onConfirm={() => undefined}
+      />
+    );
+
+    expect(screen.getAllByText((_, element) => element?.textContent === "A partitura Score teve o nome alterado na música 03 VEZES SANTO.").length).toBeGreaterThan(0);
+    expect(screen.queryByText((_, element) => element?.textContent?.includes("Score.MUS foi adicionada") ?? false)).not.toBeInTheDocument();
   });
 });

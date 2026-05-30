@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 
 import type { ScanResult } from "../api/commands";
 import { compareInstrumentNames } from "../utils/instrumentOrder";
-import { normalizeScoreNameForSave } from "../utils/nameFormat";
+import { normalizeScoreNameForSave, normalizeSongNameForSave } from "../utils/nameFormat";
 import { Modal } from "./ui";
 
 interface ScanReportModalProps {
@@ -112,7 +112,9 @@ type ReviewSection = {
 
 function buildReviewSections(reportItems: string[]): ReviewSection[] {
   const parsedItems = coalesceExtensionOnlyScoreChanges(
-    dedupeReviewItems(reportItems.map(parseReviewItem).filter((item): item is ReviewItem => item !== null))
+    coalesceScoreRenameAdditions(
+      dedupeReviewItems(reportItems.map(parseReviewItem).filter((item): item is ReviewItem => item !== null))
+    )
   );
   const createdSongNames = new Set(parsedItems.filter((item) => item.entity === "song" && item.action === "adding").map((item) => normalizeKey(item.songName ?? item.value ?? item.raw)));
   const modifiedSongNames = new Set(parsedItems.filter((item) => item.entity === "song" && item.action === "modified").map((item) => normalizeKey(item.songName ?? item.value ?? item.raw)));
@@ -250,6 +252,18 @@ function parseReviewItem(raw: string): ReviewItem | null {
     };
   }
 
+  const scoreRenamedWithSongMatch = raw.match(/^A partitura\s+(.+?)\s+teve o nome alterado na música\s+(.+)\.$/);
+  if (scoreRenamedWithSongMatch) {
+    return {
+      action: "modified",
+      entity: "score",
+      scoreName: scoreRenamedWithSongMatch[1].trim(),
+      songName: scoreRenamedWithSongMatch[2].trim(),
+      customText: raw,
+      raw,
+    };
+  }
+
   const scoreRemovedMatch = raw.match(/^A partitura\s+(.+?)\s+foi deletada\.$/);
   if (scoreRemovedMatch) {
     const parsed = parseScoreReference(scoreRemovedMatch[1].trim());
@@ -372,6 +386,31 @@ function coalesceExtensionOnlyScoreChanges(items: ReviewItem[]): ReviewItem[] {
   }
 
   return result;
+}
+
+function coalesceScoreRenameAdditions(items: ReviewItem[]): ReviewItem[] {
+  const renameKeys = new Set<string>();
+
+  for (const item of items) {
+    if (item.entity !== "score" || item.action !== "modified" || !item.scoreName || !item.songName) {
+      continue;
+    }
+
+    if (!item.customText?.includes("teve o nome alterado")) {
+      continue;
+    }
+
+    renameKeys.add(`${normalizeKey(item.songName)}|${normalizeKey(stripFileExtension(item.scoreName))}`);
+  }
+
+  return items.filter((item) => {
+    if (item.entity !== "score" || item.action !== "adding" || !item.scoreName || !item.songName) {
+      return true;
+    }
+
+    const key = `${normalizeKey(item.songName)}|${normalizeKey(stripFileExtension(item.scoreName))}`;
+    return !renameKeys.has(key);
+  });
 }
 
 function buildScoreChangeKeys(songName: string | undefined, scoreName: string): string[] {
@@ -852,6 +891,15 @@ function renderCustomScoreText(text: string): ReactNode {
     );
   }
 
+  const renameWithSongMatch = text.match(/^A partitura\s+(.+?)\s+teve o nome alterado na música\s+(.+)\.$/);
+  if (renameWithSongMatch) {
+    return (
+      <>
+        A partitura <strong>{formatScoreDisplayName(renameWithSongMatch[1])}</strong> teve o nome alterado na música <strong>{renameWithSongMatch[2]}</strong>.
+      </>
+    );
+  }
+
   return text;
 }
 
@@ -879,8 +927,8 @@ function parseScoreReference(rawPath: string): { songName: string; scoreName: st
   const extensionMatch = fileName.match(/(\.[^.]+)$/);
 
   return {
-    songName: stripFileExtension(fileName),
-    scoreName: `Score${extensionMatch?.[1] ?? ""}`,
+    songName: normalizeSongNameForSave(stripFileExtension(fileName)) ?? stripFileExtension(fileName),
+    scoreName: `Sem instrumento${extensionMatch ? ` (${extensionMatch[1]})` : ""}`,
   };
 }
 
