@@ -144,7 +144,7 @@ mod tests {
     }
 
     #[test]
-    fn test_get_song_by_id_not_found() {
+    fn test_get_song_by_id_missing() {
         let db = make_db();
         let result = db.get_song_by_id("nonexistent");
         assert!(result.is_err());
@@ -167,7 +167,7 @@ mod tests {
     }
 
     #[test]
-    fn test_get_song_list_item_by_id_not_found() {
+    fn test_get_song_list_item_by_id_missing() {
         let db = make_db();
         let result = db.get_song_list_item_by_id("nonexistent");
         assert!(result.is_err());
@@ -625,7 +625,7 @@ mod tests {
     }
 
     #[test]
-    fn test_delete_score_not_found() {
+    fn test_delete_score_missing() {
         let db = make_db();
         let result = db.delete_score("nonexistent");
         assert!(result.is_err());
@@ -679,7 +679,7 @@ mod tests {
     }
 
     #[test]
-    fn test_get_score_file_path_not_found() {
+    fn test_get_score_file_path_missing() {
         let db = make_db();
         let result = db.get_score_file_path("nonexistent");
         assert!(result.is_err());

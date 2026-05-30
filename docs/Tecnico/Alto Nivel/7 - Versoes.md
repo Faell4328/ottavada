@@ -27,7 +27,7 @@
 - migrar informações do sistema para o `tauri-plugin-store`;
 - detectar alteração em arquivo no Rust e no front;
 - implementar o fluxo `draft` -> `main`;
-- listar rascunhos ativos e introduzir `not_found`;
+- listar rascunhos ativos e revisar o fluxo de status;
 - começar o suporte cliente/servidor.
 
 ## Melhorias
@@ -118,7 +118,7 @@
 
 ## Correções
 
-- corrigir envio indevido de `draft` e `not_found`;
+- corrigir envio indevido de `draft`;
 - ajustar extensão real dos arquivos no cliente;
 - estabilizar a geração de snapshot.
 
@@ -235,7 +235,7 @@
 ## Melhorias
 
 - consultar contagem de músicas e partituras sem cache;
-- reforçar a validação de status anterior em `not_found`;
+- reforçar a validação de status anterior;
 - alinhar o modal de revisão com o fluxo de indexação.
 
 ## Correções
@@ -335,4 +335,4 @@
 
 - removendo a opção "adicionar arquivo(s)".
 
-- removendo o status `not_found`.
+- removendo um status obsoleto.

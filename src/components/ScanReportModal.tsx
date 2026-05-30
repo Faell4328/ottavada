@@ -26,7 +26,7 @@ export function ScanReportModal({
   const reportItems = report.report_items ?? [
     ...report.added_files.map((item) => `Partitura adicionada: ${item}`),
     ...report.changed_files.map((item) => `Partitura alterada: ${item}`),
-    ...report.not_found_files.map((item) => `A partitura ${item} foi deletada.`),
+    ...report.deleted_files.map((item) => `A partitura ${item} foi deletada.`),
     ...report.recovered_files.map((item) => `Partitura recuperada: ${item}`),
     ...report.failed_files.map(([path, error]) => `Falha ao processar ${path}: ${error}`),
   ];

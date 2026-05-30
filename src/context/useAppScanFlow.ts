@@ -472,12 +472,12 @@ export function useAppScanFlow({
       const addedCount = result.added_files.length;
       const failedCount = result.failed_files.length;
       const recoveredCount = result.recovered_files?.length ?? 0;
-      const notFoundCount = result.not_found_files?.length ?? 0;
+      const deletedCount = result.deleted_files?.length ?? 0;
       const reportItemsCount = result.report_items?.length ?? 0;
 
       const hasPendingChanges = await api.hasPendingChanges();
       const hasDetectedFileChanges =
-        changedCount > 0 || addedCount > 0 || recoveredCount > 0 || notFoundCount > 0 || reportItemsCount > 0;
+        changedCount > 0 || addedCount > 0 || recoveredCount > 0 || deletedCount > 0 || reportItemsCount > 0;
 
       if (!forceCloudSync && !hasPendingChanges && !hasDetectedFileChanges) {
         resetScanState();
@@ -661,8 +661,8 @@ export function useAppScanFlow({
         if (addedCount > 0) {
           summaryParts.push(`${addedCount} adicionado(s)`);
         }
-        if (notFoundCount > 0) {
-          summaryParts.push(`${notFoundCount} não encontrado(s)`);
+        if (deletedCount > 0) {
+          summaryParts.push(`${deletedCount} deletado(s)`);
         }
         if (reportItemsCount > 0) {
           summaryParts.push(`${reportItemsCount} alteração(ões) no relatório`);
@@ -683,7 +683,7 @@ export function useAppScanFlow({
         }
       }
 
-      if (changedCount > 0 || recoveredCount > 0 || notFoundCount > 0 || (result.report_items?.length ?? 0) > 0) {
+      if (changedCount > 0 || recoveredCount > 0 || deletedCount > 0 || (result.report_items?.length ?? 0) > 0) {
         await loadSongs();
       }
 

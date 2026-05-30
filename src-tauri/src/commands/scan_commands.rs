@@ -75,7 +75,7 @@ fn scan_files_for_changes_impl(
     let scores = db.get_all_scores_with_metadata_by_host(host_id)?;
     let mut changed_files = Vec::new();
     let mut added_files = Vec::new();
-    let mut not_found_files = Vec::new();
+    let mut deleted_files = Vec::new();
     let mut recovered_files = Vec::new();
     let mut failed_files = Vec::new();
 
@@ -127,7 +127,7 @@ fn scan_files_for_changes_impl(
                         ));
                     }
                 }
-                not_found_files.push(full_path);
+                deleted_files.push(full_path);
                 continue;
             }
 
@@ -216,7 +216,7 @@ fn scan_files_for_changes_impl(
         "Verificação concluída. {} alterados, {} adicionados, {} não encontrados, {} recuperados, {} erros",
         changed_files.len(),
         added_files.len(),
-        not_found_files.len(),
+        deleted_files.len(),
         recovered_files.len(),
         failed_files.len()
     );
@@ -226,7 +226,7 @@ fn scan_files_for_changes_impl(
         &db,
         &changed_files,
         &added_files,
-        &not_found_files,
+        &deleted_files,
         &recovered_files,
         &failed_files,
         &changed_fields,
@@ -235,7 +235,7 @@ fn scan_files_for_changes_impl(
     Ok(ScanResult {
         changed_files,
         added_files,
-        not_found_files,
+        deleted_files,
         recovered_files,
         failed_files,
         report_items,
@@ -256,7 +256,7 @@ fn preview_scan_files_for_changes_impl(
     let scores = db.get_all_scores_with_metadata_by_host(host_id)?;
     let mut changed_files = Vec::new();
     let mut added_files = Vec::new();
-    let mut not_found_files = Vec::new();
+    let mut deleted_files = Vec::new();
     let mut recovered_files = Vec::new();
     let mut failed_files = Vec::new();
 
@@ -298,7 +298,7 @@ fn preview_scan_files_for_changes_impl(
             let path = Path::new(&full_path);
 
             if !path.exists() || !path.is_file() {
-                not_found_files.push(full_path);
+                deleted_files.push(full_path);
                 continue;
             }
 
@@ -337,10 +337,10 @@ fn preview_scan_files_for_changes_impl(
     }
 
     info!(
-        "Prévia concluída. {} alterados, {} adicionados, {} não encontrados, {} recuperados, {} erros",
+        "Prévia concluída. {} alterados, {} adicionados, {} deletados, {} recuperados, {} erros",
         changed_files.len(),
         added_files.len(),
-        not_found_files.len(),
+        deleted_files.len(),
         recovered_files.len(),
         failed_files.len()
     );
@@ -350,7 +350,7 @@ fn preview_scan_files_for_changes_impl(
         &db,
         &changed_files,
         &added_files,
-        &not_found_files,
+        &deleted_files,
         &recovered_files,
         &failed_files,
         &changed_fields,
@@ -359,7 +359,7 @@ fn preview_scan_files_for_changes_impl(
     Ok(ScanResult {
         changed_files,
         added_files,
-        not_found_files,
+        deleted_files,
         recovered_files,
         failed_files,
         report_items,
@@ -371,7 +371,7 @@ fn build_report_items(
     db: &Database,
     changed_files: &[String],
     added_files: &[String],
-    not_found_files: &[String],
+    deleted_files: &[String],
     recovered_files: &[String],
     failed_files: &[(String, String)],
     changed_fields: &[ChangedFieldRecord],
@@ -424,7 +424,7 @@ fn build_report_items(
         items.push(format!("Partitura alterada: {}", item));
     }
 
-    for item in not_found_files {
+    for item in deleted_files {
         items.push(format!("A partitura {} foi deletada.", item));
     }
 
@@ -750,7 +750,7 @@ fn parse_stored_modified_at(stored_modified_at_str: &str) -> chrono::NaiveDateTi
 pub struct ScanResult {
     pub changed_files: Vec<String>,
     pub added_files: Vec<String>,
-    pub not_found_files: Vec<String>,
+    pub deleted_files: Vec<String>,
     pub recovered_files: Vec<String>,
     pub failed_files: Vec<(String, String)>,
     pub report_items: Vec<String>,
@@ -798,7 +798,7 @@ mod tests {
     }
 
     #[test]
-    fn recovers_not_found_back_to_draft_when_previous_status_was_draft() {
+    fn recovers_deleted_back_to_draft_when_previous_status_was_draft() {
         let dir = tempdir().expect("temp dir");
         let db = Database::new(&dir.path().join("scan.db")).expect("db");
         let store = SystemStore::new(dir.path().to_path_buf());
@@ -912,7 +912,7 @@ mod tests {
 
         assert!(result.changed_files.is_empty());
         assert!(result.added_files.is_empty());
-        assert!(result.not_found_files.is_empty());
+        assert!(result.deleted_files.is_empty());
     }
 
     #[test]
@@ -975,7 +975,7 @@ mod tests {
         let result = scan_files_for_changes_impl(&db, &store, true).expect("scan");
         let scores = db.get_scores_for_song("song-1").expect("scores");
 
-        assert_eq!(result.not_found_files.len(), 1);
+        assert_eq!(result.deleted_files.len(), 1);
         assert!(result.database_changes_count >= 1);
         assert_eq!(scores.len(), 0);
     }
@@ -1098,7 +1098,7 @@ mod tests {
 
         let text = super::describe_score_change(&db, &change).expect("description");
 
-        assert!(text.contains("ignorada"));
+        assert!(text.contains("principal"));
         assert!(text.contains("voltou para main"));
     }
 
@@ -1673,9 +1673,9 @@ mod tests {
         let result = scan_files_for_changes_impl(&db, &store, false).expect("scan");
         let scores = db.get_scores_for_song("song-1").expect("scores");
 
-        assert_eq!(result.not_found_files.len(), 1);
+        assert_eq!(result.deleted_files.len(), 1);
         assert_eq!(result.added_files.len(), 1);
-        assert!(result.not_found_files[0].ends_with("Canon - Trompete.musx"));
+        assert!(result.deleted_files[0].ends_with("Canon - Trompete.musx"));
         assert!(result.added_files[0].ends_with("Canon - Clarinete.musx"));
         assert!(scores.iter().any(|score| score.file_path.ends_with("Canon - Clarinete.musx")));
         assert!(

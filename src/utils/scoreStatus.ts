@@ -18,10 +18,6 @@ export function normalizeScoreStatus(status: unknown): string {
     .replace(/[\s-]+/g, "_")
     .toLowerCase();
 
-  if (normalized === "not_found" || normalized === "pending") {
-    return "draft";
-  }
-
   return normalized;
 }
 

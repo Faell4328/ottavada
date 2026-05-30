@@ -301,7 +301,7 @@ export async function refreshLibrarySummaryCache(): Promise<LibrarySummary> {
 export interface ScanResult {
   changed_files: string[];
   added_files: string[];
-  not_found_files: string[];
+  deleted_files: string[];
   recovered_files: string[];
   failed_files: Array<[string, string]>;
   report_items?: string[];

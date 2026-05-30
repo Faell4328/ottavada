@@ -917,7 +917,7 @@ mod tests {
     }
 
     #[test]
-    fn skips_when_only_draft_or_not_found_scores_exist() {
+    fn skips_when_only_draft_scores_exist() {
         let temp = tempdir().expect("temp dir");
         let songs_dir = temp.path().join("songs");
         std::fs::create_dir_all(&songs_dir).expect("create songs dir");

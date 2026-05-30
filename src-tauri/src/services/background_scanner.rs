@@ -32,7 +32,7 @@ pub fn run_initial_scan(db: &Database, host_id: &str) {
 
     let mut changed_count = 0;
     let mut added_count = 0;
-    let mut not_found_count = 0;
+    let mut deleted_count = 0;
     let mut recovered_count = 0;
 
     let mut scores_by_song: HashMap<String, Vec<ScoreMetadataEntry>> = HashMap::new();
@@ -75,7 +75,7 @@ pub fn run_initial_scan(db: &Database, host_id: &str) {
             let path = Path::new(&full_path);
 
             if !path.exists() || !path.is_file() {
-                not_found_count += 1;
+                deleted_count += 1;
                 info!("✓ Arquivo não encontrado: {}", full_path);
                 continue;
             }
@@ -144,8 +144,8 @@ pub fn run_initial_scan(db: &Database, host_id: &str) {
     }
 
     info!(
-        "Verificação inicial concluída: {} alterações, {} adicionados, {} não encontrados",
-        changed_count, added_count, not_found_count
+        "Verificação inicial concluída: {} alterações, {} adicionados, {} deletados",
+        changed_count, added_count, deleted_count
     );
 }
 
