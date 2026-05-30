@@ -2,6 +2,8 @@ import { ListChecks } from "lucide-react";
 import type { ReactNode } from "react";
 
 import type { ScanResult } from "../api/commands";
+import { compareInstrumentNames } from "../utils/instrumentOrder";
+import { normalizeScoreNameForSave } from "../utils/nameFormat";
 import { Modal } from "./ui";
 
 interface ScanReportModalProps {
@@ -251,7 +253,7 @@ function parseReviewItem(raw: string): ReviewItem | null {
   const scoreRemovedMatch = raw.match(/^A partitura\s+(.+?)\s+foi deletada\.$/);
   if (scoreRemovedMatch) {
     const parsed = parseScoreReference(scoreRemovedMatch[1].trim());
-    return { action: "deleted", entity: "score", songName: parsed.songName, scoreName: parsed.scoreName, customText: raw, raw };
+    return { action: "deleted", entity: "score", songName: parsed.songName, scoreName: parsed.scoreName, raw };
   }
 
   const scoreExtensionOnlyMatch = raw.match(/^A partitura\s+(.+?)\s+teve a extensão alterada na música\s+(.+)\.$/);
@@ -419,7 +421,8 @@ function buildActionGroups(
   const composerItems: ReactNode[] = [];
   const arrangerItems: ReactNode[] = [];
   const songItems: ReactNode[] = [];
-  const scoreItems: ReactNode[] = [];
+  const scoreGroups = new Map<string, { action: ReviewAction; songName: string; scoreNames: string[] }>();
+  const scoreOrder: Array<{ kind: "group"; key: string } | { kind: "custom"; item: ReviewItem }> = [];
 
   const matchingItems = items.filter((item) => item.action === action);
 
@@ -449,10 +452,46 @@ function buildActionGroups(
     }
 
     if (item.entity === "score") {
-      const songName = item.songName ?? "";
+      if (item.customText) {
+        scoreOrder.push({ kind: "custom", item });
+        continue;
+      }
+
+      const songName = item.songName ?? item.scoreName ?? item.raw;
       const scoreName = item.scoreName ?? item.raw;
-      scoreItems.push(item.customText ? renderCustomScoreText(item.customText) : renderScoreItem(action, scoreName, songName));
+      const key = `${action}|${normalizeKey(songName)}`;
+      const group = scoreGroups.get(key);
+
+      if (group) {
+        if (!group.scoreNames.some((existingName) => normalizeKey(existingName) === normalizeKey(scoreName))) {
+          group.scoreNames.push(scoreName);
+          group.scoreNames.sort((a, b) => compareInstrumentNames(formatScoreDisplayName(a), formatScoreDisplayName(b)));
+        }
+      } else {
+        scoreGroups.set(key, { action, songName, scoreNames: [scoreName] });
+        scoreOrder.push({ kind: "group", key });
+      }
     }
+  }
+
+  const scoreItems: ReactNode[] = [];
+  for (const entry of scoreOrder) {
+    if (entry.kind === "custom") {
+      scoreItems.push(renderCustomScoreText(entry.item.customText ?? entry.item.raw));
+      continue;
+    }
+
+    const group = scoreGroups.get(entry.key);
+    if (!group) {
+      continue;
+    }
+
+    if (group.scoreNames.length === 1) {
+      scoreItems.push(renderScoreItem(action, group.scoreNames[0], group.songName));
+      continue;
+    }
+
+    scoreItems.push(renderGroupedScoreItem(action, group.songName, group.scoreNames));
   }
 
   const groups: EntityGroup[] = [];
@@ -619,6 +658,7 @@ function renderCustomSongText(text: string): ReactNode {
 }
 
 function renderScoreItem(action: ReviewAction, scoreName: string, songName: string): ReactNode {
+  scoreName = formatScoreDisplayName(scoreName);
   const isStandaloneScoreName = normalizeKey(scoreName) === normalizeKey(songName);
 
   if (action === "adding") {
@@ -668,21 +708,81 @@ function renderScoreItem(action: ReviewAction, scoreName: string, songName: stri
   );
 }
 
+function renderGroupedScoreItem(action: ReviewAction, songName: string, scoreNames: string[]): ReactNode {
+  const scoreList = joinStrongList(scoreNames.map(formatScoreDisplayName));
+  const noun = scoreNames.length === 1 ? "A partitura" : "As partituras";
+
+  if (action === "adding") {
+    return songName
+      ? (
+        <>
+          {noun} {scoreList} {scoreNames.length === 1 ? "foi adicionada" : "foram adicionadas"} na música <strong>{songName}</strong>.
+        </>
+      )
+      : (
+        <>
+          {noun} {scoreList} {scoreNames.length === 1 ? "foi adicionada" : "foram adicionadas"}.
+        </>
+      );
+  }
+
+  if (action === "deleted") {
+    return songName
+      ? (
+        <>
+          {noun} {scoreList} {scoreNames.length === 1 ? "foi deletada" : "foram deletadas"} na música <strong>{songName}</strong>.
+        </>
+      )
+      : (
+        <>
+          {noun} {scoreList} {scoreNames.length === 1 ? "foi deletada" : "foram deletadas"}.
+        </>
+      );
+  }
+
+  return songName
+    ? (
+      <>
+        {noun} {scoreList} {scoreNames.length === 1 ? "foi alterada" : "foram alteradas"} na música <strong>{songName}</strong>.
+      </>
+    )
+    : (
+      <>
+        {noun} {scoreList} {scoreNames.length === 1 ? "foi alterada" : "foram alteradas"}.
+      </>
+    );
+}
+
+function joinStrongList(values: string[]): ReactNode[] {
+  return values.flatMap((value, index) => {
+    const parts: ReactNode[] = [];
+
+    if (index > 0) {
+      parts.push(index === values.length - 1 ? " e " : ", ");
+    }
+
+    parts.push(<strong key={`${value}-${index}`}>{value}</strong>);
+    return parts;
+  });
+}
+
 function renderCustomScoreText(text: string): ReactNode {
   const extensionOnlyMatch = text.match(/^A partitura\s+(.+?)\s+teve a extensão alterada na música\s+(.+)\.$/);
   if (extensionOnlyMatch) {
-    const isStandaloneScoreName = normalizeKey(extensionOnlyMatch[1]) === normalizeKey(extensionOnlyMatch[2]);
+    const scoreName = formatScoreDisplayName(extensionOnlyMatch[1]);
+    const songName = extensionOnlyMatch[2];
+    const isStandaloneScoreName = normalizeKey(scoreName) === normalizeKey(songName);
     if (isStandaloneScoreName) {
       return (
         <>
-          A partitura <strong>{extensionOnlyMatch[1]}</strong> teve a extensão alterada.
+          A partitura <strong>{scoreName}</strong> teve a extensão alterada.
         </>
       );
     }
 
     return (
       <>
-        A partitura <strong>{extensionOnlyMatch[1]}</strong> teve a extensão alterada na música <strong>{extensionOnlyMatch[2]}</strong>.
+        A partitura <strong>{scoreName}</strong> teve a extensão alterada na música <strong>{songName}</strong>.
       </>
     );
   }
@@ -691,14 +791,14 @@ function renderCustomScoreText(text: string): ReactNode {
   if (deleteMatch) {
     return (
       <>
-        A partitura <strong>{deleteMatch[1]}</strong> foi deletada.
+        A partitura <strong>{formatScoreDisplayName(deleteMatch[1])}</strong> foi deletada.
       </>
     );
   }
 
   const statusChangeMatch = text.match(/^A partitura\s+(.+?)\s+saiu de\s+(.+?)\s+e\s+(?:voltou para main|foi para\s+(.+?))\s+na música\s+(.+)\.$/);
   if (statusChangeMatch) {
-    const scoreName = statusChangeMatch[1];
+    const scoreName = formatScoreDisplayName(statusChangeMatch[1]);
     const previousStatus = statusChangeMatch[2];
     const nextStatus = statusChangeMatch[3] ?? "main";
     const songName = statusChangeMatch[4];
@@ -747,7 +847,7 @@ function renderCustomScoreText(text: string): ReactNode {
   if (renameMatch) {
     return (
       <>
-        A partitura <strong>{renameMatch[1]}</strong> teve o nome alterado.
+        A partitura <strong>{formatScoreDisplayName(renameMatch[1])}</strong> teve o nome alterado.
       </>
     );
   }
@@ -776,10 +876,22 @@ function parseScoreReference(rawPath: string): { songName: string; scoreName: st
     };
   }
 
+  const extensionMatch = fileName.match(/(\.[^.]+)$/);
+
   return {
-    songName: fileName,
-    scoreName: fileName,
+    songName: stripFileExtension(fileName),
+    scoreName: `Score${extensionMatch?.[1] ?? ""}`,
   };
+}
+
+function formatScoreDisplayName(value: string): string {
+  const normalized = normalizeScoreNameForSave(value) ?? value.trim();
+
+  if (normalizeKey(normalized) === normalizeKey("Score")) {
+    return "Score";
+  }
+
+  return normalized;
 }
 
 function ActionSectionCard({

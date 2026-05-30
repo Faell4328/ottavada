@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::path::Path;
 use std::time::Duration;
 use rusqlite::params;
@@ -378,16 +378,6 @@ fn build_report_items(
 ) -> Vec<String> {
     let mut items = Vec::new();
     let mut category_names_by_id: HashMap<String, String> = HashMap::new();
-    let created_song_ids: HashSet<String> = changed_fields
-        .iter()
-        .filter(|change| {
-            change.entity == "songs"
-                && change.change_type == "insert"
-                && change.field.as_deref() == Some("name")
-        })
-        .map(|change| change.entity_id.clone())
-        .collect();
-    let score_song_ids_by_full_path = collect_score_song_ids_by_full_path(db);
     let mut status_changes_by_score_id: HashMap<String, Vec<&ChangedFieldRecord>> = HashMap::new();
     let mut status_change_order: Vec<String> = Vec::new();
 
@@ -410,13 +400,6 @@ fn build_report_items(
     }
 
     for item in added_files {
-        if score_song_ids_by_full_path
-            .get(item)
-            .is_some_and(|song_id| created_song_ids.contains(song_id))
-        {
-            continue;
-        }
-
         items.push(format!("Partitura adicionada: {}", item));
     }
 
@@ -437,17 +420,6 @@ fn build_report_items(
     }
 
     for change in changed_fields {
-        if change.entity == "scores"
-            && change.change_type == "insert"
-            && change.field.as_deref() == Some("name")
-            && db
-                .get_song_id_for_score(&change.entity_id)
-                .map(|song_id| created_song_ids.contains(&song_id))
-                .unwrap_or(false)
-        {
-            continue;
-        }
-
         if change.entity == "scores" && change.change_type == "update" && change.field.as_deref() == Some("status") {
             continue;
         }
@@ -480,30 +452,6 @@ fn describe_database_change(
         "scores" => describe_score_change(db, change),
         _ => None,
     }
-}
-
-fn collect_score_song_ids_by_full_path(db: &Database) -> HashMap<String, String> {
-    let conn = match db.conn.lock() {
-        Ok(conn) => conn,
-        Err(_) => return HashMap::new(),
-    };
-
-    let mut stmt = match conn.prepare("SELECT song_id, file_path, file_name FROM scores") {
-        Ok(stmt) => stmt,
-        Err(_) => return HashMap::new(),
-    };
-
-    let rows = match stmt.query_map([], |row| {
-        let song_id: String = row.get(0)?;
-        let file_path: String = row.get(1)?;
-        let file_name: String = row.get(2)?;
-        Ok((build_score_full_path(&file_path, &file_name), song_id))
-    }) {
-        Ok(rows) => rows,
-        Err(_) => return HashMap::new(),
-    };
-
-    rows.filter_map(|row| row.ok()).collect()
 }
 
 fn describe_song_category_change(
@@ -1438,7 +1386,7 @@ mod tests {
     }
 
     #[test]
-    fn build_report_items_hides_score_additions_for_new_songs_but_keeps_later_score_updates() {
+    fn build_report_items_includes_score_additions_for_new_songs_and_keeps_later_score_updates() {
         let db = Database::new_in_memory().expect("db");
         let song_dir = Path::new("/music/song-1").to_path_buf();
 
@@ -1483,7 +1431,7 @@ mod tests {
 
         assert!(report_items.iter().any(|item| item.contains("Música criada: HINO NOVO")));
         assert!(report_items.iter().any(|item| item.contains("foi para rascunho")));
-        assert!(report_items.iter().all(|item| !item.contains("Partitura adicionada: /music/song-1/HINO NOVO - Flauta.musx")));
+        assert!(report_items.iter().any(|item| item.contains("Partitura adicionada:") && item.contains("HINO NOVO - Flauta.musx")));
     }
 
     #[test]

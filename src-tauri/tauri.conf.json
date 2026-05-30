@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Score Maestro",
+  "productName": "Score Maestro 2",
   "version": "1.1.0",
-  "identifier": "com.rhafa.scoremaestro",
+  "identifier": "com.rhafa.scoremaestro2",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420/",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Score Maestro",
+        "title": "Score Maestro 2",
         "width": 800,
         "height": 600,
         "maximized": true,

@@ -40,8 +40,8 @@ describe("startup loading screen", () => {
     expect(shell).toHaveClass("bg-linear-to-br");
     expect(container).toHaveTextContent("Carregando Score Maestro");
     expect(container).toHaveTextContent("Preparando a interface inicial");
-    expect(container.querySelectorAll('img[src="/metronome1.png"]').length).toBe(1);
-    expect(container.querySelectorAll('img[src="/metronome2.png"]').length).toBe(1);
+    expect(container.querySelectorAll('img[src="/metronome1.avif"]').length).toBe(1);
+    expect(container.querySelectorAll('img[src="/metronome2.avif"]').length).toBe(1);
   });
 
   it("finishes the startup gate after checking updates", async () => {

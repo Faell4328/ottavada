@@ -1,4 +1,4 @@
-export const APP_IMAGE_SOURCES = ["/icon.png", "/logo.png", "/metronome1.png", "/metronome2.png"] as const;
+export const APP_IMAGE_SOURCES = ["/icon.png", "/logo.png", "/metronome1.avif", "/metronome2.avif"] as const;
 
 type ImageLike = {
   src: string;

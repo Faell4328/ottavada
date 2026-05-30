@@ -31,8 +31,8 @@ export function LoadingScreen() {
     <div className="fixed inset-0 z-9999 flex h-screen w-screen items-center justify-center overflow-hidden bg-linear-to-br from-white via-[#fbfcfe] to-[#eef3f8]">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(79,132,215,0.08),transparent_42%),radial-gradient(circle_at_bottom_right,rgba(93,109,130,0.08),transparent_36%)]" />
       <div className="pointer-events-none absolute left-0 top-0 h-0 w-0 overflow-hidden opacity-0" aria-hidden="true">
-        <img src="/metronome1.png" alt="" loading="eager" fetchPriority="high" />
-        <img src="/metronome2.png" alt="" loading="eager" fetchPriority="high" />
+        <img src="/metronome1.avif" alt="" loading="eager" fetchPriority="high" />
+        <img src="/metronome2.avif" alt="" loading="eager" fetchPriority="high" />
       </div>
       <div className="relative flex w-full max-w-md flex-col items-center gap-4 rounded-3xl border border-[#dce6f1] bg-white/90 px-8 py-10 text-center shadow-[0_24px_80px_rgba(36,68,104,0.12)] backdrop-blur-sm">
         <div className="flex h-14 w-14 items-center justify-center rounded-full border border-[#d6e2ef] bg-[#f7faff] shadow-inner">

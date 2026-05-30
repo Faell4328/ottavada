@@ -18,6 +18,16 @@ O usuário deve selecionar entre cliente e servidor. Deve ter um breve texto exp
 
 O usuário deve informar o nome do computador e da organização
 
+# 2. Modal de revisão de alteração
+
+## 2.1. Agrupamento de mesmo tipo e música
+
+Quando várias partituras são alteradas com o mesmo tipo, ex: "adicionada" para a música "HINO NACIONAL", todas as partitura devem ser agrupadas na mesma linha.
+
+## 2.2. Deletando e Adicionando
+
+Quando uma música e/ou partitura for deletada e adicionada, o modal deve mostrar que foi alterada e não que foi deletada e adicionada (podendo confundir o usuário).
+
 ---
 
 ### Header

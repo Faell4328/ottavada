@@ -33,7 +33,7 @@ describe("StatusBar loading state", () => {
     const { container } = render(<StatusBar />);
 
     expect(screen.getByText("Processando")).toBeInTheDocument();
-    expect(container.querySelector('img[src="/metronome1.png"]')).toBeInTheDocument();
-    expect(container.querySelector('img[src="/metronome2.png"]')).toBeInTheDocument();
+    expect(container.querySelector('img[src="/metronome1.avif"]')).toBeInTheDocument();
+    expect(container.querySelector('img[src="/metronome2.avif"]')).toBeInTheDocument();
   });
 });

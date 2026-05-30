@@ -5,14 +5,14 @@ export default function Metronome() {
         <div className="ms-[-10px] h-[60px] w-[60px] shrink-0" aria-hidden="true">
             <div className="relative h-full w-full">
                 <img
-                    src="/metronome1.png"
+                    src="/metronome1.avif"
                     alt=""
                     loading="eager"
                     fetchPriority="high"
                     className="absolute w-[60px]"
                 />
                 <img
-                    src="/metronome2.png"
+                    src="/metronome2.avif"
                     alt=""
                     loading="eager"
                     fetchPriority="high"
