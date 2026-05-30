@@ -44,6 +44,7 @@ export function EditInstrumentModal({
       name: "",
       composer: null,
       arranger: null,
+      path: "",
       updated_at: "",
       is_favorite: false,
       category_ids: [],

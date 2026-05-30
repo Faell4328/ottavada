@@ -66,6 +66,7 @@ const duplicateSongs: SongListItem[] = [
     name: "CANON",
     composer: null,
     arranger: null,
+    path: "/library/canon",
     updated_at: "2026-04-08T00:00:00.000Z",
     is_favorite: false,
     category_ids: [],
@@ -151,20 +152,25 @@ describe("AddFilesModal", () => {
     expect(mockOnClose).toHaveBeenCalled();
   });
 
-  it("should allow removing files", () => {
+  it("should allow removing files", async () => {
+    const deleteFilePathSpy = vi.spyOn(api, "deleteFilePath").mockResolvedValue(undefined);
+
     renderWithAppProvider(
       <AddFilesModal isOpen={true} files={sampleFiles} onClose={mockOnClose} onSuccess={mockOnSuccess} />
     );
 
-    // Initially shows 2 instruments
     expect(screen.getByText("Instrumentos a adicionar (2)")).toBeInTheDocument();
 
-    // Click the first remove button
-    const removeButtons = screen.getAllByTitle("Remover arquivo");
-    fireEvent.click(removeButtons[0]);
+    fireEvent.click(screen.getAllByTitle("Excluir arquivo")[0]);
 
-    // Should now show 1 instrument
-    expect(screen.getByText("Instrumentos a adicionar (1)")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Excluir arquivo" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar exclusão" }));
+
+    await waitFor(() => {
+      expect(deleteFilePathSpy).toHaveBeenCalledWith(sampleFiles[0].path);
+      expect(screen.getByText("Instrumentos a adicionar (1)")).toBeInTheDocument();
+    });
   });
 
   it("should allow ignoring and restoring files", () => {

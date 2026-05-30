@@ -8,6 +8,7 @@ const baseSong: SongListItem = {
   name: "CANON",
   composer: null,
   arranger: null,
+  path: "/music/canon",
   updated_at: "2026-04-08T00:00:00.000Z",
   is_favorite: false,
   category_ids: [],

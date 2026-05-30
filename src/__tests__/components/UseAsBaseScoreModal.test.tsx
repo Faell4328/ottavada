@@ -8,6 +8,7 @@ const sampleSong: SongListItem = {
   name: "HINO NACIONAL",
   composer: null,
   arranger: null,
+  path: "/music/hino-nacional",
   updated_at: "2024-01-01 12:00:00",
   is_favorite: false,
   category_ids: [],

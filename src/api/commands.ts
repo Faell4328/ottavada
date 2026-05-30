@@ -119,6 +119,10 @@ export async function createSongWithMetadata(
   });
 }
 
+export async function deleteFilePath(filePath: string): Promise<void> {
+  return invoke("delete_file_path", { filePath });
+}
+
 export async function updateSong(
   songId: string,
   name: string,

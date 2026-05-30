@@ -115,6 +115,18 @@ fn delete_song_with_files_core(
 }
 
 #[tauri::command]
+pub fn delete_file_path(
+    store: State<'_, SystemStore>,
+    file_path: String,
+) -> Result<(), AppError> {
+    require_server_settings(&store)?;
+
+    let path = std::path::Path::new(&file_path);
+    info!("Excluindo arquivo da tela de revisão: {}", path.display());
+    remove_path_if_exists(path)
+}
+
+#[tauri::command]
 pub fn get_all_songs(db: State<'_, Database>) -> Result<Vec<SongListItem>, AppError> {
     info!("Buscando todas as músicas");
     run_song_query_with_logging("Busca de todas as músicas concluída", || {

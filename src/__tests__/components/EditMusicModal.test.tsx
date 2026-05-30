@@ -16,6 +16,7 @@ vi.mock("@tauri-apps/api/core", () => ({
         return [
           {
             id: "s-global-1",
+          path: "/music/global-song",
             name: "Global Song",
             composer: "Pachelbel",
             arranger: "Global Arranger",
@@ -31,6 +32,7 @@ vi.mock("@tauri-apps/api/core", () => ({
           name: "Canon in D",
           composer: "Pachelbel",
           arranger: "Modern Arranged",
+          path: "/music/canon-in-d",
           updated_at: "2024-01-01 12:00:00",
           is_favorite: false,
           category_ids: ["c1"],
@@ -73,6 +75,7 @@ const sampleSong: SongListItem = {
   name: "Canon in D",
   composer: "Pachelbel",
   arranger: "Modern Arranged",
+  path: "/music/canon-in-d",
   updated_at: "2024-01-01 12:00:00",
   is_favorite: false,
   category_ids: ["c1"],

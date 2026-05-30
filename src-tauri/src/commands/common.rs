@@ -96,7 +96,7 @@ mod tests {
 
     use tempfile::tempdir;
 
-    use super::regenerate_song_archives_for_song_ids;
+    use super::{regenerate_song_archives_for_song_ids, remove_path_if_exists};
     use crate::domain::models::{AppSettings, ComputerType, Score, ScoreStatus, Song};
     use crate::infrastructure::database::Database;
     use crate::infrastructure::store::SystemStore;
@@ -170,5 +170,16 @@ mod tests {
                 .join("song-1.tar.zst")
                 .is_file()
         );
+    }
+
+    #[test]
+    fn remove_path_if_exists_deletes_files() {
+        let dir = tempdir().expect("temp dir");
+        let file_path = dir.path().join("score.musx");
+        fs::write(&file_path, b"score").expect("write file");
+
+        remove_path_if_exists(&file_path).expect("delete file");
+
+        assert!(!file_path.exists());
     }
 }

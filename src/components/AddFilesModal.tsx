@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { Ban, ExternalLink, FolderOpen, Loader2, RotateCcw, Trash2 } from "lucide-react";
 import { useAppState } from "../context/AppContext";
 import type { IndexedFile, SongListItem } from "../types";
@@ -56,6 +57,11 @@ export function AddFilesModal({
   const [reviewInstrumentNames, setReviewInstrumentNames] = useState<Record<number, string>>({});
   const [removedFileIndices, setRemovedFileIndices] = useState<Set<number>>(new Set());
   const [ignoredFileIndices, setIgnoredFileIndices] = useState<Set<number>>(new Set());
+  const [pendingDeleteFile, setPendingDeleteFile] = useState<{
+    idx: number;
+    path: string;
+    fileName: string;
+  } | null>(null);
   const [openingScorePath, setOpeningScorePath] = useState<string | null>(null);
   const [openingLocationPath, setOpeningLocationPath] = useState<string | null>(null);
   const normalizedTitle = useMemo(() => normalizeSongNameForSave(title), [title]);
@@ -99,6 +105,7 @@ export function AddFilesModal({
       setError("");
       setRemovedFileIndices(new Set());
       setIgnoredFileIndices(new Set());
+      setPendingDeleteFile(null);
       setOpeningScorePath(null);
       setOpeningLocationPath(null);
       
@@ -141,24 +148,52 @@ export function AddFilesModal({
     });
   };
 
-  const removeFile = (idx: number) => {
-    setRemovedFileIndices((prev) => {
-      const newSet = new Set(prev);
-      newSet.add(idx);
-      return newSet;
+  const ignoreFile = (idx: number) => {
+    setIgnoredFileIndices((prev) => {
+      const next = new Set(prev);
+      next.add(idx);
+      return next;
     });
   };
 
-  const toggleIgnoreFile = (idx: number) => {
+  const unignoreFile = (idx: number) => {
     setIgnoredFileIndices((prev) => {
       const next = new Set(prev);
-      if (next.has(idx)) {
-        next.delete(idx);
-      } else {
-        next.add(idx);
-      }
+      next.delete(idx);
       return next;
     });
+  };
+
+  const openDeleteFileModal = (idx: number, path: string, fileName: string) => {
+    setPendingDeleteFile({ idx, path, fileName });
+  };
+
+  const closeDeleteFileModal = () => {
+    setPendingDeleteFile(null);
+  };
+
+  const deleteSelectedFile = async () => {
+    if (!pendingDeleteFile) {
+      return;
+    }
+
+    try {
+      await api.deleteFilePath(pendingDeleteFile.path);
+      setRemovedFileIndices((prev) => {
+        const next = new Set(prev);
+        next.add(pendingDeleteFile.idx);
+        return next;
+      });
+      setIgnoredFileIndices((prev) => {
+        const next = new Set(prev);
+        next.delete(pendingDeleteFile.idx);
+        return next;
+      });
+      setPendingDeleteFile(null);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : "Erro ao excluir arquivo";
+      setError(errorMsg);
+    }
   };
 
   const handleOpenScore = async (path: string) => {
@@ -428,7 +463,7 @@ export function AddFilesModal({
                             <div className="flex items-center gap-1">
                               <button
                                 type="button"
-                                onClick={() => toggleIgnoreFile(idx)}
+                                onClick={() => ignoreFile(idx)}
                                 className="p-1 text-[#8b9db2] hover:text-[#4f84d7] transition-colors"
                                 title="Ignorar arquivo"
                               >
@@ -436,9 +471,9 @@ export function AddFilesModal({
                               </button>
                               <button
                                 type="button"
-                                onClick={() => removeFile(idx)}
+                                onClick={() => openDeleteFileModal(idx, file.path, fileName)}
                                 className="p-1 text-[#8b9db2] hover:text-red-500 transition-colors"
-                                title="Remover arquivo"
+                                title="Excluir arquivo"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </button>
@@ -520,7 +555,7 @@ export function AddFilesModal({
                     <div className="flex items-center gap-1">
                       <button
                         type="button"
-                        onClick={() => toggleIgnoreFile(item.idx)}
+                        onClick={() => (item.isIgnored ? unignoreFile(item.idx) : ignoreFile(item.idx))}
                         className={`p-1 transition-colors ${item.isIgnored ? "text-[#4f84d7] hover:text-[#345f9e]" : "text-[#8b9db2] hover:text-[#4f84d7]"}`}
                         title={item.isIgnored ? "Designorar arquivo" : "Ignorar arquivo"}
                       >
@@ -528,10 +563,10 @@ export function AddFilesModal({
                       </button>
                       <button
                         type="button"
-                        onClick={() => removeFile(item.idx)}
+                        onClick={() => openDeleteFileModal(item.idx, item.file.path, fileName)}
                         disabled={item.isLocked}
                         className="p-1 text-[#8b9db2] hover:text-red-500 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-                        title="Remover arquivo"
+                        title="Excluir arquivo"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -594,6 +629,51 @@ export function AddFilesModal({
           </div>
         </FormField>
       )}
+
+      {pendingDeleteFile && typeof document !== "undefined"
+        ? createPortal(
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+              <div className="w-full max-w-md rounded-lg border border-[#c5cfdb] bg-[#f8fafd] p-6 shadow-xl">
+                <h2 className="mb-3 text-lg font-semibold text-[#2f4259]">Excluir arquivo</h2>
+                <p className="mb-2 text-sm text-[#4a6278]">
+                  Você realmente deseja excluir o arquivo <strong>{pendingDeleteFile.fileName}</strong>?
+                </p>
+                <p className="mb-6 text-sm text-[#4a6278]">
+                  Se não quiser excluir, clique em Ignorar para manter o arquivo e salvá-lo como ignorado.
+                </p>
+                <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+                  <button
+                    type="button"
+                    onClick={closeDeleteFileModal}
+                    className="rounded-lg border border-[#c5cfdb] px-4 py-2 text-sm font-medium text-[#344b61] transition-colors hover:bg-[#eef2f6]"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      ignoreFile(pendingDeleteFile.idx);
+                      closeDeleteFileModal();
+                    }}
+                    className="rounded-lg border border-[#4f84d7] px-4 py-2 text-sm font-medium text-[#4f84d7] transition-colors hover:bg-[#edf4ff]"
+                  >
+                    Ignorar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void deleteSelectedFile();
+                    }}
+                    className="rounded-lg bg-[#c04b4b] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#a93b3b]"
+                  >
+                    Confirmar exclusão
+                  </button>
+                </div>
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
 
       <ErrorMessage error={error} />
     </Modal>
