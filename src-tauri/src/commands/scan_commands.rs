@@ -252,6 +252,7 @@ fn preview_scan_files_for_changes_impl(
     let settings = store.get_app_settings()?;
     settings.require_server_only()?;
     let host_id = &settings.computer_id;
+    let updated_by = settings.computer_id.clone();
 
     let scores = db.get_all_scores_with_metadata_by_host(host_id)?;
     let mut changed_files = Vec::new();
@@ -313,7 +314,20 @@ fn preview_scan_files_for_changes_impl(
                     );
 
                     if detector.has_changed() {
-                        changed_files.push(full_path);
+                        if let Err(e) = db.update_score_status(
+                            &score.score_id,
+                            ScoreStatus::Draft,
+                            &updated_by,
+                            Some((current_size, current_modified_at)),
+                        ) {
+                            warn!("Erro ao atualizar status para draft: {:?}", e);
+                            failed_files.push((
+                                full_path.clone(),
+                                format!("Erro ao atualizar: {:?}", e),
+                            ));
+                        } else {
+                            changed_files.push(full_path);
+                        }
                     }
                 }
                 Err(e) => {
@@ -1443,6 +1457,70 @@ mod tests {
 
         assert!(result.added_files.is_empty());
         assert!(result.report_items.iter().all(|item| !item.contains("Flute2.musx")));
+    }
+
+    #[test]
+    fn preview_scan_marks_changed_scores_as_draft() {
+        let dir = tempdir().expect("temp dir");
+        let db = Database::new(&dir.path().join("scan.db")).expect("db");
+        let store = SystemStore::new(dir.path().to_path_buf());
+
+        store
+            .save_app_settings(&AppSettings {
+                computer_id: "server-1".to_string(),
+                computer_name: Some("Servidor".to_string()),
+                computer_type: ComputerType::Server,
+                first_run_completed: true,
+                ..Default::default()
+            })
+            .expect("save settings");
+
+        let song_dir = dir.path().join("songs").join("song-1");
+        fs::create_dir_all(&song_dir).expect("create song dir");
+        let score_path = song_dir.join("A BANDA - Flute.musx");
+        fs::write(&score_path, b"updated-score").expect("write score");
+
+        let (file_size, file_modified_at) = get_file_metadata(&score_path).expect("metadata");
+
+        db.insert_song(
+            &Song {
+                id: "song-1".to_string(),
+                name: "A BANDA".to_string(),
+                composer: None,
+                arranger: None,
+                path: song_dir.to_string_lossy().to_string(),
+                is_favorite: false,
+                status: ScoreStatus::Main,
+                updated_at: now(),
+                updated_by: "server-1".to_string(),
+            },
+            &[],
+        )
+        .expect("insert song");
+
+        db.insert_score(&Score {
+            id: "score-1".to_string(),
+            song_id: "song-1".to_string(),
+            name: Some("Flute".to_string()),
+            host_id: "server-1".to_string(),
+            file_path: song_dir.to_string_lossy().to_string(),
+            file_name: "A BANDA - Flute.musx".to_string(),
+            file_size,
+            file_modified_at,
+            updated_at: now(),
+            status: ScoreStatus::Main,
+            updated_by: "server-1".to_string(),
+        })
+        .expect("insert score");
+
+        fs::write(&score_path, b"changed-version").expect("rewrite score");
+
+        let result = super::preview_scan_files_for_changes_impl(&db, &store).expect("preview scan");
+        let updated_song = db.get_song_list_item_by_id("song-1").expect("updated song");
+
+        assert_eq!(updated_song.scores[0].status, ScoreStatus::Draft);
+        assert!(result.changed_files.iter().any(|item| item.ends_with("A BANDA - Flute.musx")));
+        assert!(result.report_items.iter().any(|item| item.contains("foi para rascunho")));
     }
 
     #[test]
