@@ -133,6 +133,18 @@ export function AddFilesModal({
     }));
   };
 
+  const clearInstrumentName = (idx: number) => {
+    setInstrumentNames((prev) => ({
+      ...prev,
+      [idx]: "",
+    }));
+
+    setReviewInstrumentNames((prev) => ({
+      ...prev,
+      [idx]: "",
+    }));
+  };
+
   const commitInstrumentName = (idx: number) => {
     const nextValue = normalizeScoreNameInput(instrumentNames[idx] ?? "");
 
@@ -149,6 +161,8 @@ export function AddFilesModal({
   };
 
   const ignoreFile = (idx: number) => {
+    clearInstrumentName(idx);
+
     setIgnoredFileIndices((prev) => {
       const next = new Set(prev);
       next.add(idx);
@@ -514,12 +528,18 @@ export function AddFilesModal({
 
                           <TextInput
                             value={instrumentNames[idx] || ""}
-                            onChange={(val) => updateInstrumentName(idx, val)}
+                            onChange={(val) => {
+                              if (!item.isIgnored) {
+                                updateInstrumentName(idx, val);
+                              }
+                            }}
                             onBlur={() => {
                               commitInstrumentName(idx);
                             }}
                             placeholder="Nome do instrumento"
                             autoFocus={visibleFiles[0]?.idx === idx}
+                            disabled={item.isIgnored}
+                            readOnly={item.isLocked}
                           />
                         </div>
                       );
@@ -615,12 +635,17 @@ export function AddFilesModal({
 
                   <TextInput
                     value={instrumentNames[item.idx] || ""}
-                    onChange={(val) => updateInstrumentName(item.idx, val)}
+                    onChange={(val) => {
+                      if (!item.isIgnored) {
+                        updateInstrumentName(item.idx, val);
+                      }
+                    }}
                     onBlur={() => {
                       commitInstrumentName(item.idx);
                     }}
                     placeholder="Nome do instrumento"
                       autoFocus={visibleFiles[0]?.idx === item.idx}
+                    disabled={item.isIgnored}
                     readOnly={item.isLocked}
                   />
                 </div>

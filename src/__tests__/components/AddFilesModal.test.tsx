@@ -180,16 +180,28 @@ describe("AddFilesModal", () => {
 
     expect(screen.getByText("Instrumentos a adicionar (2)")).toBeInTheDocument();
 
+    const firstInstrumentInput = screen.getAllByPlaceholderText("Nome do instrumento")[0] as HTMLInputElement;
+    expect(firstInstrumentInput).toHaveValue("Flauta");
+
     fireEvent.click(screen.getAllByTitle("Ignorar arquivo")[0]);
 
     expect(screen.getByText("Instrumentos a adicionar (2)")).toBeInTheDocument();
     expect(screen.getByText("Ignorada")).toBeInTheDocument();
     expect(screen.getByTitle("Designorar arquivo")).toBeInTheDocument();
+    expect(screen.getAllByPlaceholderText("Nome do instrumento")[0]).toBeDisabled();
+    expect(screen.getAllByPlaceholderText("Nome do instrumento")[0]).toHaveValue("");
+
+    fireEvent.change(screen.getAllByPlaceholderText("Nome do instrumento")[0], {
+      target: { value: "Outra coisa" },
+    });
+
+    expect(screen.getAllByPlaceholderText("Nome do instrumento")[0]).toHaveValue("");
 
     fireEvent.click(screen.getByTitle("Designorar arquivo"));
 
     expect(screen.getByText("Instrumentos a adicionar (2)")).toBeInTheDocument();
     expect(screen.queryByText("Ignorada")).not.toBeInTheDocument();
+    expect(screen.getAllByPlaceholderText("Nome do instrumento")[0]).not.toBeDisabled();
   });
 
   it("should save ignored files with ignored status", async () => {
