@@ -1136,6 +1136,70 @@ mod tests {
     }
 
     #[test]
+    fn test_update_composer_renames_matching_songs() {
+        let db = make_db();
+        db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
+        db.insert_song(&make_song("s2", "Ave Maria"), &[]).unwrap();
+
+        db.update_composer("Bach", "Pachelbel").unwrap();
+
+        let songs = db.get_all_songs().unwrap();
+        assert!(songs
+            .iter()
+            .all(|song| song.composer.as_deref() == Some("Pachelbel")));
+    }
+
+    #[test]
+    fn test_delete_composer_clears_matching_songs() {
+        let db = make_db();
+        db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
+        db.insert_song(&make_song("s2", "Ave Maria"), &[]).unwrap();
+
+        db.delete_composer("Bach").unwrap();
+
+        let songs = db.get_all_songs().unwrap();
+        assert!(songs.iter().all(|song| song.composer.is_none()));
+    }
+
+    #[test]
+    fn test_update_arranger_renames_matching_songs() {
+        let db = make_db();
+
+        let mut song1 = make_song("s1", "Canon");
+        song1.arranger = Some("Ana".to_string());
+        let mut song2 = make_song("s2", "Ave Maria");
+        song2.arranger = Some("Ana".to_string());
+
+        db.insert_song(&song1, &[]).unwrap();
+        db.insert_song(&song2, &[]).unwrap();
+
+        db.update_arranger("Ana", "Bruno").unwrap();
+
+        let songs = db.get_all_songs().unwrap();
+        assert!(songs
+            .iter()
+            .all(|song| song.arranger.as_deref() == Some("Bruno")));
+    }
+
+    #[test]
+    fn test_delete_arranger_clears_matching_songs() {
+        let db = make_db();
+
+        let mut song1 = make_song("s1", "Canon");
+        song1.arranger = Some("Ana".to_string());
+        let mut song2 = make_song("s2", "Ave Maria");
+        song2.arranger = Some("Ana".to_string());
+
+        db.insert_song(&song1, &[]).unwrap();
+        db.insert_song(&song2, &[]).unwrap();
+
+        db.delete_arranger("Ana").unwrap();
+
+        let songs = db.get_all_songs().unwrap();
+        assert!(songs.iter().all(|song| song.arranger.is_none()));
+    }
+
+    #[test]
     fn test_songs_by_category() {
         let db = make_db();
 

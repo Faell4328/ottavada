@@ -117,6 +117,15 @@ fn delete_song_with_files_core(
     delete_song_core(db, store, song_id)
 }
 
+fn normalize_author_change_name(name: &str, fallback_message: &str) -> Result<String, AppError> {
+    let trimmed_name = name.trim();
+    if trimmed_name.is_empty() {
+        return Err(AppError::Generic(fallback_message.to_string()));
+    }
+
+    Ok(trimmed_name.to_string())
+}
+
 #[tauri::command]
 pub fn delete_file_path(store: State<'_, SystemStore>, file_path: String) -> Result<(), AppError> {
     require_server_settings(&store)?;
@@ -202,6 +211,62 @@ pub fn toggle_favorite(
             Err(e)
         }
     }
+}
+
+#[tauri::command]
+pub fn update_composer(
+    db: State<'_, Database>,
+    store: State<'_, SystemStore>,
+    old_name: String,
+    new_name: String,
+) -> Result<usize, AppError> {
+    require_server_settings(&store)?;
+
+    let normalized_new_name = normalize_author_change_name(
+        &new_name,
+        "Nome do compositor não pode estar vazio",
+    )?;
+
+    db.update_composer(&old_name, &normalized_new_name)
+}
+
+#[tauri::command]
+pub fn delete_composer(
+    db: State<'_, Database>,
+    store: State<'_, SystemStore>,
+    old_name: String,
+) -> Result<usize, AppError> {
+    require_server_settings(&store)?;
+
+    db.delete_composer(&old_name)
+}
+
+#[tauri::command]
+pub fn update_arranger(
+    db: State<'_, Database>,
+    store: State<'_, SystemStore>,
+    old_name: String,
+    new_name: String,
+) -> Result<usize, AppError> {
+    require_server_settings(&store)?;
+
+    let normalized_new_name = normalize_author_change_name(
+        &new_name,
+        "Nome do arranjador não pode estar vazio",
+    )?;
+
+    db.update_arranger(&old_name, &normalized_new_name)
+}
+
+#[tauri::command]
+pub fn delete_arranger(
+    db: State<'_, Database>,
+    store: State<'_, SystemStore>,
+    old_name: String,
+) -> Result<usize, AppError> {
+    require_server_settings(&store)?;
+
+    db.delete_arranger(&old_name)
 }
 
 #[tauri::command]

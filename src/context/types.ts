@@ -29,6 +29,8 @@ export interface AppContextValue {
   createCategory: (name: string) => Promise<void>;
   updateCategory: (categoryId: string, name: string) => Promise<void>;
   deleteCategory: (categoryId: string) => Promise<void>;
+  updateAuthor: (kind: "composer" | "arranger", oldName: string, newName: string) => Promise<void>;
+  deleteAuthor: (kind: "composer" | "arranger", oldName: string) => Promise<void>;
   saveSettings: (settings: AppSettings) => Promise<void>;
   updateSong: (
     songId: string,

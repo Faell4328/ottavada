@@ -1478,6 +1478,77 @@ impl Database {
         Ok(())
     }
 
+    fn update_song_author_field(
+        &self,
+        field_name: &str,
+        old_name: &str,
+        new_name: Option<&str>,
+    ) -> Result<usize, AppError> {
+        let conn = self.conn.lock().unwrap();
+        let trimmed_old_name = old_name.trim();
+
+        if trimmed_old_name.is_empty() {
+            return Err(AppError::Generic(
+                "Nome não pode estar vazio".to_string(),
+            ));
+        }
+
+        let normalized_new_name = new_name.map(str::trim).filter(|value| !value.is_empty());
+
+        if let Some(next_name) = normalized_new_name {
+            if next_name.eq_ignore_ascii_case(trimmed_old_name) {
+                return Ok(0);
+            }
+        }
+
+        let select_sql = format!(
+            "SELECT id FROM songs WHERE {} IS NOT NULL AND LOWER(TRIM({})) = LOWER(?1)",
+            field_name, field_name
+        );
+        let mut stmt = conn.prepare(&select_sql)?;
+        let song_ids: Vec<String> = stmt
+            .query_map(params![trimmed_old_name], |row| row.get(0))?
+            .filter_map(|row| row.ok())
+            .collect();
+
+        if song_ids.is_empty() {
+            return Ok(0);
+        }
+
+        let update_sql = format!("UPDATE songs SET {} = ?1 WHERE id = ?2", field_name);
+        let change_value = normalized_new_name.map(str::to_string);
+
+        for song_id in &song_ids {
+            conn.execute(&update_sql, params![change_value, song_id])?;
+            Self::insert_changed_field(
+                &conn,
+                "update",
+                "songs",
+                song_id,
+                Some(field_name),
+                change_value.clone(),
+            )?;
+        }
+
+        Ok(song_ids.len())
+    }
+
+    pub fn update_composer(&self, old_name: &str, new_name: &str) -> Result<usize, AppError> {
+        self.update_song_author_field("composer", old_name, Some(new_name))
+    }
+
+    pub fn delete_composer(&self, old_name: &str) -> Result<usize, AppError> {
+        self.update_song_author_field("composer", old_name, None)
+    }
+
+    pub fn update_arranger(&self, old_name: &str, new_name: &str) -> Result<usize, AppError> {
+        self.update_song_author_field("arranger", old_name, Some(new_name))
+    }
+
+    pub fn delete_arranger(&self, old_name: &str) -> Result<usize, AppError> {
+        self.update_song_author_field("arranger", old_name, None)
+    }
+
     pub fn get_all_categories(&self) -> Result<Vec<Category>, AppError> {
         let conn = self.conn.lock().unwrap();
         Self::ensure_default_category_with_conn(&conn)?;

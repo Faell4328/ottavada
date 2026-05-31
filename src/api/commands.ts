@@ -123,6 +123,22 @@ export async function deleteFilePath(filePath: string): Promise<void> {
   return invoke("delete_file_path", { filePath });
 }
 
+export async function updateComposer(oldName: string, newName: string): Promise<number> {
+  return invoke("update_composer", { oldName, newName });
+}
+
+export async function deleteComposer(oldName: string): Promise<number> {
+  return invoke("delete_composer", { oldName });
+}
+
+export async function updateArranger(oldName: string, newName: string): Promise<number> {
+  return invoke("update_arranger", { oldName, newName });
+}
+
+export async function deleteArranger(oldName: string): Promise<number> {
+  return invoke("delete_arranger", { oldName });
+}
+
 export async function updateSong(
   songId: string,
   name: string,

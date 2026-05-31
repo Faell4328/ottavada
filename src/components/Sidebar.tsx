@@ -15,15 +15,20 @@ import { isSidebarViewActive } from "../utils/sidebarView";
 import { useConfirmation } from "../hooks/useConfirmation";
 import { ConfirmationModal } from "./ui/ConfirmationModal";
 import { EditCategoryModal } from "./EditCategoryModal";
+import { EditAuthorModal } from "./EditAuthorModal";
 import toast from "react-hot-toast";
 
 export default function Sidebar() {
-  const { state, setSidebarView, setAuthorFilters, createCategory, updateCategory, deleteCategory } =
+  const { state, setSidebarView, setAuthorFilters, createCategory, updateCategory, deleteCategory, updateAuthor, deleteAuthor } =
     useAppState();
   const [newCategoryName, setNewCategoryName] = useState("");
   const [showNewCategory, setShowNewCategory] = useState(false);
   const [isCreatingCategory, setIsCreatingCategory] = useState(false);
   const [categoryToEdit, setCategoryToEdit] = useState<{ id: string; name: string } | null>(null);
+  const [authorToEdit, setAuthorToEdit] = useState<{
+    kind: "composer" | "arranger";
+    name: string;
+  } | null>(null);
   const confirmation = useConfirmation();
 
   const currentView = state.sidebarView;
@@ -109,6 +114,13 @@ export default function Sidebar() {
 
   const canEditCategory = (categoryId: string, categoryName: string) =>
     !isCategoryLocked && categoryId !== "default-category" && categoryName.toLowerCase() !== "sem categoria";
+
+  const canEditAuthor = (kind: "composer" | "arranger", authorName: string) =>
+    !isCategoryLocked && authorName.toLowerCase() !== `sem ${kind}`;
+
+  const openEditAuthor = (kind: "composer" | "arranger", name: string) => {
+    setAuthorToEdit({ kind, name });
+  };
 
   return (
     <aside className="flex w-60 flex-col gap-2.5 border-r border-white/20 bg-linear-to-b from-[rgba(35,52,72,0.94)] to-[rgba(55,78,106,0.9)] px-3 py-3 text-[#dce7f5]">
@@ -234,12 +246,41 @@ export default function Sidebar() {
             onClick={() => setAuthorFilters({ ...state.authorFilters, composer: "none" })}
           />
           {composerOptions.map((composer) => (
-            <SidebarItem
-              key={composer}
-              label={composer}
-              active={state.authorFilters.composer === composer}
-              onClick={() => setAuthorFilters({ ...state.authorFilters, composer })}
-            />
+            <div key={composer} className="group flex items-center">
+              <SidebarItem
+                label={composer}
+                active={state.authorFilters.composer === composer}
+                onClick={() => setAuthorFilters({ ...state.authorFilters, composer })}
+                className="flex-1"
+              />
+              {canEditAuthor("composer", composer) && (
+                <button
+                  type="button"
+                  onClick={() => openEditAuthor("composer", composer)}
+                  title="Editar compositor"
+                  className="opacity-0 group-hover:opacity-100 flex h-5 w-5 items-center justify-center rounded bg-transparent hover:bg-white/10 transition-all cursor-pointer border-0 text-white/70"
+                >
+                  <Pencil className="h-3 w-3" />
+                </button>
+              )}
+              {canEditAuthor("composer", composer) && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    confirmation.requestConfirmation(
+                      "Excluir compositor?",
+                      `O compositor \"${composer}\" será removido de todas as músicas que o utilizam.`,
+                      async () => {
+                        await deleteAuthor("composer", composer);
+                      }
+                    )
+                  }
+                  className="opacity-0 group-hover:opacity-100 flex h-5 w-5 items-center justify-center rounded bg-transparent hover:bg-red-500/20 transition-all cursor-pointer border-0 text-red-300/70"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              )}
+            </div>
           ))}
         </nav>
 
@@ -256,12 +297,41 @@ export default function Sidebar() {
             onClick={() => setAuthorFilters({ ...state.authorFilters, arranger: "none" })}
           />
           {arrangerOptions.map((arranger) => (
-            <SidebarItem
-              key={arranger}
-              label={arranger}
-              active={state.authorFilters.arranger === arranger}
-              onClick={() => setAuthorFilters({ ...state.authorFilters, arranger })}
-            />
+            <div key={arranger} className="group flex items-center">
+              <SidebarItem
+                label={arranger}
+                active={state.authorFilters.arranger === arranger}
+                onClick={() => setAuthorFilters({ ...state.authorFilters, arranger })}
+                className="flex-1"
+              />
+              {canEditAuthor("arranger", arranger) && (
+                <button
+                  type="button"
+                  onClick={() => openEditAuthor("arranger", arranger)}
+                  title="Editar arranjador"
+                  className="opacity-0 group-hover:opacity-100 flex h-5 w-5 items-center justify-center rounded bg-transparent hover:bg-white/10 transition-all cursor-pointer border-0 text-white/70"
+                >
+                  <Pencil className="h-3 w-3" />
+                </button>
+              )}
+              {canEditAuthor("arranger", arranger) && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    confirmation.requestConfirmation(
+                      "Excluir arranjador?",
+                      `O arranjador \"${arranger}\" será removido de todas as músicas que o utilizam.`,
+                      async () => {
+                        await deleteAuthor("arranger", arranger);
+                      }
+                    )
+                  }
+                  className="opacity-0 group-hover:opacity-100 flex h-5 w-5 items-center justify-center rounded bg-transparent hover:bg-red-500/20 transition-all cursor-pointer border-0 text-red-300/70"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              )}
+            </div>
           ))}
         </nav>
       </div>
@@ -282,6 +352,15 @@ export default function Sidebar() {
         onSave={async (categoryId, name) => {
           await updateCategory(categoryId, name);
           setCategoryToEdit(null);
+        }}
+      />
+      <EditAuthorModal
+        isOpen={authorToEdit !== null}
+        author={authorToEdit}
+        onClose={() => setAuthorToEdit(null)}
+        onSave={async (kind, oldName, newName) => {
+          await updateAuthor(kind, oldName, newName);
+          setAuthorToEdit(null);
         }}
       />
     </aside>

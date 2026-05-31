@@ -5,6 +5,7 @@ import * as api from "../api/commands";
 import type { AppSettings, ScoreListItem, SidebarView, SongListItem } from "../types";
 import type { Action, State } from "./reducer";
 import type { AuthorFilterValue } from "./types";
+import { normalizeAuthorName } from "../utils/songSearch";
 
 interface UseAppCrudActionsParams {
   state: State;
@@ -167,6 +168,109 @@ export function useAppCrudActions({
     state.rcloneProgress.direction,
     state.settings?.computer_type,
     state.sidebarView,
+  ]);
+
+  const updateAuthor = useCallback(async (
+    kind: "composer" | "arranger",
+    oldName: string,
+    newName: string
+  ) => {
+    if (
+      state.settings?.computer_type === "Client" ||
+      state.isScanningFiles ||
+      state.rcloneProgress.direction !== null ||
+      state.operationStatus.stepCurrent !== null
+    ) {
+      toast.error(
+        state.settings?.computer_type === "Client"
+          ? "Esse recurso só está disponível no computador principal."
+          : "Espere a sincronização terminar para continuar."
+      );
+      return;
+    }
+
+    try {
+      if (kind === "composer") {
+        await api.updateComposer(oldName, newName);
+      } else {
+        await api.updateArranger(oldName, newName);
+      }
+
+      if (normalizeAuthorName(state.authorFilters[kind]) === normalizeAuthorName(oldName)) {
+        dispatch({
+          type: "SET_AUTHOR_FILTERS",
+          payload: {
+            ...state.authorFilters,
+            [kind]: newName.trim(),
+          },
+        });
+      }
+
+      await loadSongs();
+    } catch (err) {
+      console.error(`Failed to update ${kind}:`, err);
+      toast.error("Não foi possível salvar o nome.");
+      throw err;
+    }
+  }, [
+    dispatch,
+    loadSongs,
+    state.authorFilters,
+    state.isScanningFiles,
+    state.operationStatus.stepCurrent,
+    state.rcloneProgress.direction,
+    state.settings?.computer_type,
+  ]);
+
+  const deleteAuthor = useCallback(async (
+    kind: "composer" | "arranger",
+    oldName: string
+  ) => {
+    if (
+      state.settings?.computer_type === "Client" ||
+      state.isScanningFiles ||
+      state.rcloneProgress.direction !== null ||
+      state.operationStatus.stepCurrent !== null
+    ) {
+      toast.error(
+        state.settings?.computer_type === "Client"
+          ? "Esse recurso só está disponível no computador principal."
+          : "Espere a sincronização terminar para continuar."
+      );
+      return;
+    }
+
+    try {
+      if (kind === "composer") {
+        await api.deleteComposer(oldName);
+      } else {
+        await api.deleteArranger(oldName);
+      }
+
+      if (normalizeAuthorName(state.authorFilters[kind]) === normalizeAuthorName(oldName)) {
+        dispatch({
+          type: "SET_AUTHOR_FILTERS",
+          payload: {
+            ...state.authorFilters,
+            [kind]: "all",
+          },
+        });
+      }
+
+      await loadSongs();
+    } catch (err) {
+      console.error(`Failed to delete ${kind}:`, err);
+      toast.error("Não foi possível remover o nome.");
+      throw err;
+    }
+  }, [
+    dispatch,
+    loadSongs,
+    state.authorFilters,
+    state.isScanningFiles,
+    state.operationStatus.stepCurrent,
+    state.rcloneProgress.direction,
+    state.settings?.computer_type,
   ]);
 
   const updateSong = useCallback(async (
@@ -340,8 +444,9 @@ export function useAppCrudActions({
     toggleFavorite,
     createCategory,
     updateCategory,
-    updateCategory,
     deleteCategory,
+    updateAuthor,
+    deleteAuthor,
     updateSong,
     updateScore,
     updateScoreStatus,
