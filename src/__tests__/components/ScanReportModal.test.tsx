@@ -95,7 +95,7 @@ describe("ScanReportModal", () => {
     expect(screen.queryAllByText((_, element) => element?.textContent?.includes("Sem Instrumento") ?? false).length).toBeGreaterThan(0);
     expect(screen.queryAllByText((_, element) => element?.textContent?.includes("03 VEZES SANTO.musx") ?? false).length).toBe(0);
     expect(screen.queryAllByText((_, element) => element?.textContent?.includes("VEZES SANTO.MUS foi adicionada") ?? false).length).toBe(0);
-    expect(screen.getAllByText((_, element) => element?.textContent?.includes("A partitura /music/Eis o Nosso Deus - Flauta.musx saiu de rascunho e voltou para main na música Eis o Nosso Deus") ?? false).length).toBeGreaterThan(0);
+    expect(screen.getAllByText((_, element) => element?.textContent?.includes("A partitura /music/Eis o Nosso Deus - Flauta.musx saiu de rascunho e voltou para principal na música Eis o Nosso Deus") ?? false).length).toBeGreaterThan(0);
     expect(screen.getAllByText((_, element) => element?.textContent?.includes("A partitura /music/Eis o Nosso Deus - Flute2.musx saiu de ignorada e foi para rascunho na música Eis o Nosso Deus") ?? false).length).toBeGreaterThan(0);
     expect(screen.queryByText("Arquivos recuperados")).not.toBeInTheDocument();
     expect(screen.queryByText("Arquivos com erro")).not.toBeInTheDocument();

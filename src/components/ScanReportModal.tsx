@@ -893,7 +893,7 @@ function renderCustomScoreText(text: string): ReactNode {
       }
 
       if (value === "main") {
-        return "main";
+        return "principal";
       }
 
       return value;
@@ -903,7 +903,7 @@ function renderCustomScoreText(text: string): ReactNode {
       if (nextStatus === "main") {
         return (
           <>
-            A partitura <strong>{scoreName}</strong> saiu de {labelForStatus(previousStatus)} e voltou para main.
+            A partitura <strong>{scoreName}</strong> saiu de {labelForStatus(previousStatus)} e voltou para principal.
           </>
         );
       }
@@ -917,7 +917,7 @@ function renderCustomScoreText(text: string): ReactNode {
 
     return (
       <>
-        A partitura <strong>{scoreName}</strong> saiu de {labelForStatus(previousStatus)} e {nextStatus === "main" ? "voltou para main" : `foi para ${labelForStatus(nextStatus)}`} na música <strong>{songName}</strong>.
+        A partitura <strong>{scoreName}</strong> saiu de {labelForStatus(previousStatus)} e {nextStatus === "main" ? "voltou para principal" : `foi para ${labelForStatus(nextStatus)}`} na música <strong>{songName}</strong>.
       </>
     );
   }
