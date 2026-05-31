@@ -41,7 +41,7 @@ jobs:
       shell: cmd
       run: |
         cd C:\gitea\Score-Maestro
-        rem src-tauri\rclone\rclone64.exe src-tauri\rclone\rclone.exe 
+        rem src-tauri\rclone\rclonex64.exe src-tauri\rclone\rclone.exe 
       
     - name: Buildando o projeto em x64
       shell: cmd
@@ -53,7 +53,7 @@ jobs:
       shell: cmd
       run: |
         cd C:\gitea\Score-Maestro
-        rem src-tauri\rclone\rclone32.exe src-tauri\rclone\rclone.exe 
+        rem src-tauri\rclone\rclonex32.exe src-tauri\rclone\rclone.exe 
 
     - name: Buildando o projeto em x32
       shell: cmd
@@ -65,7 +65,7 @@ jobs:
       shell: cmd
       run: |
         cd C:\gitea\Score-Maestro
-        rem src-tauri\rclone\rclone.exe src-tauri\rclone\rclone32.exe 
+        rem src-tauri\rclone\rclone.exe src-tauri\rclone\rclonex32.exe 
 
     - name: Upload
       uses: actions/upload-artifact@v3
