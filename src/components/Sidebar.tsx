@@ -4,6 +4,7 @@ import {
   Heart,
   FileEdit,
   FolderOpen,
+  Pencil,
   Plus,
   Trash2,
 } from "lucide-react";
@@ -13,14 +14,16 @@ import { isClientComputer } from "../utils/computer";
 import { isSidebarViewActive } from "../utils/sidebarView";
 import { useConfirmation } from "../hooks/useConfirmation";
 import { ConfirmationModal } from "./ui/ConfirmationModal";
+import { EditCategoryModal } from "./EditCategoryModal";
 import toast from "react-hot-toast";
 
 export default function Sidebar() {
-  const { state, setSidebarView, setAuthorFilters, createCategory, deleteCategory } =
+  const { state, setSidebarView, setAuthorFilters, createCategory, updateCategory, deleteCategory } =
     useAppState();
   const [newCategoryName, setNewCategoryName] = useState("");
   const [showNewCategory, setShowNewCategory] = useState(false);
   const [isCreatingCategory, setIsCreatingCategory] = useState(false);
+  const [categoryToEdit, setCategoryToEdit] = useState<{ id: string; name: string } | null>(null);
   const confirmation = useConfirmation();
 
   const currentView = state.sidebarView;
@@ -104,6 +107,9 @@ export default function Sidebar() {
     await handleCreateCategory();
   }
 
+  const canEditCategory = (categoryId: string, categoryName: string) =>
+    !isCategoryLocked && categoryId !== "default-category" && categoryName.toLowerCase() !== "sem categoria";
+
   return (
     <aside className="flex w-60 flex-col gap-2.5 border-r border-white/20 bg-linear-to-b from-[rgba(35,52,72,0.94)] to-[rgba(55,78,106,0.9)] px-3 py-3 text-[#dce7f5]">
       {/* Biblioteca */}
@@ -177,7 +183,17 @@ export default function Sidebar() {
                 }
                 className="flex-1"
               />
-              {!isCategoryLocked && cat.id !== "default-category" && cat.name.toLowerCase() !== "sem categoria" && (
+              {canEditCategory(cat.id, cat.name) && (
+                <button
+                  type="button"
+                  onClick={() => setCategoryToEdit({ id: cat.id, name: cat.name })}
+                  title="Editar categoria"
+                  className="opacity-0 group-hover:opacity-100 flex h-5 w-5 items-center justify-center rounded bg-transparent hover:bg-white/10 transition-all cursor-pointer border-0 text-white/70"
+                >
+                  <Pencil className="h-3 w-3" />
+                </button>
+              )}
+              {canEditCategory(cat.id, cat.name) && (
                 <button
                   type="button"
                   onClick={() =>
@@ -258,6 +274,15 @@ export default function Sidebar() {
           void confirmation.confirm();
         }}
         onCancel={confirmation.cancel}
+      />
+      <EditCategoryModal
+        isOpen={categoryToEdit !== null}
+        category={categoryToEdit}
+        onClose={() => setCategoryToEdit(null)}
+        onSave={async (categoryId, name) => {
+          await updateCategory(categoryId, name);
+          setCategoryToEdit(null);
+        }}
       />
     </aside>
   );

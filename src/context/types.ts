@@ -27,6 +27,7 @@ export interface AppContextValue {
   setAuthorFilters: (payload: { composer: AuthorFilterValue; arranger: AuthorFilterValue }) => void;
   toggleFavorite: (songId: string) => Promise<void>;
   createCategory: (name: string) => Promise<void>;
+  updateCategory: (categoryId: string, name: string) => Promise<void>;
   deleteCategory: (categoryId: string) => Promise<void>;
   saveSettings: (settings: AppSettings) => Promise<void>;
   updateSong: (

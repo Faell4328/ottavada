@@ -1104,6 +1104,37 @@ mod tests {
     }
 
     #[test]
+    fn test_update_category_renames_category() {
+        let db = make_db();
+        let cat = make_category("c1", "Harpa Cristã");
+        db.insert_category(&cat).unwrap();
+
+        db.update_category("c1", "Coral").unwrap();
+
+        let categories = db.get_all_categories().unwrap();
+        assert!(categories.iter().any(|c| c.id == "c1" && c.name == "Coral"));
+
+        let conn = db.conn.lock().unwrap();
+        let change_count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM changedField WHERE entity = 'categories' AND entityId = ?1 AND field = 'name' AND value = 'Coral'",
+                ["c1"],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(change_count, 1);
+    }
+
+    #[test]
+    fn test_update_default_category_is_rejected() {
+        let db = make_db();
+
+        let result = db.update_category("default-category", "Outra");
+
+        assert!(result.is_err());
+    }
+
+    #[test]
     fn test_songs_by_category() {
         let db = make_db();
 

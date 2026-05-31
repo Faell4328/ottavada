@@ -204,6 +204,10 @@ export async function createCategory(name: string): Promise<Category> {
   return invoke("create_category", { name });
 }
 
+export async function updateCategory(categoryId: string, name: string): Promise<Category> {
+  return invoke("update_category", { categoryId, name });
+}
+
 export async function deleteCategory(categoryId: string): Promise<void> {
   return invoke("delete_category", { categoryId });
 }

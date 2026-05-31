@@ -277,6 +277,7 @@ pub fn run() {
             // Categories
             commands::category_commands::get_categories,
             commands::category_commands::create_category,
+            commands::category_commands::update_category,
             commands::category_commands::delete_category,
             // Settings
             commands::settings_commands::get_settings,

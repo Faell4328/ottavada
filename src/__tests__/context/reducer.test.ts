@@ -283,6 +283,23 @@ describe("AppContext Reducer", () => {
 
   });
 
+  describe("UPDATE_SIDEBAR_CATEGORY_NAME", () => {
+    it("should update the active category label without changing its id", () => {
+      const categoryView = { type: "category" as const, id: "c1", name: "Hinos" };
+      const stateWithCategoryView = {
+        ...initialState,
+        sidebarView: categoryView,
+      };
+
+      const state = reducer(stateWithCategoryView, {
+        type: "UPDATE_SIDEBAR_CATEGORY_NAME",
+        payload: { categoryId: "c1", name: "Coral" },
+      });
+
+      expect(state.sidebarView).toEqual({ type: "category", id: "c1", name: "Coral" });
+    });
+  });
+
   describe("SET_SELECTED_SONG", () => {
     it("should reset selectedScore when selecting a new song", () => {
       const stateWithScore = {

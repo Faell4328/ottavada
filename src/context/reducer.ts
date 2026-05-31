@@ -100,6 +100,7 @@ export type Action =
   | { type: "SET_SELECTED_SCORE"; payload: ScoreListItem | null }
   | { type: "SET_SEARCH_QUERY"; payload: string }
   | { type: "SET_AUTHOR_FILTERS"; payload: { composer: string; arranger: string } }
+  | { type: "UPDATE_SIDEBAR_CATEGORY_NAME"; payload: { categoryId: string; name: string } }
   | { type: "SET_FIRST_RUN"; payload: boolean }
   | { type: "SET_LOADING"; payload: boolean }
   | { type: "TOGGLE_FAVORITE"; payload: { songId: string; isFavorite: boolean } }
@@ -181,6 +182,16 @@ export function reducer(state: State, action: Action): State {
       return { ...state, searchQuery: action.payload };
     case "SET_AUTHOR_FILTERS":
       return { ...state, authorFilters: action.payload };
+    case "UPDATE_SIDEBAR_CATEGORY_NAME":
+      return {
+        ...state,
+        sidebarView:
+          typeof state.sidebarView === "object" &&
+          state.sidebarView.type === "category" &&
+          state.sidebarView.id === action.payload.categoryId
+            ? { ...state.sidebarView, name: action.payload.name }
+            : state.sidebarView,
+      };
     case "SET_FIRST_RUN":
       return { ...state, isFirstRun: action.payload };
     case "SET_LOADING":

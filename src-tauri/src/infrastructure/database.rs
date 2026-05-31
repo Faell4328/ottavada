@@ -1412,6 +1412,72 @@ impl Database {
         Ok(())
     }
 
+    pub fn update_category(
+        &self,
+        category_id: &str,
+        name: &str,
+    ) -> Result<(), AppError> {
+        let conn = self.conn.lock().unwrap();
+
+        if category_id == DEFAULT_CATEGORY_ID {
+            return Err(AppError::Generic(
+                "A categoria 'Sem categoria' nao pode ser editada".to_string(),
+            ));
+        }
+
+        let trimmed_name = name.trim();
+        if trimmed_name.is_empty() {
+            return Err(AppError::Generic(
+                "Nome da categoria não pode estar vazio".to_string(),
+            ));
+        }
+
+        let current_name: String = conn
+            .query_row(
+                "SELECT name FROM categories WHERE id = ?1",
+                params![category_id],
+                |row| row.get(0),
+            )
+            .map_err(|e| match e {
+                rusqlite::Error::QueryReturnedNoRows => {
+                    AppError::Generic("Categoria não encontrada".to_string())
+                }
+                other => AppError::Database(other),
+            })?;
+
+        if current_name == trimmed_name {
+            return Ok(());
+        }
+
+        let duplicate_exists: Result<String, rusqlite::Error> = conn.query_row(
+            "SELECT id FROM categories WHERE name = ?1 AND id <> ?2",
+            params![trimmed_name, category_id],
+            |row| row.get(0),
+        );
+
+        if duplicate_exists.is_ok() {
+            return Err(AppError::Generic(
+                "Já existe uma categoria com esse nome".to_string(),
+            ));
+        }
+
+        conn.execute(
+            "UPDATE categories SET name = ?1 WHERE id = ?2",
+            params![trimmed_name, category_id],
+        )?;
+
+        Self::insert_changed_field(
+            &conn,
+            "update",
+            "categories",
+            category_id,
+            Some("name"),
+            Some(trimmed_name.to_string()),
+        )?;
+
+        Ok(())
+    }
+
     pub fn get_all_categories(&self) -> Result<Vec<Category>, AppError> {
         let conn = self.conn.lock().unwrap();
         Self::ensure_default_category_with_conn(&conn)?;

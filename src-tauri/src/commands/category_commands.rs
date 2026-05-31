@@ -57,6 +57,42 @@ pub fn create_category(
 }
 
 #[tauri::command]
+pub fn update_category(
+    db: State<'_, Database>,
+    store: State<'_, SystemStore>,
+    category_id: String,
+    name: String,
+) -> Result<Category, AppError> {
+    info!("Atualizando categoria: {}", category_id);
+
+    let settings = require_server_settings(&store)?;
+    let trimmed_name = name.trim();
+
+    if trimmed_name.is_empty() {
+        return Err(AppError::Generic(
+            "Nome da categoria não pode estar vazio".into(),
+        ));
+    }
+
+    let updated_by = settings.computer_id.clone();
+
+    db.update_category(&category_id, trimmed_name)
+        .map(|_| {
+            info!("Categoria atualizada com sucesso: {}", category_id);
+            Category {
+                id: category_id,
+                name: trimmed_name.to_string(),
+                updated_at: Local::now().naive_local(),
+                updated_by,
+            }
+        })
+        .map_err(|e| {
+            error!("Erro ao atualizar categoria: {:?}", e);
+            e
+        })
+}
+
+#[tauri::command]
 pub fn delete_category(
     db: State<'_, Database>,
     store: State<'_, SystemStore>,

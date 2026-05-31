@@ -86,6 +86,50 @@ export function useAppCrudActions({
     state.settings?.computer_type,
   ]);
 
+  const updateCategory = useCallback(async (categoryId: string, name: string) => {
+    if (
+      state.settings?.computer_type === "Client" ||
+      state.isScanningFiles ||
+      state.rcloneProgress.direction !== null ||
+      state.operationStatus.stepCurrent !== null
+    ) {
+      toast.error(
+        state.settings?.computer_type === "Client"
+          ? "Esse recurso só está disponível no computador principal."
+          : "Espere a sincronização terminar para continuar."
+      );
+      return;
+    }
+
+    try {
+      await api.updateCategory(categoryId, name);
+      await loadCategories();
+
+      if (
+        typeof state.sidebarView === "object" &&
+        state.sidebarView.type === "category" &&
+        state.sidebarView.id === categoryId
+      ) {
+        dispatch({
+          type: "UPDATE_SIDEBAR_CATEGORY_NAME",
+          payload: { categoryId, name: name.trim() },
+        });
+      }
+    } catch (err) {
+      console.error("Failed to update category:", err);
+      toast.error("Não foi possível salvar a categoria.");
+      throw err;
+    }
+  }, [
+    dispatch,
+    loadCategories,
+    state.isScanningFiles,
+    state.operationStatus.stepCurrent,
+    state.rcloneProgress.direction,
+    state.settings?.computer_type,
+    state.sidebarView,
+  ]);
+
   const deleteCategory = useCallback(async (categoryId: string) => {
     if (
       state.settings?.computer_type === "Client" ||
@@ -295,6 +339,8 @@ export function useAppCrudActions({
     setAuthorFilters,
     toggleFavorite,
     createCategory,
+    updateCategory,
+    updateCategory,
     deleteCategory,
     updateSong,
     updateScore,
