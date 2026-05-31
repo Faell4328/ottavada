@@ -36,6 +36,12 @@ jobs:
         git checkout .
         git pull
         rmdir /s /q src-tauri\target\x86_64-pc-windows-msvc\release\bundle\ || exit /b 0
+
+    - name: Mudando o nome do rclone 64
+      shell: cmd
+      run: |
+        cd C:\gitea\Score-Maestro
+        rem src-tauri\rclone\rclone64.exe src-tauri\rclone\rclone.exe 
       
     - name: Buildando o projeto em x64
       shell: cmd
@@ -43,18 +49,23 @@ jobs:
         cd C:\gitea\Score-Maestro
         npm run tauri:build:win:x64
 
-    # - name: Mudando o nome do rclone
-    #   shell: cmd
-    #   run: |
-    #     cd C:\gitea\Score-Maestro
-    #     rem src-tauri\rclone\rclone.exe src-tauri\rclone\rclone64.exe 
-    #     rem src-tauri\rclone\rclone32.exe src-tauri\rclone\rclone.exe 
+    - name: Mudando o nome do rclone 32
+      shell: cmd
+      run: |
+        cd C:\gitea\Score-Maestro
+        rem src-tauri\rclone\rclone32.exe src-tauri\rclone\rclone.exe 
 
-    # - name: Buildando o projeto em x32
-    #   shell: cmd
-    #   run: |
-    #     cd C:\gitea\Score-Maestro
-    #     npm run tauri:build:win:x32
+    - name: Buildando o projeto em x32
+      shell: cmd
+      run: |
+        cd C:\gitea\Score-Maestro
+        npm run tauri:build:win:x32
+
+    - name: Voltando nome rclone
+      shell: cmd
+      run: |
+        cd C:\gitea\Score-Maestro
+        rem src-tauri\rclone\rclone.exe src-tauri\rclone\rclone32.exe 
 
     - name: Upload
       uses: actions/upload-artifact@v3

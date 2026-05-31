@@ -462,6 +462,9 @@ export function AddFilesModal({
                       const fileName = getFileName(file.path) || file.name;
                       const directoryPath = getDirectoryPath(file.path);
                       const isBusy = openingScorePath === file.path || openingLocationPath === file.path;
+                      const isIgnored = ignoredFileIndices.has(idx);
+                      const conflict = isIgnored ? null : duplicateMap.get(idx) ?? null;
+                      const isLocked = conflict !== null;
 
                       return (
                         <div key={idx} className={index > 0 ? "border-t border-amber-200 pt-3" : ""}>
@@ -529,7 +532,7 @@ export function AddFilesModal({
                           <TextInput
                             value={instrumentNames[idx] || ""}
                             onChange={(val) => {
-                              if (!item.isIgnored) {
+                              if (!isIgnored) {
                                 updateInstrumentName(idx, val);
                               }
                             }}
@@ -538,8 +541,8 @@ export function AddFilesModal({
                             }}
                             placeholder="Nome do instrumento"
                             autoFocus={visibleFiles[0]?.idx === idx}
-                            disabled={item.isIgnored}
-                            readOnly={item.isLocked}
+                            disabled={isIgnored}
+                            readOnly={isLocked}
                           />
                         </div>
                       );
