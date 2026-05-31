@@ -103,10 +103,11 @@ fn record_telemetry_failure(db: &Database, computer_id: &str, now: i64, error: &
 pub fn send_telemetry_once(db: &Database, store: &SystemStore) -> Result<(), AppError> {
     let settings = store.get_app_settings()?;
     let now = Utc::now().timestamp();
-    db.prune_telemetry_errors_older_than_week(now).map_err(|error| {
-        record_telemetry_failure(db, &settings.computer_id, now, &error);
-        error
-    })?;
+    db.prune_telemetry_errors_older_than_week(now)
+        .map_err(|error| {
+            record_telemetry_failure(db, &settings.computer_id, now, &error);
+            error
+        })?;
 
     let endpoint = telemetry_endpoint().ok_or_else(|| {
         let error = AppError::Generic("TELEMETRY_ENDPOINT não configurado".to_string());
@@ -130,7 +131,11 @@ pub fn send_telemetry_once(db: &Database, store: &SystemStore) -> Result<(), App
     let payload = build_payload(&settings, counts, errors);
 
     let client = reqwest::blocking::Client::new();
-    let response = client.post(endpoint).header("Token", token).json(&payload).send();
+    let response = client
+        .post(endpoint)
+        .header("Token", token)
+        .json(&payload)
+        .send();
 
     let response = match response {
         Ok(response) => response,
@@ -156,14 +161,12 @@ pub fn send_telemetry_once(db: &Database, store: &SystemStore) -> Result<(), App
 }
 
 pub fn spawn_telemetry_worker(db: Database, store_path: std::path::PathBuf) {
-    std::thread::spawn(move || {
-        loop {
-            std::thread::sleep(Duration::from_secs(TELEMETRY_INTERVAL_SECONDS));
-            let store = SystemStore::new(store_path.clone());
+    std::thread::spawn(move || loop {
+        std::thread::sleep(Duration::from_secs(TELEMETRY_INTERVAL_SECONDS));
+        let store = SystemStore::new(store_path.clone());
 
-            if let Err(error) = send_telemetry_once(&db, &store) {
-                error!("Falha ao enviar telemetria: {}", error);
-            }
+        if let Err(error) = send_telemetry_once(&db, &store) {
+            error!("Falha ao enviar telemetria: {}", error);
         }
     });
 }

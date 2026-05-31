@@ -46,7 +46,10 @@ mod tests {
     #[test]
     fn preserves_numbers_that_are_not_prefix() {
         assert_eq!(normalize_score_name("Trumpet 3I"), "Trumpet 3I");
-        assert_eq!(normalize_score_name("Flauta 2 Principal 3"), "Flauta 2 Principal 3");
+        assert_eq!(
+            normalize_score_name("Flauta 2 Principal 3"),
+            "Flauta 2 Principal 3"
+        );
         assert_eq!(normalize_score_name("Sax10"), "Sax10");
     }
 

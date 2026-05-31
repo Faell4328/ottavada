@@ -36,6 +36,7 @@ struct SongBackupRow {
     song_id: String,
     song_name: String,
     last_uploadable_score_modified_at: Option<i64>,
+    last_status_change_at: Option<i64>,
     last_backup_at: Option<i64>,
 }
 
@@ -58,17 +59,20 @@ struct ArchiveJob {
 
 fn should_generate_archive(row: &SongBackupRow, songs_dir: &Path) -> bool {
     let archive_exists = songs_dir.join(format!("{}.tar.zst", row.song_id)).is_file();
+    let last_change_at = row
+        .last_uploadable_score_modified_at
+        .max(row.last_status_change_at);
 
     if !archive_exists {
-        return row.last_uploadable_score_modified_at.is_some();
+        return last_change_at.is_some();
     }
 
-    let Some(last_uploadable_modified_at) = row.last_uploadable_score_modified_at else {
+    let Some(last_change_at) = last_change_at else {
         return false;
     };
 
     row.last_backup_at
-        .map(|last_backup| last_uploadable_modified_at > last_backup)
+        .map(|last_backup| last_change_at > last_backup)
         .unwrap_or(true)
 }
 
@@ -86,11 +90,7 @@ fn upsert_processing_status(db: &Database, song_id: &str) -> Result<(), AppError
     Ok(())
 }
 
-fn update_backup_status(
-    db: &Database,
-    song_id: &str,
-    status: &str,
-) -> Result<(), AppError> {
+fn update_backup_status(db: &Database, song_id: &str, status: &str) -> Result<(), AppError> {
     let conn = db.conn.lock().unwrap();
     conn.execute(
         "UPDATE songsBackup
@@ -107,12 +107,28 @@ fn list_song_backup_rows(db: &Database, songs_dir: &Path) -> Result<Vec<SongBack
         "SELECT
             s.id,
             s.name,
-            MAX(CAST(strftime('%s', sc.file_modified_at) AS INTEGER)) AS last_uploadable_score_modified_at
+            main_scores.last_uploadable_score_modified_at,
+            status_changes.last_status_change_at
          FROM songs s
-         LEFT JOIN scores sc
-            ON s.id = sc.song_id
-           AND sc.status IN ('main')
-         GROUP BY s.id, s.name
+         LEFT JOIN (
+            SELECT
+                song_id,
+                MAX(CAST(strftime('%s', file_modified_at) AS INTEGER)) AS last_uploadable_score_modified_at
+            FROM scores
+            WHERE status IN ('main')
+            GROUP BY song_id
+         ) main_scores ON main_scores.song_id = s.id
+         LEFT JOIN (
+            SELECT
+                sc.song_id AS song_id,
+                MAX(cf.timestamp) AS last_status_change_at
+            FROM scores sc
+            JOIN changedField cf
+              ON cf.entity = 'scores'
+             AND cf.entityId = sc.id
+             AND cf.field = 'status'
+            GROUP BY sc.song_id
+         ) status_changes ON status_changes.song_id = s.id
          ORDER BY s.name",
     )?;
 
@@ -128,6 +144,7 @@ fn list_song_backup_rows(db: &Database, songs_dir: &Path) -> Result<Vec<SongBack
             song_id,
             song_name: row.get(1)?,
             last_uploadable_score_modified_at: row.get(2)?,
+            last_status_change_at: row.get(3)?,
             last_backup_at,
         })
     })?;
@@ -136,7 +153,10 @@ fn list_song_backup_rows(db: &Database, songs_dir: &Path) -> Result<Vec<SongBack
     Ok(rows?)
 }
 
-fn list_scores_for_archive(db: &Database, song_id: &str) -> Result<Vec<ScoreArchiveEntry>, AppError> {
+fn list_scores_for_archive(
+    db: &Database,
+    song_id: &str,
+) -> Result<Vec<ScoreArchiveEntry>, AppError> {
     let conn = db.conn.lock().unwrap();
     let mut stmt = conn.prepare(
         "SELECT id, file_path, file_name, status
@@ -230,7 +250,9 @@ fn copy_single_score(entry: &ScoreArchiveEntry, temp_dir: &Path) -> Result<(), A
 fn has_duplicate_tar_names(entries: &[ScoreArchiveEntry]) -> bool {
     let mut seen = HashSet::new();
 
-    entries.iter().any(|entry| !seen.insert(entry.tar_name.clone()))
+    entries
+        .iter()
+        .any(|entry| !seen.insert(entry.tar_name.clone()))
 }
 
 fn copy_and_rename_scores_parallel(
@@ -259,25 +281,23 @@ fn copy_and_rename_scores_parallel(
             let stop = Arc::clone(&stop);
             let first_error = Arc::clone(&first_error);
 
-            scope.spawn(move || {
-                loop {
-                    if stop.load(Ordering::Relaxed) {
-                        break;
-                    }
+            scope.spawn(move || loop {
+                if stop.load(Ordering::Relaxed) {
+                    break;
+                }
 
-                    let idx = next_index.fetch_add(1, Ordering::Relaxed);
-                    if idx >= entries.len() {
-                        break;
-                    }
+                let idx = next_index.fetch_add(1, Ordering::Relaxed);
+                if idx >= entries.len() {
+                    break;
+                }
 
-                    if let Err(err) = copy_single_score(&entries[idx], temp_dir) {
-                        let mut guard = first_error.lock().unwrap();
-                        if guard.is_none() {
-                            *guard = Some(err.to_string());
-                        }
-                        stop.store(true, Ordering::Relaxed);
-                        break;
+                if let Err(err) = copy_single_score(&entries[idx], temp_dir) {
+                    let mut guard = first_error.lock().unwrap();
+                    if guard.is_none() {
+                        *guard = Some(err.to_string());
                     }
+                    stop.store(true, Ordering::Relaxed);
+                    break;
                 }
             });
         }
@@ -446,11 +466,8 @@ fn generate_archive_with_retry(
             copy_and_rename_scores_parallel(&entries, &song_temp_dir, copy_threads)?;
 
             remove_if_exists(&tmp_file);
-            let size = create_tar_zst_from_temp_dir_with_threads(
-                &song_temp_dir,
-                &tmp_file,
-                zstd_threads,
-            )?;
+            let size =
+                create_tar_zst_from_temp_dir_with_threads(&song_temp_dir, &tmp_file, zstd_threads)?;
 
             if final_file.exists() {
                 fs::remove_file(&final_file)?;
@@ -522,11 +539,7 @@ fn run_archive_jobs_parallel(
             .collect();
     }
 
-    let (tx, rx) = mpsc::channel::<(
-        usize,
-        SongBackupRow,
-        Result<(String, u64), AppError>,
-    )>();
+    let (tx, rx) = mpsc::channel::<(usize, SongBackupRow, Result<(String, u64), AppError>)>();
 
     std::thread::scope(|scope| {
         for worker_idx in 0..workers {
@@ -677,6 +690,33 @@ fn generate_song_archives_with_prepared_versions(
             }
         };
 
+        if entries.is_empty() {
+            let archive_path = songs_dir.join(format!("{}.tar.zst", row.song_id));
+            remove_if_exists(&archive_path);
+
+            if let Err(err) = update_backup_status(db, &row.song_id, "ok") {
+                error!(
+                    "Erro ao atualizar status de backup (clean) para {}: {}",
+                    row.song_id, err
+                );
+            }
+
+            info!(
+                "Arquivo {}.tar.zst removido porque não há partituras main",
+                row.song_id
+            );
+
+            results.push(SongArchiveResult {
+                song_id: row.song_id,
+                song_name: row.song_name,
+                archive_path: None,
+                archive_size: None,
+                generated: false,
+                error: None,
+            });
+            continue;
+        }
+
         jobs.push(ArchiveJob { row, entries });
     }
 
@@ -776,7 +816,12 @@ pub fn generate_song_archives_for_song_ids(
 
     let song_ids_filter = song_ids.iter().cloned().collect::<HashSet<_>>();
 
-    generate_song_archives_with_prepared_versions(db, app_data_dir, cloud_root_dir, Some(&song_ids_filter))
+    generate_song_archives_with_prepared_versions(
+        db,
+        app_data_dir,
+        cloud_root_dir,
+        Some(&song_ids_filter),
+    )
 }
 
 pub fn regenerate_all_song_archives(
@@ -797,15 +842,15 @@ pub fn regenerate_all_song_archives(
 mod tests {
     use std::fs::File;
 
-    use chrono::Local;
     use crate::domain::models::{Score, ScoreStatus, Song};
     use crate::infrastructure::database::Database;
+    use chrono::Local;
     use tempfile::tempdir;
 
     use super::{
         archive_worker_count_for, cleanup_orphan_archives, copy_and_rename_scores_parallel,
-        copy_worker_count_for, generate_song_archives, should_generate_archive, SongBackupRow,
-        ScoreArchiveEntry,
+        copy_worker_count_for, generate_song_archives, should_generate_archive, ScoreArchiveEntry,
+        SongBackupRow,
     };
 
     #[test]
@@ -818,6 +863,7 @@ mod tests {
             song_id: "song-1".to_string(),
             song_name: "Musica".to_string(),
             last_uploadable_score_modified_at: Some(100),
+            last_status_change_at: None,
             last_backup_at: Some(100),
         };
 
@@ -834,6 +880,7 @@ mod tests {
             song_id: "song-2".to_string(),
             song_name: "Musica".to_string(),
             last_uploadable_score_modified_at: Some(100),
+            last_status_change_at: None,
             last_backup_at: Some(100),
         };
 
@@ -892,9 +939,18 @@ mod tests {
 
         copy_and_rename_scores_parallel(&entries, &target_dir, 2).expect("copy scores");
 
-        assert_eq!(std::fs::read(target_dir.join("first.tar")).expect("read first"), b"first");
-        assert_eq!(std::fs::read(target_dir.join("second.tar")).expect("read second"), b"second");
-        assert_eq!(std::fs::read(target_dir.join("third.tar")).expect("read third"), b"third");
+        assert_eq!(
+            std::fs::read(target_dir.join("first.tar")).expect("read first"),
+            b"first"
+        );
+        assert_eq!(
+            std::fs::read(target_dir.join("second.tar")).expect("read second"),
+            b"second"
+        );
+        assert_eq!(
+            std::fs::read(target_dir.join("third.tar")).expect("read third"),
+            b"third"
+        );
     }
 
     #[test]
@@ -907,6 +963,7 @@ mod tests {
             song_id: "song-3".to_string(),
             song_name: "Musica".to_string(),
             last_uploadable_score_modified_at: Some(200),
+            last_status_change_at: None,
             last_backup_at: Some(100),
         };
 
@@ -926,6 +983,7 @@ mod tests {
             song_id: "song-4".to_string(),
             song_name: "Musica".to_string(),
             last_uploadable_score_modified_at: None,
+            last_status_change_at: None,
             last_backup_at: Some(100),
         };
 
@@ -934,6 +992,99 @@ mod tests {
             .expect("create archive placeholder");
 
         assert!(!should_generate_archive(&row, &songs_dir));
+    }
+
+    #[test]
+    fn regenerates_when_score_status_changes_even_without_file_metadata_change() {
+        let temp = tempdir().expect("temp dir");
+        let app_data_dir = temp.path().join("app-data");
+        let cloud_root_dir = temp.path().join("cloud");
+        let db_path = temp.path().join("database.sqlite");
+
+        std::fs::create_dir_all(&app_data_dir).expect("create app data dir");
+        std::fs::create_dir_all(cloud_root_dir.join("songs")).expect("create cloud songs dir");
+
+        let db = Database::new(&db_path).expect("create db");
+
+        let song_dir = temp.path().join("songs").join("song-1");
+        std::fs::create_dir_all(&song_dir).expect("create song dir");
+        let score_file = song_dir.join("score-a.musx");
+        std::fs::write(&score_file, b"score contents").expect("write score file");
+
+        db.insert_song(
+            &Song {
+                id: "song-1".to_string(),
+                name: "Musica".to_string(),
+                composer: None,
+                arranger: None,
+                path: song_dir.to_string_lossy().to_string(),
+                is_favorite: false,
+                status: ScoreStatus::Main,
+                updated_at: Local::now().naive_local(),
+                updated_by: "server-1".to_string(),
+            },
+            &[],
+        )
+        .expect("insert song");
+
+        db.insert_score(&Score {
+            id: "score-1".to_string(),
+            song_id: "song-1".to_string(),
+            name: Some("Violino".to_string()),
+            host_id: "server-1".to_string(),
+            file_path: song_dir.to_string_lossy().to_string(),
+            file_name: "score-a.musx".to_string(),
+            file_size: 14,
+            file_modified_at: Local::now().naive_local(),
+            updated_at: Local::now().naive_local(),
+            status: ScoreStatus::Main,
+            updated_by: "server-1".to_string(),
+        })
+        .expect("insert score");
+
+        let summary = generate_song_archives(&db, &app_data_dir, &cloud_root_dir)
+            .expect("generate initial archive");
+        assert_eq!(summary.generated, 1);
+
+        let archive_path = cloud_root_dir.join("songs").join("song-1.tar.zst");
+        assert!(archive_path.exists());
+
+        db.update_score_status("score-1", ScoreStatus::Ignored, "server-1", None)
+            .expect("mark ignored");
+
+        let summary = generate_song_archives(&db, &app_data_dir, &cloud_root_dir)
+            .expect("remove archive after ignored");
+        assert_eq!(summary.total, 1);
+        assert_eq!(summary.generated, 0);
+        assert!(!archive_path.exists());
+
+        db.update_score_status("score-1", ScoreStatus::Main, "server-1", None)
+            .expect("mark main again");
+
+        let summary = generate_song_archives(&db, &app_data_dir, &cloud_root_dir)
+            .expect("regenerate archive after main");
+        assert_eq!(summary.total, 1);
+        assert_eq!(summary.generated, 1);
+        assert!(archive_path.exists());
+
+        let archive_file = File::open(&archive_path).expect("open archive");
+        let decoder = zstd::stream::read::Decoder::new(archive_file).expect("decoder");
+        let mut archive = tar::Archive::new(decoder);
+        let mut names = Vec::new();
+
+        for entry in archive.entries().expect("entries") {
+            let entry = entry.expect("read entry");
+            let name = entry
+                .path()
+                .expect("path")
+                .file_name()
+                .and_then(|value| value.to_str())
+                .expect("name")
+                .to_string();
+            names.push(name);
+        }
+
+        assert_eq!(names, vec!["score-1.musx"]);
     }
 
     #[test]
@@ -984,8 +1135,8 @@ mod tests {
         })
         .expect("insert draft score");
 
-        let summary = generate_song_archives(&db, &app_data_dir, &cloud_root_dir)
-            .expect("generate archives");
+        let summary =
+            generate_song_archives(&db, &app_data_dir, &cloud_root_dir).expect("generate archives");
 
         assert_eq!(summary.total, 1);
         assert_eq!(summary.generated, 0);
@@ -1059,8 +1210,8 @@ mod tests {
         })
         .expect("insert draft score");
 
-        let summary = generate_song_archives(&db, &app_data_dir, &cloud_root_dir)
-            .expect("generate archives");
+        let summary =
+            generate_song_archives(&db, &app_data_dir, &cloud_root_dir).expect("generate archives");
 
         assert_eq!(summary.total, 1);
         assert_eq!(summary.generated, 1);
@@ -1104,6 +1255,7 @@ mod tests {
             song_id: "valid-song".to_string(),
             song_name: "Valid Song".to_string(),
             last_uploadable_score_modified_at: Some(100),
+            last_status_change_at: None,
             last_backup_at: Some(100),
         }];
 
@@ -1128,5 +1280,4 @@ mod tests {
         assert_eq!(removed, 0);
         assert!(songs_dir.join("notes.txt").is_file());
     }
-
 }

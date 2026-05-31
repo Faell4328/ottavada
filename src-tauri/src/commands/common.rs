@@ -163,13 +163,12 @@ mod tests {
 
         regenerate_song_archives_for_song_ids(&db, &store, &[song_id.clone()]).expect("regen");
 
-        assert!(
-            dir.path()
-                .join("cloud")
-                .join("songs")
-                .join("song-1.tar.zst")
-                .is_file()
-        );
+        assert!(dir
+            .path()
+            .join("cloud")
+            .join("songs")
+            .join("song-1.tar.zst")
+            .is_file());
     }
 
     #[test]

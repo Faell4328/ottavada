@@ -1,6 +1,6 @@
+use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use std::process::Command;
 use tauri::{AppHandle, State};
 use tracing::{error, info};
 
@@ -246,10 +246,7 @@ pub fn mark_snapshot_as_uploaded(
     store.save_app_settings(&settings)
 }
 
-fn mark_local_changes_as_applied_impl(
-    db: &Database,
-    store: &SystemStore,
-) -> Result<(), AppError> {
+fn mark_local_changes_as_applied_impl(db: &Database, store: &SystemStore) -> Result<(), AppError> {
     let latest_change = db.get_latest_changed_field_timestamp()?.unwrap_or(0);
     db.clear_changed_fields()?;
     let mut settings = store.get_app_settings()?;

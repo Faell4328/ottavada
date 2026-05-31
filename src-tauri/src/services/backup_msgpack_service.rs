@@ -216,9 +216,8 @@ pub fn force_generate_backup_msgpack_in_cloud(
     db: &Database,
     store: &SystemStore,
 ) -> Result<BackupFileSummary, AppError> {
-    generate_backup_msgpack_in_cloud(db, store, true)?.ok_or_else(|| {
-        AppError::Generic("Falha ao gerar backup da nuvem".to_string())
-    })
+    generate_backup_msgpack_in_cloud(db, store, true)?
+        .ok_or_else(|| AppError::Generic("Falha ao gerar backup da nuvem".to_string()))
 }
 
 fn generate_backup_msgpack_in_cloud(
@@ -230,13 +229,16 @@ fn generate_backup_msgpack_in_cloud(
     settings.require_server_only()?;
 
     let now = chrono::Local::now().timestamp();
-    if !force && !should_generate_automatic_backup_from_timestamps(settings.last_backup_timestamp, now) {
+    if !force
+        && !should_generate_automatic_backup_from_timestamps(settings.last_backup_timestamp, now)
+    {
         return Ok(None);
     }
 
     let backup_path = ensure_backup_cloud_dir(store.app_data_dir())?.join(BACKUP_FILE_NAME);
 
-    let summary = export_backup_msgpack(db, store, Some(backup_path.to_string_lossy().to_string()))?;
+    let summary =
+        export_backup_msgpack(db, store, Some(backup_path.to_string_lossy().to_string()))?;
 
     sync_cloud_directory_with_rclone_impl(store, "upload", Some("backup"))?;
 
@@ -368,7 +370,7 @@ fn collect_backup_payload(
 
     let backup_songs = {
         let mut stmt = conn.prepare(
-              "SELECT songId AS id, songId AS song_id, status
+            "SELECT songId AS id, songId AS song_id, status
              FROM songsBackup
                ORDER BY songId ASC",
         )?;
@@ -434,15 +436,23 @@ fn validate_backup_file_integrity(
         && verified_payload.settings.computer_id == expected_payload.settings.computer_id
         && verified_payload.settings.computer_name == expected_payload.settings.computer_name
         && verified_payload.settings.computer_type == expected_payload.settings.computer_type
-        && verified_payload.settings.google_drive_mode == expected_payload.settings.google_drive_mode
-        && verified_payload.settings.first_run_completed == expected_payload.settings.first_run_completed
+        && verified_payload.settings.google_drive_mode
+            == expected_payload.settings.google_drive_mode
+        && verified_payload.settings.first_run_completed
+            == expected_payload.settings.first_run_completed
         && verified_payload.settings.database_local == expected_payload.settings.database_local
-        && verified_payload.settings.rclone_config.as_ref().map(|config| {
-            config.provider.clone()
-        }) == expected_payload.settings.rclone_config.as_ref().map(|config| {
-            config.provider.clone()
-        })
-        && verified_payload.settings.last_backup_timestamp == expected_payload.settings.last_backup_timestamp
+        && verified_payload
+            .settings
+            .rclone_config
+            .as_ref()
+            .map(|config| config.provider.clone())
+            == expected_payload
+                .settings
+                .rclone_config
+                .as_ref()
+                .map(|config| config.provider.clone())
+        && verified_payload.settings.last_backup_timestamp
+            == expected_payload.settings.last_backup_timestamp
         && verified_payload.categories.len() == expected_payload.categories.len()
         && verified_payload.songs.len() == expected_payload.songs.len()
         && verified_payload.scores.len() == expected_payload.scores.len()
@@ -587,9 +597,9 @@ mod tests {
     use crate::infrastructure::database::Database;
     use crate::infrastructure::store::SystemStore;
 
-    use super::{export_backup_msgpack, import_backup_msgpack};
-    use super::AUTO_BACKUP_INTERVAL_SECONDS;
     use super::should_generate_automatic_backup_from_timestamps;
+    use super::AUTO_BACKUP_INTERVAL_SECONDS;
+    use super::{export_backup_msgpack, import_backup_msgpack};
 
     #[test]
     fn exports_and_imports_backup_msgpack() {

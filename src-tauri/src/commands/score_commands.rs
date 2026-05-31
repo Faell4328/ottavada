@@ -6,9 +6,9 @@ use tracing::{error, info, warn};
 
 #[cfg(target_os = "windows")]
 use crate::commands::common::configure_no_window_command;
-#[cfg(target_os = "windows")]
-use std::os::windows::process::CommandExt;
-use crate::commands::common::{regenerate_song_archives_for_song_ids, remove_path_if_exists, require_server_settings};
+use crate::commands::common::{
+    regenerate_song_archives_for_song_ids, remove_path_if_exists, require_server_settings,
+};
 use crate::domain::errors::AppError;
 use crate::domain::models::ComputerType;
 use crate::domain::models::*;
@@ -16,19 +16,11 @@ use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
 use crate::services::indexer::{get_file_metadata, paths_match, split_file_path};
 use crate::services::name_formatter::normalize_optional_score_name;
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
 
 const VALID_SCORE_EXTENSIONS: [&str; 11] = [
-    "pdf",
-    "mus",
-    "musx",
-    "mscx",
-    "mscz",
-    "xml",
-    "musicxml",
-    "sib",
-    "enc",
-    "mid",
-    "midi",
+    "pdf", "mus", "musx", "mscx", "mscz", "xml", "musicxml", "sib", "enc", "mid", "midi",
 ];
 
 fn score_exists_for_indexed_file(
@@ -114,15 +106,16 @@ fn ensure_supported_score_file(path: &Path) -> Result<(), AppError> {
     Ok(())
 }
 
-fn resolve_manual_score_status(current_status: ScoreStatus, requested_status: &str) -> Result<ScoreStatus, AppError> {
+fn resolve_manual_score_status(
+    current_status: ScoreStatus,
+    requested_status: &str,
+) -> Result<ScoreStatus, AppError> {
     match requested_status.to_lowercase().as_str() {
         "draft" => Ok(ScoreStatus::Draft),
         "ignored" => Ok(ScoreStatus::Ignored),
         "main" => {
             if current_status != ScoreStatus::Draft && current_status != ScoreStatus::Ignored {
-                warn!(
-                    "Tentativa de definir score como main fora do fluxo draft/ignored -> main"
-                );
+                warn!("Tentativa de definir score como main fora do fluxo draft/ignored -> main");
                 return Err(AppError::Generic(
                     "A partitura precisa estar como 'draft' ou 'ignored' para ser definida como 'main'".into(),
                 ));
@@ -131,9 +124,13 @@ fn resolve_manual_score_status(current_status: ScoreStatus, requested_status: &s
             Ok(ScoreStatus::Main)
         }
         _ => {
-            warn!("Fluxo inválido de status manual solicitado: {}", requested_status);
+            warn!(
+                "Fluxo inválido de status manual solicitado: {}",
+                requested_status
+            );
             Err(AppError::Generic(
-                "Apenas as mudanças para 'draft', 'main' ou 'ignored' são permitidas manualmente".into(),
+                "Apenas as mudanças para 'draft', 'main' ou 'ignored' são permitidas manualmente"
+                    .into(),
             ))
         }
     }
@@ -222,9 +219,9 @@ fn open_file_location_on_system(file_path: &str) -> Result<(), AppError> {
     {
         let mut cmd = configure_no_window_command(std::process::Command::new("explorer"));
         if path.is_dir() {
-            cmd.arg(&normalized_path)
-                .spawn()
-                .map_err(|e| AppError::Generic(format!("Erro ao abrir local do diretório: {}", e)))?;
+            cmd.arg(&normalized_path).spawn().map_err(|e| {
+                AppError::Generic(format!("Erro ao abrir local do diretório: {}", e))
+            })?;
         } else {
             cmd.args(["/select,", &normalized_path])
                 .spawn()
@@ -407,7 +404,8 @@ fn sanitize_file_name_component(value: &str) -> String {
     let sanitized: String = value
         .chars()
         .map(|ch| {
-            if ch.is_control() || matches!(ch, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|') {
+            if ch.is_control() || matches!(ch, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|')
+            {
                 '_'
             } else {
                 ch
@@ -429,10 +427,7 @@ fn build_client_extracted_score_name(song_name: &str, score_name: Option<&str>) 
     format!("{} - {}", song, score)
 }
 
-fn refresh_library_summary_cache(
-    _db: &Database,
-    _store: &SystemStore,
-) -> Result<(), AppError> {
+fn refresh_library_summary_cache(_db: &Database, _store: &SystemStore) -> Result<(), AppError> {
     Ok(())
 }
 
@@ -506,8 +501,12 @@ pub async fn open_file(
             .join(format!("{}.tar.zst", song_id));
         let temp_dir = app_data_dir.join("tmp").join("scores");
 
-        let extracted_path =
-            extract_score_file_from_archive(&archive_path, &score_id, &output_file_stem, &temp_dir)?;
+        let extracted_path = extract_score_file_from_archive(
+            &archive_path,
+            &score_id,
+            &output_file_stem,
+            &temp_dir,
+        )?;
         let extracted_path_str = extracted_path.to_string_lossy().to_string();
         return open_path_on_system(&extracted_path_str);
     }
@@ -524,10 +523,7 @@ pub fn open_file_path(file_path: String) -> Result<(), AppError> {
 }
 
 #[tauri::command]
-pub fn open_file_location(
-    db: State<'_, Database>,
-    file_path: String,
-) -> Result<(), AppError> {
+pub fn open_file_location(db: State<'_, Database>, file_path: String) -> Result<(), AppError> {
     let path = Path::new(&file_path);
     if path.exists() && path.is_dir() {
         return open_file_location_on_system(&file_path);
@@ -578,7 +574,10 @@ pub fn update_score_status(
     db.update_score_status(&score_id, next_status, &settings.computer_id, None)?;
     let _ = refresh_library_summary_cache(&db, &store);
 
-    info!("Status da partitura {} atualizado com sucesso para {}", score_id, status);
+    info!(
+        "Status da partitura {} atualizado com sucesso para {}",
+        score_id, status
+    );
     db.get_song_list_item_by_id(&song_id)
 }
 
@@ -626,12 +625,14 @@ pub fn use_score_as_base(
                 .find(|score| score.id == source_score_id)
                 .map(|score| (song, score))
         })
-        .ok_or_else(|| AppError::Generic(format!("Partitura não encontrada: {}", source_score_id)))?;
+        .ok_or_else(|| {
+            AppError::Generic(format!("Partitura não encontrada: {}", source_score_id))
+        })?;
 
     let song_id = &song.id;
 
     let source_full_path = Path::new(&db.get_score_file_path(&source_score_id)?).to_path_buf();
-    
+
     if !source_full_path.exists() || !source_full_path.is_file() {
         return Err(AppError::Generic("Arquivo de origem não encontrado".into()));
     }
@@ -641,9 +642,9 @@ pub fn use_score_as_base(
         .and_then(|name| name.to_str())
         .ok_or_else(|| AppError::Generic("Nome do arquivo de origem inválido".into()))?;
 
-    let (song_prefix, extension) = source_file_name.rsplit_once('.').ok_or_else(|| {
-        AppError::Generic("Extensão de arquivo inválida".into())
-    })?;
+    let (song_prefix, extension) = source_file_name
+        .rsplit_once('.')
+        .ok_or_else(|| AppError::Generic("Extensão de arquivo inválida".into()))?;
 
     let file_name_prefix = song_prefix
         .rsplit_once(" - ")
@@ -653,7 +654,10 @@ pub fn use_score_as_base(
     let compacted_score_name = new_score_name.replace(' ', "");
 
     // Create new filename with the new name and extension
-    let new_filename = format!("{} - {}.{}", file_name_prefix, compacted_score_name, extension);
+    let new_filename = format!(
+        "{} - {}.{}",
+        file_name_prefix, compacted_score_name, extension
+    );
     let source_parent = source_full_path.parent().ok_or_else(|| {
         AppError::Generic("Não foi possível identificar o diretório da partitura de origem".into())
     })?;
@@ -672,7 +676,8 @@ pub fn use_score_as_base(
 
     // Create new score entry
     let (file_size, file_modified_at) = read_score_file_metadata(&new_file_path)?;
-    let (score_file_path, file_name) = split_file_path(&new_file_path.to_string_lossy().to_string());
+    let (score_file_path, file_name) =
+        split_file_path(&new_file_path.to_string_lossy().to_string());
 
     let now = Local::now().naive_local();
     let new_score = Score {
@@ -710,7 +715,6 @@ pub fn use_score_as_base(
     db.get_song_list_item_by_id(song_id)
 }
 
-
 #[cfg(test)]
 mod tests {
     use std::fs;
@@ -724,15 +728,12 @@ mod tests {
 
     use super::{
         build_client_extracted_score_name, delete_score_core, extract_score_file_from_archive,
-        resolve_manual_score_status,
-        resolve_openable_score_path,
-        sanitize_file_name_component,
+        resolve_manual_score_status, resolve_openable_score_path, sanitize_file_name_component,
     };
 
     fn write_test_tar_zst(archive_path: &Path, files: &[(&str, &[u8])]) {
         let archive_file = fs::File::create(archive_path).expect("create archive file");
-        let mut encoder =
-            zstd::stream::Encoder::new(archive_file, 3).expect("create zstd encoder");
+        let mut encoder = zstd::stream::Encoder::new(archive_file, 3).expect("create zstd encoder");
 
         {
             let mut builder = tar::Builder::new(&mut encoder);
@@ -783,8 +784,12 @@ mod tests {
         write_test_tar_zst(&archive_path, &[("score-a.musx", b"A")]);
 
         let output_dir = dir.path().join("out");
-        let result =
-            extract_score_file_from_archive(&archive_path, "score-z", "MUSICA TESTE - flute", &output_dir);
+        let result = extract_score_file_from_archive(
+            &archive_path,
+            "score-z",
+            "MUSICA TESTE - flute",
+            &output_dir,
+        );
 
         assert!(result.is_err());
     }
@@ -822,8 +827,14 @@ mod tests {
         fs::copy(&source_file, &new_file_path).expect("copy file");
 
         assert!(new_file_path.exists());
-        assert_eq!(fs::read(&new_file_path).expect("read new file"), b"test content");
-        assert_eq!(new_file_path.file_name().and_then(|n| n.to_str()), Some("copy.musx"));
+        assert_eq!(
+            fs::read(&new_file_path).expect("read new file"),
+            b"test content"
+        );
+        assert_eq!(
+            new_file_path.file_name().and_then(|n| n.to_str()),
+            Some("copy.musx")
+        );
     }
 
     #[test]
@@ -892,7 +903,12 @@ mod tests {
                 name: "HINO NACIONAL".to_string(),
                 composer: None,
                 arranger: None,
-                path: dir.path().join("songs").join("song-1").to_string_lossy().to_string(),
+                path: dir
+                    .path()
+                    .join("songs")
+                    .join("song-1")
+                    .to_string_lossy()
+                    .to_string(),
                 is_favorite: false,
                 status: ScoreStatus::Main,
                 updated_at: chrono::Local::now().naive_local(),
@@ -953,7 +969,12 @@ mod tests {
                 name: "HINO NACIONAL".to_string(),
                 composer: None,
                 arranger: None,
-                path: dir.path().join("songs").join("song-1").to_string_lossy().to_string(),
+                path: dir
+                    .path()
+                    .join("songs")
+                    .join("song-1")
+                    .to_string_lossy()
+                    .to_string(),
                 is_favorite: false,
                 status: ScoreStatus::Main,
                 updated_at: chrono::Local::now().naive_local(),
@@ -980,6 +1001,8 @@ mod tests {
 
         let err = resolve_openable_score_path(&db, "score-1").expect_err("missing file");
 
-        assert!(err.to_string().contains("Arquivo da partitura não encontrado"));
+        assert!(err
+            .to_string()
+            .contains("Arquivo da partitura não encontrado"));
     }
 }

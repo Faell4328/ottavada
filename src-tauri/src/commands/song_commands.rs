@@ -1,8 +1,8 @@
 use chrono::Local;
+use serde::Serialize;
 use std::path::Path;
 use tauri::State;
 use tracing::{error, info, warn};
-use serde::Serialize;
 
 use crate::commands::common::regenerate_song_archives_for_song_ids;
 use crate::commands::common::remove_path_if_exists;
@@ -25,11 +25,15 @@ fn normalized_required_song_name(name: &str) -> Result<String, AppError> {
 }
 
 fn normalized_optional_text(value: Option<String>) -> Option<String> {
-    value.map(|v| v.trim().to_string()).filter(|v| !v.is_empty())
+    value
+        .map(|v| v.trim().to_string())
+        .filter(|v| !v.is_empty())
 }
 
 fn normalized_optional_text_ref(value: Option<&str>) -> Option<String> {
-    value.map(|v| v.trim().to_string()).filter(|v| !v.is_empty())
+    value
+        .map(|v| v.trim().to_string())
+        .filter(|v| !v.is_empty())
 }
 
 fn normalized_required_song_path(path: &str) -> Result<String, AppError> {
@@ -53,7 +57,9 @@ fn ensure_unique_song_name(
     });
 
     if has_conflict {
-        return Err(AppError::Generic("Uma música com esse nome já existe".into()));
+        return Err(AppError::Generic(
+            "Uma música com esse nome já existe".into(),
+        ));
     }
 
     Ok(())
@@ -75,10 +81,7 @@ where
     }
 }
 
-fn refresh_library_summary_cache(
-    _db: &Database,
-    _store: &SystemStore,
-) -> Result<(), AppError> {
+fn refresh_library_summary_cache(_db: &Database, _store: &SystemStore) -> Result<(), AppError> {
     Ok(())
 }
 
@@ -115,10 +118,7 @@ fn delete_song_with_files_core(
 }
 
 #[tauri::command]
-pub fn delete_file_path(
-    store: State<'_, SystemStore>,
-    file_path: String,
-) -> Result<(), AppError> {
+pub fn delete_file_path(store: State<'_, SystemStore>, file_path: String) -> Result<(), AppError> {
     require_server_settings(&store)?;
 
     let path = std::path::Path::new(&file_path);
@@ -251,9 +251,7 @@ fn import_files_core(
             .iter()
             .find(|s| s.name.eq_ignore_ascii_case(song_name));
 
-        let existing_scores = existing_song
-            .map(|s| s.scores.clone())
-            .unwrap_or_default();
+        let existing_scores = existing_song.map(|s| s.scores.clone()).unwrap_or_default();
 
         let mut known_named_instruments: Vec<String> = existing_scores
             .iter()
@@ -347,7 +345,9 @@ fn import_files_core(
             new_song_id
         };
 
-        for (normalized_file, score_file_path, file_name, file_size, file_modified_at) in files_to_add {
+        for (normalized_file, score_file_path, file_name, file_size, file_modified_at) in
+            files_to_add
+        {
             let score_status = normalized_file
                 .status
                 .clone()
@@ -369,7 +369,6 @@ fn import_files_core(
         }
 
         let _ = regenerate_song_archives_for_song_ids(db, store, &[song_id.clone()]);
-
     }
 
     Ok(ImportIndexedFilesResult {
@@ -532,19 +531,21 @@ pub fn create_song_with_metadata(
         updated_by,
     };
 
-    db.insert_song(&song, &category_ids)
-        .map_err(|e| {
-            error!(
-                "Erro ao criar música '{}' (id={}): {:?}",
-                song.name, song_id, e
-            );
-            e
-        })?;
+    db.insert_song(&song, &category_ids).map_err(|e| {
+        error!(
+            "Erro ao criar música '{}' (id={}): {:?}",
+            song.name, song_id, e
+        );
+        e
+    })?;
 
     let _ = refresh_library_summary_cache(&db, &store);
 
     db.get_song_list_item_by_id(&song_id).map(|created| {
-        info!("Música criada com sucesso: {} ({})", created.name, created.id);
+        info!(
+            "Música criada com sucesso: {} ({})",
+            created.name, created.id
+        );
         created
     })
 }
@@ -689,13 +690,12 @@ mod tests {
         .expect("import files");
 
         let song_id = &result.songs[0].id;
-        assert!(
-            dir.path()
-                .join("cloud")
-                .join("songs")
-                .join(format!("{}.tar.zst", song_id))
-                .is_file()
-        );
+        assert!(dir
+            .path()
+            .join("cloud")
+            .join("songs")
+            .join(format!("{}.tar.zst", song_id))
+            .is_file());
     }
 
     #[test]
@@ -739,7 +739,10 @@ mod tests {
         )
         .expect("import files");
 
-        assert_eq!(db.get_song_by_id(&result.songs[0].id).expect("song").status, ScoreStatus::Main);
+        assert_eq!(
+            db.get_song_by_id(&result.songs[0].id).expect("song").status,
+            ScoreStatus::Main
+        );
     }
 
     #[test]

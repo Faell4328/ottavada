@@ -21,7 +21,10 @@ pub fn ensure_sync_cloud_dir(app_data_dir: &Path) -> Result<PathBuf, AppError> {
     let sync_dir = cloud_dir.join(CLOUD_SYNC_DIR_NAME);
 
     fs::create_dir_all(&sync_dir).map_err(|e| {
-        AppError::Generic(format!("Erro ao preparar pasta local de sincronização da nuvem: {}", e))
+        AppError::Generic(format!(
+            "Erro ao preparar pasta local de sincronização da nuvem: {}",
+            e
+        ))
     })?;
 
     Ok(sync_dir)
@@ -32,7 +35,10 @@ pub fn ensure_actions_cloud_dir(app_data_dir: &Path) -> Result<PathBuf, AppError
     let actions_dir = cloud_dir.join(CLOUD_ACTIONS_DIR_NAME);
 
     fs::create_dir_all(&actions_dir).map_err(|e| {
-        AppError::Generic(format!("Erro ao preparar pasta local de ações da nuvem: {}", e))
+        AppError::Generic(format!(
+            "Erro ao preparar pasta local de ações da nuvem: {}",
+            e
+        ))
     })?;
 
     Ok(actions_dir)
@@ -43,7 +49,10 @@ pub fn ensure_backup_cloud_dir(app_data_dir: &Path) -> Result<PathBuf, AppError>
     let backup_dir = cloud_dir.join(CLOUD_BACKUP_DIR_NAME);
 
     fs::create_dir_all(&backup_dir).map_err(|e| {
-        AppError::Generic(format!("Erro ao preparar pasta local de backup da nuvem: {}", e))
+        AppError::Generic(format!(
+            "Erro ao preparar pasta local de backup da nuvem: {}",
+            e
+        ))
     })?;
 
     Ok(backup_dir)
@@ -62,9 +71,8 @@ pub fn mark_server_apply_in_progress(app_data_dir: &Path) -> Result<(), AppError
 pub fn clear_server_apply_in_progress(app_data_dir: &Path) -> Result<(), AppError> {
     let marker_path = server_apply_in_progress_path(app_data_dir);
     if marker_path.exists() {
-        fs::remove_file(&marker_path).map_err(|e| {
-            AppError::Generic(format!("Erro ao limpar apply em andamento: {}", e))
-        })?;
+        fs::remove_file(&marker_path)
+            .map_err(|e| AppError::Generic(format!("Erro ao limpar apply em andamento: {}", e)))?;
     }
 
     Ok(())

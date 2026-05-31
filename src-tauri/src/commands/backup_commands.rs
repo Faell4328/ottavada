@@ -4,7 +4,6 @@ use crate::commands::common::{require_server_settings, run_blocking_with_store};
 use crate::domain::errors::AppError;
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
-use crate::services::cloud_paths::ensure_cloud_root_dir;
 use crate::services::backup_msgpack_service::{
     export_backup_msgpack, force_generate_backup_msgpack_in_cloud,
     generate_automatic_backup_msgpack, import_backup_msgpack, import_backup_msgpack_from_cloud,
@@ -14,6 +13,7 @@ use crate::services::backup_songs_service::{
     generate_song_archives, regenerate_all_song_archives, SongArchiveSummary,
 };
 use crate::services::client_sync_service::{apply_server_changes_for_client, ClientSyncSummary};
+use crate::services::cloud_paths::ensure_cloud_root_dir;
 use crate::services::events_service::{generate_events_msgpack, EventsFileSummary};
 use crate::services::snapshot_service::{generate_snapshot_msgpack, SnapshotFileSummary};
 

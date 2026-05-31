@@ -242,7 +242,8 @@ mod tests {
     fn test_insert_song_category_ids_are_trimmed_deduplicated_and_blank_filtered() {
         let db = make_db();
         db.insert_category(&make_category("c1", "Hinos")).unwrap();
-        db.insert_category(&make_category("c2", "Clássicas")).unwrap();
+        db.insert_category(&make_category("c2", "Clássicas"))
+            .unwrap();
 
         let relation_events_before = count_changed_field_for_entity(&db, "categoriesSongs");
         db.insert_song(
@@ -301,7 +302,8 @@ mod tests {
     fn test_update_song_category_ids_are_deduplicated_for_changed_field_generation() {
         let db = make_db();
         db.insert_category(&make_category("c1", "Hinos")).unwrap();
-        db.insert_category(&make_category("c2", "Clássicas")).unwrap();
+        db.insert_category(&make_category("c2", "Clássicas"))
+            .unwrap();
         db.insert_song(&make_song("s1", "Canon"), &["c1".to_string()])
             .unwrap();
 
@@ -434,7 +436,11 @@ mod tests {
         db.insert_score(&score_c).unwrap();
 
         let songs = db.get_all_songs().unwrap();
-        let ordered_ids: Vec<&str> = songs[0].scores.iter().map(|score| score.id.as_str()).collect();
+        let ordered_ids: Vec<&str> = songs[0]
+            .scores
+            .iter()
+            .map(|score| score.id.as_str())
+            .collect();
 
         assert_eq!(ordered_ids, vec!["sc-b", "sc-c", "sc-a"]);
     }
@@ -882,6 +888,41 @@ mod tests {
     }
 
     #[test]
+    fn test_update_score_status_non_main_marks_song_backup_processing() {
+        let statuses = [ScoreStatus::Draft, ScoreStatus::Ignored];
+
+        for status in statuses {
+            let db = make_db();
+            db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
+            db.insert_score(&make_score(&db, "sc1", "s1", Some("Violino")))
+                .unwrap();
+
+            {
+                let conn = db.conn.lock().unwrap();
+                conn.execute(
+                    "UPDATE songsBackup SET status = 'ok' WHERE songId = ?1",
+                    ["s1"],
+                )
+                .unwrap();
+            }
+
+            db.update_score_status("sc1", status.clone(), "test-computer", None)
+                .unwrap();
+
+            let conn = db.conn.lock().unwrap();
+            let backup: String = conn
+                .query_row(
+                    "SELECT status FROM songsBackup WHERE songId = ?1",
+                    ["s1"],
+                    |row| row.get(0),
+                )
+                .unwrap();
+
+            assert_eq!(backup, "processing");
+        }
+    }
+
+    #[test]
     // ── Score Metadata for Scanning ──
 
     fn test_get_all_scores_with_metadata() {
@@ -1048,7 +1089,9 @@ mod tests {
 
         let categories = db.get_all_categories().unwrap();
         assert_eq!(categories.len(), 2);
-        assert!(categories.iter().any(|c| c.id == "c1" && c.name == "Harpa Cristã"));
+        assert!(categories
+            .iter()
+            .any(|c| c.id == "c1" && c.name == "Harpa Cristã"));
         assert!(categories
             .iter()
             .any(|c| c.id == "default-category" && c.name == "Sem categoria"));

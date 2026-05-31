@@ -36,15 +36,20 @@ pub fn run_initial_scan(db: &Database, host_id: &str) {
     let mut recovered_count = 0;
 
     let mut scores_by_song: HashMap<String, Vec<ScoreMetadataEntry>> = HashMap::new();
-    for (song_id, score_id, file_path, file_name, stored_size, stored_modified_at_str, status) in scores {
-        scores_by_song.entry(song_id).or_default().push(ScoreMetadataEntry {
-            score_id,
-            file_path,
-            file_name,
-            stored_size,
-            stored_modified_at_str,
-            status: ScoreStatus::from_str(&status),
-        });
+    for (song_id, score_id, file_path, file_name, stored_size, stored_modified_at_str, status) in
+        scores
+    {
+        scores_by_song
+            .entry(song_id)
+            .or_default()
+            .push(ScoreMetadataEntry {
+                score_id,
+                file_path,
+                file_name,
+                stored_size,
+                stored_modified_at_str,
+                status: ScoreStatus::from_str(&status),
+            });
     }
 
     info!("Total de músicas para verificar: {}", scores_by_song.len());
@@ -63,10 +68,11 @@ pub fn run_initial_scan(db: &Database, host_id: &str) {
             continue;
         }
 
-        let song_directory = match score_directory(&scanable_scores[0].file_path, &scanable_scores[0].file_name) {
-            Some(directory) => directory,
-            None => continue,
-        };
+        let song_directory =
+            match score_directory(&scanable_scores[0].file_path, &scanable_scores[0].file_name) {
+                Some(directory) => directory,
+                None => continue,
+            };
 
         let current_files = scan_directory(Path::new(&song_directory));
 
@@ -105,7 +111,6 @@ pub fn run_initial_scan(db: &Database, host_id: &str) {
                     }
                 }
             }
-
         }
 
         for current_file in current_files {
@@ -137,7 +142,10 @@ pub fn run_initial_scan(db: &Database, host_id: &str) {
                     }
                 }
                 Err(e) => {
-                    warn!("Erro ao obter metadados do novo arquivo {}: {:?}", current_path, e);
+                    warn!(
+                        "Erro ao obter metadados do novo arquivo {}: {:?}",
+                        current_path, e
+                    );
                 }
             }
         }

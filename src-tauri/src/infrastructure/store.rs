@@ -101,17 +101,20 @@ impl SystemStore {
 
         let computer_name = read_string(&store, &["computerName"]);
 
-        let organization_name = read_string(&store, &["organizationName"])
-            .and_then(|value| if value.trim().is_empty() { None } else { Some(value) });
+        let organization_name = read_string(&store, &["organizationName"]).and_then(|value| {
+            if value.trim().is_empty() {
+                None
+            } else {
+                Some(value)
+            }
+        });
 
-        let computer_type_raw = read_string(&store, &["type"])
-            .unwrap_or_else(|| "server".to_string());
+        let computer_type_raw =
+            read_string(&store, &["type"]).unwrap_or_else(|| "server".to_string());
 
         let computer_type = ComputerType::from_store_str(&computer_type_raw);
 
-        let rclone_config = store
-            .get("rclone")
-            .and_then(Self::parse_rclone_config);
+        let rclone_config = store.get("rclone").and_then(Self::parse_rclone_config);
 
         let cloud = store.get("cloud");
         let last_snapshot_timestamp = cloud
@@ -198,7 +201,8 @@ impl SystemStore {
         let mut store = self.load_store()?;
 
         store["id"] = serde_json::json!(settings.computer_id);
-        store["computerName"] = serde_json::json!(settings.computer_name.clone().unwrap_or_default());
+        store["computerName"] =
+            serde_json::json!(settings.computer_name.clone().unwrap_or_default());
         store["type"] = serde_json::json!(settings.computer_type.as_store_str());
 
         if let Some(organization_name) = settings.organization_name.as_ref() {
@@ -206,10 +210,14 @@ impl SystemStore {
             if !organization_name.is_empty() {
                 store["organizationName"] = serde_json::json!(organization_name);
             } else {
-                store.as_object_mut().map(|obj| obj.remove("organizationName"));
+                store
+                    .as_object_mut()
+                    .map(|obj| obj.remove("organizationName"));
             }
         } else {
-            store.as_object_mut().map(|obj| obj.remove("organizationName"));
+            store
+                .as_object_mut()
+                .map(|obj| obj.remove("organizationName"));
         }
 
         if let Some(ref rclone_cfg) = settings.rclone_config {
@@ -289,7 +297,9 @@ impl SystemStore {
                 .map(|obj| obj.remove("backup_songs_step"));
         }
 
-        store.as_object_mut().map(|obj| obj.remove("library_summary"));
+        store
+            .as_object_mut()
+            .map(|obj| obj.remove("library_summary"));
 
         if let Some(last_snapshot_timestamp) = settings.last_snapshot_timestamp {
             store["cloud"]["lastSnapshotTimestamp"] = serde_json::json!(last_snapshot_timestamp);
@@ -368,11 +378,9 @@ impl SystemStore {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_support::create_test_app_data_dir;
     use super::SystemStore;
-    use crate::domain::models::{
-        AppSettings, ComputerType, LibraryStatusSummary, LibrarySummary,
-    };
+    use crate::domain::models::{AppSettings, ComputerType, LibraryStatusSummary, LibrarySummary};
+    use crate::test_support::create_test_app_data_dir;
 
     #[test]
     fn does_not_persist_library_summary_in_store() {
@@ -427,7 +435,10 @@ mod tests {
         store.save_app_settings(&settings).expect("save settings");
 
         let raw_store = store.load_store().expect("load store");
-        assert_eq!(raw_store.get("id").and_then(|v| v.as_str()), Some("server-2"));
+        assert_eq!(
+            raw_store.get("id").and_then(|v| v.as_str()),
+            Some("server-2")
+        );
         assert_eq!(
             raw_store.get("computerName").and_then(|v| v.as_str()),
             Some("Servidor")
@@ -436,7 +447,10 @@ mod tests {
             raw_store.get("organizationName").and_then(|v| v.as_str()),
             Some("Orquestra")
         );
-        assert_eq!(raw_store.get("type").and_then(|v| v.as_str()), Some("server"));
+        assert_eq!(
+            raw_store.get("type").and_then(|v| v.as_str()),
+            Some("server")
+        );
         assert!(raw_store.get("rclone").is_some());
         assert!(raw_store.get("cloud").is_some());
         assert!(raw_store.get("computer_id").is_none());

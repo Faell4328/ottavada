@@ -3,7 +3,8 @@ use std::fs;
 use std::path::PathBuf;
 
 fn main() {
-    let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR ausente"));
+    let manifest_dir =
+        PathBuf::from(env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR ausente"));
     let env_path = manifest_dir.join(".env");
 
     if let Ok(content) = fs::read_to_string(&env_path) {

@@ -1,11 +1,11 @@
 pub mod background_scanner;
-pub mod cloud_paths;
 pub mod backup_msgpack_service;
 pub mod backup_songs_service;
 pub mod client_sync_service;
+pub mod cloud_paths;
 pub mod events_service;
 pub mod indexer;
 pub mod msgpack_zstd;
 pub mod name_formatter;
-pub mod telemetry_service;
 pub mod snapshot_service;
+pub mod telemetry_service;

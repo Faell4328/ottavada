@@ -1,6 +1,6 @@
-use crate::commands::common::{configure_no_window_command, run_blocking_with_store};
 #[cfg(target_os = "windows")]
 use crate::commands::common::configure_windows_command;
+use crate::commands::common::{configure_no_window_command, run_blocking_with_store};
 use crate::domain::errors::AppError;
 use crate::infrastructure::store::SystemStore;
 use serde_json::Value;
@@ -52,10 +52,7 @@ fn new_rclone_command() -> Command {
 
     #[cfg(target_os = "windows")]
     {
-        cmd = configure_windows_command(
-            cmd,
-            0x0800_0000 | WINDOWS_ABOVE_NORMAL_PRIORITY_CLASS,
-        );
+        cmd = configure_windows_command(cmd, 0x0800_0000 | WINDOWS_ABOVE_NORMAL_PRIORITY_CLASS);
     }
 
     if let Some(config_path) = RCLONE_CONFIG_PATH.get() {
@@ -134,7 +131,9 @@ fn terminate_process_pid(pid: u32) -> Result<(), AppError> {
     let output = configure_no_window_command(Command::new("taskkill"))
         .args(["/PID", pid_str.as_str(), "/T", "/F"])
         .output()
-        .map_err(|e| AppError::Generic(format!("Erro ao encerrar processo rclone {}: {}", pid, e)))?;
+        .map_err(|e| {
+            AppError::Generic(format!("Erro ao encerrar processo rclone {}: {}", pid, e))
+        })?;
 
     if output.status.success() {
         return Ok(());
@@ -163,7 +162,9 @@ fn terminate_process_pid(pid: u32) -> Result<(), AppError> {
     let term_output = Command::new("kill")
         .args(["-TERM", pid_str.as_str()])
         .output()
-        .map_err(|e| AppError::Generic(format!("Erro ao encerrar processo rclone {}: {}", pid, e)))?;
+        .map_err(|e| {
+            AppError::Generic(format!("Erro ao encerrar processo rclone {}: {}", pid, e))
+        })?;
 
     if term_output.status.success() {
         return Ok(());
@@ -211,7 +212,10 @@ fn run_rclone_once_impl(
 
     let child = cmd.spawn().map_err(|e| {
         error!("Erro ao executar rclone [{}]: {:?}", operation_label, e);
-        AppError::Generic(format!("Erro ao executar rclone ({}): {}", operation_label, e))
+        AppError::Generic(format!(
+            "Erro ao executar rclone ({}): {}",
+            operation_label, e
+        ))
     })?;
 
     let pid = child.id();
@@ -327,9 +331,8 @@ fn write_rclone_config(setup: &RcloneSetupRequest) -> Result<(), AppError> {
         }
     }
 
-    let current_config = std::fs::read_to_string(&config_path).map_err(|e| {
-        AppError::Generic(format!("Falha ao validar o rclone.conf gerado: {}", e))
-    })?;
+    let current_config = std::fs::read_to_string(&config_path)
+        .map_err(|e| AppError::Generic(format!("Falha ao validar o rclone.conf gerado: {}", e)))?;
 
     if current_config.trim().is_empty() {
         return Err(AppError::Generic(
@@ -391,7 +394,10 @@ pub fn terminate_stale_rclone_rc_processes() {
                 }
             }
             Err(err) => {
-                warn!("Falha ao executar taskkill para limpar rclone órfão: {}", err);
+                warn!(
+                    "Falha ao executar taskkill para limpar rclone órfão: {}",
+                    err
+                );
             }
         }
     }
@@ -460,7 +466,10 @@ fn run_rclone_with_retry_impl(
     Ok(output)
 }
 
-fn run_rclone_with_retry(args: &[&str], operation_label: &str) -> Result<std::process::Output, AppError> {
+fn run_rclone_with_retry(
+    args: &[&str],
+    operation_label: &str,
+) -> Result<std::process::Output, AppError> {
     with_rclone_operation_lock(|| run_rclone_with_retry_impl(args, operation_label))
 }
 
@@ -533,7 +542,10 @@ fn resolve_sync_targets(
         })?;
     }
 
-    Ok((normalize_path_for_rclone(&local_target.to_string_lossy()), remote_target))
+    Ok((
+        normalize_path_for_rclone(&local_target.to_string_lossy()),
+        remote_target,
+    ))
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -607,7 +619,8 @@ fn parse_transferring_items(items: &[Value]) -> (u64, u64, Option<f64>) {
     for item in items {
         let item_size = value_as_u64(item, &["size"]).unwrap_or(0);
         let item_bytes = value_as_u64(item, &["bytes"]).unwrap_or(0);
-        let item_percentage = value_as_f64(item, &["percentage"]).map(|value| (value / 100.0).clamp(0.0, 1.0));
+        let item_percentage =
+            value_as_f64(item, &["percentage"]).map(|value| (value / 100.0).clamp(0.0, 1.0));
 
         let estimated_bytes = if item_size > 0 {
             if item_bytes > 0 {
@@ -652,9 +665,13 @@ fn parse_rclone_rc_stats(parsed: &Value) -> RcloneRcStats {
     let bytes = value_as_u64(parsed, &["bytes", "bytesTransferred"]).unwrap_or(0);
     let total_bytes_raw = value_as_u64(parsed, &["totalBytes", "total_bytes"]).unwrap_or(0);
 
-    let speed_bytes_per_sec = value_as_f64(parsed, &["speed", "speedBytesPerSec", "speed_bytes_per_sec"]) 
-        .unwrap_or(0.0);
-    let eta_seconds = value_as_i64(parsed, &["eta", "etaSeconds", "eta_seconds"]).filter(|eta| *eta >= 0);
+    let speed_bytes_per_sec = value_as_f64(
+        parsed,
+        &["speed", "speedBytesPerSec", "speed_bytes_per_sec"],
+    )
+    .unwrap_or(0.0);
+    let eta_seconds =
+        value_as_i64(parsed, &["eta", "etaSeconds", "eta_seconds"]).filter(|eta| *eta >= 0);
 
     let transferring_items = parsed
         .get("transferring")
@@ -683,7 +700,8 @@ fn parse_rclone_rc_stats(parsed: &Value) -> RcloneRcStats {
     };
 
     let transfers_done = value_as_u64(parsed, &["transfers"]).unwrap_or(0);
-    let total_transfers = value_as_u64(parsed, &["totalTransfers", "total_transfers"]).filter(|total| *total > 0);
+    let total_transfers =
+        value_as_u64(parsed, &["totalTransfers", "total_transfers"]).filter(|total| *total > 0);
 
     let percentage = if let Some(total) = total_bytes.filter(|total| *total > 0) {
         Some(((bytes as f64 / total as f64) * 100.0).clamp(0.0, 100.0))
@@ -715,10 +733,14 @@ fn fetch_rclone_rc_stats() -> Result<Option<RcloneRcStats>, AppError> {
 
     stream
         .set_read_timeout(Some(Duration::from_millis(RCLONE_RC_TIMEOUT_MS)))
-        .map_err(|e| AppError::Generic(format!("Erro ao configurar timeout de leitura RC: {}", e)))?;
+        .map_err(|e| {
+            AppError::Generic(format!("Erro ao configurar timeout de leitura RC: {}", e))
+        })?;
     stream
         .set_write_timeout(Some(Duration::from_millis(RCLONE_RC_TIMEOUT_MS)))
-        .map_err(|e| AppError::Generic(format!("Erro ao configurar timeout de escrita RC: {}", e)))?;
+        .map_err(|e| {
+            AppError::Generic(format!("Erro ao configurar timeout de escrita RC: {}", e))
+        })?;
 
     let request = concat!(
         "POST /core/stats HTTP/1.1\r\n",
@@ -757,10 +779,14 @@ fn reset_rclone_rc_stats() -> Result<(), AppError> {
 
     stream
         .set_read_timeout(Some(Duration::from_millis(RCLONE_RC_TIMEOUT_MS)))
-        .map_err(|e| AppError::Generic(format!("Erro ao configurar timeout de leitura RC: {}", e)))?;
+        .map_err(|e| {
+            AppError::Generic(format!("Erro ao configurar timeout de leitura RC: {}", e))
+        })?;
     stream
         .set_write_timeout(Some(Duration::from_millis(RCLONE_RC_TIMEOUT_MS)))
-        .map_err(|e| AppError::Generic(format!("Erro ao configurar timeout de escrita RC: {}", e)))?;
+        .map_err(|e| {
+            AppError::Generic(format!("Erro ao configurar timeout de escrita RC: {}", e))
+        })?;
 
     let request = concat!(
         "POST /core/stats-reset HTTP/1.1\r\n",
@@ -1097,13 +1123,14 @@ pub fn upload_cloud_paths_with_rclone_impl(
                         continue;
                     }
 
-                    let relative_entry = entry_path.strip_prefix(&cloud_local_dir).map_err(|e| {
-                        AppError::Generic(format!(
+                    let relative_entry =
+                        entry_path.strip_prefix(&cloud_local_dir).map_err(|e| {
+                            AppError::Generic(format!(
                             "Erro ao calcular caminho relativo '{}' para upload incremental: {}",
                             entry_path.display(),
                             e
                         ))
-                    })?;
+                        })?;
 
                     let normalized_entry = relative_entry.to_string_lossy().replace('\\', "/");
                     if !normalized_entry.is_empty() {
@@ -1199,12 +1226,16 @@ pub fn sync_cloud_directory_with_rclone_impl(
     let (local_target, remote_target) = resolve_sync_targets(store, relative_path)?;
 
     let (source, destination, direction_label) = match sync_direction {
-        RcloneSyncDirection::Upload => {
-            (local_target.clone(), remote_target.clone(), "upload".to_string())
-        }
-        RcloneSyncDirection::Download => {
-            (remote_target.clone(), local_target.clone(), "download".to_string())
-        }
+        RcloneSyncDirection::Upload => (
+            local_target.clone(),
+            remote_target.clone(),
+            "upload".to_string(),
+        ),
+        RcloneSyncDirection::Download => (
+            remote_target.clone(),
+            local_target.clone(),
+            "download".to_string(),
+        ),
     };
 
     info!(
@@ -1300,7 +1331,12 @@ fn test_rclone_upload_impl(
     })?;
     let test_file_str = normalize_path_for_rclone(test_file_str);
 
-    let mut args = vec!["copy", test_file_str.as_str(), remote_path.as_str(), "--no-traverse"];
+    let mut args = vec![
+        "copy",
+        test_file_str.as_str(),
+        remote_path.as_str(),
+        "--no-traverse",
+    ];
     append_common_copy_flags(&mut args);
     let output = run_rclone_once(&args, "test-upload")?;
 

@@ -7,17 +7,7 @@ use crate::services::name_formatter::{normalize_optional_score_name, normalize_s
 
 /// Extensões de arquivo suportadas
 const SUPPORTED_EXTENSIONS: &[&str] = &[
-    "pdf",
-    "mus",
-    "musx",
-    "mscx",
-    "mscz",
-    "xml",
-    "musicxml",
-    "sib",
-    "enc",
-    "mid",
-    "midi",
+    "pdf", "mus", "musx", "mscx", "mscz", "xml", "musicxml", "sib", "enc", "mid", "midi",
 ];
 
 /// Indexa um diretório, retornando todos os arquivos de partitura encontrados.
@@ -85,7 +75,13 @@ fn normalize_instrument_probe(value: &str) -> String {
     value
         .chars()
         .flat_map(char::to_lowercase)
-        .map(|ch| if ch.is_ascii_alphanumeric() || ch.is_ascii_whitespace() { ch } else { ' ' })
+        .map(|ch| {
+            if ch.is_ascii_alphanumeric() || ch.is_ascii_whitespace() {
+                ch
+            } else {
+                ' '
+            }
+        })
         .collect::<String>()
         .split_whitespace()
         .collect::<Vec<_>>()
@@ -170,7 +166,12 @@ fn looks_like_non_instrument_descriptor(value: &str) -> bool {
         return true;
     }
 
-    const PHRASES: &[&str] = &["full score", "conductor score", "partitura completa", "partitura geral"];
+    const PHRASES: &[&str] = &[
+        "full score",
+        "conductor score",
+        "partitura completa",
+        "partitura geral",
+    ];
     PHRASES.iter().any(|phrase| normalized.starts_with(phrase))
 }
 
@@ -180,7 +181,8 @@ fn parse_instrument_from_file_stem(file_stem: &str, song_name: &str) -> Option<S
     if let Some(idx) = file_stem.rfind(" - ") {
         let normalized = normalize_optional_score_name(Some(&file_stem[idx + 3..]));
         return normalized.filter(|candidate| {
-            normalize_song_name(candidate) != song_name && !looks_like_non_instrument_descriptor(candidate)
+            normalize_song_name(candidate) != song_name
+                && !looks_like_non_instrument_descriptor(candidate)
         });
     }
 
@@ -296,8 +298,7 @@ mod tests {
 
     #[test]
     fn test_parse_instrument_without_suffix() {
-        let instrument =
-            parse_instrument_from_file_stem("Moonlight Sonata", "SONATA AO LUAR");
+        let instrument = parse_instrument_from_file_stem("Moonlight Sonata", "SONATA AO LUAR");
         assert_eq!(instrument, None);
     }
 
@@ -363,7 +364,11 @@ mod tests {
         std::fs::write(dir.path().join("Moonlight.musx"), b"fake musx").unwrap();
         std::fs::write(dir.path().join("Ode - Piano.mus"), b"fake mus").unwrap();
         std::fs::write(dir.path().join("Suite - Flauta.MSCX"), b"fake mscx").unwrap();
-        std::fs::write(dir.path().join("Hymn - Trompete.MUSICXML"), b"fake musicxml").unwrap();
+        std::fs::write(
+            dir.path().join("Hymn - Trompete.MUSICXML"),
+            b"fake musicxml",
+        )
+        .unwrap();
 
         // Create unsupported files
         std::fs::write(dir.path().join("readme.txt"), b"text").unwrap();

@@ -7,7 +7,10 @@ use crate::domain::errors::AppError;
 
 pub const ZSTD_LEVEL_BALANCED: i32 = 10;
 
-pub fn serialize_msgpack_named<T: Serialize>(payload: &T, file_label: &str) -> Result<Vec<u8>, AppError> {
+pub fn serialize_msgpack_named<T: Serialize>(
+    payload: &T,
+    file_label: &str,
+) -> Result<Vec<u8>, AppError> {
     rmp_serde::to_vec_named(payload)
         .map_err(|e| AppError::Generic(format!("Erro ao serializar {}: {}", file_label, e)))
 }

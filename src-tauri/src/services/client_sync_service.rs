@@ -185,8 +185,7 @@ pub fn apply_server_changes_for_client(
     let mut events_applied = 0usize;
 
     if events_path.exists() {
-        let events_payload: EventsMessagePack =
-            read_zstd_msgpack(&events_path, "events.msgpack")?;
+        let events_payload: EventsMessagePack = read_zstd_msgpack(&events_path, "events.msgpack")?;
 
         let known_change_timestamp = settings.last_change_timestamp.unwrap_or(0);
 
@@ -237,7 +236,10 @@ pub fn has_pending_server_changes(db: &Database, store: &SystemStore) -> Result<
         }
         Ok(_) => {}
         Err(err) => {
-            warn!("Falha ao ler snapshot local para validar alterações: {}", err);
+            warn!(
+                "Falha ao ler snapshot local para validar alterações: {}",
+                err
+            );
             return Ok(true);
         }
     }
@@ -575,16 +577,21 @@ fn apply_upsert_field_event(
         }
         "scores" => match item.field.as_str() {
             "songId" => {
-                let song_id = item.value.clone().ok_or_else(|| {
-                    AppError::Generic("Evento de score sem songId".to_string())
-                })?;
+                let song_id = item
+                    .value
+                    .clone()
+                    .ok_or_else(|| AppError::Generic("Evento de score sem songId".to_string()))?;
 
                 ensure_song_exists(tx, &song_id, event.timestamp)?;
                 ensure_score_exists(tx, &event.entity_id, &song_id, event.timestamp)?;
 
                 tx.execute(
                     "UPDATE scores SET song_id = ?1, file_path = ?2 WHERE id = ?3",
-                    params![song_id, format!("/cloud/songs/{}", song_id), event.entity_id],
+                    params![
+                        song_id,
+                        format!("/cloud/songs/{}", song_id),
+                        event.entity_id
+                    ],
                 )?;
 
                 if let Some(pending) = pending_scores.remove(&event.entity_id) {
@@ -605,7 +612,10 @@ fn apply_upsert_field_event(
                     if let Some(extension) = pending.extension {
                         tx.execute(
                             "UPDATE scores SET file_name = ?1 WHERE id = ?2",
-                            params![format!("{}.{}", event.entity_id, extension), event.entity_id],
+                            params![
+                                format!("{}.{}", event.entity_id, extension),
+                                event.entity_id
+                            ],
                         )?;
                     }
                 }
@@ -617,9 +627,7 @@ fn apply_upsert_field_event(
                         params![item.value.clone(), event.entity_id],
                     )?;
                 } else {
-                    let pending = pending_scores
-                        .entry(event.entity_id.clone())
-                        .or_default();
+                    let pending = pending_scores.entry(event.entity_id.clone()).or_default();
                     pending.name = item.value.clone();
                 }
             }
@@ -630,9 +638,7 @@ fn apply_upsert_field_event(
                         params![item.value.clone(), event.entity_id],
                     )?;
                 } else {
-                    let pending = pending_scores
-                        .entry(event.entity_id.clone())
-                        .or_default();
+                    let pending = pending_scores.entry(event.entity_id.clone()).or_default();
                     pending.status = item.value.clone();
                 }
             }
@@ -644,12 +650,13 @@ fn apply_upsert_field_event(
                 if score_exists(tx, &event.entity_id)? {
                     tx.execute(
                         "UPDATE scores SET file_name = ?1 WHERE id = ?2",
-                        params![format!("{}.{}", event.entity_id, extension), event.entity_id],
+                        params![
+                            format!("{}.{}", event.entity_id, extension),
+                            event.entity_id
+                        ],
                     )?;
                 } else {
-                    let pending = pending_scores
-                        .entry(event.entity_id.clone())
-                        .or_default();
+                    let pending = pending_scores.entry(event.entity_id.clone()).or_default();
                     pending.extension = Some(extension);
                 }
             }
@@ -700,7 +707,10 @@ fn ensure_song_exists(
     Ok(())
 }
 
-fn ensure_category_exists(tx: &rusqlite::Transaction<'_>, category_id: &str) -> Result<(), AppError> {
+fn ensure_category_exists(
+    tx: &rusqlite::Transaction<'_>,
+    category_id: &str,
+) -> Result<(), AppError> {
     tx.execute(
         "INSERT OR IGNORE INTO categories (id, name) VALUES (?1, ?2)",
         params![category_id, format!("Categoria {}", category_id)],
@@ -752,7 +762,11 @@ fn read_events_last_timestamp(path: &Path) -> Result<Option<i64>, AppError> {
     }
 
     let events_payload: EventsMessagePack = read_zstd_msgpack(path, "events.msgpack")?;
-    Ok(events_payload.events.into_iter().map(|event| event.timestamp).max())
+    Ok(events_payload
+        .events
+        .into_iter()
+        .map(|event| event.timestamp)
+        .max())
 }
 
 fn score_exists(tx: &rusqlite::Transaction<'_>, score_id: &str) -> Result<bool, AppError> {
@@ -794,8 +808,8 @@ fn resolve_cloud_dir(app_data_dir: &std::path::Path) -> Result<std::path::PathBu
 
 #[cfg(test)]
 mod tests {
-    use tempfile::tempdir;
     use rusqlite::params;
+    use tempfile::tempdir;
 
     use crate::domain::models::{AppSettings, ComputerType};
     use crate::infrastructure::database::Database;
@@ -962,7 +976,10 @@ mod tests {
             }],
         };
 
-        write_zstd_msgpack(&cloud_dir.join("actions").join("events.msgpack.zst"), &events_payload);
+        write_zstd_msgpack(
+            &cloud_dir.join("actions").join("events.msgpack.zst"),
+            &events_payload,
+        );
 
         let summary = apply_server_changes_for_client(&db, &store).expect("sync client");
 
@@ -1056,7 +1073,10 @@ mod tests {
 
         let song = db.get_song_list_item_by_id("song-1").expect("get song");
         assert_eq!(song.category_ids.len(), 1);
-        assert!(!song.category_ids.iter().any(|category_id| category_id == "cat-1"));
+        assert!(!song
+            .category_ids
+            .iter()
+            .any(|category_id| category_id == "cat-1"));
     }
 
     #[test]
@@ -1140,7 +1160,10 @@ mod tests {
             ],
         };
 
-        write_zstd_msgpack(&cloud_dir.join("actions").join("events.msgpack.zst"), &events_payload);
+        write_zstd_msgpack(
+            &cloud_dir.join("actions").join("events.msgpack.zst"),
+            &events_payload,
+        );
 
         let summary = apply_server_changes_for_client(&db, &store).expect("sync client");
         assert!(!summary.snapshot_applied);
@@ -1199,7 +1222,10 @@ mod tests {
             }],
         };
 
-        write_zstd_msgpack(&cloud_dir.join("actions").join("snapshot.msgpack.zst"), &snapshot_payload);
+        write_zstd_msgpack(
+            &cloud_dir.join("actions").join("snapshot.msgpack.zst"),
+            &snapshot_payload,
+        );
 
         let summary = apply_server_changes_for_client(&db, &store).expect("sync client");
 
@@ -1281,9 +1307,7 @@ mod tests {
         };
         write_zstd_msgpack(&actions_dir.join("snapshot.msgpack.zst"), &snapshot_payload);
 
-        let events_payload = EventsTestPayload {
-            events: vec![],
-        };
+        let events_payload = EventsTestPayload { events: vec![] };
         write_zstd_msgpack(&actions_dir.join("events.msgpack.zst"), &events_payload);
 
         assert!(!has_pending_server_changes(&db, &store).expect("inspect pending changes"));

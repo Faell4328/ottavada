@@ -4,8 +4,8 @@ use std::fs;
 use serde::Serialize;
 
 use crate::domain::errors::AppError;
-use crate::domain::models::ScoreStatus;
 use crate::domain::models::OperationGuard;
+use crate::domain::models::ScoreStatus;
 use crate::infrastructure::database::{ChangedFieldRecord, Database};
 use crate::infrastructure::store::SystemStore;
 use crate::services::cloud_paths::ensure_actions_cloud_dir;
@@ -151,7 +151,9 @@ fn build_events_payload(
                 .entry(change.entity_id.clone())
                 .or_insert_with(ScoreChangeSummary::default);
 
-            if change.timestamp > entry.timestamp || (change.timestamp == entry.timestamp && index >= entry.sort_index) {
+            if change.timestamp > entry.timestamp
+                || (change.timestamp == entry.timestamp && index >= entry.sort_index)
+            {
                 entry.sort_index = index;
                 entry.timestamp = change.timestamp;
                 entry.event_id = change.id.clone();
@@ -202,7 +204,10 @@ fn build_events_payload(
             .then(left.event.id.cmp(&right.event.id))
     });
 
-    Ok(planned_events.into_iter().map(|planned| planned.event).collect())
+    Ok(planned_events
+        .into_iter()
+        .map(|planned| planned.event)
+        .collect())
 }
 
 fn build_score_event(
@@ -289,7 +294,12 @@ mod tests {
             name: "Musica Teste".to_string(),
             composer: None,
             arranger: None,
-            path: dir.path().join("songs").join("song-1").to_string_lossy().to_string(),
+            path: dir
+                .path()
+                .join("songs")
+                .join("song-1")
+                .to_string_lossy()
+                .to_string(),
             is_favorite: false,
             status: crate::domain::models::ScoreStatus::Main,
             updated_at: chrono::Local::now().naive_local(),
@@ -303,7 +313,9 @@ mod tests {
         assert!(summary.events_count > 0);
         assert!(summary.file_size > 0);
         assert!(std::path::Path::new(&summary.output_path).ends_with(
-            std::path::Path::new("cloud").join("actions").join("events.msgpack.zst")
+            std::path::Path::new("cloud")
+                .join("actions")
+                .join("events.msgpack.zst")
         ));
     }
 
@@ -369,10 +381,16 @@ mod tests {
         let summary = generate_events_msgpack(&db, &store).expect("generate events");
         assert_eq!(summary.events_count, 1);
 
-        let raw = fs::read(dir.path().join("cloud").join("actions").join("events.msgpack.zst"))
-            .expect("read events file");
+        let raw = fs::read(
+            dir.path()
+                .join("cloud")
+                .join("actions")
+                .join("events.msgpack.zst"),
+        )
+        .expect("read events file");
         let mut decoder = zstd::stream::read::Decoder::new(raw.as_slice()).expect("decoder");
-        let payload: serde_json::Value = rmp_serde::from_read(&mut decoder).expect("decode msgpack");
+        let payload: serde_json::Value =
+            rmp_serde::from_read(&mut decoder).expect("decode msgpack");
         assert_eq!(payload["events"][0]["type"], "insert");
         assert_eq!(payload["events"][0]["entity"], "scores");
         assert_eq!(payload["events"][0]["data"][0]["field"], "songId");

@@ -333,7 +333,7 @@ impl Database {
         value: Option<String>,
     ) -> Result<(), AppError> {
         conn.execute(
-                "INSERT INTO changedField (id, type, entity, entityId, field, value, timestamp)
+            "INSERT INTO changedField (id, type, entity, entityId, field, value, timestamp)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             params![
                 uuid::Uuid::new_v4().to_string(),
@@ -733,7 +733,7 @@ impl Database {
         let mut summary = LibrarySummary::default();
 
         let mut stmt = conn.prepare(
-                        r#"SELECT status, COUNT(*) AS scores_count, COUNT(DISTINCT song_id) AS songs_count
+            r#"SELECT status, COUNT(*) AS scores_count, COUNT(DISTINCT song_id) AS songs_count
                          FROM scores
                              WHERE status IN ('main', 'draft')
                          GROUP BY status"#,
@@ -1103,14 +1103,7 @@ impl Database {
         }
 
         if file_changed {
-            Self::insert_changed_field(
-                &conn,
-                "update",
-                "scores",
-                score_id,
-                Some("file"),
-                None,
-            )?;
+            Self::insert_changed_field(&conn, "update", "scores", score_id, Some("file"), None)?;
 
             let old_extension = Self::extract_file_extension(&original_file_name);
             let new_extension = Self::extract_file_extension(file_name);
@@ -1360,7 +1353,7 @@ impl Database {
             )?;
         }
 
-        if old_status != status.as_str() && status == ScoreStatus::Main {
+        if old_status != status.as_str() {
             conn.execute(
                 "INSERT INTO songsBackup (songId, status)
                  VALUES (?1, 'processing')
@@ -1388,8 +1381,7 @@ impl Database {
     }
 
     fn get_category_ids(conn: &Connection, song_id: &str) -> Result<Vec<String>, AppError> {
-        let mut stmt =
-            conn.prepare("SELECT categoryId FROM categoriesSongs WHERE songId = ?1")?;
+        let mut stmt = conn.prepare("SELECT categoryId FROM categoriesSongs WHERE songId = ?1")?;
 
         let category_ids: Vec<String> = stmt
             .query_map(params![song_id], |row| row.get(0))?
@@ -1678,7 +1670,7 @@ impl Database {
     pub fn get_all_backup_songs_status(&self) -> Result<Vec<SongBackupStatus>, AppError> {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
-              "SELECT songId, status
+            "SELECT songId, status
                FROM songsBackup ORDER BY songId ASC",
         )?;
 
@@ -1704,7 +1696,7 @@ impl Database {
         let conn = self.conn.lock().unwrap();
         let status_str = status.as_str();
         let mut stmt = conn.prepare(
-              "SELECT songId, status
+            "SELECT songId, status
                FROM songsBackup WHERE status = ?1 ORDER BY songId ASC",
         )?;
 
@@ -1813,14 +1805,16 @@ impl Database {
     /// Retorna true quando existe ao menos um evento pendente em changedField.
     pub fn has_pending_changes(&self) -> Result<bool, AppError> {
         let conn = self.conn.lock().unwrap();
-        let count: i64 = conn.query_row("SELECT COUNT(1) FROM changedField", [], |row| row.get(0))?;
+        let count: i64 =
+            conn.query_row("SELECT COUNT(1) FROM changedField", [], |row| row.get(0))?;
         Ok(count > 0)
     }
 
     /// Retorna a quantidade de eventos pendentes em changedField.
     pub fn get_pending_changes_count(&self) -> Result<usize, AppError> {
         let conn = self.conn.lock().unwrap();
-        let count: i64 = conn.query_row("SELECT COUNT(1) FROM changedField", [], |row| row.get(0))?;
+        let count: i64 =
+            conn.query_row("SELECT COUNT(1) FROM changedField", [], |row| row.get(0))?;
         Ok(count as usize)
     }
 
@@ -1878,7 +1872,8 @@ impl Database {
         &self,
     ) -> Result<Vec<crate::services::telemetry_service::TelemetryErrorPayload>, AppError> {
         let conn = self.conn.lock().unwrap();
-        let mut stmt = conn.prepare("SELECT id, message, timestamp FROM errors ORDER BY timestamp ASC")?;
+        let mut stmt =
+            conn.prepare("SELECT id, message, timestamp FROM errors ORDER BY timestamp ASC")?;
 
         let errors = stmt
             .query_map([], |row| {
