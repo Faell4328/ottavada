@@ -1481,7 +1481,10 @@ impl Database {
     pub fn get_all_categories(&self) -> Result<Vec<Category>, AppError> {
         let conn = self.conn.lock().unwrap();
         Self::ensure_default_category_with_conn(&conn)?;
-        let mut stmt = conn.prepare("SELECT id, name FROM categories ORDER BY name")?;
+        let mut stmt = conn.prepare(
+            "SELECT id, name FROM categories
+             ORDER BY CASE WHEN id = 'default-category' THEN 0 ELSE 1 END, name COLLATE NOCASE",
+        )?;
 
         let categories = stmt
             .query_map([], |row| {

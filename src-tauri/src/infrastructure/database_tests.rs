@@ -1085,18 +1085,19 @@ mod tests {
     fn test_category_crud() {
         let db = make_db();
         let cat = make_category("c1", "Harpa Cristã");
+        let cat2 = make_category("c2", "Acordes");
         db.insert_category(&cat).unwrap();
+        db.insert_category(&cat2).unwrap();
 
         let categories = db.get_all_categories().unwrap();
-        assert_eq!(categories.len(), 2);
-        assert!(categories
-            .iter()
-            .any(|c| c.id == "c1" && c.name == "Harpa Cristã"));
-        assert!(categories
-            .iter()
-            .any(|c| c.id == "default-category" && c.name == "Sem categoria"));
+        assert_eq!(categories.len(), 3);
+        assert_eq!(categories[0].id, "default-category");
+        assert_eq!(categories[0].name, "Sem categoria");
+        assert_eq!(categories[1].name, "Acordes");
+        assert_eq!(categories[2].name, "Harpa Cristã");
 
         db.delete_category("c1").unwrap();
+        db.delete_category("c2").unwrap();
         let categories = db.get_all_categories().unwrap();
         assert_eq!(categories.len(), 1);
         assert_eq!(categories[0].id, "default-category");
