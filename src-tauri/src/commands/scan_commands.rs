@@ -570,6 +570,29 @@ fn describe_song_change(db: &Database, change: &ChangedFieldRecord) -> Option<St
             "A música {} teve o nome alterado.",
             change.value.clone().unwrap_or(song_name)
         )),
+        ("update", Some("status")) => {
+            let previous_status_label = match change.value.as_deref() {
+                Some("draft") => "rascunho",
+                Some("main") => "principal",
+                Some(other) => other,
+                None => "rascunho",
+            };
+
+            match song.as_ref().map(|song| song.status.as_str()) {
+                Some("main") => Some(format!(
+                    "A música {} saiu de {} e voltou para principal.",
+                    song_name, previous_status_label
+                )),
+                Some("draft") => Some(format!(
+                    "A música {} saiu de {} e foi para rascunho.",
+                    song_name, previous_status_label
+                )),
+                _ => Some(format!(
+                    "A música {} teve o status alterado.",
+                    song_name
+                )),
+            }
+        }
         ("insert", Some("composer")) => change.value.as_ref().map(|value| {
             format!(
                 "O compositor {} foi adicionado à música {}.",
@@ -1526,6 +1549,42 @@ mod tests {
         assert_eq!(
             super::describe_song_change(&db, &arranger_added),
             Some("O arranjador Maria foi adicionado à música Eis o Nosso Deus.".to_string())
+        );
+    }
+
+    #[test]
+    fn describes_song_status_change() {
+        let db = Database::new_in_memory().expect("db");
+
+        db.insert_song(
+            &Song {
+                id: "song-1".to_string(),
+                name: "Eis o Nosso Deus".to_string(),
+                composer: None,
+                arranger: None,
+                path: "/music/song-1".to_string(),
+                is_favorite: false,
+                status: ScoreStatus::Main,
+                updated_at: now(),
+                updated_by: "server-1".to_string(),
+            },
+            &[],
+        )
+        .expect("insert song");
+
+        let status_changed = ChangedFieldRecord {
+            id: "change-3".to_string(),
+            change_type: "update".to_string(),
+            entity: "songs".to_string(),
+            entity_id: "song-1".to_string(),
+            field: Some("status".to_string()),
+            value: Some("draft".to_string()),
+            timestamp: 0,
+        };
+
+        assert_eq!(
+            super::describe_song_change(&db, &status_changed),
+            Some("A música Eis o Nosso Deus saiu de rascunho e voltou para principal.".to_string())
         );
     }
 

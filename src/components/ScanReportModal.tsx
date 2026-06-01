@@ -164,6 +164,19 @@ function parseReviewItem(raw: string): ReviewItem | null {
     return { action: "modified", entity: "song", songName: songUpdatedMatch[1].trim(), raw };
   }
 
+  const songStatusChangeMatch = raw.match(
+    /^A música\s+(.+?)\s+saiu de\s+(.+?)\s+e\s+(?:voltou para principal|foi para\s+(.+?))\.$/
+  );
+  if (songStatusChangeMatch) {
+    return {
+      action: "modified",
+      entity: "song",
+      songName: songStatusChangeMatch[1].trim(),
+      customText: raw,
+      raw,
+    };
+  }
+
   const songRemovedMatch = raw.match(/^A música\s+(.+?)\s+foi deletada\.$/);
   if (songRemovedMatch) {
     return { action: "deleted", entity: "song", songName: songRemovedMatch[1].trim(), raw };
@@ -725,7 +738,40 @@ function formatSongItem(action: ReviewAction, songName: string): ReactNode {
 function renderCustomSongText(text: string): ReactNode {
   const match = text.match(/^A música\s+(.+?)\s+teve o nome alterado\.$/);
   if (!match) {
-    return text;
+    const statusChangeMatch = text.match(
+      /^A música\s+(.+?)\s+saiu de\s+(.+?)\s+e\s+(?:voltou para principal|foi para\s+(.+?))\.$/
+    );
+
+    if (!statusChangeMatch) {
+      return text;
+    }
+
+    const songName = statusChangeMatch[1];
+    const previousStatus = statusChangeMatch[2];
+    const nextStatus = statusChangeMatch[3];
+    const returnsToMain = text.includes("voltou para principal");
+
+    const labelForStatus = (value: string) => {
+      if (value === "ignored") {
+        return "ignorada";
+      }
+
+      if (value === "draft") {
+        return "rascunho";
+      }
+
+      if (value === "main") {
+        return "principal";
+      }
+
+      return value;
+    };
+
+    return (
+      <>
+        A música <strong>{songName}</strong> saiu de {labelForStatus(previousStatus)} e {returnsToMain ? "voltou para principal" : `foi para ${labelForStatus(nextStatus ?? "principal")}`}.
+      </>
+    );
   }
 
   return (

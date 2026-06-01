@@ -13,6 +13,7 @@ const report = {
     "Música criada: Hino Nacional",
     "A música Eis o Nosso Deus teve o nome alterado.",
     "A música Hino Antigo foi deletada.",
+    "A música Eis o Nosso Deus saiu de rascunho e voltou para principal.",
     "Partitura adicionada: /music/Eis o Nosso Deus - Oboe.musx",
     "Partitura adicionada: /music/Eis o Nosso Deus - Tenor Saxophone.musx",
     "Partitura adicionada: /music/Eis o Nosso Deus - Flauta.pdf",
@@ -140,5 +141,28 @@ describe("ScanReportModal", () => {
 
     expect(screen.getAllByText((_, element) => element?.textContent === "A partitura Score teve o nome alterado na música 03 VEZES SANTO.").length).toBeGreaterThan(0);
     expect(screen.queryByText((_, element) => element?.textContent?.includes("Score.MUS foi adicionada") ?? false)).not.toBeInTheDocument();
+  });
+
+  it("bolds the song name in a status change line", () => {
+    render(
+      <ScanReportModal
+        isOpen={true}
+        report={{
+          changed_files: [],
+          added_files: [],
+          deleted_files: [],
+          recovered_files: [],
+          failed_files: [],
+          report_items: ["A música Eis o Nosso Deus saiu de rascunho e voltou para principal."],
+        }}
+        isConfirming={false}
+        onClose={() => undefined}
+        onConfirm={() => undefined}
+      />
+    );
+
+    const musicSection = screen.getByText("Músicas").closest("section");
+    expect(musicSection).toHaveTextContent("A música Eis o Nosso Deus saiu de rascunho e voltou para principal.");
+    expect(Array.from(musicSection?.querySelectorAll("strong") ?? []).some((element) => element.textContent === "Eis o Nosso Deus")).toBe(true);
   });
 });
