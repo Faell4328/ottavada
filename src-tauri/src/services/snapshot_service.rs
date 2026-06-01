@@ -112,6 +112,11 @@ pub fn generate_snapshot_msgpack(
     let all_songs = db.get_all_songs()?;
     let all_categories = db.get_all_categories()?;
 
+    let exportable_songs: Vec<_> = all_songs
+        .iter()
+        .filter(|song| song.status == ScoreStatus::Main)
+        .collect();
+
     let mut category_songs = Vec::new();
     let mut composers_by_name: HashMap<String, String> = HashMap::new();
     let mut composer_entities = Vec::new();
@@ -120,7 +125,7 @@ pub fn generate_snapshot_msgpack(
     let mut arranger_entities = Vec::new();
     let mut arranger_songs = Vec::new();
 
-    let songs = all_songs
+    let songs = exportable_songs
         .iter()
         .map(|song| SnapshotSong {
             id: song.id.clone(),
@@ -144,7 +149,7 @@ pub fn generate_snapshot_msgpack(
         })
         .collect::<Vec<_>>();
 
-    for song in &all_songs {
+    for song in &exportable_songs {
         for category_id in &song.category_ids {
             category_songs.push(SnapshotCategorySong {
                 id: uuid::Uuid::new_v4().to_string(),
@@ -498,6 +503,64 @@ mod tests {
             .as_array()
             .expect("scores array")
             .is_empty());
+    }
+
+    #[test]
+    fn excludes_draft_songs_from_snapshot_payload() {
+        let dir = tempdir().expect("temp dir");
+        let db_path = dir.path().join("test.db");
+        let db = Database::new(&db_path).expect("db init");
+        let store = SystemStore::new(dir.path().to_path_buf());
+
+        let settings = crate::domain::models::AppSettings {
+            computer_id: "server-1".to_string(),
+            computer_name: Some("Servidor".to_string()),
+            computer_type: crate::domain::models::ComputerType::Server,
+            ..Default::default()
+        };
+        store.save_app_settings(&settings).expect("save settings");
+
+        let main_song = Song {
+            id: "song-main".to_string(),
+            name: "Musica Principal".to_string(),
+            composer: None,
+            arranger: None,
+            path: "/music/song-main".to_string(),
+            is_favorite: false,
+            status: crate::domain::models::ScoreStatus::Main,
+            updated_at: chrono::Local::now().naive_local(),
+            updated_by: "server-1".to_string(),
+        };
+        db.insert_song(&main_song, &[]).expect("insert main song");
+
+        let draft_song = Song {
+            id: "song-draft".to_string(),
+            name: "Musica Rascunho".to_string(),
+            composer: None,
+            arranger: None,
+            path: "/music/song-draft".to_string(),
+            is_favorite: false,
+            status: crate::domain::models::ScoreStatus::Draft,
+            updated_at: chrono::Local::now().naive_local(),
+            updated_by: "server-1".to_string(),
+        };
+        db.insert_song(&draft_song, &[]).expect("insert draft song");
+
+        let summary = generate_snapshot_msgpack(&db, &store).expect("generate snapshot");
+
+        let raw = fs::read(
+            dir.path()
+                .join("cloud")
+                .join("actions")
+                .join("snapshot.msgpack.zst"),
+        )
+        .expect("read snapshot file");
+        let mut decoder = zstd::stream::read::Decoder::new(raw.as_slice()).expect("decoder");
+        let payload: Value = rmp_serde::from_read(&mut decoder).expect("decode msgpack");
+
+        assert_eq!(summary.songs_count, 1);
+        assert_eq!(payload["songs"].as_array().expect("songs array").len(), 1);
+        assert_eq!(payload["songs"][0]["id"], "song-main");
     }
 
     fn conn_execute_draft_score(db: &Database) {

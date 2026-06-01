@@ -19,6 +19,7 @@ describe("TypeScript Types", () => {
         path: "/music/canon-in-d",
         updated_at: "2024-01-01 12:00:00",
         is_favorite: false,
+        status: "main",
         category_ids: [],
         scores: [],
       };

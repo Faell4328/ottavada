@@ -50,6 +50,7 @@ const sampleSong: SongListItem = {
   path: "/music/canon",
   updated_at: "2026-04-16T00:00:00.000Z",
   is_favorite: false,
+  status: "main",
   category_ids: [],
   scores: [],
 };
@@ -76,6 +77,7 @@ const sampleSong2: SongListItem = {
   path: "/music/amazing-grace",
   updated_at: "2026-04-16T00:00:00.000Z",
   is_favorite: false,
+  status: "main",
   category_ids: [],
   scores: [],
 };

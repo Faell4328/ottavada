@@ -149,6 +149,10 @@ export async function updateSong(
   return invoke("update_song", { songId, name, composer, arranger, categoryIds });
 }
 
+export async function updateSongStatus(songId: string, status: "main" | "draft"): Promise<SongListItem> {
+  return invoke("update_song_status", { songId, status });
+}
+
 export async function updateScore(
   scoreId: string,
   instrumentName: string | null,

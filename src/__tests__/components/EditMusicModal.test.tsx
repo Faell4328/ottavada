@@ -22,6 +22,7 @@ vi.mock("@tauri-apps/api/core", () => ({
             arranger: "Global Arranger",
             updated_at: "2024-01-01 12:00:00",
             is_favorite: false,
+            status: "main",
             category_ids: [],
             scores: [],
           },
@@ -78,6 +79,7 @@ const sampleSong: SongListItem = {
   path: "/music/canon-in-d",
   updated_at: "2024-01-01 12:00:00",
   is_favorite: false,
+  status: "main",
   category_ids: ["c1"],
   scores: [],
 };

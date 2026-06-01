@@ -5,6 +5,7 @@ import {
   songMatchesAuthorFilter,
   songMatchesSearchQuery,
 } from "../../utils/songSearch";
+import type { SongListItem } from "../../types";
 
 describe("songSearch", () => {
   it("normalizes accents and punctuation", () => {
@@ -22,6 +23,7 @@ describe("songSearch", () => {
           path: "/songs/hino-nacional",
           updated_at: "",
           is_favorite: false,
+          status: "main",
           category_ids: [],
           scores: [],
         },
@@ -41,6 +43,7 @@ describe("songSearch", () => {
           path: "/songs/canon-in-d",
           updated_at: "",
           is_favorite: false,
+          status: "main",
           category_ids: [],
           scores: [],
         },
@@ -60,6 +63,7 @@ describe("songSearch", () => {
           path: "/songs/any",
           updated_at: "",
           is_favorite: false,
+          status: "main",
           category_ids: [],
           scores: [],
         },
@@ -80,6 +84,7 @@ describe("songSearch", () => {
             path: "/songs/a",
             updated_at: "",
             is_favorite: false,
+            status: "main",
             category_ids: [],
             scores: [],
           },
@@ -91,6 +96,7 @@ describe("songSearch", () => {
             path: "/songs/b",
             updated_at: "",
             is_favorite: false,
+            status: "main",
             category_ids: [],
             scores: [],
           },
@@ -101,7 +107,7 @@ describe("songSearch", () => {
   });
 
   it("matches author filters including all and none", () => {
-    const song = {
+    const song: SongListItem = {
       id: "1",
       name: "CANON",
       composer: "Pachelbel",
@@ -109,6 +115,7 @@ describe("songSearch", () => {
       path: "/songs/canon",
       updated_at: "",
       is_favorite: false,
+      status: "main",
       category_ids: [],
       scores: [],
     };

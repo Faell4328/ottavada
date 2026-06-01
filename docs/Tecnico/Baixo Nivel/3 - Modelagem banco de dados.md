@@ -55,13 +55,14 @@ Tabela responsável por armazenar todas as relações entre categorias e música
 
 Tabela responsável por armazenar as informações das músicas.
 
-| Campo                   | Tipo          | PK  | FK  | Referência | Obrigatório? | Onde?              |
-| ----------------------- | ------------- | --- | --- | ---------- | ------------ | ------------------ |
-| id                      | text (`uuid`) | Sim | Não | Não        | Sim          | Cliente / Servidor |
-| name                    | text          | Não | Não | Não        | Sim          | Cliente / Servidor |
-| isFavorite              | bool          | Não | Não | Não        | Não          | Cliente / Servidor |
-| path                    | text          | Não | Não | Não        | Sim          | Servidor           |
-| lastScoreFileModifiedAt | integer       | Não | Não | Não        | Sim          | Servidor           |
+| Campo                   | Tipo              | PK  | FK  | Referência | Obrigatório? | Onde?              |
+| ----------------------- | ----------------- | --- | --- | ---------- | ------------ | ------------------ |
+| id                      | text (`uuid`)     | Sim | Não | Não        | Sim          | Cliente / Servidor |
+| name                    | text              | Não | Não | Não        | Sim          | Cliente / Servidor |
+| isFavorite              | bool              | Não | Não | Não        | Não          | Cliente / Servidor |
+| path                    | text              | Não | Não | Não        | Sim          | Servidor           |
+| lastScoreFileModifiedAt | integer           | Não | Não | Não        | Sim          | Servidor           |
+| status                  | (`main`  `draft`) | Não | Não | Não        | Sim          | Servidor           |
 
 - `path` - diretório onde as partituras estão sendo indexadas.    
 

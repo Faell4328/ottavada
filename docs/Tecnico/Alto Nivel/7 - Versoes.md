@@ -312,27 +312,29 @@
 
 ## Funcionalidades
 
-- indexação de diretórios.
+- indexação de diretórios;
+- editar o nome da categoria, compositor e arranjador;
+- deletar facilmente compositor e arranjador;
+- converter música para `main` ou `draft`.
 
 ## Melhorias
 
-- atualizando a modelagem do banco de dados.
-- atualizando os arquivos `*.msgpack`.
+- atualizando a modelagem do banco de dados;
+- atualizando os arquivos `*.msgpack`;
+- implementando verificação de hash quando arquivo tem data/hora do último salvamento alterado.
 
 ! Refatoração completa do código (ex: arquivo do db gitante).
 
 ## Correções
 
-- removendo duplicações e padronizando os campos no `tauri-store`.
+- removendo duplicações e padronizando os campos no `tauri-store`;
 
-- removendo completamente o status `pedding` do código.
+- removendo inconsistências no status `draft`;
 
-- removendo inconsistências no status `draft`.
+- removendo o criar música (manual);
 
-- removendo o criar música.
+- corrigindo o indexar diretório para o novo padrão;
 
-- corrigindo o indexar diretório para o novo padrão.
+- removendo a opção "adicionar arquivo(s)";
 
-- removendo a opção "adicionar arquivo(s)".
-
-- removendo um status obsoleto.
+- removendo os status `not_found` e `pedding`.

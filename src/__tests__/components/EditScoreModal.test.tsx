@@ -16,6 +16,7 @@ const sampleSong: SongListItem = {
   path: "/music/hino-nacional",
   updated_at: "2024-01-01 12:00:00",
   is_favorite: false,
+  status: "main",
   category_ids: [],
   scores: [
     {

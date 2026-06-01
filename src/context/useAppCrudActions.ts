@@ -300,6 +300,29 @@ export function useAppCrudActions({
     }
   }, [dispatch, getErrorMessage, loadCategories, loadSettings, loadSongs, refreshSelectedSong]);
 
+    const updateSongStatus = useCallback(async (
+      songId: string,
+      status: "main" | "draft"
+    ) => {
+      try {
+        const updatedSong = await api.updateSongStatus(songId, status);
+        dispatch({ type: "UPDATE_SELECTED_SONG", payload: updatedSong });
+
+        const updatedSongs = state.songs.map((song) =>
+          song.id === updatedSong.id ? updatedSong : song
+        );
+        dispatch({ type: "SET_SONGS", payload: updatedSongs });
+
+        await refreshSelectedSong();
+        await loadSettings();
+        toast.success("Status da música atualizado.");
+      } catch (err) {
+        console.error("Failed to update song status:", err);
+        toast.error("Não foi possível mudar o status da música.");
+        throw err;
+      }
+    }, [dispatch, loadSettings, refreshSelectedSong, state.songs]);
+
   const updateScore = useCallback(async (
     scoreId: string,
     instrumentName: string | null,
@@ -448,6 +471,7 @@ export function useAppCrudActions({
     updateAuthor,
     deleteAuthor,
     updateSong,
+    updateSongStatus,
     updateScore,
     updateScoreStatus,
     deleteScore,

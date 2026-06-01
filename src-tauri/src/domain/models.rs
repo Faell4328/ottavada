@@ -381,6 +381,7 @@ pub struct SongListItem {
     pub path: String,
     pub updated_at: NaiveDateTime,
     pub is_favorite: bool,
+    pub status: ScoreStatus,
     pub category_ids: Vec<String>,
     pub scores: Vec<ScoreListItem>,
 }

@@ -586,7 +586,7 @@ impl Database {
         let conn = self.conn.lock().unwrap();
         let mut items = Self::query_song_list_items(
             &conn,
-            r#"SELECT id, name, composer, arranger, path, datetime('now') AS updated_at, is_favorite FROM songs WHERE id = ?1"#,
+            r#"SELECT id, name, composer, arranger, path, datetime('now') AS updated_at, is_favorite, status FROM songs WHERE id = ?1"#,
             &[&song_id as &dyn rusqlite::ToSql],
             true,
         )?;
@@ -614,6 +614,7 @@ impl Database {
                     path: row.get(4)?,
                     updated_at: parse_datetime(&row.get::<_, String>(5)?),
                     is_favorite: row.get::<_, i32>(6)? != 0,
+                    status: ScoreStatus::from_str(&row.get::<_, String>(7)?),
                     category_ids: Vec::new(),
                     scores: Vec::new(),
                 })
@@ -768,7 +769,7 @@ impl Database {
         let conn = self.conn.lock().unwrap();
         Self::query_song_list_items(
             &conn,
-            r#"SELECT id, name, composer, arranger, path, datetime('now') AS updated_at, is_favorite
+            r#"SELECT id, name, composer, arranger, path, datetime('now') AS updated_at, is_favorite, status
              FROM songs
              ORDER BY name COLLATE NOCASE ASC, id ASC"#,
             &[],
@@ -780,7 +781,7 @@ impl Database {
         let conn = self.conn.lock().unwrap();
         Self::query_song_list_items(
             &conn,
-            r#"SELECT id, name, composer, arranger, path, datetime('now') AS updated_at, is_favorite
+            r#"SELECT id, name, composer, arranger, path, datetime('now') AS updated_at, is_favorite, status
              FROM songs
              ORDER BY name COLLATE NOCASE ASC, id ASC"#,
             &[],
@@ -792,7 +793,7 @@ impl Database {
         let conn = self.conn.lock().unwrap();
         Self::query_song_list_items(
             &conn,
-            r#"SELECT id, name, composer, arranger, path, datetime('now') AS updated_at, is_favorite
+            r#"SELECT id, name, composer, arranger, path, datetime('now') AS updated_at, is_favorite, status
              FROM songs
              WHERE is_favorite = 1
              ORDER BY name COLLATE NOCASE ASC, id ASC"#,
@@ -805,7 +806,7 @@ impl Database {
         let conn = self.conn.lock().unwrap();
         Self::query_song_list_items(
             &conn,
-            r#"SELECT id, name, composer, arranger, path, datetime('now') AS updated_at, is_favorite
+            r#"SELECT id, name, composer, arranger, path, datetime('now') AS updated_at, is_favorite, status
              FROM songs
              WHERE is_favorite = 1
              ORDER BY name COLLATE NOCASE ASC, id ASC"#,
@@ -836,7 +837,7 @@ impl Database {
         let like_query = format!("%{}%", query.trim());
         Self::query_song_list_items(
             &conn,
-            r#"SELECT s.id, s.name, s.composer, s.arranger, s.path, datetime('now') AS updated_at, s.is_favorite
+            r#"SELECT s.id, s.name, s.composer, s.arranger, s.path, datetime('now') AS updated_at, s.is_favorite, s.status
              FROM songs s
              WHERE s.name LIKE ?1
                 OR COALESCE(s.composer, '') LIKE ?1
@@ -853,7 +854,7 @@ impl Database {
         let like_query = format!("%{}%", query.trim());
         Self::query_song_list_items(
             &conn,
-            r#"SELECT s.id, s.name, s.composer, s.arranger, s.path, datetime('now') AS updated_at, s.is_favorite
+            r#"SELECT s.id, s.name, s.composer, s.arranger, s.path, datetime('now') AS updated_at, s.is_favorite, s.status
              FROM songs s
              WHERE s.name LIKE ?1
                 OR COALESCE(s.composer, '') LIKE ?1
@@ -868,7 +869,7 @@ impl Database {
         let conn = self.conn.lock().unwrap();
         Self::query_song_list_items(
             &conn,
-            "SELECT s.id, s.name, s.composer, s.arranger, s.path, datetime('now') AS updated_at, s.is_favorite
+            "SELECT s.id, s.name, s.composer, s.arranger, s.path, datetime('now') AS updated_at, s.is_favorite, s.status
              FROM songs s
              INNER JOIN categoriesSongs cs ON cs.songId = s.id
              WHERE cs.categoryId = ?1
@@ -885,7 +886,7 @@ impl Database {
         let conn = self.conn.lock().unwrap();
         Self::query_song_list_items(
             &conn,
-            "SELECT s.id, s.name, s.composer, s.arranger, s.path, datetime('now') AS updated_at, s.is_favorite
+            "SELECT s.id, s.name, s.composer, s.arranger, s.path, datetime('now') AS updated_at, s.is_favorite, s.status
              FROM songs s
              INNER JOIN categoriesSongs cs ON cs.songId = s.id
              WHERE cs.categoryId = ?1
@@ -899,7 +900,7 @@ impl Database {
         let conn = self.conn.lock().unwrap();
         Self::query_song_list_items(
             &conn,
-            "SELECT DISTINCT s.id, s.name, s.composer, s.arranger, s.path, datetime('now') AS updated_at, s.is_favorite
+            "SELECT DISTINCT s.id, s.name, s.composer, s.arranger, s.path, datetime('now') AS updated_at, s.is_favorite, s.status
              FROM songs s
              INNER JOIN scores sc ON sc.song_id = s.id
              WHERE sc.status = 'draft'
@@ -913,7 +914,7 @@ impl Database {
         let conn = self.conn.lock().unwrap();
         Self::query_song_list_items(
             &conn,
-            "SELECT DISTINCT s.id, s.name, s.composer, s.arranger, s.path, datetime('now') AS updated_at, s.is_favorite
+            "SELECT DISTINCT s.id, s.name, s.composer, s.arranger, s.path, datetime('now') AS updated_at, s.is_favorite, s.status
              FROM songs s
              INNER JOIN scores sc ON sc.song_id = s.id
              WHERE sc.status = 'draft'
@@ -927,6 +928,140 @@ impl Database {
         let conn = self.conn.lock().unwrap();
         let mut grouped = Self::get_scores_for_songs(&conn, &[song_id.to_string()])?;
         Ok(grouped.remove(song_id).unwrap_or_default())
+    }
+
+    fn sync_song_status_from_scores(conn: &Connection, song_id: &str) -> Result<(), AppError> {
+        let (next_status, current_status): (Option<String>, String) = conn
+            .query_row(
+                "SELECT
+                    CASE
+                        WHEN SUM(CASE WHEN status = 'main' THEN 1 ELSE 0 END) > 0 THEN 'main'
+                        WHEN SUM(CASE WHEN status = 'draft' THEN 1 ELSE 0 END) > 0 THEN 'draft'
+                        ELSE NULL
+                    END AS next_status,
+                    (SELECT status FROM songs WHERE id = ?1) AS current_status
+                 FROM scores
+                 WHERE song_id = ?1
+                   AND status IN ('main', 'draft')",
+                params![song_id],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .map_err(|e| match e {
+                rusqlite::Error::QueryReturnedNoRows => {
+                    AppError::SongNotFound(song_id.to_string())
+                }
+                other => AppError::Database(other),
+            })?;
+
+        let Some(next_status) = next_status else {
+            return Ok(());
+        };
+
+        if current_status == next_status {
+            return Ok(());
+        }
+
+        conn.execute(
+            "UPDATE songs SET status = ?1 WHERE id = ?2",
+            params![next_status.clone(), song_id],
+        )?;
+
+        Self::insert_changed_field(
+            conn,
+            "update",
+            "songs",
+            song_id,
+            Some("status"),
+            Some(current_status),
+        )?;
+
+        Ok(())
+    }
+
+    pub fn update_song_status_for_song(
+        &self,
+        song_id: &str,
+        status: ScoreStatus,
+        _updated_by: &str,
+    ) -> Result<(), AppError> {
+        let mut conn = self.conn.lock().unwrap();
+        let tx = conn.transaction()?;
+
+        let current_status: String = tx
+            .query_row(
+                "SELECT status FROM songs WHERE id = ?1",
+                params![song_id],
+                |row| row.get(0),
+            )
+            .map_err(|e| match e {
+                rusqlite::Error::QueryReturnedNoRows => {
+                    AppError::SongNotFound(song_id.to_string())
+                }
+                other => AppError::Database(other),
+            })?;
+
+        let mut score_stmt = tx.prepare("SELECT id, status FROM scores WHERE song_id = ?1")?;
+        let score_rows = score_stmt.query_map(params![song_id], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })?;
+
+        let mut score_updates = Vec::new();
+        for row in score_rows {
+            score_updates.push(row?);
+        }
+
+        if current_status != status.as_str() {
+            tx.execute(
+                "UPDATE songs SET status = ?1 WHERE id = ?2",
+                params![status.as_str(), song_id],
+            )?;
+
+            Self::insert_changed_field(
+                &tx,
+                "update",
+                "songs",
+                song_id,
+                Some("status"),
+                Some(current_status.clone()),
+            )?;
+        }
+
+        let mut score_status_changed = false;
+        for (score_id, old_status) in score_updates {
+            if old_status == status.as_str() {
+                continue;
+            }
+
+            score_status_changed = true;
+            tx.execute(
+                "UPDATE scores SET status = ?1 WHERE id = ?2",
+                params![status.as_str(), score_id],
+            )?;
+
+            Self::insert_changed_field(
+                &tx,
+                "update",
+                "scores",
+                &score_id,
+                Some("status"),
+                Some(old_status),
+            )?;
+        }
+
+        drop(score_stmt);
+
+        if score_status_changed || current_status != status.as_str() {
+            tx.execute(
+                "INSERT INTO songsBackup (songId, status)
+                 VALUES (?1, 'processing')
+                 ON CONFLICT(songId) DO UPDATE SET
+                    status = 'processing'",
+                params![song_id],
+            )?;
+        }
+
+        tx.commit()?;
+        Ok(())
     }
 
     // ── Scores ──
@@ -999,6 +1134,8 @@ impl Database {
                 Some(extension),
             )?;
         }
+
+        Self::sync_song_status_from_scores(&conn, &score.song_id)?;
 
         // Inserir uma nova partitura invalida o backup atual da música,
         // forçando a regeneração do arquivo {songId}.tar.zst.
@@ -1166,6 +1303,8 @@ impl Database {
             Some("file_name"),
             Some(file_name),
         )?;
+
+        Self::sync_song_status_from_scores(&conn, &song_id)?;
 
         // Deletar uma partitura precisa invalidar o último backup da música,
         // forçando a regeneração do arquivo {songId}.tar.zst no próximo ciclo.
@@ -1362,6 +1501,8 @@ impl Database {
                 params![song_id],
             )?;
         }
+
+        Self::sync_song_status_from_scores(&conn, &song_id)?;
 
         Ok(())
     }

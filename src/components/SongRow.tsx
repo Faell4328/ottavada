@@ -14,6 +14,7 @@ export interface SongRowProps {
   onToggleFavorite: () => void;
   onEdit: () => void;
   onDelete: (songId: string) => Promise<void>;
+  onStatusChange: (songId: string, status: "main" | "draft") => Promise<void>;
   menuId: string;
   isMenuOpen: boolean;
   onMenuOpen: (id: string) => void;
@@ -30,6 +31,7 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(function Son
     onToggleFavorite,
     onEdit,
     onDelete,
+    onStatusChange,
     menuId,
     isMenuOpen,
     onMenuOpen,
@@ -45,6 +47,7 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(function Son
   const isClient = isClientComputer(computerType);
   const isActionLocked = isClient || isLocked;
   const openLocalTarget = song.path.trim();
+  const isDraft = song.status === "draft";
   const handleMenuAction = (e: React.MouseEvent, action: () => void) => {
     e.stopPropagation();
     action();
@@ -104,9 +107,9 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(function Son
           contentVisibility: "auto",
           containIntrinsicSize: "44px",
         }}
-        className={`border-b border-[#d8e0ea] text-sm text-[#344b61] ${
-          isExpanded ? "bg-[#edf2f7] font-bold" : "bg-white hover:bg-[#f7f9fc]"
-        } cursor-pointer transition-colors`}
+        className={`border-b border-[#d8e0ea] text-sm transition-colors ${
+          isDraft ? "bg-[#fff7ed] text-[#7c4a10] hover:bg-[#fdeccf]" : "bg-white text-[#344b61] hover:bg-[#f7f9fc]"
+        } cursor-pointer`}
         onClick={onToggle}
       >
         <td className="px-3.5 py-2">
@@ -119,10 +122,16 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(function Son
             <span className="font-bold truncate">{song.name}</span>
           </span>
         </td>
-        <td className="px-3.5 py-2 text-[#5c7089]">{author || "—"}</td>
+        <td className={`px-3.5 py-2 ${isDraft ? "text-[#8a5b19]" : "text-[#5c7089]"}`}>{author || "—"}</td>
         <td className="px-3.5 py-2">
           <div className="flex items-center justify-between">
-            <span className="text-[#5c7089]">—</span>
+            {isDraft ? (
+              <span className="inline-flex items-center rounded-full bg-orange-100 px-2.5 py-1 text-xs font-semibold text-orange-800">
+                Rascunho
+              </span>
+            ) : (
+              <span className="text-xs font-medium text-[#6b849e]">Principal</span>
+            )}
             <ContextMenu
               isOpen={isMenuOpen}
               onToggle={(e) => {
@@ -151,10 +160,21 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(function Son
                   void handleOpenLocal();
                   onMenuClose();
                 }}
-                    disabled={!openLocalTarget}
+                disabled={!openLocalTarget}
               />
               {!isClient && (
                 <>
+                  <ContextMenuItem
+                    label={isDraft ? "Definir como principal" : "Definir como rascunho"}
+                    onClick={(e) =>
+                      handleMenuAction(e, () => {
+                        void Promise.resolve(onStatusChange(song.id, isDraft ? "main" : "draft")).catch((err) => {
+                          console.error("Failed to update song status:", err);
+                        });
+                      })
+                    }
+                    disabled={isActionLocked}
+                  />
                   <ContextMenuItem
                     label={song.is_favorite ? "Remover de favoritos" : "Adicionar aos favoritos"}
                     onClick={(e) => handleMenuAction(e, onToggleFavorite)}
@@ -235,6 +255,7 @@ export function areSongRowPropsEqual(prev: SongRowProps, next: SongRowProps) {
     prev.song.arranger === next.song.arranger &&
     prev.song.is_favorite === next.song.is_favorite &&
     prev.song.path === next.song.path &&
+    prev.song.status === next.song.status &&
     prev.song.scores.length === next.song.scores.length &&
     prev.song.category_ids.length === next.song.category_ids.length &&
     prev.isExpanded === next.isExpanded &&

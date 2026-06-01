@@ -47,6 +47,7 @@ export function EditInstrumentModal({
       path: "",
       updated_at: "",
       is_favorite: false,
+      status: "main" as const,
       category_ids: [],
       scores: existingScores,
     };

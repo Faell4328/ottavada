@@ -39,6 +39,7 @@ export interface AppContextValue {
     arranger: string | null,
     categoryIds: string[]
   ) => Promise<void>;
+  updateSongStatus: (songId: string, status: "main" | "draft") => Promise<void>;
   updateScore: (
     scoreId: string,
     instrumentName: string | null,

@@ -35,6 +35,7 @@ pub struct SongArchiveSummary {
 struct SongBackupRow {
     song_id: String,
     song_name: String,
+    song_status: String,
     last_uploadable_score_modified_at: Option<i64>,
     last_status_change_at: Option<i64>,
     last_backup_at: Option<i64>,
@@ -107,6 +108,7 @@ fn list_song_backup_rows(db: &Database, songs_dir: &Path) -> Result<Vec<SongBack
         "SELECT
             s.id,
             s.name,
+            s.status,
             main_scores.last_uploadable_score_modified_at,
             status_changes.last_status_change_at
          FROM songs s
@@ -143,8 +145,9 @@ fn list_song_backup_rows(db: &Database, songs_dir: &Path) -> Result<Vec<SongBack
         Ok(SongBackupRow {
             song_id,
             song_name: row.get(1)?,
-            last_uploadable_score_modified_at: row.get(2)?,
-            last_status_change_at: row.get(3)?,
+            song_status: row.get(2)?,
+            last_uploadable_score_modified_at: row.get(3)?,
+            last_status_change_at: row.get(4)?,
             last_backup_at,
         })
     })?;
@@ -630,6 +633,28 @@ fn generate_song_archives_with_prepared_versions(
     let mut jobs = Vec::new();
 
     for row in rows {
+        if !row.song_status.eq_ignore_ascii_case("main") {
+            let archive_path = songs_dir.join(format!("{}.tar.zst", row.song_id));
+            remove_if_exists(&archive_path);
+
+            if let Err(err) = update_backup_status(db, &row.song_id, "ok") {
+                error!(
+                    "Erro ao atualizar status de backup (draft skip) para {}: {}",
+                    row.song_id, err
+                );
+            }
+
+            results.push(SongArchiveResult {
+                song_id: row.song_id,
+                song_name: row.song_name,
+                archive_path: None,
+                archive_size: None,
+                generated: false,
+                error: None,
+            });
+            continue;
+        }
+
         if let Err(err) = upsert_processing_status(db, &row.song_id) {
             error!(
                 "Erro ao iniciar status de processamento para {}: {}",
@@ -862,6 +887,7 @@ mod tests {
         let row = SongBackupRow {
             song_id: "song-1".to_string(),
             song_name: "Musica".to_string(),
+            song_status: "main".to_string(),
             last_uploadable_score_modified_at: Some(100),
             last_status_change_at: None,
             last_backup_at: Some(100),
@@ -879,6 +905,7 @@ mod tests {
         let row = SongBackupRow {
             song_id: "song-2".to_string(),
             song_name: "Musica".to_string(),
+            song_status: "main".to_string(),
             last_uploadable_score_modified_at: Some(100),
             last_status_change_at: None,
             last_backup_at: Some(100),
@@ -962,6 +989,7 @@ mod tests {
         let row = SongBackupRow {
             song_id: "song-3".to_string(),
             song_name: "Musica".to_string(),
+            song_status: "main".to_string(),
             last_uploadable_score_modified_at: Some(200),
             last_status_change_at: None,
             last_backup_at: Some(100),
@@ -982,6 +1010,7 @@ mod tests {
         let row = SongBackupRow {
             song_id: "song-4".to_string(),
             song_name: "Musica".to_string(),
+            song_status: "draft".to_string(),
             last_uploadable_score_modified_at: None,
             last_status_change_at: None,
             last_backup_at: Some(100),
@@ -1254,6 +1283,7 @@ mod tests {
         let rows = vec![SongBackupRow {
             song_id: "valid-song".to_string(),
             song_name: "Valid Song".to_string(),
+            song_status: "main".to_string(),
             last_uploadable_score_modified_at: Some(100),
             last_status_change_at: None,
             last_backup_at: Some(100),

@@ -20,6 +20,7 @@ const baseSong = {
   path: "/songs/hino-nacional",
   updated_at: "2026-04-08T10:00:00Z",
   is_favorite: false,
+  status: "main" as const,
   category_ids: ["cat-1"],
   scores: [baseScore],
 };
@@ -51,6 +52,7 @@ function buildSongRowProps(overrides: Partial<SongRowProps> = {}): SongRowProps 
     onToggleFavorite: () => undefined,
     onEdit: () => undefined,
     onDelete: async () => undefined,
+    onStatusChange: async () => undefined,
     menuId: "song-1",
     isMenuOpen: false,
     onMenuOpen: () => undefined,
@@ -89,6 +91,18 @@ describe("row memo comparators", () => {
       song: {
         ...baseSong,
         path: "/songs/novo-caminho",
+      },
+    });
+
+    expect(areSongRowPropsEqual(prev, next)).toBe(false);
+  });
+
+  it("re-renders song rows when the song status changes", () => {
+    const prev = buildSongRowProps();
+    const next = buildSongRowProps({
+      song: {
+        ...baseSong,
+        status: "draft",
       },
     });
 

@@ -30,6 +30,7 @@ export default function SongsList() {
     selectScore,
     toggleFavorite,
     updateSong,
+    updateSongStatus,
     updateScore,
     updateScoreStatus,
     deleteScore,
@@ -330,6 +331,7 @@ export default function SongsList() {
                           setIsEditMusicModalOpen(true);
                         }}
                         onDelete={deleteSong}
+                        onStatusChange={updateSongStatus}
                         menuId={`song-${song.id}`}
                         isMenuOpen={openMenuId === `song-${song.id}`}
                         onMenuOpen={(id) => setOpenMenuId(id)}

@@ -17,6 +17,7 @@ const song: SongListItem = {
   path: "/music/HINO NACIONAL",
   updated_at: "2024-01-01 12:00:00",
   is_favorite: false,
+  status: "main",
   category_ids: [],
   scores: [],
 };
@@ -26,6 +27,7 @@ describe("SongRow menu", () => {
   const onToggleFavorite = vi.fn();
   const onEdit = vi.fn();
   const onDelete = vi.fn();
+  const onStatusChange = vi.fn();
   const onMenuOpen = vi.fn();
   const onMenuClose = vi.fn();
 
@@ -46,6 +48,7 @@ describe("SongRow menu", () => {
             onToggleFavorite={onToggleFavorite}
             onEdit={onEdit}
             onDelete={onDelete}
+            onStatusChange={onStatusChange}
             menuId="song-1"
             isMenuOpen={true}
             onMenuOpen={onMenuOpen}
@@ -77,6 +80,7 @@ describe("SongRow menu", () => {
             onToggleFavorite={onToggleFavorite}
             onEdit={onEdit}
             onDelete={onDelete}
+            onStatusChange={onStatusChange}
             menuId="song-1"
             isMenuOpen={true}
             onMenuOpen={onMenuOpen}
@@ -98,5 +102,89 @@ describe("SongRow menu", () => {
     await waitFor(() => {
       expect(deleteSongWithFilesSpy).toHaveBeenCalledWith(song.id);
     });
+  });
+
+  it("toggles the song status from the overflow menu", async () => {
+    render(
+      <table>
+        <tbody>
+          <MemoizedSongRow
+            song={song}
+            isExpanded={true}
+            onToggle={onToggle}
+            onToggleFavorite={onToggleFavorite}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            onStatusChange={onStatusChange}
+            menuId="song-1"
+            isMenuOpen={true}
+            onMenuOpen={onMenuOpen}
+            onMenuClose={onMenuClose}
+            computerType="Server"
+            isLocked={false}
+          />
+        </tbody>
+      </table>
+    );
+
+    fireEvent.click(screen.getByText("Definir como rascunho"));
+
+    await waitFor(() => {
+      expect(onStatusChange).toHaveBeenCalledWith(song.id, "draft");
+    });
+  });
+
+  it("renders draft songs with highlighted styling and main songs as normal rows", () => {
+    const draftSong = { ...song, status: "draft" as const };
+
+    const { rerender } = render(
+      <table>
+        <tbody>
+          <MemoizedSongRow
+            song={song}
+            isExpanded={true}
+            onToggle={onToggle}
+            onToggleFavorite={onToggleFavorite}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            onStatusChange={onStatusChange}
+            menuId="song-1"
+            isMenuOpen={true}
+            onMenuOpen={onMenuOpen}
+            onMenuClose={onMenuClose}
+            computerType="Server"
+            isLocked={false}
+          />
+        </tbody>
+      </table>
+    );
+
+    expect(screen.getByText("Principal")).toBeInTheDocument();
+    expect(screen.getByText("Principal").closest("tr")).toHaveClass("bg-white");
+
+    rerender(
+      <table>
+        <tbody>
+          <MemoizedSongRow
+            song={draftSong}
+            isExpanded={true}
+            onToggle={onToggle}
+            onToggleFavorite={onToggleFavorite}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            onStatusChange={onStatusChange}
+            menuId="song-1"
+            isMenuOpen={true}
+            onMenuOpen={onMenuOpen}
+            onMenuClose={onMenuClose}
+            computerType="Server"
+            isLocked={false}
+          />
+        </tbody>
+      </table>
+    );
+
+    expect(screen.getByText("Rascunho")).toBeInTheDocument();
+    expect(screen.getByText("Rascunho").closest("tr")).toHaveClass("bg-[#fff7ed]");
   });
 });

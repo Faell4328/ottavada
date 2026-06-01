@@ -8,6 +8,7 @@ export interface SongListItem {
   path: string;
   updated_at: string;
   is_favorite: boolean;
+  status: "main" | "draft";
   category_ids: string[];
   scores: ScoreListItem[];
 }

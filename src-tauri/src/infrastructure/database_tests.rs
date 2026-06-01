@@ -795,6 +795,30 @@ mod tests {
     }
 
     #[test]
+    fn test_song_status_is_derived_from_score_statuses() {
+        let db = make_db();
+        db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
+        db.insert_score(&make_score(&db, "sc1", "s1", Some("Violino")))
+            .unwrap();
+        db.insert_score(&make_score(&db, "sc2", "s1", Some("Piano")))
+            .unwrap();
+
+        db.update_score_status("sc1", ScoreStatus::Draft, "test-computer", None)
+            .unwrap();
+        db.update_score_status("sc2", ScoreStatus::Draft, "test-computer", None)
+            .unwrap();
+
+        let songs = db.get_all_songs().unwrap();
+        assert_eq!(songs[0].status, ScoreStatus::Draft);
+
+        db.update_score_status("sc1", ScoreStatus::Main, "test-computer", None)
+            .unwrap();
+
+        let songs = db.get_all_songs().unwrap();
+        assert_eq!(songs[0].status, ScoreStatus::Main);
+    }
+
+    #[test]
     fn test_update_score_status_draft_creates_changed_field_event() {
         let db = make_db();
         db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();

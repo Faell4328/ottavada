@@ -11,6 +11,7 @@ const baseSong: SongListItem = {
   path: "/music/canon",
   updated_at: "2026-04-08T00:00:00.000Z",
   is_favorite: false,
+  status: "main",
   category_ids: [],
   scores: [
     {

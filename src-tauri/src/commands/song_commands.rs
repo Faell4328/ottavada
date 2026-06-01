@@ -547,6 +547,16 @@ fn validate_server_create_song(
     Ok(settings.computer_id)
 }
 
+fn resolve_manual_song_status(requested_status: &str) -> Result<ScoreStatus, AppError> {
+    match requested_status.to_lowercase().as_str() {
+        "draft" => Ok(ScoreStatus::Draft),
+        "main" => Ok(ScoreStatus::Main),
+        _ => Err(AppError::Generic(
+            "Apenas as mudanças para 'draft' ou 'main' são permitidas manualmente".into(),
+        )),
+    }
+}
+
 #[tauri::command]
 pub fn create_song(
     db: State<'_, Database>,
@@ -650,6 +660,23 @@ pub fn update_song(
     };
 
     db.update_song(&updated_song, &category_ids)?;
+    let _ = refresh_library_summary_cache(&db, &store);
+    db.get_song_list_item_by_id(&song_id)
+}
+
+#[tauri::command]
+pub fn update_song_status(
+    db: State<'_, Database>,
+    store: State<'_, SystemStore>,
+    song_id: String,
+    status: String,
+) -> Result<SongListItem, AppError> {
+    let settings = require_server_settings(&store)?;
+    let next_status = resolve_manual_song_status(&status)?;
+
+    info!("Atualizando status da música: {} para: {}", song_id, status);
+    db.update_song_status_for_song(&song_id, next_status, &settings.computer_id)?;
+
     let _ = refresh_library_summary_cache(&db, &store);
     db.get_song_list_item_by_id(&song_id)
 }
