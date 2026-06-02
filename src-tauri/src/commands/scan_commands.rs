@@ -73,6 +73,7 @@ fn scan_files_for_changes_impl(
     let host_id = &settings.computer_id; // O filtro é por quem criou o score
 
     let scores = db.get_all_scores_with_metadata_by_host(host_id)?;
+    let songs = db.get_all_songs()?;
     let mut changed_files = Vec::new();
     let mut added_files = Vec::new();
     let mut deleted_files = Vec::new();
@@ -101,6 +102,14 @@ fn scan_files_for_changes_impl(
             continue;
         }
 
+        let Some(song_directory) = songs
+            .iter()
+            .find(|song| song.id == song_id)
+            .map(|song| song.path.clone())
+        else {
+            continue;
+        };
+
         let scanable_scores: Vec<&ScoreMetadataEntry> = song_scores
             .iter()
             .filter(|score| score.status != ScoreStatus::Ignored)
@@ -109,12 +118,6 @@ fn scan_files_for_changes_impl(
         if scanable_scores.is_empty() {
             continue;
         }
-
-        let song_directory =
-            match score_directory(&scanable_scores[0].file_path, &scanable_scores[0].file_name) {
-                Some(directory) => directory,
-                None => continue,
-            };
 
         let current_files = scan_directory(Path::new(&song_directory));
 
@@ -263,6 +266,7 @@ fn preview_scan_files_for_changes_impl(
     let updated_by = settings.computer_id.clone();
 
     let scores = db.get_all_scores_with_metadata_by_host(host_id)?;
+    let songs = db.get_all_songs()?;
     let mut changed_files = Vec::new();
     let mut added_files = Vec::new();
     let mut deleted_files = Vec::new();
@@ -291,6 +295,14 @@ fn preview_scan_files_for_changes_impl(
             continue;
         }
 
+        let Some(song_directory) = songs
+            .iter()
+            .find(|song| song.id == song_id)
+            .map(|song| song.path.clone())
+        else {
+            continue;
+        };
+
         let scanable_scores: Vec<&ScoreMetadataEntry> = song_scores
             .iter()
             .filter(|score| score.status != ScoreStatus::Ignored)
@@ -299,12 +311,6 @@ fn preview_scan_files_for_changes_impl(
         if scanable_scores.is_empty() {
             continue;
         }
-
-        let song_directory =
-            match score_directory(&scanable_scores[0].file_path, &scanable_scores[0].file_name) {
-                Some(directory) => directory,
-                None => continue,
-            };
 
         let current_files = scan_directory(Path::new(&song_directory));
 
@@ -2060,5 +2066,73 @@ mod tests {
             .iter()
             .any(|score| score.file_path.ends_with("Canon - Trompete.musx")
                 && score.status == ScoreStatus::Main));
+    }
+
+    #[test]
+    fn preview_scan_uses_song_directory_to_detect_new_and_removed_files() {
+        let dir = tempdir().expect("temp dir");
+        let db = Database::new(&dir.path().join("scan.db")).expect("db");
+        let store = SystemStore::new(dir.path().to_path_buf());
+
+        store
+            .save_app_settings(&AppSettings {
+                computer_id: "server-1".to_string(),
+                computer_name: Some("Servidor".to_string()),
+                computer_type: ComputerType::Server,
+                first_run_completed: true,
+                ..Default::default()
+            })
+            .expect("save settings");
+
+        let song_dir = dir.path().join("indexed").join("song-1");
+        let legacy_score_dir = dir.path().join("legacy").join("song-1");
+        fs::create_dir_all(&song_dir).expect("create song dir");
+        fs::create_dir_all(&legacy_score_dir).expect("create legacy dir");
+
+        let existing_score_path = legacy_score_dir.join("Canon - Flute.musx");
+        fs::write(&existing_score_path, b"score").expect("write score");
+
+        let (file_size, file_modified_at) = get_file_metadata(&existing_score_path).expect("metadata");
+
+        db.insert_song(
+            &Song {
+                id: "song-1".to_string(),
+                name: "CANON".to_string(),
+                composer: None,
+                arranger: None,
+                path: song_dir.to_string_lossy().to_string(),
+                is_favorite: false,
+                status: ScoreStatus::Main,
+                updated_at: now(),
+                updated_by: "server-1".to_string(),
+            },
+            &[],
+        )
+        .expect("insert song");
+
+        db.insert_score(&Score {
+            id: "score-1".to_string(),
+            song_id: "song-1".to_string(),
+            name: Some("Flute".to_string()),
+            host_id: "server-1".to_string(),
+            file_path: legacy_score_dir.to_string_lossy().to_string(),
+            file_name: "Canon - Flute.musx".to_string(),
+            file_size,
+            file_modified_at,
+            updated_at: now(),
+            status: ScoreStatus::Main,
+            updated_by: "server-1".to_string(),
+        })
+        .expect("insert score");
+
+        fs::remove_file(&existing_score_path).expect("remove old score file");
+        fs::write(song_dir.join("Canon - Clarinet.musx"), b"new-score").expect("write new score");
+
+        let result = super::preview_scan_files_for_changes_impl(&db, &store).expect("preview scan");
+
+        assert_eq!(result.deleted_files.len(), 1);
+        assert_eq!(result.added_files.len(), 1);
+        assert!(result.deleted_files[0].ends_with("Canon - Flute.musx"));
+        assert!(result.added_files[0].ends_with("Canon - Clarinet.musx"));
     }
 }

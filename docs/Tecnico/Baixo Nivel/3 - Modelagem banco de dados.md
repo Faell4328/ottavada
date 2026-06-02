@@ -82,6 +82,7 @@ Tabela responsável por armazenar as informações das partituras.
 | fileExtension  | text                           | Não | Não | Não         | Sim          | Cliente / Servidor |
 | fileModifiedAt | integer                        | Não | Não | Não         | Sim          | Servidor           |
 | fileSize       | integer                        | Não | Não | Não         | Sim          | Servidor           |
+| hash           | text                           | Não | Não | Não         | Sim          | Servidor           |
 | status         | (`main`, `draft` ou `ignored`) | Não | Não | Não         | Sim          | Servidor           |
 
 - `hostId` - Id do computador que contém o arquivo original localmente (indexado).
