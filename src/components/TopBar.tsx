@@ -19,7 +19,7 @@ interface TopBarProps {
 }
 
 export default function TopBar({
-  title = "Score Maestro Cliente 2",
+  title = "Score Maestro Servidor",
   onUpdateClick,
   isUpdateBusy,
   hasAvailableUpdate,

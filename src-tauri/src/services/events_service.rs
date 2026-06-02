@@ -163,6 +163,25 @@ fn build_events_payload(
             continue;
         }
 
+        if change.entity == "songs"
+            && change.field.as_deref() == Some("status")
+            && matches!(change.value.as_deref(), Some("draft"))
+        {
+            planned_events.push(PlannedEvent {
+                sort_index: index,
+                event: EventMessagePack {
+                    id: change.id.clone(),
+                    timestamp: change.timestamp,
+                    event_type: "delete".to_string(),
+                    entity: "songs".to_string(),
+                    entity_id: change.entity_id.clone(),
+                    data: None,
+                },
+            });
+
+            continue;
+        }
+
         planned_events.push(PlannedEvent {
             sort_index: index,
             event: EventMessagePack {
@@ -261,6 +280,7 @@ mod tests {
     use rusqlite::params;
     use tempfile::tempdir;
 
+    use crate::domain::models::ScoreStatus;
     use crate::domain::models::{Category, Song};
     use crate::infrastructure::database::Database;
     use crate::infrastructure::store::SystemStore;
@@ -397,6 +417,78 @@ mod tests {
         assert_eq!(payload["events"][0]["data"][0]["value"], "song-1");
         assert_eq!(payload["events"][0]["data"][2]["field"], "status");
         assert_eq!(payload["events"][0]["data"][2]["value"], "main");
+    }
+
+    #[test]
+    fn translates_song_status_draft_into_delete_event() {
+        let dir = tempdir().expect("temp dir");
+        let db_path = dir.path().join("test.db");
+        let db = Database::new(&db_path).expect("db init");
+        let store = SystemStore::new(dir.path().to_path_buf());
+
+        let settings = crate::domain::models::AppSettings {
+            computer_id: "server-1".to_string(),
+            computer_name: Some("Servidor".to_string()),
+            computer_type: crate::domain::models::ComputerType::Server,
+            ..Default::default()
+        };
+        store.save_app_settings(&settings).expect("save settings");
+
+        let song = Song {
+            id: "song-1".to_string(),
+            name: "Musica Teste".to_string(),
+            composer: None,
+            arranger: None,
+            path: dir
+                .path()
+                .join("songs")
+                .join("song-1")
+                .to_string_lossy()
+                .to_string(),
+            is_favorite: false,
+            status: ScoreStatus::Draft,
+            updated_at: chrono::Local::now().naive_local(),
+            updated_by: "server-1".to_string(),
+        };
+        db.insert_song(&song, &[]).expect("insert song");
+
+        let conn = db.conn.lock().expect("lock db");
+        conn.execute("DELETE FROM changedField", [])
+            .expect("clear changed fields");
+        conn.execute(
+            "INSERT INTO changedField (id, type, entity, entityId, field, value, timestamp)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            params![
+                "evt-draft-song",
+                "update",
+                "songs",
+                "song-1",
+                "status",
+                "draft",
+                chrono::Local::now().timestamp(),
+            ],
+        )
+        .expect("insert draft song event");
+        drop(conn);
+
+        let summary = generate_events_msgpack(&db, &store).expect("generate events");
+        assert_eq!(summary.events_count, 1);
+
+        let raw = fs::read(
+            dir.path()
+                .join("cloud")
+                .join("actions")
+                .join("events.msgpack.zst"),
+        )
+        .expect("read events file");
+        let mut decoder = zstd::stream::read::Decoder::new(raw.as_slice()).expect("decoder");
+        let payload: serde_json::Value =
+            rmp_serde::from_read(&mut decoder).expect("decode msgpack");
+
+        assert_eq!(payload["events"][0]["type"], "delete");
+        assert_eq!(payload["events"][0]["entity"], "songs");
+        assert_eq!(payload["events"][0]["entityId"], "song-1");
+        assert!(payload["events"][0]["data"].is_null());
     }
 
     #[test]
