@@ -474,7 +474,20 @@ function buildActionGroups(
   const arrangerItems: ReactNode[] = [];
   const songItems: ReactNode[] = [];
   const scoreGroups = new Map<string, { action: ReviewAction; songName: string; scoreNames: string[] }>();
-  const scoreOrder: Array<{ kind: "group"; key: string } | { kind: "custom"; item: ReviewItem }> = [];
+  const customScoreGroups = new Map<
+    string,
+    {
+      songName: string;
+      previousStatus: string;
+      nextStatus: string;
+      scoreNames: string[];
+    }
+  >();
+  const scoreOrder: Array<
+    | { kind: "group"; key: string }
+    | { kind: "custom"; item: ReviewItem }
+    | { kind: "custom-group"; key: string }
+  > = [];
 
   const matchingItems = items.filter((item) => item.action === action);
 
@@ -505,6 +518,30 @@ function buildActionGroups(
 
     if (item.entity === "score") {
       if (item.customText) {
+        const statusChange = parseCustomScoreStatusChange(item.customText);
+        if (statusChange) {
+          const key = `${action}|${normalizeKey(statusChange.songName)}|${normalizeKey(statusChange.previousStatus)}|${normalizeKey(statusChange.nextStatus)}`;
+          const existingGroup = customScoreGroups.get(key);
+
+          if (existingGroup) {
+            if (!existingGroup.scoreNames.some((existingName) => normalizeKey(existingName) === normalizeKey(statusChange.scoreName))) {
+              existingGroup.scoreNames.push(statusChange.scoreName);
+              existingGroup.scoreNames.sort((a, b) => compareInstrumentNames(formatScoreDisplayName(a), formatScoreDisplayName(b)));
+            }
+
+            continue;
+          }
+
+          customScoreGroups.set(key, {
+            songName: statusChange.songName,
+            previousStatus: statusChange.previousStatus,
+            nextStatus: statusChange.nextStatus,
+            scoreNames: [statusChange.scoreName],
+          });
+          scoreOrder.push({ kind: "custom-group", key });
+          continue;
+        }
+
         scoreOrder.push({ kind: "custom", item });
         continue;
       }
@@ -532,6 +569,25 @@ function buildActionGroups(
       scoreItems.push({
         songName: entry.item.songName ?? getScoreReviewSongNameFromText(entry.item.customText ?? entry.item.raw),
         content: renderCustomScoreText(entry.item.customText ?? entry.item.raw),
+      });
+      continue;
+    }
+
+    if (entry.kind === "custom-group") {
+      const group = customScoreGroups.get(entry.key);
+      if (!group) {
+        continue;
+      }
+
+      scoreItems.push({
+        songName: group.songName,
+        content: renderGroupedCustomScoreStatusItem(
+          action,
+          group.songName,
+          group.previousStatus,
+          group.nextStatus,
+          group.scoreNames,
+        ),
       });
       continue;
     }
@@ -877,6 +933,41 @@ function renderGroupedScoreItem(action: ReviewAction, songName: string, scoreNam
     );
 }
 
+function renderGroupedCustomScoreStatusItem(
+  action: ReviewAction,
+  songName: string,
+  previousStatus: string,
+  nextStatus: string,
+  scoreNames: string[]
+): ReactNode {
+  const scoreList = joinStrongList(scoreNames.map((value) => formatScoreDisplayName(value, songName)));
+  const noun = scoreNames.length === 1 ? "A partitura" : "As partituras";
+  const previousStatusLabel = formatStatusLabel(previousStatus);
+  const nextStatusLabel = formatStatusLabel(nextStatus);
+
+  if (action === "deleted") {
+    return (
+      <>
+        {noun} {scoreList} {scoreNames.length === 1 ? "foi deletada" : "foram deletadas"} na música <strong>{songName}</strong>.
+      </>
+    );
+  }
+
+  if (nextStatus === "main") {
+    return (
+      <>
+        {noun} {scoreList} {scoreNames.length === 1 ? "saiu" : "saíram"} de {previousStatusLabel} e {scoreNames.length === 1 ? "voltou" : "voltaram"} para principal na música <strong>{songName}</strong>.
+      </>
+    );
+  }
+
+  return (
+    <>
+      {noun} {scoreList} {scoreNames.length === 1 ? "saiu" : "saíram"} de {previousStatusLabel} e {scoreNames.length === 1 ? "foi" : "foram"} para {nextStatusLabel} na música <strong>{songName}</strong>.
+    </>
+  );
+}
+
 function joinStrongList(values: string[]): ReactNode[] {
   return values.flatMap((value, index) => {
     const parts: ReactNode[] = [];
@@ -888,6 +979,41 @@ function joinStrongList(values: string[]): ReactNode[] {
     parts.push(<strong key={`${value}-${index}`}>{value}</strong>);
     return parts;
   });
+}
+
+function formatStatusLabel(value: string): string {
+  if (value === "ignored") {
+    return "ignorada";
+  }
+
+  if (value === "draft") {
+    return "rascunho";
+  }
+
+  if (value === "main") {
+    return "principal";
+  }
+
+  return value;
+}
+
+function parseCustomScoreStatusChange(text: string): {
+  songName: string;
+  scoreName: string;
+  previousStatus: string;
+  nextStatus: string;
+} | null {
+  const statusChangeMatch = text.match(/^A partitura\s+(.+?)\s+saiu de\s+(.+?)\s+e\s+(?:voltou para main|foi para\s+(.+?))\s+na música\s+(.+)\.$/);
+  if (!statusChangeMatch) {
+    return null;
+  }
+
+  return {
+    scoreName: statusChangeMatch[1].trim(),
+    previousStatus: statusChangeMatch[2].trim(),
+    nextStatus: (statusChangeMatch[3] ?? "main").trim(),
+    songName: statusChangeMatch[4].trim(),
+  };
 }
 
 function renderCustomScoreText(text: string): ReactNode {
@@ -921,49 +1047,33 @@ function renderCustomScoreText(text: string): ReactNode {
     );
   }
 
-  const statusChangeMatch = text.match(/^A partitura\s+(.+?)\s+saiu de\s+(.+?)\s+e\s+(?:voltou para main|foi para\s+(.+?))\s+na música\s+(.+)\.$/);
-  if (statusChangeMatch) {
-    const scoreName = formatScoreDisplayName(statusChangeMatch[1]);
-    const previousStatus = statusChangeMatch[2];
-    const nextStatus = statusChangeMatch[3] ?? "main";
-    const songName = statusChangeMatch[4];
+  const statusChange = parseCustomScoreStatusChange(text);
+  if (statusChange) {
+    const scoreName = formatScoreDisplayName(statusChange.scoreName);
+    const previousStatus = statusChange.previousStatus;
+    const nextStatus = statusChange.nextStatus;
+    const songName = statusChange.songName;
     const isStandaloneScoreName = normalizeKey(scoreName) === normalizeKey(songName);
-
-    const labelForStatus = (value: string) => {
-      if (value === "ignored") {
-        return "ignorada";
-      }
-
-      if (value === "draft") {
-        return "rascunho";
-      }
-
-      if (value === "main") {
-        return "principal";
-      }
-
-      return value;
-    };
 
     if (isStandaloneScoreName) {
       if (nextStatus === "main") {
         return (
           <>
-            A partitura <strong>{scoreName}</strong> saiu de {labelForStatus(previousStatus)} e voltou para principal.
+            A partitura <strong>{scoreName}</strong> saiu de {formatStatusLabel(previousStatus)} e voltou para principal.
           </>
         );
       }
 
       return (
         <>
-          A partitura <strong>{scoreName}</strong> saiu de {labelForStatus(previousStatus)} e foi para {labelForStatus(nextStatus)}.
+          A partitura <strong>{scoreName}</strong> saiu de {formatStatusLabel(previousStatus)} e foi para {formatStatusLabel(nextStatus)}.
         </>
       );
     }
 
     return (
       <>
-        A partitura <strong>{scoreName}</strong> saiu de {labelForStatus(previousStatus)} e {nextStatus === "main" ? "voltou para principal" : `foi para ${labelForStatus(nextStatus)}`} na música <strong>{songName}</strong>.
+        A partitura <strong>{scoreName}</strong> saiu de {formatStatusLabel(previousStatus)} e {nextStatus === "main" ? "voltou para principal" : `foi para ${formatStatusLabel(nextStatus)}`} na música <strong>{songName}</strong>.
       </>
     );
   }

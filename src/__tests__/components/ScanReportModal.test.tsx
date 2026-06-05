@@ -165,4 +165,43 @@ describe("ScanReportModal", () => {
     expect(musicSection).toHaveTextContent("A música Eis o Nosso Deus saiu de rascunho e voltou para principal.");
     expect(Array.from(musicSection?.querySelectorAll("strong") ?? []).some((element) => element.textContent === "Eis o Nosso Deus")).toBe(true);
   });
+
+  it("groups score status changes from the same song into one line", () => {
+    render(
+      <ScanReportModal
+        isOpen={true}
+        report={{
+          changed_files: [],
+          added_files: [],
+          deleted_files: [],
+          recovered_files: [],
+          failed_files: [],
+          report_items: [
+            "A partitura Flauta.musx saiu de principal e foi para draft na música Eis o Nosso Deus.",
+            "A partitura Oboe.musx saiu de principal e foi para draft na música Eis o Nosso Deus.",
+          ],
+        }}
+        isConfirming={false}
+        onClose={() => undefined}
+        onConfirm={() => undefined}
+      />
+    );
+
+    expect(
+      screen.getAllByText((_, element) =>
+        element?.textContent ===
+        "As partituras Flauta.musx e Oboe.musx saíram de principal e foram para rascunho na música Eis o Nosso Deus."
+      ).length
+    ).toBeGreaterThan(0);
+    expect(
+      screen.queryAllByText((_, element) =>
+        element?.textContent === "A partitura Flauta.musx saiu de principal e foi para rascunho na música Eis o Nosso Deus."
+      ).length
+    ).toBe(0);
+    expect(
+      screen.queryAllByText((_, element) =>
+        element?.textContent === "A partitura Oboe.musx saiu de principal e foi para rascunho na música Eis o Nosso Deus."
+      ).length
+    ).toBe(0);
+  });
 });
