@@ -947,6 +947,38 @@ mod tests {
     }
 
     #[test]
+    fn test_update_song_status_for_song_draft_keeps_ignored_scores_unchanged() {
+        let db = make_db();
+        db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
+
+        let mut main_score = make_score(&db, "sc1", "s1", Some("Violino"));
+        main_score.status = ScoreStatus::Main;
+        db.insert_score(&main_score).unwrap();
+
+        let mut ignored_score = make_score(&db, "sc2", "s1", Some("Piano"));
+        ignored_score.status = ScoreStatus::Ignored;
+        db.insert_score(&ignored_score).unwrap();
+
+        db.update_song_status_for_song("s1", ScoreStatus::Draft, "test-computer")
+            .unwrap();
+
+        let conn = db.conn.lock().unwrap();
+        let main_status: String = conn
+            .query_row("SELECT status FROM scores WHERE id = ?1", ["sc1"], |row| {
+                row.get(0)
+            })
+            .unwrap();
+        let ignored_status: String = conn
+            .query_row("SELECT status FROM scores WHERE id = ?1", ["sc2"], |row| {
+                row.get(0)
+            })
+            .unwrap();
+
+        assert_eq!(main_status, ScoreStatus::Draft.as_str());
+        assert_eq!(ignored_status, ScoreStatus::Ignored.as_str());
+    }
+
+    #[test]
     // ── Score Metadata for Scanning ──
 
     fn test_get_all_scores_with_metadata() {

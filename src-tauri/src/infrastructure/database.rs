@@ -1028,6 +1028,10 @@ impl Database {
 
         let mut score_status_changed = false;
         for (score_id, old_status) in score_updates {
+            if old_status == ScoreStatus::Ignored.as_str() {
+                continue;
+            }
+
             if old_status == status.as_str() {
                 continue;
             }
