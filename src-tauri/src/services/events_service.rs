@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 
 use serde::Serialize;
@@ -29,7 +29,7 @@ struct EventsMessagePack {
     events: Vec<EventMessagePack>,
 }
 
-#[derive(Debug, Serialize, serde::Deserialize)]
+#[derive(Debug, Serialize, serde::Deserialize, Clone)]
 struct EventMessagePack {
     id: String,
     timestamp: i64,
@@ -42,7 +42,7 @@ struct EventMessagePack {
     data: Option<Vec<EventDataMessagePack>>,
 }
 
-#[derive(Debug, Serialize, serde::Deserialize)]
+#[derive(Debug, Serialize, serde::Deserialize, Clone)]
 struct EventDataMessagePack {
     field: String,
     #[serde(rename = "value", skip_serializing_if = "Option::is_none")]
@@ -51,7 +51,7 @@ struct EventDataMessagePack {
 
 #[derive(Debug)]
 struct PlannedEvent {
-    sort_index: usize,
+    sort_index: (usize, usize),
     event: EventMessagePack,
 }
 
@@ -172,6 +172,7 @@ fn build_events_payload(
 ) -> Result<Vec<EventMessagePack>, AppError> {
     let mut planned_events = Vec::<PlannedEvent>::with_capacity(changed_fields.len());
     let mut score_changes: HashMap<String, ScoreChangeSummary> = HashMap::new();
+    let mut handled_score_ids: HashSet<String> = HashSet::new();
 
     for (index, change) in changed_fields.iter().enumerate() {
         if change.entity == "scores" {
@@ -192,25 +193,26 @@ fn build_events_payload(
         }
 
         if change.entity == "songs" && change.field.as_deref() == Some("status") {
-            let (event_type, data) = build_song_status_event(db, change)?;
+            let song_events = build_song_status_events(db, change)?;
 
-            planned_events.push(PlannedEvent {
-                sort_index: index,
-                event: EventMessagePack {
-                    id: change.id.clone(),
-                    timestamp: change.timestamp,
-                    event_type,
-                    entity: "songs".to_string(),
-                    entity_id: change.entity_id.clone(),
-                    data,
-                },
-            });
+            for (event_index, event) in song_events.iter().enumerate() {
+                planned_events.push(PlannedEvent {
+                    sort_index: (index, event_index),
+                    event: event.clone(),
+                });
+            }
+
+            if let Ok(scores) = db.get_scores_for_song(&change.entity_id) {
+                for score in scores {
+                    handled_score_ids.insert(score.id);
+                }
+            }
 
             continue;
         }
 
         planned_events.push(PlannedEvent {
-            sort_index: index,
+            sort_index: (index, 0),
             event: EventMessagePack {
                 id: change.id.clone(),
                 timestamp: change.timestamp,
@@ -228,10 +230,14 @@ fn build_events_payload(
     }
 
     for (score_id, change) in score_changes {
+        if handled_score_ids.contains(&score_id) {
+            continue;
+        }
+
         let (event_type, data) = build_score_event(db, &score_id, &change.change_type)?;
 
         planned_events.push(PlannedEvent {
-            sort_index: change.sort_index,
+            sort_index: (change.sort_index, 0),
             event: EventMessagePack {
                 id: change.event_id,
                 timestamp: change.timestamp,
@@ -254,6 +260,145 @@ fn build_events_payload(
         .into_iter()
         .map(|planned| planned.event)
         .collect())
+}
+
+fn build_song_status_events(
+    db: &Database,
+    change: &ChangedFieldRecord,
+) -> Result<Vec<EventMessagePack>, AppError> {
+    let song = db.get_song_by_id(&change.entity_id)?;
+    let scores = db.get_scores_for_song(&change.entity_id)?;
+
+    match song.status {
+        ScoreStatus::Main => {
+            let mut events = Vec::with_capacity(scores.len() + 1);
+            events.push(build_song_insert_event(
+                change,
+                song.name,
+                song.composer,
+                song.arranger,
+            ));
+
+            for score in scores {
+                if score.status == ScoreStatus::Main {
+                    events.push(build_score_insert_event(
+                        change.timestamp,
+                        &change.entity_id,
+                        &change.id,
+                        &score,
+                    ));
+                }
+            }
+
+            Ok(events)
+        }
+        ScoreStatus::Draft | ScoreStatus::NotFound | ScoreStatus::Ignored => {
+            let mut events = Vec::with_capacity(scores.len() + 1);
+            events.push(EventMessagePack {
+                id: change.id.clone(),
+                timestamp: change.timestamp,
+                event_type: "delete".to_string(),
+                entity: "songs".to_string(),
+                entity_id: change.entity_id.clone(),
+                data: None,
+            });
+
+            for score in scores {
+                events.push(build_score_delete_event(
+                    change.timestamp,
+                    &change.id,
+                    &score.id,
+                ));
+            }
+
+            Ok(events)
+        }
+    }
+}
+
+fn build_song_insert_event(
+    change: &ChangedFieldRecord,
+    song_name: String,
+    composer: Option<String>,
+    arranger: Option<String>,
+) -> EventMessagePack {
+    let mut data = Vec::with_capacity(3);
+    data.push(EventDataMessagePack {
+        field: "name".to_string(),
+        value: Some(song_name),
+    });
+
+    if let Some(composer) = composer {
+        data.push(EventDataMessagePack {
+            field: "composer".to_string(),
+            value: Some(composer),
+        });
+    }
+
+    if let Some(arranger) = arranger {
+        data.push(EventDataMessagePack {
+            field: "arranger".to_string(),
+            value: Some(arranger),
+        });
+    }
+
+    EventMessagePack {
+        id: change.id.clone(),
+        timestamp: change.timestamp,
+        event_type: "insert".to_string(),
+        entity: "songs".to_string(),
+        entity_id: change.entity_id.clone(),
+        data: Some(data),
+    }
+}
+
+fn build_score_insert_event(
+    timestamp: i64,
+    song_id: &str,
+    source_event_id: &str,
+    score: &crate::domain::models::ScoreListItem,
+) -> EventMessagePack {
+    let mut data = Vec::with_capacity(4);
+    data.push(EventDataMessagePack {
+        field: "songId".to_string(),
+        value: Some(song_id.to_string()),
+    });
+    data.push(EventDataMessagePack {
+        field: "name".to_string(),
+        value: score.name.clone(),
+    });
+    data.push(EventDataMessagePack {
+        field: "status".to_string(),
+        value: Some("main".to_string()),
+    });
+    data.push(EventDataMessagePack {
+        field: "extension".to_string(),
+        value: Some(score.file_extension.trim_start_matches('.').to_string()),
+    });
+
+    EventMessagePack {
+        id: format!("{}:{}", source_event_id, score.id),
+        timestamp,
+        event_type: "insert".to_string(),
+        entity: "scores".to_string(),
+        entity_id: score.id.clone(),
+        data: Some(data),
+    }
+}
+
+fn build_score_delete_event(
+    timestamp: i64,
+    source_event_id: &str,
+    score_id: &str,
+) -> EventMessagePack {
+    EventMessagePack {
+        id: format!("{}:{}", source_event_id, score_id),
+        timestamp,
+        event_type: "delete".to_string(),
+        entity: "scores".to_string(),
+        entity_id: score_id.to_string(),
+        data: None,
+    }
 }
 
 fn build_score_event(
@@ -298,48 +443,6 @@ fn build_score_event(
     });
 
     Ok(("insert".to_string(), Some(data)))
-}
-
-fn build_song_status_event(
-    db: &Database,
-    change: &ChangedFieldRecord,
-) -> Result<(String, Option<Vec<EventDataMessagePack>>), AppError> {
-    match change.value.as_deref() {
-        Some("draft") | Some("not_found") => Ok(("delete".to_string(), None)),
-        Some("main") => {
-            let song = db.get_song_by_id(&change.entity_id)?;
-            let mut data = Vec::with_capacity(3);
-            data.push(EventDataMessagePack {
-                field: "name".to_string(),
-                value: Some(song.name),
-            });
-
-            if let Some(composer) = song.composer {
-                data.push(EventDataMessagePack {
-                    field: "composer".to_string(),
-                    value: Some(composer),
-                });
-            }
-
-            if let Some(arranger) = song.arranger {
-                data.push(EventDataMessagePack {
-                    field: "arranger".to_string(),
-                    value: Some(arranger),
-                });
-            }
-
-            Ok(("insert".to_string(), Some(data)))
-        }
-        _ => Ok((
-            change.change_type.clone(),
-            change.field.as_ref().map(|field| {
-                vec![EventDataMessagePack {
-                    field: field.clone(),
-                    value: change.value.clone(),
-                }]
-            }),
-        )),
-    }
 }
 
 #[cfg(test)]
@@ -665,6 +768,22 @@ mod tests {
         db.insert_song(&song, &[]).expect("insert song");
 
         let conn = db.conn.lock().expect("lock db");
+        conn.execute(
+            "INSERT INTO scores (id, song_id, name, host_id, file_path, file_name, file_extension, file_size, file_modified_at, status)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, datetime('now'), ?9)",
+            params![
+                "score-1",
+                "song-1",
+                Some("Flauta".to_string()),
+                "server-1",
+                dir.path().join("songs").join("song-1").to_string_lossy().to_string(),
+                "flauta.musx",
+                "musx",
+                0,
+                "main",
+            ],
+        )
+        .expect("insert score");
         conn.execute("DELETE FROM changedField", [])
             .expect("clear changed fields");
         conn.execute(
@@ -684,7 +803,7 @@ mod tests {
         drop(conn);
 
         let summary = generate_events_msgpack(&db, &store).expect("generate events");
-        assert_eq!(summary.events_count, 1);
+        assert_eq!(summary.events_count, 2);
 
         let raw = fs::read(
             dir.path()
@@ -700,6 +819,9 @@ mod tests {
         assert_eq!(payload["events"][0]["type"], "delete");
         assert_eq!(payload["events"][0]["entity"], "songs");
         assert_eq!(payload["events"][0]["entityId"], "song-1");
+        assert_eq!(payload["events"][1]["type"], "delete");
+        assert_eq!(payload["events"][1]["entity"], "scores");
+        assert_eq!(payload["events"][1]["entityId"], "score-1");
     }
 
     #[test]
@@ -736,6 +858,22 @@ mod tests {
         db.insert_song(&song, &[]).expect("insert song");
 
         let conn = db.conn.lock().expect("lock db");
+        conn.execute(
+            "INSERT INTO scores (id, song_id, name, host_id, file_path, file_name, file_extension, file_size, file_modified_at, status)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, datetime('now'), ?9)",
+            params![
+                "score-1",
+                "song-1",
+                Some("Flauta".to_string()),
+                "server-1",
+                dir.path().join("songs").join("song-1").to_string_lossy().to_string(),
+                "flauta.musx",
+                "musx",
+                0,
+                "main",
+            ],
+        )
+        .expect("insert score");
         conn.execute("DELETE FROM changedField", [])
             .expect("clear changed fields");
         drop(conn);
@@ -744,7 +882,7 @@ mod tests {
             .expect("update song status");
 
         let summary = generate_events_msgpack(&db, &store).expect("generate events");
-        assert_eq!(summary.events_count, 1);
+        assert_eq!(summary.events_count, 2);
 
         let raw = fs::read(
             dir.path()
@@ -762,6 +900,11 @@ mod tests {
         assert_eq!(payload["events"][0]["entityId"], "song-1");
         assert_eq!(payload["events"][0]["data"][0]["field"], "name");
         assert_eq!(payload["events"][0]["data"][0]["value"], "Musica Teste");
+        assert_eq!(payload["events"][1]["type"], "insert");
+        assert_eq!(payload["events"][1]["entity"], "scores");
+        assert_eq!(payload["events"][1]["entityId"], "score-1");
+        assert_eq!(payload["events"][1]["data"][0]["field"], "songId");
+        assert_eq!(payload["events"][1]["data"][0]["value"], "song-1");
     }
 
     #[test]

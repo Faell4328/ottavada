@@ -219,6 +219,7 @@ describe("SongRow menu", () => {
             onEdit={onEdit}
             onDelete={onDelete}
             onStatusChange={onStatusChange}
+              onReindex={onReindex}
             menuId="song-1"
             isMenuOpen={true}
             onMenuOpen={onMenuOpen}
