@@ -972,7 +972,7 @@ impl Database {
             "songs",
             song_id,
             Some("status"),
-            Some(current_status),
+            Some(next_status.clone()),
         )?;
 
         Ok(())
@@ -1022,7 +1022,7 @@ impl Database {
                 "songs",
                 song_id,
                 Some("status"),
-                Some(current_status.clone()),
+                Some(status.as_str().to_string()),
             )?;
         }
 
