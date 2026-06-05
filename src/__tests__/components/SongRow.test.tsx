@@ -7,6 +7,11 @@ import * as api from "../../api/commands";
 vi.mock("../../api/commands", () => ({
   openFileLocation: vi.fn(),
   deleteSongWithFiles: vi.fn(),
+  reindexSongDirectory: vi.fn(),
+}));
+
+vi.mock("@tauri-apps/plugin-dialog", () => ({
+  open: vi.fn(),
 }));
 
 const song: SongListItem = {
@@ -104,6 +109,42 @@ describe("SongRow menu", () => {
 
     await waitFor(() => {
       expect(deleteSongWithFilesSpy).toHaveBeenCalledWith(song.id);
+    });
+  });
+
+  it("opens a folder picker and reindexes the selected directory from the overflow menu", async () => {
+    const reindexSongDirectorySpy = vi.spyOn(api, "reindexSongDirectory").mockResolvedValue(song);
+    const { open } = await import("@tauri-apps/plugin-dialog");
+    vi.mocked(open).mockResolvedValue("C:/music/new-canon");
+
+    render(
+      <table>
+        <tbody>
+          <MemoizedSongRow
+            song={{ ...song, status: "not_found" }}
+            isExpanded={true}
+            onToggle={onToggle}
+            onToggleFavorite={onToggleFavorite}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            onStatusChange={onStatusChange}
+            onReindex={onReindex}
+            menuId="song-1"
+            isMenuOpen={true}
+            onMenuOpen={onMenuOpen}
+            onMenuClose={onMenuClose}
+            computerType="Server"
+            isLocked={false}
+          />
+        </tbody>
+      </table>
+    );
+
+    fireEvent.click(screen.getByText("Reindexar música"));
+
+    await waitFor(() => {
+      expect(reindexSongDirectorySpy).toHaveBeenCalledWith(song.id, "C:/music/new-canon");
+      expect(onReindex).toHaveBeenCalled();
     });
   });
 

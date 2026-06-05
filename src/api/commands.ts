@@ -66,6 +66,10 @@ export async function scanDirectory(directory: string): Promise<IndexedFile[]> {
   return invoke("scan_directory", { directory });
 }
 
+export async function reindexSongDirectory(songId: string, directory: string): Promise<SongListItem> {
+  return invoke("reindex_song_directory", { songId, directory });
+}
+
 export async function importIndexedFiles(
   files: IndexedFile[],
   categoryIds: string[] = []

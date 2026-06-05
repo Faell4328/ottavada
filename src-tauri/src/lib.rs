@@ -257,6 +257,7 @@ pub fn run() {
             commands::song_commands::get_search_suggestions,
             commands::song_commands::toggle_favorite,
             commands::song_commands::scan_directory,
+            commands::song_commands::reindex_song_directory,
             commands::song_commands::import_indexed_files,
             commands::song_commands::import_indexed_files_with_metadata,
             commands::song_commands::get_songs_by_category,

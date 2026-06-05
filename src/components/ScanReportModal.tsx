@@ -829,7 +829,15 @@ function renderCustomSongText(text: string): ReactNode {
 
     return (
       <>
-        A música <strong>{songName}</strong> saiu de {labelForStatus(previousStatus)} e {returnsToMain ? "voltou para principal" : `foi para ${labelForStatus(nextStatus ?? "principal")}`}.
+        A música <strong>{songName}</strong> saiu de <strong>{labelForStatus(previousStatus)}</strong> e {returnsToMain ? (
+          <>
+            voltou para <strong>principal</strong>
+          </>
+        ) : (
+          <>
+            foi para <strong>{labelForStatus(nextStatus ?? "principal")}</strong>
+          </>
+        )}.
       </>
     );
   }

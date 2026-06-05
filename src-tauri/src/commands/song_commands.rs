@@ -290,6 +290,85 @@ pub fn scan_directory(directory: String) -> Result<Vec<IndexedFile>, AppError> {
     Ok(indexer::scan_directory(path))
 }
 
+#[tauri::command]
+pub fn reindex_song_directory(
+    db: State<'_, Database>,
+    store: State<'_, SystemStore>,
+    song_id: String,
+    directory: String,
+) -> Result<SongListItem, AppError> {
+    let normalized_directory = normalized_required_song_path(&directory)?;
+    let path = Path::new(&normalized_directory);
+    if !path.is_dir() {
+        return Err(AppError::InvalidDirectory(normalized_directory));
+    }
+
+    let settings = require_server_settings(&store)?;
+    let updated_by = settings.computer_id.clone();
+    let song_item = db.get_song_list_item_by_id(&song_id)?;
+    let mut song = db.get_song_by_id(&song_id)?;
+    let indexed_files = indexer::scan_directory(path);
+
+    if indexed_files.is_empty() {
+        return Err(AppError::Generic(
+            "Nenhuma partitura válida encontrada nesse diretório".into(),
+        ));
+    }
+
+    song.path = normalized_directory.clone();
+    song.updated_at = Local::now().naive_local();
+    song.updated_by = updated_by.clone();
+    db.update_song(&song, &song_item.category_ids)?;
+
+    let existing_score_paths: Vec<String> = db
+        .get_scores_for_song(&song_id)?
+        .into_iter()
+        .map(|score| score.file_path)
+        .collect();
+
+    let mut added_count = 0;
+    for indexed_file in indexed_files {
+        if existing_score_paths
+            .iter()
+            .any(|existing_path| paths_match(existing_path, &indexed_file.path))
+        {
+            continue;
+        }
+
+        let (file_size, file_modified_at) = match get_file_metadata(Path::new(&indexed_file.path)) {
+            Ok(metadata) => metadata,
+            Err(e) => {
+                warn!(
+                    "Erro ao obter metadados do arquivo reindexado {}: {:?}",
+                    indexed_file.path, e
+                );
+                continue;
+            }
+        };
+
+        let (file_path, file_name) = indexer::split_file_path(&indexed_file.path);
+        let score = Score::new_from_file(
+            song_id.clone(),
+            updated_by.clone(),
+            &indexed_file,
+            file_path,
+            file_name,
+            (file_size, file_modified_at),
+        );
+
+        db.insert_score(&score)?;
+        added_count += 1;
+    }
+
+    info!(
+        "Reindexação concluída para música {}: {} arquivos adicionados",
+        song_id, added_count
+    );
+
+    let _ = refresh_library_summary_cache(&db, &store);
+    db.get_song_list_item_by_id(&song_id)
+}
+
 /// Importa arquivos indexados, agrupando por nome da música.
 /// Músicas existentes (case-insensitive) não são duplicadas.
 fn import_files_core(

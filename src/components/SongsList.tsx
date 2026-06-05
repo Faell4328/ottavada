@@ -25,6 +25,8 @@ import { MemoizedSongRow } from "./SongRow";
 export default function SongsList() {
   const {
     state,
+    loadSongs,
+    refreshSelectedSong,
     setSearchQuery,
     selectSong,
     selectScore,
@@ -35,7 +37,6 @@ export default function SongsList() {
     updateScoreStatus,
     deleteScore,
     deleteSong,
-    scanFilesForChanges,
     useScoreAsBase,
   } = useAppState();
 
@@ -333,7 +334,10 @@ export default function SongsList() {
                         }}
                         onDelete={deleteSong}
                         onStatusChange={updateSongStatus}
-                        onReindex={() => scanFilesForChanges()}
+                        onReindex={async () => {
+                          await loadSongs();
+                          await refreshSelectedSong();
+                        }}
                         menuId={`song-${song.id}`}
                         isMenuOpen={openMenuId === `song-${song.id}`}
                         onMenuOpen={(id) => setOpenMenuId(id)}

@@ -97,16 +97,53 @@ fn scan_files_for_changes_impl(
             });
     }
 
-    for (song_id, song_scores) in scores_by_song {
-        if song_scores.is_empty() {
-            continue;
-        }
+    for song in &songs {
+        let Some(song_scores) = scores_by_song.get(&song.id) else {
+            if song.status != ScoreStatus::NotFound {
+                continue;
+            }
 
-        let Some(song_directory) = songs
-            .iter()
-            .find(|song| song.id == song_id)
-            .map(|song| song.path.clone())
-        else {
+            let current_files = scan_directory(Path::new(&song.path));
+
+            for current_file in current_files {
+                let current_path = &current_file.path;
+
+                match get_file_metadata(Path::new(current_path)) {
+                    Ok((file_size, file_modified_at)) => {
+                        let (file_path, file_name) = split_file_path(current_path);
+                        let score = Score::new_from_file(
+                            song.id.clone(),
+                            updated_by.clone(),
+                            &current_file,
+                            file_path,
+                            file_name,
+                            (file_size, file_modified_at),
+                        );
+
+                        match db.insert_score(&score) {
+                            Ok(()) => {
+                                info!("Novo arquivo indexado: {}", current_path);
+                                added_files.push(current_path.clone());
+                            }
+                            Err(e) => {
+                                warn!("Erro ao inserir novo arquivo {}: {:?}", current_path, e);
+                                failed_files.push((
+                                    current_path.clone(),
+                                    format!("Erro ao indexar novo arquivo: {:?}", e),
+                                ));
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        warn!(
+                            "Erro ao obter metadados do novo arquivo {}: {:?}",
+                            current_path, e
+                        );
+                        failed_files.push((current_path.clone(), format!("Erro ao ler: {}", e)));
+                    }
+                }
+            }
+
             continue;
         };
 
@@ -115,11 +152,11 @@ fn scan_files_for_changes_impl(
             .filter(|score| score.status != ScoreStatus::Ignored)
             .collect();
 
-        if scanable_scores.is_empty() {
+        if scanable_scores.is_empty() && song.status != ScoreStatus::NotFound {
             continue;
         }
 
-        let current_files = scan_directory(Path::new(&song_directory));
+        let current_files = scan_directory(Path::new(&song.path));
 
         for score in &scanable_scores {
             let full_path = build_score_full_path(&score.file_path, &score.file_name);
@@ -190,7 +227,7 @@ fn scan_files_for_changes_impl(
                 Ok((file_size, file_modified_at)) => {
                     let (file_path, file_name) = split_file_path(current_path);
                     let score = Score::new_from_file(
-                        song_id.clone(),
+                            song.id.clone(),
                         updated_by.clone(),
                         &current_file,
                         file_path,
@@ -290,16 +327,19 @@ fn preview_scan_files_for_changes_impl(
             });
     }
 
-    for (song_id, song_scores) in scores_by_song {
-        if song_scores.is_empty() {
-            continue;
-        }
+    for song in &songs {
+        let Some(song_scores) = scores_by_song.get(&song.id) else {
+            if song.status != ScoreStatus::NotFound {
+                continue;
+            }
 
-        let Some(song_directory) = songs
-            .iter()
-            .find(|song| song.id == song_id)
-            .map(|song| song.path.clone())
-        else {
+            let current_files = scan_directory(Path::new(&song.path));
+
+            for current_file in current_files {
+                let current_path = &current_file.path;
+                added_files.push(current_path.clone());
+            }
+
             continue;
         };
 
@@ -308,11 +348,11 @@ fn preview_scan_files_for_changes_impl(
             .filter(|score| score.status != ScoreStatus::Ignored)
             .collect();
 
-        if scanable_scores.is_empty() {
+        if scanable_scores.is_empty() && song.status != ScoreStatus::NotFound {
             continue;
         }
 
-        let current_files = scan_directory(Path::new(&song_directory));
+        let current_files = scan_directory(Path::new(&song.path));
 
         for score in &scanable_scores {
             let full_path = build_score_full_path(&score.file_path, &score.file_name);
@@ -1089,6 +1129,52 @@ mod tests {
     }
 
     #[test]
+    fn indexes_valid_files_for_not_found_songs_during_scan() {
+        let dir = tempdir().expect("temp dir");
+        let db = Database::new(&dir.path().join("scan.db")).expect("db");
+        let store = SystemStore::new(dir.path().to_path_buf());
+
+        store
+            .save_app_settings(&AppSettings {
+                computer_id: "server-1".to_string(),
+                computer_name: Some("Servidor".to_string()),
+                computer_type: ComputerType::Server,
+                first_run_completed: true,
+                ..Default::default()
+            })
+            .expect("save settings");
+
+        let song_dir = dir.path().join("songs").join("song-1");
+        fs::create_dir_all(&song_dir).expect("create song dir");
+        fs::write(song_dir.join("Canon.pdf"), b"pdf-data").expect("write score");
+
+        db.insert_song(
+            &Song {
+                id: "song-1".to_string(),
+                name: "CANON".to_string(),
+                composer: None,
+                arranger: None,
+                path: song_dir.to_string_lossy().to_string(),
+                is_favorite: false,
+                status: ScoreStatus::NotFound,
+                updated_at: now(),
+                updated_by: "server-1".to_string(),
+            },
+            &[],
+        )
+        .expect("insert song");
+
+        let result = scan_files_for_changes_impl(&db, &store, false).expect("scan");
+        let scores = db.get_scores_for_song("song-1").expect("scores");
+        let updated_song = db.get_song_list_item_by_id("song-1").expect("song");
+
+        assert_eq!(result.added_files.len(), 1);
+        assert!(result.added_files[0].ends_with("Canon.pdf"));
+        assert_eq!(scores.len(), 1);
+        assert_eq!(updated_song.status, ScoreStatus::Main);
+    }
+
+    #[test]
     fn deletes_missing_scores_when_apply_missing_deletions_is_enabled() {
         let dir = tempdir().expect("temp dir");
         let db = Database::new(&dir.path().join("scan.db")).expect("db");
@@ -1596,6 +1682,42 @@ mod tests {
         assert_eq!(
             super::describe_song_change(&db, &status_changed),
             Some("A música Eis o Nosso Deus saiu de rascunho e voltou para principal.".to_string())
+        );
+    }
+
+    #[test]
+    fn describes_song_status_change_from_not_found_to_main() {
+        let db = Database::new_in_memory().expect("db");
+
+        db.insert_song(
+            &Song {
+                id: "song-1".to_string(),
+                name: "00 - TESTE".to_string(),
+                composer: None,
+                arranger: None,
+                path: "/music/song-1".to_string(),
+                is_favorite: false,
+                status: ScoreStatus::Main,
+                updated_at: now(),
+                updated_by: "server-1".to_string(),
+            },
+            &[],
+        )
+        .expect("insert song");
+
+        let status_changed = ChangedFieldRecord {
+            id: "change-4".to_string(),
+            change_type: "update".to_string(),
+            entity: "songs".to_string(),
+            entity_id: "song-1".to_string(),
+            field: Some("status".to_string()),
+            value: Some("not_found".to_string()),
+            timestamp: 0,
+        };
+
+        assert_eq!(
+            super::describe_song_change(&db, &status_changed),
+            Some("A música 00 - TESTE saiu de sem partitura e voltou para principal.".to_string())
         );
     }
 

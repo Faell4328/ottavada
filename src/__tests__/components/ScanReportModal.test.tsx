@@ -164,6 +164,33 @@ describe("ScanReportModal", () => {
     const musicSection = screen.getByText("Músicas").closest("section");
     expect(musicSection).toHaveTextContent("A música Eis o Nosso Deus saiu de rascunho e voltou para principal.");
     expect(Array.from(musicSection?.querySelectorAll("strong") ?? []).some((element) => element.textContent === "Eis o Nosso Deus")).toBe(true);
+    expect(Array.from(musicSection?.querySelectorAll("strong") ?? []).some((element) => element.textContent === "rascunho")).toBe(true);
+    expect(Array.from(musicSection?.querySelectorAll("strong") ?? []).some((element) => element.textContent === "principal")).toBe(true);
+  });
+
+  it("renders not_found to main song status changes as sem partitura to principal", () => {
+    render(
+      <ScanReportModal
+        isOpen={true}
+        report={{
+          changed_files: [],
+          added_files: [],
+          deleted_files: [],
+          recovered_files: [],
+          failed_files: [],
+          report_items: ["A música 00 - TESTE saiu de sem partitura e voltou para principal."],
+        }}
+        isConfirming={false}
+        onClose={() => undefined}
+        onConfirm={() => undefined}
+      />
+    );
+
+    const musicSection = screen.getByText("Músicas").closest("section");
+    expect(musicSection).toHaveTextContent("A música 00 - TESTE saiu de sem partitura e voltou para principal.");
+    expect(Array.from(musicSection?.querySelectorAll("strong") ?? []).some((element) => element.textContent === "00 - TESTE")).toBe(true);
+    expect(Array.from(musicSection?.querySelectorAll("strong") ?? []).some((element) => element.textContent === "sem partitura")).toBe(true);
+    expect(Array.from(musicSection?.querySelectorAll("strong") ?? []).some((element) => element.textContent === "principal")).toBe(true);
   });
 
   it("groups score status changes from the same song into one line", () => {

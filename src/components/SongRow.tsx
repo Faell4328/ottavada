@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown, ChevronRight } from "lucide-react";
+import { open } from "@tauri-apps/plugin-dialog";
 import toast from "react-hot-toast";
 import type { SongListItem } from "../types";
 import { ContextMenu, ContextMenuItem } from "./ui/ContextMenu";
@@ -68,6 +69,21 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(function Son
     } catch (err) {
       console.error("Failed to open song location:", err);
       toast.error("Erro ao abrir local da música");
+    }
+  };
+
+  const handleReindex = async () => {
+    try {
+      const selected = await open({ directory: true, multiple: false });
+      if (typeof selected !== "string" || !selected) {
+        return;
+      }
+
+      await api.reindexSongDirectory(song.id, selected);
+      await onReindex();
+    } catch (err) {
+      console.error("Failed to reindex song:", err);
+      toast.error("Erro ao reindexar música");
     }
   };
 
@@ -182,8 +198,8 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(function Son
                     label="Reindexar música"
                     onClick={(e) => {
                       e.stopPropagation();
-                      void onReindex();
                       onMenuClose();
+                      void handleReindex();
                     }}
                     disabled={isActionLocked}
                   />

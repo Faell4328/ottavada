@@ -994,7 +994,7 @@ impl Database {
             "songs",
             song_id,
             Some("status"),
-            Some(next_status.clone()),
+            Some(current_status.clone()),
         )?;
 
         Ok(())
@@ -1044,7 +1044,7 @@ impl Database {
                 "songs",
                 song_id,
                 Some("status"),
-                Some(status.as_str().to_string()),
+                Some(current_status.clone()),
             )?;
         }
 
