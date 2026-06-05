@@ -10,7 +10,8 @@ use crate::infrastructure::database::{ChangedFieldRecord, Database};
 use crate::infrastructure::store::SystemStore;
 use crate::services::cloud_paths::ensure_actions_cloud_dir;
 use crate::services::msgpack_zstd::{
-    compress_zstd_with_threads, serialize_msgpack_named, write_atomic, ZSTD_LEVEL_BALANCED,
+    compress_zstd_with_threads, read_zstd_msgpack, serialize_msgpack_named, write_atomic,
+    ZSTD_LEVEL_BALANCED,
 };
 
 const EVENTS_FILE_NAME: &str = "events.msgpack.zst";
@@ -23,12 +24,12 @@ pub struct EventsFileSummary {
     pub events_count: usize,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, serde::Deserialize)]
 struct EventsMessagePack {
     events: Vec<EventMessagePack>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, serde::Deserialize)]
 struct EventMessagePack {
     id: String,
     timestamp: i64,
@@ -41,7 +42,7 @@ struct EventMessagePack {
     data: Option<Vec<EventDataMessagePack>>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, serde::Deserialize)]
 struct EventDataMessagePack {
     field: String,
     #[serde(rename = "value", skip_serializing_if = "Option::is_none")]
@@ -71,30 +72,57 @@ pub fn generate_events_msgpack(
 
     let changed_fields = db.get_changed_fields_ordered()?;
     let actions_dir = ensure_actions_cloud_dir(store.app_data_dir())?;
+    let output_path = actions_dir.join(EVENTS_FILE_NAME);
 
     let events = build_events_payload(db, &changed_fields)?;
 
-    let payload = EventsMessagePack { events };
+    if events.is_empty() {
+        if !output_path.exists() {
+            let payload = EventsMessagePack { events: Vec::new() };
+            let msgpack_bytes = serialize_msgpack_named(&payload, "events.msgpack")?;
+            let compressed_bytes = compress_zstd_with_threads(
+                &msgpack_bytes,
+                ZSTD_LEVEL_BALANCED,
+                "events.msgpack",
+            )?;
 
-    let output_path = actions_dir.join(EVENTS_FILE_NAME);
+            write_atomic(&output_path, &compressed_bytes, "events.msgpack")?;
 
-    if payload.events.is_empty() {
-        if output_path.exists() {
-            fs::remove_file(&output_path).map_err(|e| {
-                AppError::Generic(format!(
-                    "Erro ao remover events.msgpack sem eventos novos: {}",
-                    e
-                ))
-            })?;
+            let file_size = fs::metadata(&output_path)
+                .map_err(|e| {
+                    AppError::Generic(format!("Erro ao obter metadados de events.msgpack: {}", e))
+                })?
+                .len();
+
+            return Ok(EventsFileSummary {
+                output_path: output_path.to_string_lossy().to_string(),
+                payload_size: msgpack_bytes.len() as u64,
+                file_size,
+                events_count: 0,
+            });
         }
+
+        let file_size = fs::metadata(&output_path)
+            .map_err(|e| {
+                AppError::Generic(format!("Erro ao obter metadados de events.msgpack: {}", e))
+            })?
+            .len();
 
         return Ok(EventsFileSummary {
             output_path: output_path.to_string_lossy().to_string(),
             payload_size: 0,
-            file_size: 0,
+            file_size,
             events_count: 0,
         });
     }
+
+    let mut payload = if output_path.exists() {
+        read_zstd_msgpack::<EventsMessagePack>(&output_path, "events.msgpack")?
+    } else {
+        EventsMessagePack { events: Vec::new() }
+    };
+
+    payload.events.extend(events);
 
     let msgpack_bytes = serialize_msgpack_named(&payload, "events.msgpack")?;
 
@@ -492,7 +520,98 @@ mod tests {
     }
 
     #[test]
-    fn deletes_existing_events_file_when_there_are_no_events() {
+    fn appends_new_events_without_dropping_existing_history() {
+        let dir = tempdir().expect("temp dir");
+        let db_path = dir.path().join("test.db");
+        let db = Database::new(&db_path).expect("db init");
+        let store = SystemStore::new(dir.path().to_path_buf());
+
+        let settings = crate::domain::models::AppSettings {
+            computer_id: "server-1".to_string(),
+            computer_name: Some("Servidor".to_string()),
+            computer_type: crate::domain::models::ComputerType::Server,
+            ..Default::default()
+        };
+        store.save_app_settings(&settings).expect("save settings");
+
+        let events_dir = dir.path().join("cloud").join("actions");
+        std::fs::create_dir_all(&events_dir).expect("create events dir");
+
+        let existing_payload = EventsMessagePack {
+            events: vec![EventMessagePack {
+                id: "evt-old".to_string(),
+                timestamp: 10,
+                event_type: "insert".to_string(),
+                entity: "songs".to_string(),
+                entity_id: "song-1".to_string(),
+                data: Some(vec![EventDataMessagePack {
+                    field: "name".to_string(),
+                    value: Some("Musica Antiga".to_string()),
+                }]),
+            }],
+        };
+        write_zstd_msgpack(&events_dir.join("events.msgpack.zst"), &existing_payload);
+
+        let song = Song {
+            id: "song-1".to_string(),
+            name: "Musica Teste".to_string(),
+            composer: None,
+            arranger: None,
+            path: dir
+                .path()
+                .join("songs")
+                .join("song-1")
+                .to_string_lossy()
+                .to_string(),
+            is_favorite: false,
+            status: ScoreStatus::Draft,
+            updated_at: chrono::Local::now().naive_local(),
+            updated_by: "server-1".to_string(),
+        };
+        db.insert_song(&song, &[]).expect("insert song");
+
+        let conn = db.conn.lock().expect("lock db");
+        conn.execute("DELETE FROM changedField", [])
+            .expect("clear changed fields");
+        conn.execute(
+            "INSERT INTO changedField (id, type, entity, entityId, field, value, timestamp)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            params![
+                "evt-new",
+                "update",
+                "songs",
+                "song-1",
+                "status",
+                "draft",
+                chrono::Local::now().timestamp(),
+            ],
+        )
+        .expect("insert draft event");
+        drop(conn);
+
+        let summary = generate_events_msgpack(&db, &store).expect("generate events");
+        assert_eq!(summary.events_count, 2);
+
+        let raw = fs::read(
+            dir.path()
+                .join("cloud")
+                .join("actions")
+                .join("events.msgpack.zst"),
+        )
+        .expect("read events file");
+        let mut decoder = zstd::stream::read::Decoder::new(raw.as_slice()).expect("decoder");
+        let payload: serde_json::Value =
+            rmp_serde::from_read(&mut decoder).expect("decode msgpack");
+
+        assert_eq!(payload["events"].as_array().expect("events array").len(), 2);
+        assert_eq!(payload["events"][0]["id"], "evt-old");
+        assert_eq!(payload["events"][1]["type"], "delete");
+        assert_eq!(payload["events"][1]["entity"], "songs");
+        assert_eq!(payload["events"][1]["entityId"], "song-1");
+    }
+
+    #[test]
+    fn keeps_existing_events_file_when_there_are_no_events() {
         let dir = tempdir().expect("temp dir");
         let db_path = dir.path().join("test.db");
         let db = Database::new(&db_path).expect("db init");
@@ -510,6 +629,7 @@ mod tests {
         std::fs::create_dir_all(&events_dir).expect("create events dir");
         let events_file = events_dir.join("events.msgpack.zst");
         std::fs::write(&events_file, b"stale").expect("write stale events");
+        let before = std::fs::read(&events_file).expect("read stale events before");
 
         let conn = db.conn.lock().expect("lock db");
         conn.execute("DELETE FROM changedField", [])
@@ -520,7 +640,7 @@ mod tests {
 
         assert_eq!(summary.events_count, 0);
         assert_eq!(summary.payload_size, 0);
-        assert_eq!(summary.file_size, 0);
-        assert!(!events_file.exists());
+        assert!(events_file.exists());
+        assert_eq!(std::fs::read(&events_file).expect("read stale events after"), before);
     }
 }
