@@ -580,6 +580,7 @@ fn describe_song_change(db: &Database, change: &ChangedFieldRecord) -> Option<St
             let previous_status_label = match change.value.as_deref() {
                 Some("draft") => "rascunho",
                 Some("main") => "principal",
+                Some("not_found") => "sem partitura",
                 Some(other) => other,
                 None => "rascunho",
             };
@@ -591,6 +592,10 @@ fn describe_song_change(db: &Database, change: &ChangedFieldRecord) -> Option<St
                 )),
                 Some("draft") => Some(format!(
                     "A música {} saiu de {} e foi para rascunho.",
+                    song_name, previous_status_label
+                )),
+                Some("not_found") => Some(format!(
+                    "A música {} saiu de {} e foi para sem partitura.",
                     song_name, previous_status_label
                 )),
                 _ => Some(format!(

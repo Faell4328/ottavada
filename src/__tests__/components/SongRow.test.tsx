@@ -28,6 +28,7 @@ describe("SongRow menu", () => {
   const onEdit = vi.fn();
   const onDelete = vi.fn();
   const onStatusChange = vi.fn();
+  const onReindex = vi.fn();
   const onMenuOpen = vi.fn();
   const onMenuClose = vi.fn();
 
@@ -49,6 +50,7 @@ describe("SongRow menu", () => {
             onEdit={onEdit}
             onDelete={onDelete}
             onStatusChange={onStatusChange}
+            onReindex={onReindex}
             menuId="song-1"
             isMenuOpen={true}
             onMenuOpen={onMenuOpen}
@@ -81,6 +83,7 @@ describe("SongRow menu", () => {
             onEdit={onEdit}
             onDelete={onDelete}
             onStatusChange={onStatusChange}
+            onReindex={onReindex}
             menuId="song-1"
             isMenuOpen={true}
             onMenuOpen={onMenuOpen}
@@ -116,6 +119,7 @@ describe("SongRow menu", () => {
             onEdit={onEdit}
             onDelete={onDelete}
             onStatusChange={onStatusChange}
+            onReindex={onReindex}
             menuId="song-1"
             isMenuOpen={true}
             onMenuOpen={onMenuOpen}
@@ -148,6 +152,7 @@ describe("SongRow menu", () => {
             onEdit={onEdit}
             onDelete={onDelete}
             onStatusChange={onStatusChange}
+            onReindex={onReindex}
             menuId="song-1"
             isMenuOpen={true}
             onMenuOpen={onMenuOpen}
@@ -186,5 +191,37 @@ describe("SongRow menu", () => {
 
     expect(screen.getByText("Rascunho")).toBeInTheDocument();
     expect(screen.getByText("Rascunho").closest("tr")).toHaveClass("bg-[#fff7ed]");
+  });
+
+  it("renders not_found songs with dedicated styling and actions", () => {
+    const missingSong = { ...song, status: "not_found" as const };
+
+    render(
+      <table>
+        <tbody>
+          <MemoizedSongRow
+            song={missingSong}
+            isExpanded={true}
+            onToggle={onToggle}
+            onToggleFavorite={onToggleFavorite}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            onStatusChange={onStatusChange}
+            onReindex={onReindex}
+            menuId="song-1"
+            isMenuOpen={true}
+            onMenuOpen={onMenuOpen}
+            onMenuClose={onMenuClose}
+            computerType="Server"
+            isLocked={false}
+          />
+        </tbody>
+      </table>
+    );
+
+    expect(screen.getByText("Sem partitura")).toBeInTheDocument();
+    expect(screen.getByText("Sem partitura").closest("tr")).toHaveClass("bg-[#fff1f2]");
+    expect(screen.getByText("Reindexar música")).toBeInTheDocument();
+    expect(screen.getByText("Deletar música")).toBeInTheDocument();
   });
 });

@@ -282,6 +282,14 @@ describe("AppContext Reducer", () => {
       expect(state.sidebarView).toBe("drafts");
     });
 
+    it("should support not_found view", () => {
+      const state = reducer(initialState, {
+        type: "SET_SIDEBAR_VIEW",
+        payload: "not_found",
+      });
+      expect(state.sidebarView).toBe("not_found");
+    });
+
   });
 
   describe("UPDATE_SIDEBAR_CATEGORY_NAME", () => {

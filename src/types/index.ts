@@ -8,7 +8,7 @@ export interface SongListItem {
   path: string;
   updated_at: string;
   is_favorite: boolean;
-  status: "main" | "draft";
+  status: "main" | "draft" | "not_found";
   category_ids: string[];
   scores: ScoreListItem[];
 }
@@ -133,6 +133,7 @@ export type SidebarView =
   | "all"
   | "favorites"
   | "drafts"
+  | "not_found"
   | { type: "category"; id: string; name: string };
 
 export interface AppState {

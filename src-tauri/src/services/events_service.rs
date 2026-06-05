@@ -305,7 +305,7 @@ fn build_song_status_event(
     change: &ChangedFieldRecord,
 ) -> Result<(String, Option<Vec<EventDataMessagePack>>), AppError> {
     match change.value.as_deref() {
-        Some("draft") => Ok(("delete".to_string(), None)),
+        Some("draft") | Some("not_found") => Ok(("delete".to_string(), None)),
         Some("main") => {
             let song = db.get_song_by_id(&change.entity_id)?;
             let mut data = Vec::with_capacity(3);
@@ -344,8 +344,10 @@ fn build_song_status_event(
 
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
     use std::fs;
 
+    use serde::Serialize;
     use rusqlite::params;
     use tempfile::tempdir;
 
@@ -353,8 +355,17 @@ mod tests {
     use crate::domain::models::{Category, Song};
     use crate::infrastructure::database::Database;
     use crate::infrastructure::store::SystemStore;
+    use crate::services::msgpack_zstd::{compress_zstd_with_threads, serialize_msgpack_named, write_atomic, ZSTD_LEVEL_BALANCED};
 
-    use super::generate_events_msgpack;
+    use super::{EventDataMessagePack, EventMessagePack, EventsMessagePack, generate_events_msgpack};
+
+    fn write_zstd_msgpack<T: Serialize>(path: &Path, payload: &T) {
+        let serialized = serialize_msgpack_named(payload, "events test payload").expect("serialize payload");
+        let compressed = compress_zstd_with_threads(&serialized, ZSTD_LEVEL_BALANCED, "events test payload")
+            .expect("compress payload");
+        write_atomic(path, &compressed, "events test payload").expect("write payload");
+    }
+
     #[test]
     fn generates_events_msgpack_file() {
         let dir = tempdir().expect("temp dir");
@@ -600,6 +611,77 @@ mod tests {
 
         db.update_song_status_for_song("song-1", ScoreStatus::Draft, "server-1")
             .expect("update song status");
+
+        let summary = generate_events_msgpack(&db, &store).expect("generate events");
+        assert_eq!(summary.events_count, 1);
+
+        let raw = fs::read(
+            dir.path()
+                .join("cloud")
+                .join("actions")
+                .join("events.msgpack.zst"),
+        )
+        .expect("read events file");
+        let mut decoder = zstd::stream::read::Decoder::new(raw.as_slice()).expect("decoder");
+        let payload: serde_json::Value =
+            rmp_serde::from_read(&mut decoder).expect("decode msgpack");
+
+        assert_eq!(payload["events"][0]["type"], "delete");
+        assert_eq!(payload["events"][0]["entity"], "songs");
+        assert_eq!(payload["events"][0]["entityId"], "song-1");
+    }
+
+    #[test]
+    fn translates_song_status_not_found_into_delete_event() {
+        let dir = tempdir().expect("temp dir");
+        let db_path = dir.path().join("test.db");
+        let db = Database::new(&db_path).expect("db init");
+        let store = SystemStore::new(dir.path().to_path_buf());
+
+        let settings = crate::domain::models::AppSettings {
+            computer_id: "server-1".to_string(),
+            computer_name: Some("Servidor".to_string()),
+            computer_type: crate::domain::models::ComputerType::Server,
+            ..Default::default()
+        };
+        store.save_app_settings(&settings).expect("save settings");
+
+        let song = Song {
+            id: "song-1".to_string(),
+            name: "Musica Teste".to_string(),
+            composer: None,
+            arranger: None,
+            path: dir
+                .path()
+                .join("songs")
+                .join("song-1")
+                .to_string_lossy()
+                .to_string(),
+            is_favorite: false,
+            status: ScoreStatus::NotFound,
+            updated_at: chrono::Local::now().naive_local(),
+            updated_by: "server-1".to_string(),
+        };
+        db.insert_song(&song, &[]).expect("insert song");
+
+        let conn = db.conn.lock().expect("lock db");
+        conn.execute("DELETE FROM changedField", [])
+            .expect("clear changed fields");
+        conn.execute(
+            "INSERT INTO changedField (id, type, entity, entityId, field, value, timestamp)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            params![
+                "evt-not-found-song",
+                "update",
+                "songs",
+                "song-1",
+                "status",
+                "not_found",
+                chrono::Local::now().timestamp(),
+            ],
+        )
+        .expect("insert not_found song event");
+        drop(conn);
 
         let summary = generate_events_msgpack(&db, &store).expect("generate events");
         assert_eq!(summary.events_count, 1);

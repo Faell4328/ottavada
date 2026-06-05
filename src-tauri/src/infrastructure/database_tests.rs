@@ -979,6 +979,26 @@ mod tests {
     }
 
     #[test]
+    fn test_song_becomes_not_found_when_last_active_score_is_removed() {
+        let db = make_db();
+        db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
+
+        let score = make_score(&db, "sc1", "s1", Some("Violino"));
+        db.insert_score(&score).unwrap();
+
+        db.delete_score("sc1").unwrap();
+
+        let conn = db.conn.lock().unwrap();
+        let song_status: String = conn
+            .query_row("SELECT status FROM songs WHERE id = ?1", ["s1"], |row| {
+                row.get(0)
+            })
+            .unwrap();
+
+        assert_eq!(song_status, ScoreStatus::NotFound.as_str());
+    }
+
+    #[test]
     // ── Score Metadata for Scanning ──
 
     fn test_get_all_scores_with_metadata() {

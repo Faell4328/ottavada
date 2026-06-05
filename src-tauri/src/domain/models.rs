@@ -22,6 +22,7 @@ pub struct Song {
 pub enum ScoreStatus {
     Main,
     Draft,
+    NotFound,
     Ignored,
 }
 
@@ -30,6 +31,7 @@ impl ScoreStatus {
         match self {
             ScoreStatus::Main => "main",
             ScoreStatus::Draft => "draft",
+            ScoreStatus::NotFound => "not_found",
             ScoreStatus::Ignored => "ignored",
         }
     }
@@ -38,6 +40,7 @@ impl ScoreStatus {
         match s.to_ascii_lowercase().as_str() {
             "main" => ScoreStatus::Main,
             "draft" => ScoreStatus::Draft,
+            "not_found" => ScoreStatus::NotFound,
             "ignored" => ScoreStatus::Ignored,
             _ => ScoreStatus::Main,
         }
@@ -167,6 +170,12 @@ mod tests {
     fn score_status_roundtrips_ignored() {
         assert_eq!(ScoreStatus::from_str("ignored"), ScoreStatus::Ignored);
         assert_eq!(ScoreStatus::Ignored.as_str(), "ignored");
+    }
+
+    #[test]
+    fn score_status_roundtrips_not_found() {
+        assert_eq!(ScoreStatus::from_str("not_found"), ScoreStatus::NotFound);
+        assert_eq!(ScoreStatus::NotFound.as_str(), "not_found");
     }
 }
 

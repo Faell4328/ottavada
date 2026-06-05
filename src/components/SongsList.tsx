@@ -35,6 +35,7 @@ export default function SongsList() {
     updateScoreStatus,
     deleteScore,
     deleteSong,
+    scanFilesForChanges,
     useScoreAsBase,
   } = useAppState();
 
@@ -332,6 +333,7 @@ export default function SongsList() {
                         }}
                         onDelete={deleteSong}
                         onStatusChange={updateSongStatus}
+                        onReindex={() => scanFilesForChanges()}
                         menuId={`song-${song.id}`}
                         isMenuOpen={openMenuId === `song-${song.id}`}
                         onMenuOpen={(id) => setOpenMenuId(id)}

@@ -924,6 +924,32 @@ impl Database {
         )
     }
 
+    pub fn get_songs_with_not_found(&self) -> Result<Vec<SongListItem>, AppError> {
+        let conn = self.conn.lock().unwrap();
+        Self::query_song_list_items(
+            &conn,
+            "SELECT s.id, s.name, s.composer, s.arranger, s.path, datetime('now') AS updated_at, s.is_favorite, s.status
+             FROM songs s
+             WHERE s.status = 'not_found'
+             ORDER BY s.name COLLATE NOCASE ASC, s.id ASC",
+            &[],
+            true,
+        )
+    }
+
+    pub fn get_song_summaries_with_not_found(&self) -> Result<Vec<SongListItem>, AppError> {
+        let conn = self.conn.lock().unwrap();
+        Self::query_song_list_items(
+            &conn,
+            "SELECT s.id, s.name, s.composer, s.arranger, s.path, datetime('now') AS updated_at, s.is_favorite, s.status
+             FROM songs s
+             WHERE s.status = 'not_found'
+             ORDER BY s.name COLLATE NOCASE ASC, s.id ASC",
+            &[],
+            false,
+        )
+    }
+
     pub fn get_scores_for_song(&self, song_id: &str) -> Result<Vec<ScoreListItem>, AppError> {
         let conn = self.conn.lock().unwrap();
         let mut grouped = Self::get_scores_for_songs(&conn, &[song_id.to_string()])?;
@@ -931,13 +957,13 @@ impl Database {
     }
 
     fn sync_song_status_from_scores(conn: &Connection, song_id: &str) -> Result<(), AppError> {
-        let (next_status, current_status): (Option<String>, String) = conn
+        let (next_status, current_status): (String, String) = conn
             .query_row(
                 "SELECT
                     CASE
                         WHEN SUM(CASE WHEN status = 'main' THEN 1 ELSE 0 END) > 0 THEN 'main'
                         WHEN SUM(CASE WHEN status = 'draft' THEN 1 ELSE 0 END) > 0 THEN 'draft'
-                        ELSE NULL
+                        ELSE 'not_found'
                     END AS next_status,
                     (SELECT status FROM songs WHERE id = ?1) AS current_status
                  FROM scores
@@ -952,10 +978,6 @@ impl Database {
                 }
                 other => AppError::Database(other),
             })?;
-
-        let Some(next_status) = next_status else {
-            return Ok(());
-        };
 
         if current_status == next_status {
             return Ok(());

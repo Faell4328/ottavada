@@ -816,6 +816,10 @@ function renderCustomSongText(text: string): ReactNode {
         return "rascunho";
       }
 
+      if (value === "not_found") {
+        return "sem partitura";
+      }
+
       if (value === "main") {
         return "principal";
       }
@@ -988,6 +992,10 @@ function formatStatusLabel(value: string): string {
 
   if (value === "draft") {
     return "rascunho";
+  }
+
+  if (value === "not_found") {
+    return "sem partitura";
   }
 
   if (value === "main") {

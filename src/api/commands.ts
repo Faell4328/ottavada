@@ -42,6 +42,14 @@ export async function getSongSummariesWithDrafts(): Promise<SongListItem[]> {
   return invoke("get_song_summaries_with_drafts");
 }
 
+export async function getSongsWithNotFound(): Promise<SongListItem[]> {
+  return invoke("get_songs_with_not_found");
+}
+
+export async function getSongSummariesWithNotFound(): Promise<SongListItem[]> {
+  return invoke("get_song_summaries_with_not_found");
+}
+
 export async function searchSongs(query: string): Promise<SongListItem[]> {
   return invoke("search_songs", { query });
 }

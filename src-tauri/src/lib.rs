@@ -251,6 +251,8 @@ pub fn run() {
             commands::song_commands::get_song_list_item_by_id,
             commands::song_commands::get_songs_with_drafts,
             commands::song_commands::get_song_summaries_with_drafts,
+            commands::song_commands::get_songs_with_not_found,
+            commands::song_commands::get_song_summaries_with_not_found,
             commands::song_commands::search_songs,
             commands::song_commands::get_search_suggestions,
             commands::song_commands::toggle_favorite,

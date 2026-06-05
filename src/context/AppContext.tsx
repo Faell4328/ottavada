@@ -43,6 +43,7 @@ export function AppProvider({ children, disableBootstrap = false }: AppProviderP
       const songs = await (async () => {
         if (state.sidebarView === "favorites") return api.getFavoritedSongSummaries();
         if (state.sidebarView === "drafts") return api.getSongSummariesWithDrafts();
+        if (state.sidebarView === "not_found") return api.getSongSummariesWithNotFound();
 
         if (typeof state.sidebarView === "object" && state.sidebarView.type === "category") {
           return api.getSongSummariesByCategory(state.sidebarView.id);

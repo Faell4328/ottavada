@@ -3,6 +3,7 @@ import {
   Library,
   Heart,
   FileEdit,
+  FileX,
   FolderOpen,
   Pencil,
   Plus,
@@ -54,8 +55,13 @@ export default function Sidebar() {
     },
     {
       view: "drafts",
-      label: "Rascunhos Ativos",
+      label: "Rascunhos ativos",
       icon: <FileEdit className="h-3.5 w-3.5" />,
+    },
+    {
+      view: "not_found",
+      label: "Músicas sem partituras",
+      icon: <FileX className="h-3.5 w-3.5" />,
     },
   ];
 
@@ -132,7 +138,7 @@ export default function Sidebar() {
         </div>
         <nav className="flex flex-col">
           {libraryViews
-            .filter(({ view }) => !isClient || view !== "drafts")
+            .filter(({ view }) => !isClient || (view !== "drafts" && view !== "not_found"))
             .map(({ view, label, icon }) => (
               <SidebarItem
                 key={typeof view === "string" ? view : view.id}

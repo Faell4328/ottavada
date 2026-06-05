@@ -53,6 +53,7 @@ function buildSongRowProps(overrides: Partial<SongRowProps> = {}): SongRowProps 
     onEdit: () => undefined,
     onDelete: async () => undefined,
     onStatusChange: async () => undefined,
+    onReindex: async () => undefined,
     menuId: "song-1",
     isMenuOpen: false,
     onMenuOpen: () => undefined,
@@ -103,6 +104,18 @@ describe("row memo comparators", () => {
       song: {
         ...baseSong,
         status: "draft",
+      },
+    });
+
+    expect(areSongRowPropsEqual(prev, next)).toBe(false);
+  });
+
+  it("re-renders song rows when the song status changes to not_found", () => {
+    const prev = buildSongRowProps();
+    const next = buildSongRowProps({
+      song: {
+        ...baseSong,
+        status: "not_found",
       },
     });
 

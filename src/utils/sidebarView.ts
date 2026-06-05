@@ -4,6 +4,7 @@ export function getSidebarViewLabel(sidebarView: SidebarView): string {
   if (sidebarView === "all") return "Todas as Músicas";
   if (sidebarView === "favorites") return "Favoritos";
   if (sidebarView === "drafts") return "Rascunhos Ativos";
+  if (sidebarView === "not_found") return "Músicas sem partituras";
   if (typeof sidebarView === "object") return sidebarView.name;
   return "";
 }

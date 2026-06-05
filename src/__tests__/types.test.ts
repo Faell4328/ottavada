@@ -115,10 +115,11 @@ describe("TypeScript Types", () => {
 
   describe("SidebarView", () => {
     it("should support string views", () => {
-      const views: SidebarView[] = ["all", "favorites", "drafts"];
+      const views: SidebarView[] = ["all", "favorites", "drafts", "not_found"];
       expect(views).toContain("all");
       expect(views).toContain("favorites");
       expect(views).toContain("drafts");
+      expect(views).toContain("not_found");
     });
 
     it("should support category view", () => {
