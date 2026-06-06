@@ -1393,7 +1393,7 @@ impl Database {
         conn: &Connection,
         sql: &str,
         params: &[&dyn rusqlite::ToSql],
-    ) -> Result<Vec<(String, String, String, String, u64, String, String)>, AppError> {
+    ) -> Result<Vec<(String, String, String, String, Option<String>, u64, String, String)>, AppError> {
         let mut stmt = conn.prepare(sql)?;
         let scores = stmt
             .query_map(rusqlite::params_from_iter(params), |row| {
@@ -1405,9 +1405,10 @@ impl Database {
                     row.get::<_, String>(1)?,
                     file_path,
                     file_name,
-                    row.get::<_, u64>(4)?,
-                    row.get::<_, String>(5)?,
+                    row.get::<_, Option<String>>(4)?,
+                    row.get::<_, u64>(5)?,
                     row.get::<_, String>(6)?,
+                    row.get::<_, String>(7)?,
                 ))
             })?
             .filter_map(|r| r.ok())
@@ -1433,11 +1434,11 @@ impl Database {
     pub fn get_all_scores_with_metadata_by_host(
         &self,
         host_id: &str,
-    ) -> Result<Vec<(String, String, String, String, u64, String, String)>, AppError> {
+    ) -> Result<Vec<(String, String, String, String, Option<String>, u64, String, String)>, AppError> {
         let conn = self.conn.lock().unwrap();
         Self::query_score_metadata_with_song_id(
             &conn,
-            "SELECT s.song_id, s.id, s.file_path, s.file_name, s.file_size, s.file_modified_at, s.status
+            "SELECT s.song_id, s.id, s.file_path, s.file_name, s.name, s.file_size, s.file_modified_at, s.status
              FROM scores s
              WHERE s.host_id = ?1",
             &[&host_id as &dyn rusqlite::ToSql],

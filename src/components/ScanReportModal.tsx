@@ -1116,6 +1116,14 @@ function renderCustomScoreText(text: string): ReactNode {
 }
 
 function parseScoreReference(rawPath: string): { songName: string; scoreName: string } {
+  const explicitSongMatch = rawPath.match(/^(.+?)\s+na música\s+(.+)$/);
+  if (explicitSongMatch) {
+    return {
+      scoreName: explicitSongMatch[1].trim(),
+      songName: explicitSongMatch[2].trim().replace(/\.$/, ""),
+    };
+  }
+
   const legacyParts = rawPath.split("||");
   if (legacyParts.length === 2) {
     return {

@@ -19,6 +19,7 @@ struct ScoreMetadataEntry {
     score_id: String,
     file_path: String,
     file_name: String,
+    score_name: Option<String>,
     stored_size: u64,
     stored_modified_at_str: String,
     status: ScoreStatus,
@@ -81,8 +82,16 @@ fn scan_files_for_changes_impl(
     let mut failed_files = Vec::new();
 
     let mut scores_by_song: HashMap<String, Vec<ScoreMetadataEntry>> = HashMap::new();
-    for (song_id, score_id, file_path, file_name, stored_size, stored_modified_at_str, status) in
-        scores
+    for (
+        song_id,
+        score_id,
+        file_path,
+        file_name,
+        score_name,
+        stored_size,
+        stored_modified_at_str,
+        status,
+    ) in scores
     {
         scores_by_song
             .entry(song_id)
@@ -91,6 +100,7 @@ fn scan_files_for_changes_impl(
                 score_id,
                 file_path,
                 file_name,
+                score_name,
                 stored_size,
                 stored_modified_at_str,
                 status: ScoreStatus::from_str(&status),
@@ -202,7 +212,11 @@ fn scan_files_for_changes_impl(
                             failed_files
                                 .push((full_path.clone(), format!("Erro ao atualizar: {:?}", e)));
                         } else {
-                            changed_files.push(full_path);
+                            changed_files.push(build_score_change_report_item(
+                                &song.name,
+                                &score.score_name,
+                                &full_path,
+                            ));
                         }
                     }
                 }
@@ -311,8 +325,16 @@ fn preview_scan_files_for_changes_impl(
     let mut failed_files = Vec::new();
 
     let mut scores_by_song: HashMap<String, Vec<ScoreMetadataEntry>> = HashMap::new();
-    for (song_id, score_id, file_path, file_name, stored_size, stored_modified_at_str, status) in
-        scores
+    for (
+        song_id,
+        score_id,
+        file_path,
+        file_name,
+        score_name,
+        stored_size,
+        stored_modified_at_str,
+        status,
+    ) in scores
     {
         scores_by_song
             .entry(song_id)
@@ -321,6 +343,7 @@ fn preview_scan_files_for_changes_impl(
                 score_id,
                 file_path,
                 file_name,
+                score_name,
                 stored_size,
                 stored_modified_at_str,
                 status: ScoreStatus::from_str(&status),
@@ -385,7 +408,11 @@ fn preview_scan_files_for_changes_impl(
                             failed_files
                                 .push((full_path.clone(), format!("Erro ao atualizar: {:?}", e)));
                         } else {
-                            changed_files.push(full_path);
+                            changed_files.push(build_score_change_report_item(
+                                &song.name,
+                                &score.score_name,
+                                &full_path,
+                            ));
                         }
                     }
                 }
@@ -747,6 +774,36 @@ fn describe_score_change(db: &Database, change: &ChangedFieldRecord) -> Option<S
                 ))
             }
         }
+        ("update", Some("extension")) => {
+            let conn = db.conn.lock().ok()?;
+            let result = conn
+                .query_row(
+                    "SELECT s.file_name, s.name, songs.name
+                     FROM scores s
+                     JOIN songs ON songs.id = s.song_id
+                     WHERE s.id = ?1",
+                    params![change.entity_id],
+                    |row| {
+                        Ok((
+                            row.get::<_, String>(0)?,
+                            row.get::<_, Option<String>>(1)?,
+                            row.get::<_, String>(2)?,
+                        ))
+                    },
+                )
+                .ok()?;
+
+            let score_name_with_extension = resolve_score_display_name_with_extension(
+                &result.0,
+                &result.2,
+                result.1.as_deref(),
+            );
+
+            Some(format!(
+                "A partitura {} teve a extensão alterada na música {}.",
+                score_name_with_extension, result.2
+            ))
+        }
         ("update", Some("status")) => describe_score_status_change(db, change),
         _ => None,
     }
@@ -828,21 +885,6 @@ fn describe_score_status_change(db: &Database, change: &ChangedFieldRecord) -> O
         )
         .ok()?;
 
-    let full_path = build_score_full_path(&result.0, &result.1);
-    let file_name = Path::new(&full_path)
-        .file_name()
-        .and_then(|value| value.to_str())
-        .unwrap_or(&result.1);
-    let file_stem = Path::new(file_name)
-        .file_stem()
-        .and_then(|value| value.to_str())
-        .unwrap_or(file_name)
-        .to_string();
-    let file_extension = Path::new(file_name)
-        .extension()
-        .and_then(|value| value.to_str())
-        .map(|value| format!(".{}", value))
-        .unwrap_or_default();
     let song_name = result.3;
     let previous_status_label = match change.value.as_deref() {
         Some("ignored") => "ignorada",
@@ -860,8 +902,11 @@ fn describe_score_status_change(db: &Database, change: &ChangedFieldRecord) -> O
         other => other,
     };
 
-    let score_name = resolve_score_display_name(&result.1, &song_name, result.2.as_deref());
-    let score_name_with_extension = format!("{}{}", score_name, file_extension);
+    let score_name_with_extension = resolve_score_display_name_with_extension(
+        &result.1,
+        &song_name,
+        result.2.as_deref(),
+    );
 
     if current_status == "main" {
         Some(format!(
@@ -874,6 +919,39 @@ fn describe_score_status_change(db: &Database, change: &ChangedFieldRecord) -> O
             score_name_with_extension, previous_status_label, current_status_label, song_name
         ))
     }
+}
+
+fn resolve_score_display_name_with_extension(
+    file_name: &str,
+    song_name: &str,
+    score_name: Option<&str>,
+) -> String {
+    let score_name = resolve_score_display_name(file_name, song_name, score_name);
+    let file_extension = Path::new(file_name)
+        .extension()
+        .and_then(|value| value.to_str())
+        .map(|value| format!(".{}", value))
+        .unwrap_or_default();
+
+    format!("{}{}", score_name, file_extension)
+}
+
+fn build_score_change_report_item(song_name: &str, score_name: &Option<String>, full_path: &str) -> String {
+    let Some(score_name) = score_name.as_deref().map(str::trim).filter(|value| !value.is_empty()) else {
+        return full_path.to_string();
+    };
+
+    let file_name = Path::new(full_path)
+        .file_name()
+        .and_then(|value| value.to_str())
+        .unwrap_or(full_path);
+    let extension = Path::new(file_name)
+        .extension()
+        .and_then(|value| value.to_str())
+        .map(|value| format!(".{}", value))
+        .unwrap_or_default();
+
+    format!("{}{} na música {}", score_name, extension, song_name)
 }
 
 fn describe_score_status_change_summary(
@@ -1126,6 +1204,70 @@ mod tests {
         assert!(result.changed_files.is_empty());
         assert!(result.added_files.is_empty());
         assert!(result.deleted_files.is_empty());
+    }
+
+    #[test]
+    fn reports_changed_scores_using_the_stored_score_name() {
+        let dir = tempdir().expect("temp dir");
+        let db = Database::new(&dir.path().join("scan.db")).expect("db");
+        let store = SystemStore::new(dir.path().to_path_buf());
+
+        store
+            .save_app_settings(&AppSettings {
+                computer_id: "server-1".to_string(),
+                computer_name: Some("Servidor".to_string()),
+                computer_type: ComputerType::Server,
+                first_run_completed: true,
+                ..Default::default()
+            })
+            .expect("save settings");
+
+        let song_dir = dir.path().join("songs").join("song-1");
+        fs::create_dir_all(&song_dir).expect("create song dir");
+        let score_path = song_dir.join("126.mus");
+        fs::write(&score_path, b"score-v1").expect("write score");
+
+        let (file_size, file_modified_at) = get_file_metadata(&score_path).expect("metadata");
+        db.insert_song(
+            &Song {
+                id: "song-1".to_string(),
+                name: "Bem aventurança do crente".to_string(),
+                composer: None,
+                arranger: None,
+                path: song_dir.to_string_lossy().to_string(),
+                is_favorite: false,
+                status: ScoreStatus::Main,
+                updated_at: now(),
+                updated_by: "server-1".to_string(),
+            },
+            &[],
+        )
+        .expect("insert song");
+
+        db.insert_score(&Score {
+            id: "score-1".to_string(),
+            song_id: "song-1".to_string(),
+            name: Some("Score".to_string()),
+            host_id: "server-1".to_string(),
+            file_path: song_dir.to_string_lossy().to_string(),
+            file_name: "126.mus".to_string(),
+            file_size,
+            file_modified_at,
+            updated_at: now(),
+            status: ScoreStatus::Main,
+            updated_by: "server-1".to_string(),
+        })
+        .expect("insert score");
+
+        fs::write(&score_path, b"score-v2-modified").expect("modify score");
+
+        let result = scan_files_for_changes_impl(&db, &store, false).expect("scan");
+
+        assert_eq!(result.changed_files.len(), 1);
+        assert_eq!(
+            result.changed_files[0],
+            "Score.mus na música Bem aventurança do crente"
+        );
     }
 
     #[test]
@@ -1545,6 +1687,59 @@ mod tests {
                     .join("08 H.C. CRISTO, O FIEL AMIGO - Flute2.musx")
                     .to_string_lossy()
             )
+        );
+    }
+
+    #[test]
+    fn describes_score_extension_change_uses_database_score_name() {
+        let db = Database::new_in_memory().expect("db");
+
+        db.insert_song(
+            &Song {
+                id: "song-1".to_string(),
+                name: "277 H.C. SALVO ESTÁS LIMPO ESTÁS".to_string(),
+                composer: None,
+                arranger: None,
+                path: "/music/song-1".to_string(),
+                is_favorite: false,
+                status: ScoreStatus::Main,
+                updated_at: now(),
+                updated_by: "server-1".to_string(),
+            },
+            &[],
+        )
+        .expect("insert song");
+
+        db.insert_score(&Score {
+            id: "score-1".to_string(),
+            song_id: "song-1".to_string(),
+            name: Some("Score".to_string()),
+            host_id: "server-1".to_string(),
+            file_path: "/music/song-1".to_string(),
+            file_name: "H.C. SALVO ESTÁS LIMPO ESTÁS.musx".to_string(),
+            file_size: 1024,
+            file_modified_at: now(),
+            updated_at: now(),
+            status: ScoreStatus::Main,
+            updated_by: "server-1".to_string(),
+        })
+        .expect("insert score");
+
+        let change = ChangedFieldRecord {
+            id: "change-1".to_string(),
+            change_type: "update".to_string(),
+            entity: "scores".to_string(),
+            entity_id: "score-1".to_string(),
+            field: Some("extension".to_string()),
+            value: Some("musx".to_string()),
+            timestamp: 0,
+        };
+
+        let text = super::describe_score_change(&db, &change).expect("description");
+
+        assert_eq!(
+            text,
+            "A partitura Score.musx teve a extensão alterada na música 277 H.C. SALVO ESTÁS LIMPO ESTÁS."
         );
     }
 

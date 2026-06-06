@@ -231,4 +231,25 @@ describe("ScanReportModal", () => {
       ).length
     ).toBe(0);
   });
+
+  it("renders changed scores using the explicit song name format", () => {
+    render(
+      <ScanReportModal
+        isOpen={true}
+        report={{
+          changed_files: [],
+          added_files: [],
+          deleted_files: [],
+          recovered_files: [],
+          failed_files: [],
+          report_items: ["Partitura alterada: Score.mus na música Bem aventurança do crente"],
+        }}
+        isConfirming={false}
+        onClose={() => undefined}
+        onConfirm={() => undefined}
+      />
+    );
+
+    expect(screen.getAllByText((_, element) => element?.textContent === "A partitura Score.mus foi alterada na música Bem aventurança do crente.").length).toBeGreaterThan(0);
+  });
 });
