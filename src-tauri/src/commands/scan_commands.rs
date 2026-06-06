@@ -157,14 +157,17 @@ fn scan_files_for_changes_impl(
             continue;
         };
 
+        let Some(_reference_score) = song_scores
+            .iter()
+            .find(|score| score.status != ScoreStatus::Ignored)
+        else {
+            continue;
+        };
+
         let scanable_scores: Vec<&ScoreMetadataEntry> = song_scores
             .iter()
-            .filter(|score| score.status != ScoreStatus::Ignored)
+            .filter(|score| score.status == ScoreStatus::Main)
             .collect();
-
-        if scanable_scores.is_empty() && song.status != ScoreStatus::NotFound {
-            continue;
-        }
 
         let current_files = scan_directory(Path::new(&song.path));
 
@@ -366,14 +369,17 @@ fn preview_scan_files_for_changes_impl(
             continue;
         };
 
+        let Some(_reference_score) = song_scores
+            .iter()
+            .find(|score| score.status != ScoreStatus::Ignored)
+        else {
+            continue;
+        };
+
         let scanable_scores: Vec<&ScoreMetadataEntry> = song_scores
             .iter()
-            .filter(|score| score.status != ScoreStatus::Ignored)
+            .filter(|score| score.status == ScoreStatus::Main)
             .collect();
-
-        if scanable_scores.is_empty() && song.status != ScoreStatus::NotFound {
-            continue;
-        }
 
         let current_files = scan_directory(Path::new(&song.path));
 
@@ -2069,6 +2075,17 @@ mod tests {
             .report_items
             .iter()
             .any(|item| item.contains("foi para rascunho")));
+
+        fs::write(&score_path, b"changed-version-again").expect("rewrite score again");
+
+        let second_result = super::preview_scan_files_for_changes_impl(&db, &store)
+            .expect("second preview scan");
+
+        assert!(second_result.changed_files.is_empty());
+        assert!(second_result
+            .report_items
+            .iter()
+            .all(|item| !item.contains("A BANDA - Flute.musx")));
     }
 
     #[test]

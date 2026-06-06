@@ -68,17 +68,20 @@ pub fn run_initial_scan(db: &Database, host_id: &str) {
         if song_scores.is_empty() {
             continue;
         }
+        let Some(reference_score) = song_scores
+            .iter()
+            .find(|score| score.status != ScoreStatus::Ignored)
+        else {
+            continue;
+        };
+
         let scanable_scores: Vec<&ScoreMetadataEntry> = song_scores
             .iter()
-            .filter(|score| score.status != ScoreStatus::Ignored)
+            .filter(|score| score.status == ScoreStatus::Main)
             .collect();
 
-        if scanable_scores.is_empty() {
-            continue;
-        }
-
         let song_directory =
-            match score_directory(&scanable_scores[0].file_path, &scanable_scores[0].file_name) {
+            match score_directory(&reference_score.file_path, &reference_score.file_name) {
                 Some(directory) => directory,
                 None => continue,
             };
@@ -202,4 +205,99 @@ fn resolve_recovered_score_status(
     _stored_modified_at_str: &str,
 ) -> ScoreStatus {
     ScoreStatus::Draft
+}
+
+#[cfg(test)]
+mod tests {
+    use super::run_initial_scan;
+    use crate::domain::models::{Score, ScoreStatus, Song};
+    use crate::infrastructure::database::Database;
+    use chrono::Local;
+    use rusqlite::params;
+    use std::fs;
+    use tempfile::tempdir;
+
+    fn now() -> chrono::NaiveDateTime {
+        Local::now().naive_local()
+    }
+
+    #[test]
+    fn does_not_recheck_draft_scores_after_they_change_again() {
+        let dir = tempdir().expect("temp dir");
+        let db = Database::new_in_memory().expect("db");
+
+        let song_dir = dir.path().join("song-1");
+        fs::create_dir_all(&song_dir).expect("create song dir");
+        let score_path = song_dir.join("score-1.musx");
+        fs::write(&score_path, b"main-v1").expect("write score v1");
+
+        let metadata_v1 = super::get_file_metadata(&score_path).expect("metadata v1");
+
+        db.insert_song(
+            &Song {
+                id: "song-1".to_string(),
+                name: "CANON".to_string(),
+                composer: None,
+                arranger: None,
+                path: song_dir.to_string_lossy().to_string(),
+                is_favorite: false,
+                status: ScoreStatus::Main,
+                updated_at: now(),
+                updated_by: "server-1".to_string(),
+            },
+            &[],
+        )
+        .expect("insert song");
+
+        db.insert_score(&Score {
+            id: "score-1".to_string(),
+            song_id: "song-1".to_string(),
+            name: Some("Flute".to_string()),
+            host_id: "server-1".to_string(),
+            file_path: song_dir.to_string_lossy().to_string(),
+            file_name: "score-1.musx".to_string(),
+            file_size: metadata_v1.0,
+            file_modified_at: metadata_v1.1,
+            updated_at: now(),
+            status: ScoreStatus::Main,
+            updated_by: "server-1".to_string(),
+        })
+        .expect("insert score");
+
+        fs::write(&score_path, b"main-v2").expect("write score v2");
+        run_initial_scan(&db, "server-1");
+
+        let first_scan_size: i64 = db
+            .conn
+            .lock()
+            .unwrap()
+            .query_row(
+                "SELECT file_size FROM scores WHERE id = ?1",
+                params!["score-1"],
+                |row| row.get(0),
+            )
+            .expect("first scan size");
+
+        let after_first_scan = db.get_song_list_item_by_id("song-1").expect("song after first scan");
+        assert_eq!(after_first_scan.scores[0].status, ScoreStatus::Draft);
+
+        fs::write(&score_path, b"main-v3-changed-again").expect("write score v3");
+        run_initial_scan(&db, "server-1");
+
+        let after_second_scan = db.get_song_list_item_by_id("song-1").expect("song after second scan");
+
+        assert_eq!(after_second_scan.scores[0].status, ScoreStatus::Draft);
+        let second_scan_size: i64 = db
+            .conn
+            .lock()
+            .unwrap()
+            .query_row(
+                "SELECT file_size FROM scores WHERE id = ?1",
+                params!["score-1"],
+                |row| row.get(0),
+            )
+            .expect("second scan size");
+
+        assert_eq!(second_scan_size, first_scan_size);
+    }
 }
