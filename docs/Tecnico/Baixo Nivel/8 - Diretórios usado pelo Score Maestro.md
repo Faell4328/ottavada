@@ -1,4 +1,4 @@
-# # Local
+# Local
 
 ## Diretórios
 

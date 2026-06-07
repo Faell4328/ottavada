@@ -1,7 +1,3 @@
 **Servidor**: É o computador principal do sistema e atua como a **fonte da verdade** do repertório. Nele é possível adicionar, editar e excluir músicas, partituras, categorias, compositores e arranjadores, além de gerenciar o status das músicas e partituras. O servidor mantém o repertório completo indexado localmente e é responsável por distribuir as alterações para os clientes.
 
----
-
-# 
-
 **Cliente**: É o computador destinado à consulta e sincronização do repertório. Ele pode armazenar partituras localmente para acesso offline, porém **não precisa manter a estrutura completa indexada como o servidor**. O cliente possui acesso apenas para leitura, sem permissão para adicionar, editar ou excluir músicas e partituras. Sua função é receber, sincronizar e disponibilizar localmente os arquivos distribuídos pelo servidor. Por padrão, o cliente recebe e exibe apenas as partituras marcadas como `main` pelo servidor.

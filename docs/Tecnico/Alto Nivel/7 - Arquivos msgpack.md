@@ -1,4 +1,4 @@
-Event Log (`events.msgpack`)
+**Event Log** (`events.msgpack`)
 
 Contém as alterações incrementais do sistema (inserções, atualizações e remoções).
 
@@ -8,7 +8,7 @@ Contém as alterações incrementais do sistema (inserções, atualizações e r
 
 ---
 
-**Snapshot **(`snapshot.msgpack`)
+**Snapshot** (`snapshot.msgpack`)
 
 Contém o estado consolidado do banco de dados em um determinado momento (*checkpoint*).
 
