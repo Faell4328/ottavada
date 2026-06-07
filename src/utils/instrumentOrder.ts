@@ -134,7 +134,7 @@ function getInstrumentRank(name: string | null | undefined): number {
     return numberedRank(23, getSectionNumber(normalized));
   }
 
-  if (hasToken(normalized, "viola")) {
+  if (includesAny(normalized, ["viola"])) {
     return 25;
   }
 

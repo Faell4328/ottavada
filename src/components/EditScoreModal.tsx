@@ -250,7 +250,7 @@ export function EditScoreModal({
               ) : (
                 <FolderOpen className="h-3.5 w-3.5" />
               )}
-              Abrir local
+              Abrir 
             </button>
           </div>
         </div>
