@@ -319,7 +319,7 @@ export function useAppCrudActions({
         arranger,
         categoryIds
       );
-      dispatch({ type: "UPDATE_SELECTED_SONG", payload: updatedSong });
+      dispatch({ type: "SET_SONGS", payload: state.songs.map((song) => song.id === updatedSong.id ? updatedSong : song) });
       await Promise.all([loadSongs(), loadCategories()]);
       await refreshSelectedSong();
       await loadSettings();
@@ -337,12 +337,7 @@ export function useAppCrudActions({
     ) => {
       try {
         const updatedSong = await api.updateSongStatus(songId, status);
-        dispatch({ type: "UPDATE_SELECTED_SONG", payload: updatedSong });
-
-        const updatedSongs = state.songs.map((song) =>
-          song.id === updatedSong.id ? updatedSong : song
-        );
-        dispatch({ type: "SET_SONGS", payload: updatedSongs });
+        dispatch({ type: "SET_SONGS", payload: state.songs.map((song) => song.id === updatedSong.id ? updatedSong : song) });
 
         await refreshSelectedSong();
         await loadSettings();

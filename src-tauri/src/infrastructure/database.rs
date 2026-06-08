@@ -1687,6 +1687,15 @@ impl Database {
         let change_value = normalized_new_name.map(str::to_string);
 
         for song_id in &song_ids {
+            let previous_value: Option<String> = conn
+                .query_row(
+                    &format!("SELECT {} FROM songs WHERE id = ?1", field_name),
+                    params![song_id],
+                    |row| row.get(0),
+                )
+                .ok()
+                .flatten();
+
             conn.execute(&update_sql, params![change_value, song_id])?;
             Self::insert_changed_field(
                 &conn,
@@ -1694,7 +1703,7 @@ impl Database {
                 "songs",
                 song_id,
                 Some(field_name),
-                change_value.clone(),
+                change_value.clone().or(previous_value),
             )?;
         }
 

@@ -10,6 +10,7 @@ import type { ScoreListItem, SongListItem } from "../../types";
 let resolveScores: ((scores: ScoreListItem[]) => void) | null = null;
 let nextSongSummaries: SongListItem[][] = [];
 let triggerUpdateScore: ((scoreId: string, instrumentName: string | null, filePath: string) => Promise<void>) | null = null;
+let triggerUpdateSongStatus: ((songId: string, status: "main" | "draft") => Promise<void>) | null = null;
 let nextSelectedSong: SongListItem | null = null;
 
 vi.mock("@tauri-apps/api/core", () => ({
@@ -25,6 +26,8 @@ vi.mock("@tauri-apps/api/core", () => ({
         return nextSelectedSong ?? updatedSampleSong;
       case "update_score":
         return undefined;
+      case "update_song_status":
+        return updatedDraftSong;
       default:
         return null;
     }
@@ -69,6 +72,11 @@ const updatedSampleSong: SongListItem = {
   ],
 };
 
+const updatedDraftSong: SongListItem = {
+  ...updatedSampleSong,
+  status: "draft",
+};
+
 const sampleSong2: SongListItem = {
   id: "song-2",
   name: "AMAZING GRACE",
@@ -94,7 +102,7 @@ const sampleScores: ScoreListItem[] = [
 ];
 
 function SongsListHarness() {
-  const { loadSongs, updateScore } = useAppState();
+  const { loadSongs, updateScore, updateSongStatus } = useAppState();
 
   useEffect(() => {
     void loadSongs();
@@ -103,6 +111,13 @@ function SongsListHarness() {
       triggerUpdateScore = null;
     };
   }, [loadSongs, updateScore]);
+
+  useEffect(() => {
+    triggerUpdateSongStatus = updateSongStatus;
+    return () => {
+      triggerUpdateSongStatus = null;
+    };
+  }, [updateSongStatus]);
 
   return <SongsList />;
 }
@@ -195,6 +210,20 @@ describe("SongsList", () => {
     });
 
     expect(await screen.findByText("Violino")).toBeInTheDocument();
+    expect(screen.queryByText("Flauta")).not.toBeInTheDocument();
+  });
+
+  it("does not expand scores when only the song status changes", async () => {
+    renderWithAppProvider(<SongsListHarness />);
+
+    expect(await screen.findByText("CANON")).toBeInTheDocument();
+    nextSelectedSong = null;
+
+    await act(async () => {
+      await triggerUpdateSongStatus?.("song-1", "draft");
+    });
+
+    expect(await screen.findByText("Rascunho")).toBeInTheDocument();
     expect(screen.queryByText("Flauta")).not.toBeInTheDocument();
   });
 
