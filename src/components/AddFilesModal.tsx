@@ -5,6 +5,7 @@ import { useAppState } from "../context/AppContext";
 import type { IndexedFile, SongListItem } from "../types";
 import * as api from "../api/commands";
 import { Modal, ModalFooterButtons, FormField, TextInput, ErrorMessage, AutocompleteInput } from "./ui";
+import { useScrollLock } from "../hooks/useScrollLock";
 import { CategoryCheckboxList } from "./ui/CategoryCheckboxList";
 import { getDirectoryPath, getFileName } from "../utils/paths";
 import {
@@ -74,6 +75,7 @@ export function AddFilesModal({
   } | null>(null);
   const [openingScorePath, setOpeningScorePath] = useState<string | null>(null);
   const [openingLocationPath, setOpeningLocationPath] = useState<string | null>(null);
+  useScrollLock(pendingDeleteFile !== null);
   const normalizedTitle = useMemo(() => normalizeSongNameForSave(title), [title]);
   const existingSong = useMemo(
     () => findSongByName(songsForDuplicateCheck, normalizedTitle),

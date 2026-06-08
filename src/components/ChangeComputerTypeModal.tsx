@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { AlertTriangle } from "lucide-react";
+import { useScrollLock } from "../hooks/useScrollLock";
 
 interface ChangeComputerTypeModalProps {
   isOpen: boolean;
@@ -18,6 +19,8 @@ export function ChangeComputerTypeModal({
   const [isConfirming, setIsConfirming] = useState(false);
 
   const newType = currentType === "Server" ? "Cliente" : "Servidor";
+
+  useScrollLock(isOpen);
 
   // Reset countdown when modal opens
   useEffect(() => {

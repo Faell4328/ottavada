@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown, ChevronRight } from "lucide-react";
+import { useScrollLock } from "../hooks/useScrollLock";
 import { open } from "@tauri-apps/plugin-dialog";
 import toast from "react-hot-toast";
 import type { SongListItem } from "../types";
@@ -46,6 +47,7 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(function Son
 ) {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleteLoading, setIsDeleteLoading] = useState(false);
+  useScrollLock(isDeleteModalOpen);
   const author = [song.composer, song.arranger].filter(Boolean).join(" / ");
   const isClient = isClientComputer(computerType);
   const isActionLocked = isClient || isLocked;

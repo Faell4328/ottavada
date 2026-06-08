@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { X } from "lucide-react";
+import { useScrollLock } from "../../hooks/useScrollLock";
 
 interface ModalProps {
   isOpen: boolean;
@@ -18,6 +19,8 @@ export function Modal({
   footer,
   maxWidth = "max-w-md",
 }: ModalProps) {
+  useScrollLock(isOpen);
+
   if (!isOpen) return null;
 
   return (

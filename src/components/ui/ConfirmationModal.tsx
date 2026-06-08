@@ -1,4 +1,5 @@
 import { createPortal } from "react-dom";
+import { useScrollLock } from "../../hooks/useScrollLock";
 
 interface ConfirmationModalProps {
   isOpen: boolean;
@@ -17,6 +18,8 @@ export function ConfirmationModal({
   onConfirm,
   onCancel,
 }: ConfirmationModalProps) {
+  useScrollLock(isOpen);
+
   if (!isOpen || typeof document === "undefined") return null;
 
   return createPortal(
