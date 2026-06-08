@@ -138,6 +138,13 @@ struct PendingCategorySong {
 }
 
 #[derive(Default)]
+struct PendingNamedRelation {
+    relation_id: Option<String>,
+    foreign_id: Option<String>,
+    song_id: Option<String>,
+}
+
+#[derive(Default)]
 struct PendingScore {
     name: Option<String>,
     status: Option<String>,
@@ -450,10 +457,19 @@ fn apply_events(db: &Database, events: &[EventMessagePack]) -> Result<(), AppErr
     let tx = conn.transaction()?;
 
     let mut pending_category_songs: HashMap<String, PendingCategorySong> = HashMap::new();
+    let mut pending_composer_songs: HashMap<String, PendingNamedRelation> = HashMap::new();
+    let mut pending_arranger_songs: HashMap<String, PendingNamedRelation> = HashMap::new();
     let mut pending_scores: HashMap<String, PendingScore> = HashMap::new();
 
     for event in events {
-        apply_event(&tx, event, &mut pending_category_songs, &mut pending_scores)?;
+        apply_event(
+            &tx,
+            event,
+            &mut pending_category_songs,
+            &mut pending_composer_songs,
+            &mut pending_arranger_songs,
+            &mut pending_scores,
+        )?;
     }
 
     tx.commit()?;
@@ -464,10 +480,19 @@ fn apply_event(
     tx: &rusqlite::Transaction<'_>,
     event: &EventMessagePack,
     pending_category_songs: &mut HashMap<String, PendingCategorySong>,
+    pending_composer_songs: &mut HashMap<String, PendingNamedRelation>,
+    pending_arranger_songs: &mut HashMap<String, PendingNamedRelation>,
     pending_scores: &mut HashMap<String, PendingScore>,
 ) -> Result<(), AppError> {
     if event.event_type == "delete" {
-        return apply_delete_event(tx, event, pending_category_songs, pending_scores);
+        return apply_delete_event(
+            tx,
+            event,
+            pending_category_songs,
+            pending_composer_songs,
+            pending_arranger_songs,
+            pending_scores,
+        );
     }
 
     let data_items = match &event.data {
@@ -476,7 +501,15 @@ fn apply_event(
     };
 
     for item in data_items {
-        apply_upsert_field_event(tx, event, item, pending_category_songs, pending_scores)?;
+        apply_upsert_field_event(
+            tx,
+            event,
+            item,
+            pending_category_songs,
+            pending_composer_songs,
+            pending_arranger_songs,
+            pending_scores,
+        )?;
     }
 
     Ok(())
@@ -486,6 +519,8 @@ fn apply_delete_event(
     tx: &rusqlite::Transaction<'_>,
     event: &EventMessagePack,
     pending_category_songs: &mut HashMap<String, PendingCategorySong>,
+    pending_composer_songs: &mut HashMap<String, PendingNamedRelation>,
+    pending_arranger_songs: &mut HashMap<String, PendingNamedRelation>,
     pending_scores: &mut HashMap<String, PendingScore>,
 ) -> Result<(), AppError> {
     match event.entity.as_str() {
@@ -526,6 +561,20 @@ fn apply_delete_event(
 
             pending_category_songs.remove(&event.entity_id);
         }
+        "composerSongs" => {
+            tx.execute(
+                "DELETE FROM composerSongs WHERE id = ?1",
+                params![event.entity_id],
+            )?;
+            pending_composer_songs.remove(&event.entity_id);
+        }
+        "arrangerSongs" => {
+            tx.execute(
+                "DELETE FROM arrangerSongs WHERE id = ?1",
+                params![event.entity_id],
+            )?;
+            pending_arranger_songs.remove(&event.entity_id);
+        }
         _ => {}
     }
 
@@ -537,6 +586,8 @@ fn apply_upsert_field_event(
     event: &EventMessagePack,
     item: &EventDataMessagePack,
     pending_category_songs: &mut HashMap<String, PendingCategorySong>,
+    pending_composer_songs: &mut HashMap<String, PendingNamedRelation>,
+    pending_arranger_songs: &mut HashMap<String, PendingNamedRelation>,
     pending_scores: &mut HashMap<String, PendingScore>,
 ) -> Result<(), AppError> {
     match event.entity.as_str() {
@@ -685,6 +736,46 @@ fn apply_upsert_field_event(
                 tx.execute(
                     "INSERT OR IGNORE INTO categoriesSongs (id, categoryId, songId) VALUES (?1, ?2, ?3)",
                     params![event.entity_id, category_id, song_id],
+                )?;
+            }
+        }
+        "composerSongs" => {
+            let entry = pending_composer_songs
+                .entry(event.entity_id.clone())
+                .or_default();
+
+            if item.field == "composerId" {
+                entry.foreign_id = item.value.clone();
+            }
+            if item.field == "songId" {
+                entry.song_id = item.value.clone();
+            }
+
+            if let (Some(composer_id), Some(song_id)) = (entry.foreign_id.clone(), entry.song_id.clone()) {
+                ensure_song_exists(tx, &song_id, event.timestamp)?;
+                tx.execute(
+                    "INSERT OR IGNORE INTO composerSongs (id, composerId, songId) VALUES (?1, ?2, ?3)",
+                    params![event.entity_id, composer_id, song_id],
+                )?;
+            }
+        }
+        "arrangerSongs" => {
+            let entry = pending_arranger_songs
+                .entry(event.entity_id.clone())
+                .or_default();
+
+            if item.field == "arrangerId" {
+                entry.foreign_id = item.value.clone();
+            }
+            if item.field == "songId" {
+                entry.song_id = item.value.clone();
+            }
+
+            if let (Some(arranger_id), Some(song_id)) = (entry.foreign_id.clone(), entry.song_id.clone()) {
+                ensure_song_exists(tx, &song_id, event.timestamp)?;
+                tx.execute(
+                    "INSERT OR IGNORE INTO arrangerSongs (id, arrangerId, songId) VALUES (?1, ?2, ?3)",
+                    params![event.entity_id, arranger_id, song_id],
                 )?;
             }
         }
@@ -1001,6 +1092,123 @@ mod tests {
         assert!(categories
             .iter()
             .any(|category| category.name == "Sem categoria"));
+    }
+
+    #[test]
+    fn applies_composer_and_arranger_relation_events() {
+        let dir = tempdir().expect("temp dir");
+        let db_path = dir.path().join("test.db");
+        let db = Database::new(&db_path).expect("db init");
+        let store = SystemStore::new(dir.path().to_path_buf());
+
+        let settings = AppSettings {
+            computer_id: "client-1".to_string(),
+            computer_name: Some("Cliente".to_string()),
+            computer_type: ComputerType::Client,
+            first_run_completed: true,
+            last_snapshot_timestamp: Some(0),
+            last_change_timestamp: Some(0),
+            ..Default::default()
+        };
+
+        store.save_app_settings(&settings).expect("save settings");
+
+        let cloud_dir = dir.path().join("cloud");
+        std::fs::create_dir_all(cloud_dir.join("actions")).expect("create dirs");
+
+        let snapshot_payload = SnapshotTestPayload {
+            generated_at: 100,
+            categories: Vec::new(),
+            categories_songs: Vec::new(),
+            composers: vec![SnapshotNamedEntityTestPayload {
+                id: "composer-1".to_string(),
+                name: "Compositor".to_string(),
+            }],
+            composer_songs: Vec::new(),
+            arrangers: vec![SnapshotNamedEntityTestPayload {
+                id: "arranger-1".to_string(),
+                name: "Arranjador".to_string(),
+            }],
+            arranger_songs: Vec::new(),
+            songs: vec![SnapshotSongTestPayload {
+                id: "song-1".to_string(),
+                name: "Musica 1".to_string(),
+                scores: Vec::new(),
+            }],
+        };
+
+        write_zstd_msgpack(
+            &cloud_dir.join("actions").join("snapshot.msgpack.zst"),
+            &snapshot_payload,
+        );
+
+        let events_payload = EventsTestPayload {
+            events: vec![
+                EventTestPayload {
+                    id: "evt-1".to_string(),
+                    timestamp: 120,
+                    event_type: "insert".to_string(),
+                    entity: "composerSongs".to_string(),
+                    entity_id: "composer-relation-1".to_string(),
+                    data: Some(vec![
+                        EventDataTestPayload {
+                            field: "composerId".to_string(),
+                            value: Some("composer-1".to_string()),
+                        },
+                        EventDataTestPayload {
+                            field: "songId".to_string(),
+                            value: Some("song-1".to_string()),
+                        },
+                    ]),
+                },
+                EventTestPayload {
+                    id: "evt-2".to_string(),
+                    timestamp: 121,
+                    event_type: "insert".to_string(),
+                    entity: "arrangerSongs".to_string(),
+                    entity_id: "arranger-relation-1".to_string(),
+                    data: Some(vec![
+                        EventDataTestPayload {
+                            field: "arrangerId".to_string(),
+                            value: Some("arranger-1".to_string()),
+                        },
+                        EventDataTestPayload {
+                            field: "songId".to_string(),
+                            value: Some("song-1".to_string()),
+                        },
+                    ]),
+                },
+            ],
+        };
+
+        write_zstd_msgpack(
+            &cloud_dir.join("actions").join("events.msgpack.zst"),
+            &events_payload,
+        );
+
+        let summary = apply_server_changes_for_client(&db, &store).expect("sync client");
+
+        assert!(summary.snapshot_applied);
+        assert_eq!(summary.events_applied, 2);
+
+        let conn = db.conn.lock().expect("lock db");
+        let composer_relations: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM composerSongs WHERE id = ?1",
+                params!["composer-relation-1"],
+                |row| row.get(0),
+            )
+            .expect("count composer relations");
+        let arranger_relations: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM arrangerSongs WHERE id = ?1",
+                params!["arranger-relation-1"],
+                |row| row.get(0),
+            )
+            .expect("count arranger relations");
+
+        assert_eq!(composer_relations, 1);
+        assert_eq!(arranger_relations, 1);
     }
 
     #[test]

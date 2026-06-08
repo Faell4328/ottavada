@@ -19,41 +19,48 @@ interface TopBarProps {
 }
 
 export default function TopBar({
-  title = "Score Maestro Servidor",
+  title = "Score Maestro",
   onUpdateClick,
   isUpdateBusy,
   hasAvailableUpdate,
   isUpdateActionLocked,
 }: TopBarProps) {
-  const { loadSongs, loadCategories, state, scanFilesForChanges, previewScanFilesForChanges } = useAppState();
+  const {
+    loadSongs,
+    loadCategories,
+    state,
+    scanFilesForChanges,
+    previewScanFilesForChanges,
+  } = useAppState();
   const navigate = useNavigate();
   const isClient = isClientComputer(state.settings?.computer_type);
   const isSyncLocked =
     state.isScanningFiles ||
     state.rcloneProgress.active ||
     state.operationStatus.stepCurrent !== null;
-  const clientBlockedTitle = "Esse recurso só está disponível no computador principal.";
+  const clientBlockedTitle =
+    "Esse recurso só está disponível no computador principal.";
   const syncBlockedTitle = "Espere a sincronização terminar para continuar.";
   const updateBlockedTitle = getUpdateActionBlockedMessage();
   const [pendingFiles, setPendingFiles] = useState<IndexedFile[]>([]);
-  const [existingSongsForAddFiles, setExistingSongsForAddFiles] = useState<SongListItem[]>([]);
+  const [existingSongsForAddFiles, setExistingSongsForAddFiles] = useState<
+    SongListItem[]
+  >([]);
   const [showAddFilesModal, setShowAddFilesModal] = useState(false);
   const selectedCategoryIds = useMemo(
     () =>
-      typeof state.sidebarView === "object" && state.sidebarView.type === "category"
+      typeof state.sidebarView === "object" &&
+      state.sidebarView.type === "category"
         ? [state.sidebarView.id]
         : [],
-    [state.sidebarView]
+    [state.sidebarView],
   );
 
   // Forçar reload quando scores muda - isso garante que a UI atualiza
   const handleScoresChange = async () => {
     // Pequeno delay para garantir que backend processou tudo
-    await new Promise(resolve => setTimeout(resolve, 100));
-    await Promise.all([
-      loadSongs(),
-      loadCategories()
-    ]);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    await Promise.all([loadSongs(), loadCategories()]);
   };
 
   async function handleScanDirectory() {
@@ -113,7 +120,11 @@ export default function TopBar({
         <div className="flex items-center gap-2">
           {hasAvailableUpdate && (
             <ActionButton
-              icon={<Download className={`h-4 w-4 ${isUpdateBusy ? "animate-spin" : "animate-pulse"}`} />}
+              icon={
+                <Download
+                  className={`h-4 w-4 ${isUpdateBusy ? "animate-spin" : "animate-pulse"}`}
+                />
+              }
               title={isSyncLocked ? syncBlockedTitle : "Atualização disponível"}
               onClick={onUpdateClick}
               disabled={isSyncLocked || isUpdateBusy}
@@ -122,12 +133,22 @@ export default function TopBar({
           )}
           <ActionButton
             icon={<FolderSearch className="h-4 w-4" />}
-            title={isClient ? clientBlockedTitle : isSyncLocked ? syncBlockedTitle : "Indexar diretório"}
+            title={
+              isClient
+                ? clientBlockedTitle
+                : isSyncLocked
+                  ? syncBlockedTitle
+                  : "Indexar diretório"
+            }
             onClick={handleScanDirectory}
             disabled={isClient || isSyncLocked}
           />
           <ActionButton
-            icon={<RefreshCw className={`h-4 w-4 ${state.isScanningFiles ? 'animate-spin' : ''}`} />}
+            icon={
+              <RefreshCw
+                className={`h-4 w-4 ${state.isScanningFiles ? "animate-spin" : ""}`}
+              />
+            }
             title={
               isUpdateActionLocked
                 ? updateBlockedTitle
@@ -148,7 +169,9 @@ export default function TopBar({
                 return;
               }
 
-              void (isClient ? scanFilesForChanges() : previewScanFilesForChanges());
+              void (isClient
+                ? scanFilesForChanges()
+                : previewScanFilesForChanges());
             }}
             disabled={isSyncLocked || isUpdateActionLocked}
           />

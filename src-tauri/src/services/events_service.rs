@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::fs;
 
+use rusqlite::params;
 use serde::Serialize;
 
 use crate::domain::errors::AppError;
@@ -61,6 +62,12 @@ struct ScoreChangeSummary {
     timestamp: i64,
     event_id: String,
     change_type: String,
+}
+
+#[derive(Debug, Clone)]
+struct SongRelationRecord {
+    id: String,
+    foreign_id: String,
 }
 
 pub fn generate_events_msgpack(
@@ -268,16 +275,55 @@ fn build_song_status_events(
 ) -> Result<Vec<EventMessagePack>, AppError> {
     let song = db.get_song_by_id(&change.entity_id)?;
     let scores = db.get_scores_for_song(&change.entity_id)?;
+    let category_relations = get_song_category_relations(db, &change.entity_id)?;
+    let composer_relations = get_song_named_relations(db, &change.entity_id, "composerSongs", "composerId")?;
+    let arranger_relations = get_song_named_relations(db, &change.entity_id, "arrangerSongs", "arrangerId")?;
 
     match song.status {
         ScoreStatus::Main => {
-            let mut events = Vec::with_capacity(scores.len() + 1);
+            let mut events = Vec::with_capacity(
+                scores.len()
+                    + category_relations.len()
+                    + composer_relations.len()
+                    + arranger_relations.len()
+                    + 1,
+            );
             events.push(build_song_insert_event(
                 change,
                 song.name,
                 song.composer,
                 song.arranger,
             ));
+
+            for relation in category_relations {
+                events.push(build_relation_insert_event(
+                    change.timestamp,
+                    &change.id,
+                    "categoriesSongs",
+                    &relation.id,
+                    &[("categoryId", relation.foreign_id), ("songId", change.entity_id.clone())],
+                ));
+            }
+
+            for relation in composer_relations {
+                events.push(build_relation_insert_event(
+                    change.timestamp,
+                    &change.id,
+                    "composerSongs",
+                    &relation.id,
+                    &[("composerId", relation.foreign_id), ("songId", change.entity_id.clone())],
+                ));
+            }
+
+            for relation in arranger_relations {
+                events.push(build_relation_insert_event(
+                    change.timestamp,
+                    &change.id,
+                    "arrangerSongs",
+                    &relation.id,
+                    &[("arrangerId", relation.foreign_id), ("songId", change.entity_id.clone())],
+                ));
+            }
 
             for score in scores {
                 if score.status == ScoreStatus::Main {
@@ -293,7 +339,40 @@ fn build_song_status_events(
             Ok(events)
         }
         ScoreStatus::Draft | ScoreStatus::NotFound | ScoreStatus::Ignored => {
-            let mut events = Vec::with_capacity(scores.len() + 1);
+            let mut events = Vec::with_capacity(
+                scores.len()
+                    + category_relations.len()
+                    + composer_relations.len()
+                    + arranger_relations.len()
+                    + 1,
+            );
+            for relation in category_relations {
+                events.push(build_relation_delete_event(
+                    change.timestamp,
+                    &change.id,
+                    "categoriesSongs",
+                    &relation.id,
+                ));
+            }
+
+            for relation in composer_relations {
+                events.push(build_relation_delete_event(
+                    change.timestamp,
+                    &change.id,
+                    "composerSongs",
+                    &relation.id,
+                ));
+            }
+
+            for relation in arranger_relations {
+                events.push(build_relation_delete_event(
+                    change.timestamp,
+                    &change.id,
+                    "arrangerSongs",
+                    &relation.id,
+                ));
+            }
+
             events.push(EventMessagePack {
                 id: change.id.clone(),
                 timestamp: change.timestamp,
@@ -313,6 +392,87 @@ fn build_song_status_events(
 
             Ok(events)
         }
+    }
+}
+
+fn get_song_category_relations(
+    db: &Database,
+    song_id: &str,
+) -> Result<Vec<SongRelationRecord>, AppError> {
+    let conn = db.conn.lock().unwrap();
+    let mut stmt = conn.prepare(
+        "SELECT id, categoryId FROM categoriesSongs WHERE songId = ?1 ORDER BY categoryId ASC, id ASC",
+    )?;
+    let rows = stmt.query_map(params![song_id], |row| {
+        Ok(SongRelationRecord {
+            id: row.get(0)?,
+            foreign_id: row.get(1)?,
+        })
+    })?;
+
+    Ok(rows.filter_map(|row| row.ok()).collect())
+}
+
+fn get_song_named_relations(
+    db: &Database,
+    song_id: &str,
+    table_name: &str,
+    foreign_key_name: &str,
+) -> Result<Vec<SongRelationRecord>, AppError> {
+    let conn = db.conn.lock().unwrap();
+    let sql = format!(
+        "SELECT id, {} FROM {} WHERE songId = ?1 ORDER BY {} ASC, id ASC",
+        foreign_key_name, table_name, foreign_key_name
+    );
+    let mut stmt = conn.prepare(&sql)?;
+    let rows = stmt.query_map(params![song_id], |row| {
+        Ok(SongRelationRecord {
+            id: row.get(0)?,
+            foreign_id: row.get(1)?,
+        })
+    })?;
+
+    Ok(rows.filter_map(|row| row.ok()).collect())
+}
+
+fn build_relation_insert_event(
+    timestamp: i64,
+    source_event_id: &str,
+    entity: &str,
+    relation_id: &str,
+    fields: &[(&str, String)],
+) -> EventMessagePack {
+    EventMessagePack {
+        id: format!("{}:{}", source_event_id, relation_id),
+        timestamp,
+        event_type: "insert".to_string(),
+        entity: entity.to_string(),
+        entity_id: relation_id.to_string(),
+        data: Some(
+            fields
+                .iter()
+                .map(|(field, value)| EventDataMessagePack {
+                    field: (*field).to_string(),
+                    value: Some(value.clone()),
+                })
+                .collect(),
+        ),
+    }
+}
+
+fn build_relation_delete_event(
+    timestamp: i64,
+    source_event_id: &str,
+    entity: &str,
+    relation_id: &str,
+) -> EventMessagePack {
+    EventMessagePack {
+        id: format!("{}:{}", source_event_id, relation_id),
+        timestamp,
+        event_type: "delete".to_string(),
+        entity: entity.to_string(),
+        entity_id: relation_id.to_string(),
+        data: None,
     }
 }
 
@@ -905,6 +1065,182 @@ mod tests {
         assert_eq!(payload["events"][1]["entityId"], "score-1");
         assert_eq!(payload["events"][1]["data"][0]["field"], "songId");
         assert_eq!(payload["events"][1]["data"][0]["value"], "song-1");
+    }
+
+    #[test]
+    fn translates_song_status_main_into_relation_insert_events() {
+        let dir = tempdir().expect("temp dir");
+        let db_path = dir.path().join("test.db");
+        let db = Database::new(&db_path).expect("db init");
+        let store = SystemStore::new(dir.path().to_path_buf());
+
+        let settings = crate::domain::models::AppSettings {
+            computer_id: "server-1".to_string(),
+            computer_name: Some("Servidor".to_string()),
+            computer_type: crate::domain::models::ComputerType::Server,
+            ..Default::default()
+        };
+        store.save_app_settings(&settings).expect("save settings");
+
+        let song = Song {
+            id: "song-1".to_string(),
+            name: "Musica Teste".to_string(),
+            composer: Some("Compositor".to_string()),
+            arranger: Some("Arranjador".to_string()),
+            path: dir
+                .path()
+                .join("songs")
+                .join("song-1")
+                .to_string_lossy()
+                .to_string(),
+            is_favorite: false,
+            status: ScoreStatus::Main,
+            updated_at: chrono::Local::now().naive_local(),
+            updated_by: "server-1".to_string(),
+        };
+
+        let conn = db.conn.lock().expect("lock db");
+        conn.execute("INSERT INTO categories (id, name) VALUES (?1, ?2)", params!["cat-1", "Coral"])
+            .expect("insert category");
+        conn.execute("INSERT INTO composer (id, name) VALUES (?1, ?2)", params!["composer-1", "Compositor"])
+            .expect("insert composer");
+        conn.execute("INSERT INTO arranger (id, name) VALUES (?1, ?2)", params!["arranger-1", "Arranjador"])
+            .expect("insert arranger");
+        drop(conn);
+
+        db.insert_song(&song, &["cat-1".to_string()]).expect("insert song");
+
+        let conn = db.conn.lock().expect("lock db");
+        conn.execute("INSERT INTO categoriesSongs (id, categoryId, songId) VALUES (?1, ?2, ?3)", params!["rel-cat-1", "cat-1", "song-1"])
+            .expect("insert category relation");
+        conn.execute("INSERT INTO composerSongs (id, composerId, songId) VALUES (?1, ?2, ?3)", params!["rel-composer-1", "composer-1", "song-1"])
+            .expect("insert composer relation");
+        conn.execute("INSERT INTO arrangerSongs (id, arrangerId, songId) VALUES (?1, ?2, ?3)", params!["rel-arranger-1", "arranger-1", "song-1"])
+            .expect("insert arranger relation");
+        conn.execute("DELETE FROM changedField", [])
+            .expect("clear changed fields");
+        conn.execute(
+            "INSERT INTO changedField (id, type, entity, entityId, field, value, timestamp)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            params![
+                "evt-main",
+                "update",
+                "songs",
+                "song-1",
+                "status",
+                "main",
+                chrono::Local::now().timestamp(),
+            ],
+        )
+        .expect("insert main status event");
+        drop(conn);
+
+        let summary = generate_events_msgpack(&db, &store).expect("generate events");
+        assert_eq!(summary.events_count, 4);
+
+        let raw = fs::read(
+            dir.path()
+                .join("cloud")
+                .join("actions")
+                .join("events.msgpack.zst"),
+        )
+        .expect("read events file");
+        let mut decoder = zstd::stream::read::Decoder::new(raw.as_slice()).expect("decoder");
+        let payload: serde_json::Value =
+            rmp_serde::from_read(&mut decoder).expect("decode msgpack");
+
+        assert_eq!(payload["events"][1]["entity"], "categoriesSongs");
+        assert_eq!(payload["events"][2]["entity"], "composerSongs");
+        assert_eq!(payload["events"][3]["entity"], "arrangerSongs");
+    }
+
+    #[test]
+    fn translates_song_status_draft_into_relation_delete_events() {
+        let dir = tempdir().expect("temp dir");
+        let db_path = dir.path().join("test.db");
+        let db = Database::new(&db_path).expect("db init");
+        let store = SystemStore::new(dir.path().to_path_buf());
+
+        let settings = crate::domain::models::AppSettings {
+            computer_id: "server-1".to_string(),
+            computer_name: Some("Servidor".to_string()),
+            computer_type: crate::domain::models::ComputerType::Server,
+            ..Default::default()
+        };
+        store.save_app_settings(&settings).expect("save settings");
+
+        let song = Song {
+            id: "song-1".to_string(),
+            name: "Musica Teste".to_string(),
+            composer: Some("Compositor".to_string()),
+            arranger: Some("Arranjador".to_string()),
+            path: dir
+                .path()
+                .join("songs")
+                .join("song-1")
+                .to_string_lossy()
+                .to_string(),
+            is_favorite: false,
+            status: ScoreStatus::Draft,
+            updated_at: chrono::Local::now().naive_local(),
+            updated_by: "server-1".to_string(),
+        };
+
+        let conn = db.conn.lock().expect("lock db");
+        conn.execute("INSERT INTO categories (id, name) VALUES (?1, ?2)", params!["cat-1", "Coral"])
+            .expect("insert category");
+        conn.execute("INSERT INTO composer (id, name) VALUES (?1, ?2)", params!["composer-1", "Compositor"])
+            .expect("insert composer");
+        conn.execute("INSERT INTO arranger (id, name) VALUES (?1, ?2)", params!["arranger-1", "Arranjador"])
+            .expect("insert arranger");
+        drop(conn);
+
+        db.insert_song(&song, &["cat-1".to_string()]).expect("insert song");
+
+        let conn = db.conn.lock().expect("lock db");
+        conn.execute("INSERT INTO categoriesSongs (id, categoryId, songId) VALUES (?1, ?2, ?3)", params!["rel-cat-1", "cat-1", "song-1"])
+            .expect("insert category relation");
+        conn.execute("INSERT INTO composerSongs (id, composerId, songId) VALUES (?1, ?2, ?3)", params!["rel-composer-1", "composer-1", "song-1"])
+            .expect("insert composer relation");
+        conn.execute("INSERT INTO arrangerSongs (id, arrangerId, songId) VALUES (?1, ?2, ?3)", params!["rel-arranger-1", "arranger-1", "song-1"])
+            .expect("insert arranger relation");
+        conn.execute("DELETE FROM changedField", [])
+            .expect("clear changed fields");
+        conn.execute(
+            "INSERT INTO changedField (id, type, entity, entityId, field, value, timestamp)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            params![
+                "evt-draft",
+                "update",
+                "songs",
+                "song-1",
+                "status",
+                "draft",
+                chrono::Local::now().timestamp(),
+            ],
+        )
+        .expect("insert draft status event");
+        drop(conn);
+
+        let summary = generate_events_msgpack(&db, &store).expect("generate events");
+        assert_eq!(summary.events_count, 4);
+
+        let raw = fs::read(
+            dir.path()
+                .join("cloud")
+                .join("actions")
+                .join("events.msgpack.zst"),
+        )
+        .expect("read events file");
+        let mut decoder = zstd::stream::read::Decoder::new(raw.as_slice()).expect("decoder");
+        let payload: serde_json::Value =
+            rmp_serde::from_read(&mut decoder).expect("decode msgpack");
+
+        assert_eq!(payload["events"][0]["entity"], "categoriesSongs");
+        assert_eq!(payload["events"][1]["entity"], "composerSongs");
+        assert_eq!(payload["events"][2]["entity"], "arrangerSongs");
+        assert_eq!(payload["events"][3]["entity"], "songs");
+        assert_eq!(payload["events"][3]["type"], "delete");
     }
 
     #[test]

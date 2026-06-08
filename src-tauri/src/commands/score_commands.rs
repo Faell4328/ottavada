@@ -19,8 +19,8 @@ use crate::services::name_formatter::normalize_optional_score_name;
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
 
-const VALID_SCORE_EXTENSIONS: [&str; 11] = [
-    "pdf", "mus", "musx", "mscx", "mscz", "xml", "musicxml", "sib", "enc", "mid", "midi",
+const VALID_SCORE_EXTENSIONS: [&str; 12] = [
+    "pdf", "mus", "musx", "mscx", "mscz", "xml", "musicxml", "sib", "enc", "dorico", "mid", "midi",
 ];
 
 fn score_exists_for_indexed_file(

@@ -3,8 +3,17 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { ExternalLink, FolderOpen, Loader2 } from "lucide-react";
 import type { SongListItem, ScoreListItem } from "../types";
 import * as api from "../api/commands";
-import { Modal, ModalFooterButtons, FormField, TextInput, ErrorMessage } from "./ui";
-import { normalizeScoreNameForSave, normalizeScoreNameInput } from "../utils/nameFormat";
+import {
+  Modal,
+  ModalFooterButtons,
+  FormField,
+  TextInput,
+  ErrorMessage,
+} from "./ui";
+import {
+  normalizeScoreNameForSave,
+  normalizeScoreNameInput,
+} from "../utils/nameFormat";
 import { findScoreNameConflictInSong } from "../utils/libraryDuplicates";
 import { isSupportedScoreFilePath } from "../utils/paths";
 
@@ -110,7 +119,32 @@ export function EditScoreModal({
         filters: [
           {
             name: "Partituras",
-            extensions: ["pdf", "PDF", "mus", "MUS", "musx", "MUSX", "mscx", "MSCX", "mscz", "MSCZ", "xml", "XML", "musicxml", "MUSICXML", "sib", "SIB", "enc", "ENC", "mid", "MID", "midi", "MIDI"],
+            extensions: [
+              "pdf",
+              "PDF",
+              "mus",
+              "MUS",
+              "musx",
+              "MUSX",
+              "mscx",
+              "MSCX",
+              "mscz",
+              "MSCZ",
+              "xml",
+              "XML",
+              "musicxml",
+              "MUSICXML",
+              "sib",
+              "SIB",
+              "enc",
+              "ENC",
+              "dorico",
+              "DORICO",
+              "mid",
+              "MID",
+              "midi",
+              "MIDI",
+            ],
           },
         ],
       });
@@ -177,7 +211,10 @@ export function EditScoreModal({
       {hasNameConflict && (
         <div className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
           <p className="font-semibold">Há uma pendência nesta partitura.</p>
-          <p>Já existe outra partitura com esse nome nesta música. Renomeie antes de salvar.</p>
+          <p>
+            Já existe outra partitura com esse nome nesta música. Renomeie antes
+            de salvar.
+          </p>
         </div>
       )}
 
@@ -201,7 +238,9 @@ export function EditScoreModal({
       <FormField label="Nome do Instrumento">
         <TextInput
           value={instrumentName}
-          onChange={(value) => setInstrumentName(normalizeScoreNameInput(value))}
+          onChange={(value) =>
+            setInstrumentName(normalizeScoreNameInput(value))
+          }
           placeholder="Ex: Flauta, Violino, Piano"
           disabled={isSaving}
         />
@@ -211,7 +250,11 @@ export function EditScoreModal({
         <div className="space-y-2">
           <div className="rounded border border-[#c5cfdb] bg-[#f5f7fa] p-3 min-h-[2.5rem] overflow-auto max-h-24">
             <p className="text-xs text-[#344b61] whitespace-pre-wrap break-all">
-              {filePath || <span className="text-sm text-[#a3b5c7]">Nenhum arquivo selecionado</span>}
+              {filePath || (
+                <span className="text-sm text-[#a3b5c7]">
+                  Nenhum arquivo selecionado
+                </span>
+              )}
             </p>
           </div>
           <button
@@ -250,7 +293,7 @@ export function EditScoreModal({
               ) : (
                 <FolderOpen className="h-3.5 w-3.5" />
               )}
-              Abrir 
+              Abrir
             </button>
           </div>
         </div>

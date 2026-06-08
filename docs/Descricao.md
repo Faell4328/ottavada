@@ -16,9 +16,9 @@ O **Score Maestro** é um software gratuito, desenvolvido para facilitar o dia
 
 É importante destacar que o **Score Maestro** não é uma ferramenta de criação, edição ou leitura de partituras. Ele atua como um intermediário e facilitador, integrando e organizando o fluxo de trabalho já existente.
 
-O sistema oferece suporte aos formatos `.pdf`, `.mus`, `.musx`, `.mscx`, `.xml`, `.musicxml`, `.sib`, `.enc`, `.mid` e `.midi`. Arquivos com extensões diferentes dessas são automaticamente ignorados durante o processo de indexação.
+O sistema oferece suporte aos formatos `.pdf`, `.mus`, `.musx`, `.mscx`, `mscz`, `.xml`, `.musicxml`, `.sib`, `.enc`, `.dorico`, `.mid` e `.midi`. Arquivos com extensões diferentes dessas são automaticamente ignorados durante o processo de indexação.
 
-O **Score Maestro** foi projetado para funcionar em conjunto com ferramentas amplamente utilizadas na criação e edição de partituras, como **Finale**, **MuseScore**, **Sibelius** e **Encore**, além de outros programas compatíveis com formatos como **MusicXML**, **MIDI** e **PDF**.
+O **Score Maestro** foi projetado para funcionar em conjunto com ferramentas amplamente utilizadas na criação e edição de partituras, como **Finale**, **MuseScore**, **Sibelius**, **Dorico** e **Encore**, além de outros programas compatíveis com formatos como **MusicXML**, **MIDI** e **PDF**.
 
 Dessa forma, o sistema se adapta ao fluxo de trabalho já estabelecido, permitindo que músicos e regentes continuem utilizando as ferramentas que já conhecem e preferem, sem necessidade de mudanças na rotina de trabalho.
 
