@@ -227,7 +227,12 @@ function parseReviewItem(raw: string): ReviewItem | null {
     return { action: "adding", entity: "composer", songName: composerAddedMatch[2].trim(), value: composerAddedMatch[1].trim(), raw };
   }
 
-  const composerRemovedMatch = raw.match(/^O compositor\s+(.+?)\s+foi deletado da música\s+(.+)\.$/);
+  const composerModifiedMatch = raw.match(/^O compositor\s+(.+?)\s+foi modificado na música\s+(.+)\.$/);
+  if (composerModifiedMatch) {
+    return { action: "modified", entity: "composer", songName: composerModifiedMatch[2].trim(), value: composerModifiedMatch[1].trim(), raw };
+  }
+
+  const composerRemovedMatch = raw.match(/^O compositor\s+(.+?)\s+foi (?:deletado|removido) da música\s+(.+)\.$/);
   if (composerRemovedMatch) {
     return { action: "deleted", entity: "composer", songName: composerRemovedMatch[2].trim(), value: composerRemovedMatch[1].trim(), raw };
   }
@@ -237,7 +242,12 @@ function parseReviewItem(raw: string): ReviewItem | null {
     return { action: "adding", entity: "arranger", songName: arrangerAddedMatch[2].trim(), value: arrangerAddedMatch[1].trim(), raw };
   }
 
-  const arrangerRemovedMatch = raw.match(/^O arranjador\s+(.+?)\s+foi deletado da música\s+(.+)\.$/);
+  const arrangerModifiedMatch = raw.match(/^O arranjador\s+(.+?)\s+foi modificado na música\s+(.+)\.$/);
+  if (arrangerModifiedMatch) {
+    return { action: "modified", entity: "arranger", songName: arrangerModifiedMatch[2].trim(), value: arrangerModifiedMatch[1].trim(), raw };
+  }
+
+  const arrangerRemovedMatch = raw.match(/^O arranjador\s+(.+?)\s+foi (?:deletado|removido) da música\s+(.+)\.$/);
   if (arrangerRemovedMatch) {
     return { action: "deleted", entity: "arranger", songName: arrangerRemovedMatch[2].trim(), value: arrangerRemovedMatch[1].trim(), raw };
   }
@@ -762,7 +772,7 @@ function renderPersonItem(
 
   return (
     <>
-      O {role} <strong>{personName}</strong> foi modificado na música {songName}.
+      O {role} da música <strong>{songName}</strong> foi alterado para <strong>{personName}</strong>.
     </>
   );
 }

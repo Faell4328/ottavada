@@ -33,9 +33,11 @@ const report = {
     "A categoria Hinos foi adicionada à música 3 VEZES SANTO.",
     "A categoria Hinos foi removida da música 3 VEZES SANTO.",
     "O compositor Neusom foi adicionado à música Eis o Nosso Deus.",
-    "O compositor Neusom foi deletado da música Eis o Nosso Deus.",
+    "O compositor Neusom foi modificado na música Eis o Nosso Deus.",
+    "O compositor Neusom foi removido da música Eis o Nosso Deus.",
     "O arranjador Maria foi adicionado à música Eis o Nosso Deus.",
-    "O arranjador Maria foi deletado da música Eis o Nosso Deus.",
+    "O arranjador Maria foi modificado na música Eis o Nosso Deus.",
+    "O arranjador Maria foi removido da música Eis o Nosso Deus.",
     "A partitura /music/Eis o Nosso Deus - Flauta.musx saiu de draft e voltou para main na música Eis o Nosso Deus.",
     "A partitura /music/Eis o Nosso Deus - Flute2.musx saiu de ignored e foi para draft na música Eis o Nosso Deus.",
     "Partitura alterada: /music/Eis o Nosso Deus - CANON.musx",
@@ -73,9 +75,9 @@ describe("ScanReportModal", () => {
     expect(screen.getByText("Hino Nacional").tagName).toBe("STRONG");
     expect(screen.getAllByText((_, element) => element?.textContent === "A música Eis o Nosso Deus teve o nome alterado.").length).toBeGreaterThan(0);
     expect(screen.getAllByText((_, element) => element?.textContent === "A música Hino Antigo foi deletada.").length).toBeGreaterThan(0);
-    expect(screen.getAllByText((_, element) => element?.textContent === "O compositor Neusom foi modificado na música Eis o Nosso Deus.").length).toBeGreaterThan(0);
+    expect(screen.getAllByText((_, element) => element?.textContent === "O compositor da música Eis o Nosso Deus foi alterado para Neusom.").length).toBeGreaterThan(0);
+    expect(screen.getAllByText((_, element) => element?.textContent === "O arranjador da música Eis o Nosso Deus foi alterado para Maria.").length).toBeGreaterThan(0);
     expect(screen.getAllByText((_, element) => element?.textContent === "O compositor Neusom foi deletado da música Eis o Nosso Deus.").length).toBeGreaterThan(0);
-    expect(screen.getAllByText((_, element) => element?.textContent === "O arranjador Maria foi modificado na música Eis o Nosso Deus.").length).toBeGreaterThan(0);
     expect(screen.getAllByText((_, element) => element?.textContent === "O arranjador Maria foi deletado da música Eis o Nosso Deus.").length).toBeGreaterThan(0);
     expect(screen.getAllByText((_, element) => element?.textContent === "As partituras Flauta.pdf, Oboe.musx e Tenor Saxophone.musx foram adicionadas na música Eis o Nosso Deus.").length).toBeGreaterThan(0);
     expect(screen.getAllByText((_, element) => element?.textContent?.includes("Partituras · Eis o Nosso Deus") ?? false).length).toBeGreaterThan(0);

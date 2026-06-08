@@ -7,6 +7,27 @@ import type { Action, State } from "./reducer";
 import type { AuthorFilterValue } from "./types";
 import { normalizeAuthorName } from "../utils/songSearch";
 
+function updateSongAuthorField(
+  songs: SongListItem[],
+  kind: "composer" | "arranger",
+  oldName: string,
+  newName: string | null
+): SongListItem[] {
+  const normalizedOldName = normalizeAuthorName(oldName);
+
+  return songs.map((song) => {
+    const currentName = kind === "composer" ? song.composer : song.arranger;
+    if (!currentName || normalizeAuthorName(currentName) !== normalizedOldName) {
+      return song;
+    }
+
+    return {
+      ...song,
+      [kind]: newName,
+    };
+  });
+}
+
 interface UseAppCrudActionsParams {
   state: State;
   dispatch: Dispatch<Action>;
@@ -196,6 +217,11 @@ export function useAppCrudActions({
         await api.updateArranger(oldName, newName);
       }
 
+      dispatch({
+        type: "SET_SONGS",
+        payload: updateSongAuthorField(state.songs, kind, oldName, newName.trim()),
+      });
+
       if (normalizeAuthorName(state.authorFilters[kind]) === normalizeAuthorName(oldName)) {
         dispatch({
           type: "SET_AUTHOR_FILTERS",
@@ -246,6 +272,11 @@ export function useAppCrudActions({
       } else {
         await api.deleteArranger(oldName);
       }
+
+      dispatch({
+        type: "SET_SONGS",
+        payload: updateSongAuthorField(state.songs, kind, oldName, null),
+      });
 
       if (normalizeAuthorName(state.authorFilters[kind]) === normalizeAuthorName(oldName)) {
         dispatch({
