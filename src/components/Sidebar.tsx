@@ -20,12 +20,23 @@ import { EditAuthorModal } from "./EditAuthorModal";
 import toast from "react-hot-toast";
 
 export default function Sidebar() {
-  const { state, setSidebarView, setAuthorFilters, createCategory, updateCategory, deleteCategory, updateAuthor, deleteAuthor } =
-    useAppState();
+  const {
+    state,
+    setSidebarView,
+    setAuthorFilters,
+    createCategory,
+    updateCategory,
+    deleteCategory,
+    updateAuthor,
+    deleteAuthor,
+  } = useAppState();
   const [newCategoryName, setNewCategoryName] = useState("");
   const [showNewCategory, setShowNewCategory] = useState(false);
   const [isCreatingCategory, setIsCreatingCategory] = useState(false);
-  const [categoryToEdit, setCategoryToEdit] = useState<{ id: string; name: string } | null>(null);
+  const [categoryToEdit, setCategoryToEdit] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   const [authorToEdit, setAuthorToEdit] = useState<{
     kind: "composer" | "arranger";
     name: string;
@@ -42,7 +53,11 @@ export default function Sidebar() {
   const categoryLockedTitle = isClient
     ? "Esse recurso só está disponível no computador principal."
     : "Espere a sincronização terminar para continuar.";
-  const libraryViews: Array<{ view: SidebarView; label: string; icon: ReactNode }> = [
+  const libraryViews: Array<{
+    view: SidebarView;
+    label: string;
+    icon: ReactNode;
+  }> = [
     {
       view: "all",
       label: "Todas as Músicas",
@@ -67,14 +82,22 @@ export default function Sidebar() {
 
   const composerOptions = useMemo(() => {
     const values = new Set<string>();
-    state.songs.forEach((song) => song.composer?.trim() && values.add(song.composer.trim()));
-    return [...values].sort((left, right) => left.localeCompare(right, "pt-BR", { sensitivity: "base" }));
+    state.songs.forEach(
+      (song) => song.composer?.trim() && values.add(song.composer.trim()),
+    );
+    return [...values].sort((left, right) =>
+      left.localeCompare(right, "pt-BR", { sensitivity: "base" }),
+    );
   }, [state.songs]);
 
   const arrangerOptions = useMemo(() => {
     const values = new Set<string>();
-    state.songs.forEach((song) => song.arranger?.trim() && values.add(song.arranger.trim()));
-    return [...values].sort((left, right) => left.localeCompare(right, "pt-BR", { sensitivity: "base" }));
+    state.songs.forEach(
+      (song) => song.arranger?.trim() && values.add(song.arranger.trim()),
+    );
+    return [...values].sort((left, right) =>
+      left.localeCompare(right, "pt-BR", { sensitivity: "base" }),
+    );
   }, [state.songs]);
 
   async function handleCreateCategory() {
@@ -87,7 +110,7 @@ export default function Sidebar() {
     if (!name) return;
 
     const existingCategory = state.categories.find(
-      (cat) => cat.name.toLocaleLowerCase() === name.toLocaleLowerCase()
+      (cat) => cat.name.toLocaleLowerCase() === name.toLocaleLowerCase(),
     );
 
     if (existingCategory) {
@@ -119,7 +142,9 @@ export default function Sidebar() {
   }
 
   const canEditCategory = (categoryId: string, categoryName: string) =>
-    !isCategoryLocked && categoryId !== "default-category" && categoryName.toLowerCase() !== "sem categoria";
+    !isCategoryLocked &&
+    categoryId !== "default-category" &&
+    categoryName.toLowerCase() !== "sem categoria";
 
   const canEditAuthor = (kind: "composer" | "arranger", authorName: string) =>
     !isCategoryLocked && authorName.toLowerCase() !== `sem ${kind}`;
@@ -129,7 +154,7 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="flex w-60 flex-col gap-2.5 border-r border-white/20 bg-linear-to-b from-[rgba(35,52,72,0.94)] to-[rgba(55,78,106,0.9)] px-3 py-3 text-[#dce7f5]">
+    <aside className="flex w-60 flex-col gap-2.5 border-r border-white/20 bg-[rgba(35,52,72,0.94)] px-3 py-3 text-[#dce7f5]">
       {/* Biblioteca */}
       <div className="border-b border-white/15 pb-2">
         <div className="flex items-center gap-1.5 text-sm font-bold mb-1.5">
@@ -138,7 +163,10 @@ export default function Sidebar() {
         </div>
         <nav className="flex flex-col">
           {libraryViews
-            .filter(({ view }) => !isClient || (view !== "drafts" && view !== "not_found"))
+            .filter(
+              ({ view }) =>
+                !isClient || (view !== "drafts" && view !== "not_found"),
+            )
             .map(({ view, label, icon }) => (
               <SidebarItem
                 key={typeof view === "string" ? view : view.id}
@@ -204,7 +232,9 @@ export default function Sidebar() {
               {canEditCategory(cat.id, cat.name) && (
                 <button
                   type="button"
-                  onClick={() => setCategoryToEdit({ id: cat.id, name: cat.name })}
+                  onClick={() =>
+                    setCategoryToEdit({ id: cat.id, name: cat.name })
+                  }
                   title="Editar categoria"
                   className="opacity-0 group-hover:opacity-100 flex h-5 w-5 items-center justify-center rounded bg-transparent hover:bg-white/10 transition-all cursor-pointer border-0 text-white/70"
                 >
@@ -220,7 +250,7 @@ export default function Sidebar() {
                       `A categoria \"${cat.name}\" será removida. As músicas continuarão na biblioteca sem essa categoria.`,
                       async () => {
                         await deleteCategory(cat.id);
-                      }
+                      },
                     )
                   }
                   className="opacity-0 group-hover:opacity-100 flex h-5 w-5 items-center justify-center rounded bg-transparent hover:bg-red-500/20 transition-all cursor-pointer border-0 text-red-300/70"
@@ -244,19 +274,25 @@ export default function Sidebar() {
           <SidebarItem
             label="Todos"
             active={state.authorFilters.composer === "all"}
-            onClick={() => setAuthorFilters({ ...state.authorFilters, composer: "all" })}
+            onClick={() =>
+              setAuthorFilters({ ...state.authorFilters, composer: "all" })
+            }
           />
           <SidebarItem
             label="Sem compositor"
             active={state.authorFilters.composer === "none"}
-            onClick={() => setAuthorFilters({ ...state.authorFilters, composer: "none" })}
+            onClick={() =>
+              setAuthorFilters({ ...state.authorFilters, composer: "none" })
+            }
           />
           {composerOptions.map((composer) => (
             <div key={composer} className="group flex items-center">
               <SidebarItem
                 label={composer}
                 active={state.authorFilters.composer === composer}
-                onClick={() => setAuthorFilters({ ...state.authorFilters, composer })}
+                onClick={() =>
+                  setAuthorFilters({ ...state.authorFilters, composer })
+                }
                 className="flex-1"
               />
               {canEditAuthor("composer", composer) && (
@@ -278,7 +314,7 @@ export default function Sidebar() {
                       `O compositor \"${composer}\" será removido de todas as músicas que o utilizam.`,
                       async () => {
                         await deleteAuthor("composer", composer);
-                      }
+                      },
                     )
                   }
                   className="opacity-0 group-hover:opacity-100 flex h-5 w-5 items-center justify-center rounded bg-transparent hover:bg-red-500/20 transition-all cursor-pointer border-0 text-red-300/70"
@@ -295,19 +331,25 @@ export default function Sidebar() {
           <SidebarItem
             label="Todos"
             active={state.authorFilters.arranger === "all"}
-            onClick={() => setAuthorFilters({ ...state.authorFilters, arranger: "all" })}
+            onClick={() =>
+              setAuthorFilters({ ...state.authorFilters, arranger: "all" })
+            }
           />
           <SidebarItem
             label="Sem arranjador"
             active={state.authorFilters.arranger === "none"}
-            onClick={() => setAuthorFilters({ ...state.authorFilters, arranger: "none" })}
+            onClick={() =>
+              setAuthorFilters({ ...state.authorFilters, arranger: "none" })
+            }
           />
           {arrangerOptions.map((arranger) => (
             <div key={arranger} className="group flex items-center">
               <SidebarItem
                 label={arranger}
                 active={state.authorFilters.arranger === arranger}
-                onClick={() => setAuthorFilters({ ...state.authorFilters, arranger })}
+                onClick={() =>
+                  setAuthorFilters({ ...state.authorFilters, arranger })
+                }
                 className="flex-1"
               />
               {canEditAuthor("arranger", arranger) && (
@@ -329,7 +371,7 @@ export default function Sidebar() {
                       `O arranjador \"${arranger}\" será removido de todas as músicas que o utilizam.`,
                       async () => {
                         await deleteAuthor("arranger", arranger);
-                      }
+                      },
                     )
                   }
                   className="opacity-0 group-hover:opacity-100 flex h-5 w-5 items-center justify-center rounded bg-transparent hover:bg-red-500/20 transition-all cursor-pointer border-0 text-red-300/70"
@@ -401,4 +443,3 @@ function SidebarItem({
     </button>
   );
 }
-
