@@ -2,7 +2,7 @@ import { ListChecks } from "lucide-react";
 import type { ReactNode } from "react";
 
 import type { ScanResult } from "../api/commands";
-import { compareInstrumentNames } from "../utils/instrumentOrder";
+import { compareInstrumentNames, getInstrumentRank } from "../utils/instrumentOrder";
 import { normalizeScoreNameForSave, normalizeSongNameForSave } from "../utils/nameFormat";
 import { Modal } from "./ui";
 
@@ -1146,14 +1146,20 @@ function parseScoreReference(rawPath: string): { songName: string; scoreName: st
   const fileName = normalizedPath.split("/").pop() ?? normalizedPath;
   const pathSegments = normalizedPath.split("/").filter(Boolean);
   const parentDirectoryName = pathSegments.length >= 2 ? pathSegments[pathSegments.length - 2].trim() : "";
-  const parts = fileName.split(" - ");
+  const lastDashIndex = fileName.lastIndexOf(" - ");
 
-  if (parts.length >= 2) {
-    const [songName, ...rest] = parts;
-    return {
-      songName: songName.trim() || fileName,
-      scoreName: rest.join(" - ").trim() || fileName,
-    };
+  if (lastDashIndex !== -1) {
+    const songName = fileName.slice(0, lastDashIndex).trim();
+    const rawScoreName = fileName.slice(lastDashIndex + 3).trim();
+    const extensionMatch = rawScoreName.match(/(\.[^.]+)$/);
+    const scoreStem = extensionMatch ? rawScoreName.slice(0, -extensionMatch[1].length) : rawScoreName;
+
+    if (getInstrumentRank(scoreStem) !== Number.MAX_SAFE_INTEGER) {
+      return {
+        songName: songName || fileName,
+        scoreName: rawScoreName || fileName,
+      };
+    }
   }
 
   return {

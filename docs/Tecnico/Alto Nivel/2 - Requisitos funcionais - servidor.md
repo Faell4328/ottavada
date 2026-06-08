@@ -154,7 +154,7 @@ Etapas:
 
 ## 6.4. Snapshot
 
-Um snapshot deve ser gerado quando o arquivo de eventos ultrapassar **2 MB**.
+Um snapshot deve ser gerado quando o arquivo de eventos ultrapassar **1 MB**.
 
 Após a geração do snapshot:
 

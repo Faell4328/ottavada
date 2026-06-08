@@ -201,6 +201,7 @@ fn parse_instrument_from_file_stem(file_stem: &str, song_name: &str) -> Option<S
         return normalized.filter(|candidate| {
             normalize_song_name(candidate) != song_name
                 && !looks_like_non_instrument_descriptor(candidate)
+                && looks_like_known_instrument(candidate)
         });
     }
 
@@ -311,7 +312,7 @@ mod tests {
             "298H.C. AVANTE SERVO DE JEOVA - Bass Guitar",
             "298H.C. AVANTE SERVO DE JEOVA",
         );
-        assert_eq!(instrument, Some("Bass Guitar".to_string()));
+        assert_eq!(instrument, None);
     }
 
     #[test]

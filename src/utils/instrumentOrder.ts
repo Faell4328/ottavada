@@ -55,7 +55,7 @@ function isScoreOrGrade(text: string): boolean {
   );
 }
 
-function getInstrumentRank(name: string | null | undefined): number {
+export function getInstrumentRank(name: string | null | undefined): number {
   if (!name || !name.trim()) {
     return 0;
   }
