@@ -4,7 +4,7 @@ import { Ban, ExternalLink, FolderOpen, Loader2, RotateCcw, Trash2 } from "lucid
 import { useAppState } from "../context/AppContext";
 import type { IndexedFile, SongListItem } from "../types";
 import * as api from "../api/commands";
-import { Modal, ModalFooterButtons, FormField, TextInput, ErrorMessage } from "./ui";
+import { Modal, ModalFooterButtons, FormField, TextInput, ErrorMessage, AutocompleteInput } from "./ui";
 import { CategoryCheckboxList } from "./ui/CategoryCheckboxList";
 import { getDirectoryPath, getFileName } from "../utils/paths";
 import {
@@ -14,6 +14,7 @@ import {
   normalizeSongNameInput,
 } from "../utils/nameFormat";
 import { sortIndexedFileEntriesForReview } from "../utils/indexedFileReviewOrder";
+import { getUniqueSongAuthors } from "../utils/songSearch";
 import {
   describeScoreConflict,
   findSongByName,
@@ -47,6 +48,15 @@ export function AddFilesModal({
     (category) => category.name.toLowerCase() !== "sem categoria"
   );
   const songsForDuplicateCheck = existingSongs ?? state.songs;
+  const [allSongSuggestions, setAllSongSuggestions] = useState(state.songs);
+  const composerSuggestions = useMemo(
+    () => getUniqueSongAuthors(allSongSuggestions, "composer"),
+    [allSongSuggestions]
+  );
+  const arrangerSuggestions = useMemo(
+    () => getUniqueSongAuthors(allSongSuggestions, "arranger"),
+    [allSongSuggestions]
+  );
   const [title, setTitle] = useState("");
   const [composer, setComposer] = useState("");
   const [arranger, setArranger] = useState("");
@@ -108,6 +118,7 @@ export function AddFilesModal({
       setPendingDeleteFile(null);
       setOpeningScorePath(null);
       setOpeningLocationPath(null);
+      setAllSongSuggestions(state.songs);
       
       const names: Record<number, string> = {};
       files.forEach((file, idx) => {
@@ -115,6 +126,15 @@ export function AddFilesModal({
       });
       setInstrumentNames(names);
       setReviewInstrumentNames(names);
+
+      void (async () => {
+        try {
+          setAllSongSuggestions(await api.getAllSongSummaries());
+        } catch (error) {
+          console.error("Failed to load autocomplete suggestions:", error);
+          setAllSongSuggestions(state.songs);
+        }
+      })();
     }
   }, [defaultCategoryIds, files, isOpen]);
 
@@ -424,18 +444,20 @@ export function AddFilesModal({
       {!isDuplicateSong && (
         <>
           <FormField label="Compositor">
-            <TextInput
+            <AutocompleteInput
               value={composer}
               onChange={setComposer}
               placeholder="Nome do compositor"
+              suggestions={composerSuggestions}
             />
           </FormField>
 
           <FormField label="Arranjador">
-            <TextInput
+            <AutocompleteInput
               value={arranger}
               onChange={setArranger}
               placeholder="Nome do arranjador"
+              suggestions={arrangerSuggestions}
             />
           </FormField>
 

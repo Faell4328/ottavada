@@ -12,9 +12,35 @@ vi.mock("@tauri-apps/api/core", () => ({
       case "is_first_run":
         return false;
       case "get_all_songs":
-        return [];
+        return [
+          {
+            id: "song-1",
+            name: "Global Song",
+            composer: "Pachelbel",
+            arranger: "Global Arranger",
+            path: "/music/global-song",
+            updated_at: "2024-01-01 12:00:00",
+            is_favorite: false,
+            status: "main",
+            category_ids: [],
+            scores: [],
+          },
+        ];
       case "get_all_song_summaries":
-        return [];
+        return [
+          {
+            id: "song-1",
+            name: "Global Song",
+            composer: "Pachelbel",
+            arranger: "Global Arranger",
+            path: "/music/global-song",
+            updated_at: "2024-01-01 12:00:00",
+            is_favorite: false,
+            status: "main",
+            category_ids: [],
+            scores: [],
+          },
+        ];
       case "get_categories":
         return [{ id: "c1", name: "Harpa Cristã" }];
       case "get_settings":
@@ -244,6 +270,31 @@ describe("AddFilesModal", () => {
 
     fireEvent.change(instrumentInputs[0], { target: { value: "Flauta 2 Transversal" } });
     expect(instrumentInputs[0]).toHaveValue("Flauta 2 Transversal");
+  });
+
+  it("should suggest composer and arranger names when typing", async () => {
+    renderWithAppProvider(
+      <AddFilesModal isOpen={true} files={sampleFiles} onClose={mockOnClose} onSuccess={mockOnSuccess} />
+    );
+
+    const composerInput = screen.getByPlaceholderText("Nome do compositor");
+    fireEvent.focus(composerInput);
+    fireEvent.change(composerInput, { target: { value: "Pac" } });
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Pachelbel" })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Pachelbel" }));
+    expect(composerInput).toHaveValue("Pachelbel");
+
+    const arrangerInput = screen.getByPlaceholderText("Nome do arranjador");
+  fireEvent.focus(arrangerInput);
+    fireEvent.change(arrangerInput, { target: { value: "Glo" } });
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Global Arranger" })).toBeInTheDocument();
+    });
   });
 
   it("should only reorder review items after the instrument input is blurred", async () => {
