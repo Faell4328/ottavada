@@ -181,9 +181,9 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(function Son
                   disabled={isActionLocked}
                 />
               ))}
-              {!isClient && isNotFound && (
+              {!isClient && !isNotFound && (
                 <ContextMenuItem
-                  label="Neuza"
+                  label="Abrir local"
                   onClick={(e) => {
                     e.stopPropagation();
                     void handleOpenLocal();
