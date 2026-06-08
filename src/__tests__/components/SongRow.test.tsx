@@ -100,12 +100,12 @@ describe("SongRow menu", () => {
       </table>
     );
 
-    fireEvent.click(screen.getByText("Deletar"));
+    fireEvent.click(screen.getByText("Mover para Lixeira"));
 
     expect(screen.getByText("Parar de indexar diretório")).toBeInTheDocument();
-    expect(screen.getByText("Deletar diretório e arquivos")).toBeInTheDocument();
+    expect(screen.getByText("Mover diretório e arquivos para lixeira")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByText("Deletar diretório e arquivos"));
+    fireEvent.click(screen.getByText("Mover diretório e arquivos para lixeira"));
 
     await waitFor(() => {
       expect(deleteSongWithFilesSpy).toHaveBeenCalledWith(song.id);
@@ -264,6 +264,6 @@ describe("SongRow menu", () => {
     expect(screen.getByText("Sem partitura")).toBeInTheDocument();
     expect(screen.getByText("Sem partitura").closest("tr")).toHaveClass("bg-[#fff1f2]");
     expect(screen.getByText("Reindexar música")).toBeInTheDocument();
-    expect(screen.getByText("Deletar música")).toBeInTheDocument();
+    expect(screen.getByText("Mover para Lixeira")).toBeInTheDocument();
   });
 });

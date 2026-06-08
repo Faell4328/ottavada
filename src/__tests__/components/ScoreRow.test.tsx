@@ -66,7 +66,7 @@ describe("ScoreRow menu", () => {
       "Usar como base",
       "Definir como rascunho",
       "Definir para ignorar",
-      "Deletar",
+      "Mover para Lixeira",
     ]);
   });
 

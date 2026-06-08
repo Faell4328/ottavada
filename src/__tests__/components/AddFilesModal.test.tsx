@@ -188,11 +188,11 @@ describe("AddFilesModal", () => {
 
     expect(screen.getByText("Instrumentos a adicionar (2)")).toBeInTheDocument();
 
-    fireEvent.click(screen.getAllByTitle("Excluir arquivo")[0]);
+    fireEvent.click(screen.getAllByTitle("Mover para lixeira")[0]);
 
-    expect(screen.getByRole("heading", { name: "Excluir arquivo" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Mover para lixeira" })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Confirmar exclusão" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar" }));
 
     await waitFor(() => {
       expect(deleteFilePathSpy).toHaveBeenCalledWith(sampleFiles[0].path);

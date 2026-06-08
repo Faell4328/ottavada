@@ -403,10 +403,10 @@ export function useAppCrudActions({
       await loadSongs();
       await refreshSelectedSong();
       await loadSettings();
-      toast.success("Partitura removida.");
+      toast.success("Partitura movida para lixeira.");
     } catch (err) {
       console.error("Failed to delete score:", err);
-      toast.error("Não foi possível remover a partitura.");
+      toast.error("Não foi possível mover a partitura para lixeira.");
       throw err;
     }
   }, [dispatch, getErrorMessage, loadSettings, loadSongs, refreshSelectedSong, state.selectedScore]);
@@ -423,10 +423,10 @@ export function useAppCrudActions({
       await loadSongs();
       await refreshSelectedSong();
       await loadSettings();
-      toast.success("Música removida.");
+      toast.success("Música movida para lixeira.");
     } catch (err) {
       console.error("Failed to delete song:", err);
-      toast.error("Não foi possível remover a música.");
+      toast.error("Não foi possível mover a música para lixeira.");
       throw err;
     }
   }, [dispatch, getErrorMessage, loadSettings, loadSongs, refreshSelectedSong, state.selectedSong]);

@@ -512,7 +512,7 @@ export function AddFilesModal({
                                 type="button"
                                 onClick={() => openDeleteFileModal(idx, file.path, fileName)}
                                 className="p-1 text-[#8b9db2] hover:text-red-500 transition-colors"
-                                title="Excluir arquivo"
+                                title="Mover para lixeira"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </button>
@@ -611,7 +611,7 @@ export function AddFilesModal({
                         onClick={() => openDeleteFileModal(item.idx, item.file.path, fileName)}
                         disabled={item.isLocked}
                         className="p-1 text-[#8b9db2] hover:text-red-500 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-                        title="Excluir arquivo"
+                        title="Mover para lixeira"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -684,12 +684,12 @@ export function AddFilesModal({
         ? createPortal(
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
               <div className="w-full max-w-md rounded-lg border border-[#c5cfdb] bg-[#f8fafd] p-6 shadow-xl">
-                <h2 className="mb-3 text-lg font-semibold text-[#2f4259]">Excluir arquivo</h2>
+                <h2 className="mb-3 text-lg font-semibold text-[#2f4259]">Mover para lixeira</h2>
                 <p className="mb-2 text-sm text-[#4a6278]">
-                  Você realmente deseja excluir o arquivo <strong>{pendingDeleteFile.fileName}</strong>?
+                  Você realmente deseja mover o arquivo <strong>{pendingDeleteFile.fileName}</strong> para a lixeira?
                 </p>
                 <p className="mb-6 text-sm text-[#4a6278]">
-                  Se não quiser excluir, clique em Ignorar para manter o arquivo e salvá-lo como ignorado.
+                  Se não quiser mover para lixeira, clique em Ignorar para manter o arquivo e salvá-lo como ignorado.
                 </p>
                 <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
                   <button
@@ -716,7 +716,7 @@ export function AddFilesModal({
                     }}
                     className="rounded-lg bg-[#c04b4b] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#a93b3b]"
                   >
-                    Confirmar exclusão
+                    Confirmar
                   </button>
                 </div>
               </div>

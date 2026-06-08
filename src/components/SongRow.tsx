@@ -105,7 +105,7 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(function Son
       onMenuClose();
     } catch (err) {
       console.error("Failed to delete song:", err);
-      toast.error("Erro ao deletar música");
+      toast.error("Erro ao mover música para lixeira");
     } finally {
       setIsDeleteLoading(false);
     }
@@ -204,7 +204,7 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(function Son
                     disabled={isActionLocked}
                   />
                   <ContextMenuItem
-                    label="Deletar música"
+                    label="Mover para Lixeira"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleDelete();
@@ -238,7 +238,7 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(function Son
                     disabled={isActionLocked}
                   />
                   <ContextMenuItem
-                    label="Deletar"
+                    label="Mover para Lixeira"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleDelete();
@@ -257,7 +257,7 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(function Son
         ? createPortal(
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
               <div className="w-full max-w-md rounded-lg border border-[#c5cfdb] bg-[#f8fafd] p-6 shadow-xl">
-                <h2 className="mb-3 text-lg font-semibold text-[#2f4259]">Deletar Música</h2>
+                <h2 className="mb-3 text-lg font-semibold text-[#2f4259]">Mover Música para Lixeira</h2>
                 <p className="mb-6 text-sm text-[#4a6278]">
                   O que você quer fazer com o diretório desta música?
                 </p>
@@ -285,7 +285,7 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(function Son
                     disabled={isDeleteLoading}
                     className="rounded-lg bg-[#c04b4b] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#a93b3b] disabled:opacity-50"
                   >
-                    {isDeleteLoading ? "Processando..." : "Deletar diretório e arquivos"}
+                    {isDeleteLoading ? "Processando..." : "Mover diretório e arquivos para lixeira"}
                   </button>
                 </div>
               </div>

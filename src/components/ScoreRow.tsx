@@ -199,15 +199,15 @@ function ScoreRow({
 
   const handleDelete = () => {
     confirmation.requestConfirmation(
-      "Deletar Partitura",
-      "Você realmente deseja deletar esta partitura? O arquivo será removido do computador e do Score Maestro.",
+      "Mover para Lixeira",
+      "Você realmente deseja mover esta partitura para a lixeira? O arquivo poderá ser recuperado pela lixeira do Windows.",
       async () => {
         try {
           await onDelete(score.id);
           onMenuClose();
         } catch (err) {
           console.error("Failed to delete score:", err);
-          toast.error("Erro ao deletar partitura");
+          toast.error("Erro ao mover partitura para lixeira");
         }
       }
     );
@@ -301,7 +301,7 @@ function ScoreRow({
                     />
                     {renderStatusAction()}
                     <ContextMenuItem
-                      label="Deletar"
+                      label="Mover para Lixeira"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleDelete();

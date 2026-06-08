@@ -95,9 +95,9 @@ fn delete_song_core(db: &Database, store: &SystemStore, song_id: &str) -> Result
         .join("songs")
         .join(format!("{}.tar.zst", song_id));
     if archive_path.is_file() {
-        std::fs::remove_file(&archive_path).map_err(|e| {
+        trash::delete(&archive_path).map_err(|e| {
             AppError::Generic(format!(
-                "Erro ao deletar arquivo compactado da música '{}': {}",
+                "Erro ao mover arquivo compactado da música '{}' para lixeira: {}",
                 archive_path.display(),
                 e
             ))

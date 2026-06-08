@@ -54,20 +54,16 @@ pub fn regenerate_song_archives_for_song_ids(
 }
 
 pub fn remove_path_if_exists(path: &Path) -> Result<(), AppError> {
-    match fs::metadata(path) {
-        Ok(metadata) if metadata.is_dir() => match fs::remove_dir_all(path) {
-            Ok(()) => Ok(()),
-            Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(()),
-            Err(err) => Err(AppError::Io(err)),
-        },
-        Ok(_) => match fs::remove_file(path) {
-            Ok(()) => Ok(()),
-            Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(()),
-            Err(err) => Err(AppError::Io(err)),
-        },
-        Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(()),
-        Err(err) => Err(AppError::Io(err)),
+    if !path.exists() {
+        return Ok(());
     }
+    trash::delete(path).map_err(|e| {
+        AppError::Generic(format!(
+            "Erro ao mover '{}' para lixeira: {}",
+            path.display(),
+            e
+        ))
+    })
 }
 
 #[cfg(target_os = "windows")]
