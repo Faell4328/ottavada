@@ -39,10 +39,10 @@ export interface RcloneProgressSnapshot {
   etaSeconds: number | null;
 }
 
-const SNAPSHOT_AUTO_THRESHOLD_BYTES = 2 * 1024 * 1024;
+const SNAPSHOT_AUTO_THRESHOLD_BYTES = 1 * 1024 * 1024;
 
 export function shouldRunStartupServerScan(
-  computerType: "Server" | "Client" | undefined
+  computerType: "Server" | "Client" | undefined,
 ) {
   return computerType === "Client";
 }
@@ -53,7 +53,8 @@ function normalizeRcloneProgressForUi(progress: RcloneProgressSnapshot) {
     direction: progress.direction,
     bytesBucket: Math.floor(Math.max(progress.bytes, 0) / 256_000),
     totalBytes: progress.totalBytes,
-    percentageBucket: progress.percentage === null ? null : Math.floor(progress.percentage),
+    percentageBucket:
+      progress.percentage === null ? null : Math.floor(progress.percentage),
     speedBucket: Math.floor(Math.max(progress.speedBytesPerSec, 0) / 64_000),
     etaSeconds: progress.etaSeconds,
   };
@@ -61,7 +62,7 @@ function normalizeRcloneProgressForUi(progress: RcloneProgressSnapshot) {
 
 export function shouldDispatchRcloneProgressUpdate(
   previous: RcloneProgressSnapshot | null,
-  next: RcloneProgressSnapshot
+  next: RcloneProgressSnapshot,
 ) {
   if (previous === null) {
     return true;
@@ -71,7 +72,8 @@ export function shouldDispatchRcloneProgressUpdate(
   const normalizedNext = normalizeRcloneProgressForUi(next);
 
   return Object.entries(normalizedPrevious).some(
-    ([key, value]) => normalizedNext[key as keyof typeof normalizedNext] !== value
+    ([key, value]) =>
+      normalizedNext[key as keyof typeof normalizedNext] !== value,
   );
 }
 
@@ -101,7 +103,7 @@ export function shouldUseFullCloudSync(params: {
 export function getScanFailureToastMessage(
   err: unknown,
   getErrorMessage: (err: unknown, fallback: string) => string,
-  computerType: "Server" | "Client" | undefined
+  computerType: "Server" | "Client" | undefined,
 ) {
   const fallbackMessage =
     computerType === "Client"
@@ -141,13 +143,16 @@ export function useAppScanFlow({
     });
   }, [dispatch]);
 
-  const scheduleScanReset = useCallback((delayMs: number) => {
-    clearScanTimer();
-    scanResetTimerRef.current = setTimeout(() => {
-      resetScanState();
-      scanResetTimerRef.current = null;
-    }, delayMs);
-  }, [clearScanTimer, resetScanState]);
+  const scheduleScanReset = useCallback(
+    (delayMs: number) => {
+      clearScanTimer();
+      scanResetTimerRef.current = setTimeout(() => {
+        resetScanState();
+        scanResetTimerRef.current = null;
+      }, delayMs);
+    },
+    [clearScanTimer, resetScanState],
+  );
 
   useEffect(() => {
     return () => {
@@ -155,123 +160,143 @@ export function useAppScanFlow({
     };
   }, [clearScanTimer]);
 
-  const dispatchRcloneProgress = useCallback((progress: RcloneProgressSnapshot) => {
-    if (!shouldDispatchRcloneProgressUpdate(lastRcloneProgressRef.current, progress)) {
-      return;
-    }
-
-    lastRcloneProgressRef.current = progress;
-    dispatch({ type: "SET_RCLONE_PROGRESS", payload: progress });
-  }, [dispatch]);
-
-  const runSyncWithProgress = useCallback(async ({
-    direction,
-    relativePath,
-    lockInteraction = true,
-  }: RunSyncWithProgressOptions) => {
-    let stopPolling = false;
-    lastRcloneProgressRef.current = null;
-    const progressDirection = lockInteraction ? direction : null;
-
-    dispatch({
-      type: "SET_RCLONE_PROGRESS",
-      payload: {
-        active: true,
-        direction: progressDirection,
-        bytes: 0,
-        totalBytes: null,
-        percentage: null,
-        speedBytesPerSec: 0,
-        etaSeconds: null,
-      },
-    });
-
-    const syncPromise = api.syncCloudWithRclone(direction, relativePath);
-
-    const pollingPromise = (async () => {
-      while (!stopPolling) {
-        try {
-          const stats = await api.getRcloneRcStats();
-          if (stats) {
-            dispatchRcloneProgress({
-              active: stats.active,
-              direction: progressDirection,
-              bytes: Math.max(stats.bytes, 0),
-              totalBytes: stats.total_bytes,
-              percentage: stats.percentage !== null ? Math.round(stats.percentage) : null,
-              speedBytesPerSec: stats.speed_bytes_per_sec,
-              etaSeconds: stats.eta_seconds,
-            });
-          }
-        } catch {
-          // Ignore transient RC polling errors.
-        }
-
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+  const dispatchRcloneProgress = useCallback(
+    (progress: RcloneProgressSnapshot) => {
+      if (
+        !shouldDispatchRcloneProgressUpdate(
+          lastRcloneProgressRef.current,
+          progress,
+        )
+      ) {
+        return;
       }
-    })();
 
-    try {
-      return await syncPromise;
-    } finally {
-      stopPolling = true;
+      lastRcloneProgressRef.current = progress;
+      dispatch({ type: "SET_RCLONE_PROGRESS", payload: progress });
+    },
+    [dispatch],
+  );
+
+  const runSyncWithProgress = useCallback(
+    async ({
+      direction,
+      relativePath,
+      lockInteraction = true,
+    }: RunSyncWithProgressOptions) => {
+      let stopPolling = false;
       lastRcloneProgressRef.current = null;
-      dispatch({ type: "RESET_RCLONE_PROGRESS" });
-      void pollingPromise.catch(() => undefined);
-    }
-  }, [dispatch, dispatchRcloneProgress]);
+      const progressDirection = lockInteraction ? direction : null;
 
-  const runSelectiveUploadWithProgress = useCallback(async (relativePaths: string[]) => {
-    let stopPolling = false;
-    lastRcloneProgressRef.current = null;
+      dispatch({
+        type: "SET_RCLONE_PROGRESS",
+        payload: {
+          active: true,
+          direction: progressDirection,
+          bytes: 0,
+          totalBytes: null,
+          percentage: null,
+          speedBytesPerSec: 0,
+          etaSeconds: null,
+        },
+      });
 
-    dispatch({
-      type: "SET_RCLONE_PROGRESS",
-      payload: {
-        active: true,
-        direction: "upload",
-        bytes: 0,
-        totalBytes: null,
-        percentage: null,
-        speedBytesPerSec: 0,
-        etaSeconds: null,
-      },
-    });
+      const syncPromise = api.syncCloudWithRclone(direction, relativePath);
 
-    const uploadPromise = api.uploadCloudPathsWithRclone(relativePaths);
-
-    const pollingPromise = (async () => {
-      while (!stopPolling) {
-        try {
-          const stats = await api.getRcloneRcStats();
-          if (stats) {
-            dispatchRcloneProgress({
-              active: stats.active,
-              direction: "upload",
-              bytes: Math.max(stats.bytes, 0),
-              totalBytes: stats.total_bytes,
-              percentage: stats.percentage !== null ? Math.round(stats.percentage) : null,
-              speedBytesPerSec: stats.speed_bytes_per_sec,
-              etaSeconds: stats.eta_seconds,
-            });
+      const pollingPromise = (async () => {
+        while (!stopPolling) {
+          try {
+            const stats = await api.getRcloneRcStats();
+            if (stats) {
+              dispatchRcloneProgress({
+                active: stats.active,
+                direction: progressDirection,
+                bytes: Math.max(stats.bytes, 0),
+                totalBytes: stats.total_bytes,
+                percentage:
+                  stats.percentage !== null
+                    ? Math.round(stats.percentage)
+                    : null,
+                speedBytesPerSec: stats.speed_bytes_per_sec,
+                etaSeconds: stats.eta_seconds,
+              });
+            }
+          } catch {
+            // Ignore transient RC polling errors.
           }
-        } catch {
-          // Ignore transient RC polling errors.
+
+          await new Promise((resolve) => setTimeout(resolve, 1000));
         }
+      })();
 
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+      try {
+        return await syncPromise;
+      } finally {
+        stopPolling = true;
+        lastRcloneProgressRef.current = null;
+        dispatch({ type: "RESET_RCLONE_PROGRESS" });
+        void pollingPromise.catch(() => undefined);
       }
-    })();
+    },
+    [dispatch, dispatchRcloneProgress],
+  );
 
-    try {
-      return await uploadPromise;
-    } finally {
-      stopPolling = true;
+  const runSelectiveUploadWithProgress = useCallback(
+    async (relativePaths: string[]) => {
+      let stopPolling = false;
       lastRcloneProgressRef.current = null;
-      dispatch({ type: "RESET_RCLONE_PROGRESS" });
-      void pollingPromise.catch(() => undefined);
-    }
-  }, [dispatch, dispatchRcloneProgress]);
+
+      dispatch({
+        type: "SET_RCLONE_PROGRESS",
+        payload: {
+          active: true,
+          direction: "upload",
+          bytes: 0,
+          totalBytes: null,
+          percentage: null,
+          speedBytesPerSec: 0,
+          etaSeconds: null,
+        },
+      });
+
+      const uploadPromise = api.uploadCloudPathsWithRclone(relativePaths);
+
+      const pollingPromise = (async () => {
+        while (!stopPolling) {
+          try {
+            const stats = await api.getRcloneRcStats();
+            if (stats) {
+              dispatchRcloneProgress({
+                active: stats.active,
+                direction: "upload",
+                bytes: Math.max(stats.bytes, 0),
+                totalBytes: stats.total_bytes,
+                percentage:
+                  stats.percentage !== null
+                    ? Math.round(stats.percentage)
+                    : null,
+                speedBytesPerSec: stats.speed_bytes_per_sec,
+                etaSeconds: stats.eta_seconds,
+              });
+            }
+          } catch {
+            // Ignore transient RC polling errors.
+          }
+
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
+      })();
+
+      try {
+        return await uploadPromise;
+      } finally {
+        stopPolling = true;
+        lastRcloneProgressRef.current = null;
+        dispatch({ type: "RESET_RCLONE_PROGRESS" });
+        void pollingPromise.catch(() => undefined);
+      }
+    },
+    [dispatch, dispatchRcloneProgress],
+  );
 
   const previewScanFilesForChanges = useCallback(async () => {
     if (scanInProgressRef.current) {
@@ -304,419 +329,462 @@ export function useAppScanFlow({
       resetScanState();
     } catch (err) {
       console.error("Failed to preview files for changes:", err);
-      toast.error(getScanFailureToastMessage(err, getErrorMessage, computerType));
+      toast.error(
+        getScanFailureToastMessage(err, getErrorMessage, computerType),
+      );
       resetScanState();
     } finally {
       scanInProgressRef.current = false;
     }
   }, [clearScanTimer, computerType, dispatch, getErrorMessage, resetScanState]);
 
-  const scanFilesForChanges = useCallback(async (options: ScanFilesForChangesOptions = false) => {
-    const isAutomatic =
-      typeof options === "boolean" ? options : (options.isAutomatic ?? false);
-    const forceCloudSync =
-      typeof options === "boolean" ? false : (options.forceCloudSync ?? false);
-    const preGeneratedSnapshotSummary =
-      typeof options === "boolean" ? null : (options.snapshotSummary ?? null);
-    const rethrowOnError = typeof options === "boolean" ? false : (options.rethrowOnError ?? false);
+  const scanFilesForChanges = useCallback(
+    async (options: ScanFilesForChangesOptions = false) => {
+      const isAutomatic =
+        typeof options === "boolean" ? options : (options.isAutomatic ?? false);
+      const forceCloudSync =
+        typeof options === "boolean"
+          ? false
+          : (options.forceCloudSync ?? false);
+      const preGeneratedSnapshotSummary =
+        typeof options === "boolean" ? null : (options.snapshotSummary ?? null);
+      const rethrowOnError =
+        typeof options === "boolean"
+          ? false
+          : (options.rethrowOnError ?? false);
 
-    if (scanInProgressRef.current) {
-      if (!isAutomatic) {
-        toast.error("Já existe uma operação em andamento. Aguarde ela terminar.");
-      }
-      return;
-    }
-
-    scanInProgressRef.current = true;
-
-    try {
-      clearScanTimer();
-
-      const hasInternet = await api.hasInternetConnection();
-      if (!hasInternet) {
+      if (scanInProgressRef.current) {
         if (!isAutomatic) {
-          toast.error("Não foi possível acessar a internet. Verifique sua conexão e tente novamente.");
+          toast.error(
+            "Já existe uma operação em andamento. Aguarde ela terminar.",
+          );
         }
         return;
       }
 
-      const currentSettings = await api.getSettings();
-      const isClient = currentSettings.computer_type === "Client";
+      scanInProgressRef.current = true;
 
-      if (!isClient) {
-        dispatch({ type: "SET_SCANNING_FILES", payload: true });
+      try {
+        clearScanTimer();
+
+        const hasInternet = await api.hasInternetConnection();
+        if (!hasInternet) {
+          if (!isAutomatic) {
+            toast.error(
+              "Não foi possível acessar a internet. Verifique sua conexão e tente novamente.",
+            );
+          }
+          return;
+        }
+
+        const currentSettings = await api.getSettings();
+        const isClient = currentSettings.computer_type === "Client";
+
+        if (!isClient) {
+          dispatch({ type: "SET_SCANNING_FILES", payload: true });
+          dispatch({
+            type: "SET_OPERATION_STATUS",
+            payload: {
+              title: "Etapa 1 - Iniciando verificação",
+              detail: "Preparando fluxo de sincronização",
+              stepCurrent: 1,
+              stepTotal: 1,
+            },
+          });
+          dispatch({
+            type: "SET_SCAN_PROGRESS",
+            payload: { total: 0, completed: 0, changedFiles: 0 },
+          });
+        }
+
+        if (isClient) {
+          dispatch({
+            type: "SET_SCANNING_FILES",
+            payload: true,
+          });
+          dispatch({
+            type: "SET_OPERATION_STATUS",
+            payload: {
+              title: "Etapa 1 - Consultando alterações",
+              detail: "Verificando snapshot e events da nuvem",
+              stepCurrent: 1,
+              stepTotal: 1,
+            },
+          });
+
+          await runSyncWithProgress({
+            direction: "download",
+            relativePath: "actions",
+            lockInteraction: false,
+          });
+
+          const hasPendingChanges = await api.hasPendingChanges();
+
+          if (!hasPendingChanges) {
+            resetScanState();
+            return;
+          }
+
+          dispatch({
+            type: "SET_SCANNING_FILES",
+            payload: true,
+          });
+          dispatch({
+            type: "SET_OPERATION_STATUS",
+            payload: {
+              title: "Etapa 2 - Baixando músicas",
+              detail: "Atualizando arquivos locais do cliente",
+              stepCurrent: 1,
+              stepTotal: 1,
+            },
+          });
+
+          await runSyncWithProgress({
+            direction: "download",
+            relativePath: "songs",
+            lockInteraction: true,
+          });
+
+          dispatch({
+            type: "SET_OPERATION_STATUS",
+            payload: {
+              title: "Etapa 2 - Aplicando alterações",
+              detail: "Atualizando banco local do cliente",
+              stepCurrent: 1,
+              stepTotal: 1,
+            },
+          });
+
+          const syncSummary = await api.applyServerChangesOnClient();
+
+          dispatch({
+            type: "SET_OPERATION_STATUS",
+            payload: {
+              title: "Etapa 2 - Atualizando interface",
+              detail: "Recarregando músicas e partituras",
+              stepCurrent: 1,
+              stepTotal: 1,
+            },
+          });
+
+          await Promise.all([loadSongs(), loadCategories(), loadSettings()]);
+          await refreshSelectedSong();
+
+          if (
+            !isAutomatic &&
+            (syncSummary.snapshot_applied || syncSummary.events_applied > 0)
+          ) {
+            toast.success("Alterações da nuvem aplicadas com sucesso.");
+          }
+
+          scheduleScanReset(1500);
+          return;
+        }
+
+        const baseSteps = 1;
+        let completedSteps = 0;
+        let currentTotalSteps = baseSteps;
+        const updateStepProgress = (changedFiles: number) => {
+          dispatch({
+            type: "SET_SCAN_PROGRESS",
+            payload: {
+              total: currentTotalSteps,
+              completed: completedSteps,
+              changedFiles,
+            },
+          });
+        };
+
         dispatch({
           type: "SET_OPERATION_STATUS",
           payload: {
-            title: "Etapa 1 - Iniciando verificação",
-            detail: "Preparando fluxo de sincronização",
+            title: "Etapa 1 - Verificando alterações",
+            detail: "Comparando arquivos locais (servidor)",
             stepCurrent: 1,
-            stepTotal: 1,
+            stepTotal: currentTotalSteps,
           },
         });
-        dispatch({
-          type: "SET_SCAN_PROGRESS",
-          payload: { total: 0, completed: 0, changedFiles: 0 },
-        });
-      }
+        updateStepProgress(0);
+        const result = await api.scanFilesForChanges(forceCloudSync);
+        completedSteps += 1;
 
-      if (isClient) {
-        dispatch({
-          type: "SET_SCANNING_FILES",
-          payload: true,
-        });
-        dispatch({
-          type: "SET_OPERATION_STATUS",
-          payload: {
-            title: "Etapa 1 - Consultando alterações",
-            detail: "Verificando snapshot e events da nuvem",
-            stepCurrent: 1,
-            stepTotal: 1,
-          },
-        });
-
-        await runSyncWithProgress({
-          direction: "download",
-          relativePath: "actions",
-          lockInteraction: false,
-        });
+        const changedCount = result.changed_files.length;
+        const addedCount = result.added_files.length;
+        const failedCount = result.failed_files.length;
+        const recoveredCount = result.recovered_files?.length ?? 0;
+        const deletedCount = result.deleted_files?.length ?? 0;
+        const reportItemsCount = result.report_items?.length ?? 0;
 
         const hasPendingChanges = await api.hasPendingChanges();
+        const hasDetectedFileChanges =
+          changedCount > 0 ||
+          addedCount > 0 ||
+          recoveredCount > 0 ||
+          deletedCount > 0 ||
+          reportItemsCount > 0;
 
-        if (!hasPendingChanges) {
+        if (!forceCloudSync && !hasPendingChanges && !hasDetectedFileChanges) {
           resetScanState();
           return;
         }
 
-        dispatch({
-          type: "SET_SCANNING_FILES",
-          payload: true,
-        });
-        dispatch({
-          type: "SET_OPERATION_STATUS",
-          payload: {
-            title: "Etapa 2 - Baixando músicas",
-            detail: "Atualizando arquivos locais do cliente",
-            stepCurrent: 1,
-            stepTotal: 1,
-          },
-        });
-
-        await runSyncWithProgress({
-          direction: "download",
-          relativePath: "songs",
-          lockInteraction: true,
-        });
+        // Fluxo base do servidor: verificar, compactar, gerar events e subir para a nuvem.
+        // Snapshot adiciona uma etapa extra ao total.
+        currentTotalSteps = 4;
+        updateStepProgress(reportItemsCount || changedCount);
 
         dispatch({
           type: "SET_OPERATION_STATUS",
           payload: {
-            title: "Etapa 2 - Aplicando alterações",
-            detail: "Atualizando banco local do cliente",
-            stepCurrent: 1,
-            stepTotal: 1,
-          },
-        });
-
-        const syncSummary = await api.applyServerChangesOnClient();
-
-        dispatch({
-          type: "SET_OPERATION_STATUS",
-          payload: {
-            title: "Etapa 2 - Atualizando interface",
-            detail: "Recarregando músicas e partituras",
-            stepCurrent: 1,
-            stepTotal: 1,
-          },
-        });
-
-        await Promise.all([loadSongs(), loadCategories(), loadSettings()]);
-        await refreshSelectedSong();
-
-        if (!isAutomatic && (syncSummary.snapshot_applied || syncSummary.events_applied > 0)) {
-          toast.success("Alterações da nuvem aplicadas com sucesso.");
-        }
-
-        scheduleScanReset(1500);
-        return;
-      }
-
-      const baseSteps = 1;
-      let completedSteps = 0;
-      let currentTotalSteps = baseSteps;
-      const updateStepProgress = (changedFiles: number) => {
-        dispatch({
-          type: "SET_SCAN_PROGRESS",
-          payload: {
-            total: currentTotalSteps,
-            completed: completedSteps,
-            changedFiles,
-          },
-        });
-      };
-
-      dispatch({
-        type: "SET_OPERATION_STATUS",
-        payload: {
-          title: "Etapa 1 - Verificando alterações",
-          detail: "Comparando arquivos locais (servidor)",
-          stepCurrent: 1,
-          stepTotal: currentTotalSteps,
-        },
-      });
-      updateStepProgress(0);
-      const result = await api.scanFilesForChanges(forceCloudSync);
-      completedSteps += 1;
-
-      const changedCount = result.changed_files.length;
-      const addedCount = result.added_files.length;
-      const failedCount = result.failed_files.length;
-      const recoveredCount = result.recovered_files?.length ?? 0;
-      const deletedCount = result.deleted_files?.length ?? 0;
-      const reportItemsCount = result.report_items?.length ?? 0;
-
-      const hasPendingChanges = await api.hasPendingChanges();
-      const hasDetectedFileChanges =
-        changedCount > 0 || addedCount > 0 || recoveredCount > 0 || deletedCount > 0 || reportItemsCount > 0;
-
-      if (!forceCloudSync && !hasPendingChanges && !hasDetectedFileChanges) {
-        resetScanState();
-        return;
-      }
-
-      // Fluxo base do servidor: verificar, compactar, gerar events e subir para a nuvem.
-      // Snapshot adiciona uma etapa extra ao total.
-      currentTotalSteps = 4;
-      updateStepProgress(reportItemsCount || changedCount);
-
-      dispatch({
-        type: "SET_OPERATION_STATUS",
-        payload: {
-          title: "Salvando alterações",
-          detail: "Gerando .tar.zst das músicas",
-          stepCurrent: 2,
-          stepTotal: currentTotalSteps,
-        },
-      });
-      const archiveSummary = await api.generateSongArchivesFiles();
-      completedSteps += 1;
-
-      dispatch({
-        type: "SET_OPERATION_STATUS",
-        payload: {
-          title: "Etapa 3 - Gerando eventos",
-          detail: "Atualizando events.msgpack.zst",
-          stepCurrent: 3,
-          stepTotal: currentTotalSteps,
-        },
-      });
-      const eventsSummary = await api.generateEventsFile();
-      completedSteps += 1;
-      const generatedArchives = archiveSummary.generated ?? 0;
-      const failedArchives = archiveSummary.failed ?? 0;
-      updateStepProgress(changedCount);
-
-      let snapshotGenerated = false;
-      let snapshotSummary: api.SnapshotFileSummary | null = null;
-
-      if (eventsSummary.payload_size >= SNAPSHOT_AUTO_THRESHOLD_BYTES) {
-        currentTotalSteps = 5;
-        updateStepProgress(changedCount);
-        dispatch({
-          type: "SET_OPERATION_STATUS",
-          payload: {
-            title: "Etapa 4 - Gerando snapshot",
-            detail: "Events atingiu 2MB",
-            stepCurrent: 4,
+            title: "Salvando alterações",
+            detail: "Gerando .tar.zst das músicas",
+            stepCurrent: 2,
             stepTotal: currentTotalSteps,
           },
         });
-        snapshotSummary = await api.generateSnapshotFile(false);
-        snapshotGenerated = true;
+        const archiveSummary = await api.generateSongArchivesFiles();
         completedSteps += 1;
+
+        dispatch({
+          type: "SET_OPERATION_STATUS",
+          payload: {
+            title: "Etapa 3 - Gerando eventos",
+            detail: "Atualizando events.msgpack.zst",
+            stepCurrent: 3,
+            stepTotal: currentTotalSteps,
+          },
+        });
+        const eventsSummary = await api.generateEventsFile();
+        completedSteps += 1;
+        const generatedArchives = archiveSummary.generated ?? 0;
+        const failedArchives = archiveSummary.failed ?? 0;
         updateStepProgress(changedCount);
 
-        if (!isAutomatic) {
-          toast("Cópia de segurança gerada para manter o histórico organizado.", {
-            icon: "📦",
+        let snapshotGenerated = false;
+        let snapshotSummary: api.SnapshotFileSummary | null = null;
+
+        if (eventsSummary.payload_size >= SNAPSHOT_AUTO_THRESHOLD_BYTES) {
+          currentTotalSteps = 5;
+          updateStepProgress(changedCount);
+          dispatch({
+            type: "SET_OPERATION_STATUS",
+            payload: {
+              title: "Etapa 4 - Gerando snapshot",
+              detail: "Events atingiu 2MB",
+              stepCurrent: 4,
+              stepTotal: currentTotalSteps,
+            },
           });
+          snapshotSummary = await api.generateSnapshotFile(false);
+          snapshotGenerated = true;
+          completedSteps += 1;
+          updateStepProgress(changedCount);
+
+          if (!isAutomatic) {
+            toast(
+              "Cópia de segurança gerada para manter o histórico organizado.",
+              {
+                icon: "📦",
+              },
+            );
+          }
         }
-      }
 
-      const uploadStep = snapshotGenerated ? 5 : 4;
-      const hasDatabaseChanges = eventsSummary.events_count > 0;
+        const uploadStep = snapshotGenerated ? 5 : 4;
+        const hasDatabaseChanges = eventsSummary.events_count > 0;
 
-      dispatch({
-        type: "SET_OPERATION_STATUS",
-        payload: {
-          title: `Etapa ${uploadStep} - Upload para nuvem`,
-          detail: hasPendingChanges || hasDetectedFileChanges || forceCloudSync
-            ? hasDatabaseChanges && !hasDetectedFileChanges
-              ? "Enviando alterações do banco para a nuvem"
-              : "Enviando arquivos alterados para a nuvem"
-            : "Sem alterações locais, validando sincronização da nuvem",
-          stepCurrent: uploadStep,
-          stepTotal: currentTotalSteps,
-        },
-      });
+        dispatch({
+          type: "SET_OPERATION_STATUS",
+          payload: {
+            title: `Etapa ${uploadStep} - Upload para nuvem`,
+            detail:
+              hasPendingChanges || hasDetectedFileChanges || forceCloudSync
+                ? hasDatabaseChanges && !hasDetectedFileChanges
+                  ? "Enviando alterações do banco para a nuvem"
+                  : "Enviando arquivos alterados para a nuvem"
+                : "Sem alterações locais, validando sincronização da nuvem",
+            stepCurrent: uploadStep,
+            stepTotal: currentTotalSteps,
+          },
+        });
 
-      const shouldUseFullSync = forceCloudSync || (!isAutomatic && shouldUseFullCloudSync({
-        forceCloudSync,
-        snapshotGenerated,
-        eventsCount: eventsSummary.events_count,
-        hasPendingChanges,
-        hasDetectedFileChanges,
-      }));
+        const shouldUseFullSync =
+          forceCloudSync ||
+          (!isAutomatic &&
+            shouldUseFullCloudSync({
+              forceCloudSync,
+              snapshotGenerated,
+              eventsCount: eventsSummary.events_count,
+              hasPendingChanges,
+              hasDetectedFileChanges,
+            }));
 
-      if (shouldUseFullSync) {
-        // Full sync garante que a etapa de upload sempre exista no fluxo do servidor.
-        await api.markServerApplyChangesInProgress();
+        if (shouldUseFullSync) {
+          // Full sync garante que a etapa de upload sempre exista no fluxo do servidor.
+          await api.markServerApplyChangesInProgress();
 
-        if (snapshotGenerated) {
-          let uploadError: unknown = null;
+          if (snapshotGenerated) {
+            let uploadError: unknown = null;
 
-          for (let attempt = 1; attempt <= 2; attempt += 1) {
-            try {
-              await runSyncWithProgress({ direction: "upload" });
-              uploadError = null;
-              break;
-            } catch (error) {
-              uploadError = error;
-              if (attempt === 1 && !isAutomatic) {
-                toast("Falha ao enviar a cópia de segurança. Nova tentativa em instantes.", {
-                  icon: "⚠️",
-                });
+            for (let attempt = 1; attempt <= 2; attempt += 1) {
+              try {
+                await runSyncWithProgress({ direction: "upload" });
+                uploadError = null;
+                break;
+              } catch (error) {
+                uploadError = error;
+                if (attempt === 1 && !isAutomatic) {
+                  toast(
+                    "Falha ao enviar a cópia de segurança. Nova tentativa em instantes.",
+                    {
+                      icon: "⚠️",
+                    },
+                  );
+                }
               }
             }
-          }
 
-          if (uploadError) {
-            throw uploadError;
-          }
-        } else {
-          await runSyncWithProgress({ direction: "upload" });
-        }
-      } else {
-        const uploadPaths: string[] = [];
-
-        const addUploadPath = (relativePath: string) => {
-          if (!uploadPaths.includes(relativePath)) {
-            uploadPaths.push(relativePath);
-          }
-        };
-
-        if (snapshotGenerated || eventsSummary.events_count > 0) {
-          addUploadPath("actions");
-        }
-
-        for (const archiveResult of archiveSummary.results ?? []) {
-          if (archiveResult.generated && archiveResult.song_id) {
-            addUploadPath(`songs/${archiveResult.song_id}.tar.zst`);
-          }
-        }
-
-        if (uploadPaths.length === 0) {
-          if (!isAutomatic) {
-            await api.markServerApplyChangesInProgress();
+            if (uploadError) {
+              throw uploadError;
+            }
+          } else {
             await runSyncWithProgress({ direction: "upload" });
           }
         } else {
-          await api.markServerApplyChangesInProgress();
-          await runSelectiveUploadWithProgress(uploadPaths);
-        }
-      }
+          const uploadPaths: string[] = [];
 
-      completedSteps += 1;
-      updateStepProgress(changedCount);
+          const addUploadPath = (relativePath: string) => {
+            if (!uploadPaths.includes(relativePath)) {
+              uploadPaths.push(relativePath);
+            }
+          };
 
-      // Atualiza o marcador de "alterações aplicadas" somente ao concluir com sucesso.
-      const appliedSnapshotSummary = snapshotSummary ?? preGeneratedSnapshotSummary;
+          if (snapshotGenerated || eventsSummary.events_count > 0) {
+            addUploadPath("actions");
+          }
 
-      if (appliedSnapshotSummary) {
-        await api.markSnapshotAsUploaded(
-          appliedSnapshotSummary.generated_at,
-          appliedSnapshotSummary.last_change_timestamp
-        );
-      } else {
-        await api.markLocalChangesAsApplied();
-      }
-      await api.clearServerApplyChangesInProgress();
-      await loadSettings();
-      updateStepProgress(changedCount);
+          for (const archiveResult of archiveSummary.results ?? []) {
+            if (archiveResult.generated && archiveResult.song_id) {
+              addUploadPath(`songs/${archiveResult.song_id}.tar.zst`);
+            }
+          }
 
-      if (failedCount > 0 && !isAutomatic) {
-        toast.error(`${failedCount} arquivo(s) não puderam ser verificados.`);
-      }
-
-      if (!isAutomatic && failedArchives > 0) {
-        toast.error(`${failedArchives} partitura(s) não puderam ser compactadas.`);
-      }
-
-      if (!isAutomatic) {
-        const summaryParts: string[] = [];
-        const reportItemsCount = result.report_items?.length ?? 0;
-        if (recoveredCount > 0) {
-          summaryParts.push(`${recoveredCount} recuperado(s)`);
-        }
-        if (addedCount > 0) {
-          summaryParts.push(`${addedCount} adicionado(s)`);
-        }
-        if (deletedCount > 0) {
-          summaryParts.push(`${deletedCount} deletado(s)`);
-        }
-        if (reportItemsCount > 0) {
-          summaryParts.push(`${reportItemsCount} alteração(ões) no relatório`);
-        }
-        if (generatedArchives > 0) {
-          summaryParts.push(`${generatedArchives} arquivo(s) compactado(s)`);
-        }
-
-        const hasFailures = failedCount > 0 || failedArchives > 0;
-        if (summaryParts.length > 0) {
-          const summaryText = `Verificação concluída: ${summaryParts.join(", ")}`;
-
-          if (hasFailures) {
-            toast.error(`${summaryText} Mas algumas partes falharam.`);
+          if (uploadPaths.length === 0) {
+            if (!isAutomatic) {
+              await api.markServerApplyChangesInProgress();
+              await runSyncWithProgress({ direction: "upload" });
+            }
           } else {
-            toast.success(summaryText);
+            await api.markServerApplyChangesInProgress();
+            await runSelectiveUploadWithProgress(uploadPaths);
           }
         }
-      }
 
-      if (changedCount > 0 || recoveredCount > 0 || deletedCount > 0 || (result.report_items?.length ?? 0) > 0) {
-        await loadSongs();
-      }
+        completedSteps += 1;
+        updateStepProgress(changedCount);
 
-      await refreshSelectedSong();
+        // Atualiza o marcador de "alterações aplicadas" somente ao concluir com sucesso.
+        const appliedSnapshotSummary =
+          snapshotSummary ?? preGeneratedSnapshotSummary;
 
-      const delay = 1000;
-      scheduleScanReset(delay);
-    } catch (err) {
-      console.error("Failed to scan files for changes:", err);
-      if (!isAutomatic) {
-        toast.error(getScanFailureToastMessage(err, getErrorMessage, computerType));
+        if (appliedSnapshotSummary) {
+          await api.markSnapshotAsUploaded(
+            appliedSnapshotSummary.generated_at,
+            appliedSnapshotSummary.last_change_timestamp,
+          );
+        } else {
+          await api.markLocalChangesAsApplied();
+        }
+        await api.clearServerApplyChangesInProgress();
+        await loadSettings();
+        updateStepProgress(changedCount);
+
+        if (failedCount > 0 && !isAutomatic) {
+          toast.error(`${failedCount} arquivo(s) não puderam ser verificados.`);
+        }
+
+        if (!isAutomatic && failedArchives > 0) {
+          toast.error(
+            `${failedArchives} partitura(s) não puderam ser compactadas.`,
+          );
+        }
+
+        if (!isAutomatic) {
+          const summaryParts: string[] = [];
+          const reportItemsCount = result.report_items?.length ?? 0;
+          if (recoveredCount > 0) {
+            summaryParts.push(`${recoveredCount} recuperado(s)`);
+          }
+          if (addedCount > 0) {
+            summaryParts.push(`${addedCount} adicionado(s)`);
+          }
+          if (deletedCount > 0) {
+            summaryParts.push(`${deletedCount} deletado(s)`);
+          }
+          if (reportItemsCount > 0) {
+            summaryParts.push(
+              `${reportItemsCount} alteração(ões) no relatório`,
+            );
+          }
+          if (generatedArchives > 0) {
+            summaryParts.push(`${generatedArchives} arquivo(s) compactado(s)`);
+          }
+
+          const hasFailures = failedCount > 0 || failedArchives > 0;
+          if (summaryParts.length > 0) {
+            const summaryText = `Verificação concluída: ${summaryParts.join(", ")}`;
+
+            if (hasFailures) {
+              toast.error(`${summaryText} Mas algumas partes falharam.`);
+            } else {
+              toast.success(summaryText);
+            }
+          }
+        }
+
+        if (
+          changedCount > 0 ||
+          recoveredCount > 0 ||
+          deletedCount > 0 ||
+          (result.report_items?.length ?? 0) > 0
+        ) {
+          await loadSongs();
+        }
+
+        await refreshSelectedSong();
+
+        const delay = 1000;
+        scheduleScanReset(delay);
+      } catch (err) {
+        console.error("Failed to scan files for changes:", err);
+        if (!isAutomatic) {
+          toast.error(
+            getScanFailureToastMessage(err, getErrorMessage, computerType),
+          );
+        }
+        clearScanTimer();
+        resetScanState();
+        if (rethrowOnError) {
+          throw err;
+        }
+      } finally {
+        scanInProgressRef.current = false;
       }
-      clearScanTimer();
-      resetScanState();
-      if (rethrowOnError) {
-        throw err;
-      }
-    } finally {
-      scanInProgressRef.current = false;
-    }
-  }, [
-    clearScanTimer,
-    dispatch,
-    getErrorMessage,
-    loadCategories,
-    loadSongs,
-    loadSettings,
-    resetScanState,
-    refreshSelectedSong,
-    runSelectiveUploadWithProgress,
-    runSyncWithProgress,
-    scheduleScanReset,
-  ]);
+    },
+    [
+      clearScanTimer,
+      dispatch,
+      getErrorMessage,
+      loadCategories,
+      loadSongs,
+      loadSettings,
+      resetScanState,
+      refreshSelectedSong,
+      runSelectiveUploadWithProgress,
+      runSyncWithProgress,
+      scheduleScanReset,
+    ],
+  );
 
   return { previewScanFilesForChanges, scanFilesForChanges };
 }
