@@ -22,6 +22,30 @@ O projeto foi desenvolvido com foco em Windows, por isso a explicação será ap
 
 - `rustup target add x86_64-pc-windows-msvc` - se seu computador for `x64`.
 
+
+
+## Autoassinado
+
+O aplicativo usa uma assinatura autoassinada.
+
+**Caso você tenha o .pfx**:
+
+1. Abra ele e instale no seu computador.
+
+2. Depois abra em: `certmgr.msc` > pessoal > certificados > Abra o certificado > Detalhes > Thumbprint (impressão digital).
+
+3. Com base no que foi retornado é para adicionar no `tauri.config.json`, no campo: `certificateThumbprint`.
+
+**Caso não tenha o .pfx**:
+
+1. Simplesmente remova as linhas:
+
+```json
+"certificateThumbprint": "04f52bc09d3206c1938b96532d251cacc78adcce",
+"digestAlgorithm": "sha256",
+"timestampUrl": "http://timestamp.digicert.com",
+```
+
 ---
 
 # Comandos
