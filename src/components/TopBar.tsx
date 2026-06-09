@@ -47,6 +47,7 @@ export default function TopBar({
     SongListItem[]
   >([]);
   const [showAddFilesModal, setShowAddFilesModal] = useState(false);
+  const [addFilesModalKey, setAddFilesModalKey] = useState(0);
   const selectedCategoryIds = useMemo(
     () =>
       typeof state.sidebarView === "object" &&
@@ -80,6 +81,7 @@ export default function TopBar({
         const existingSongs = await api.getAllSongs();
         setPendingFiles(files);
         setExistingSongsForAddFiles(existingSongs);
+        setAddFilesModalKey((prev) => prev + 1);
         setShowAddFilesModal(true);
       }
     } catch (err) {
@@ -192,6 +194,7 @@ export default function TopBar({
       </header>
 
       <AddFilesModal
+        key={addFilesModalKey}
         isOpen={showAddFilesModal}
         files={pendingFiles}
         existingSongs={existingSongsForAddFiles}

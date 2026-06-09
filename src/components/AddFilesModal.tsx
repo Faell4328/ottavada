@@ -58,14 +58,28 @@ export function AddFilesModal({
     () => getUniqueSongAuthors(allSongSuggestions, "arranger"),
     [allSongSuggestions]
   );
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState(() =>
+    files.length > 0 ? normalizeSongNameInput(files[0].name || "") : ""
+  );
   const [composer, setComposer] = useState("");
   const [arranger, setArranger] = useState("");
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(() => [...defaultCategoryIds]);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
-  const [instrumentNames, setInstrumentNames] = useState<Record<number, string>>({});
-  const [reviewInstrumentNames, setReviewInstrumentNames] = useState<Record<number, string>>({});
+  const [instrumentNames, setInstrumentNames] = useState<Record<number, string>>(() => {
+    const names: Record<number, string> = {};
+    files.forEach((file, idx) => {
+      names[idx] = normalizeScoreNameInput(file.instrument || "");
+    });
+    return names;
+  });
+  const [reviewInstrumentNames, setReviewInstrumentNames] = useState<Record<number, string>>(() => {
+    const names: Record<number, string> = {};
+    files.forEach((file, idx) => {
+      names[idx] = normalizeScoreNameInput(file.instrument || "");
+    });
+    return names;
+  });
   const [removedFileIndices, setRemovedFileIndices] = useState<Set<number>>(new Set());
   const [ignoredFileIndices, setIgnoredFileIndices] = useState<Set<number>>(new Set());
   const [pendingDeleteFile, setPendingDeleteFile] = useState<{
@@ -110,24 +124,7 @@ export function AddFilesModal({
 
   useEffect(() => {
     if (isOpen && files.length > 0) {
-      setTitle(normalizeSongNameInput(files[0].name || ""));
-      setComposer("");
-      setArranger("");
-      setSelectedCategories([...defaultCategoryIds]);
-      setError("");
-      setRemovedFileIndices(new Set());
-      setIgnoredFileIndices(new Set());
-      setPendingDeleteFile(null);
-      setOpeningScorePath(null);
-      setOpeningLocationPath(null);
       setAllSongSuggestions(state.songs);
-      
-      const names: Record<number, string> = {};
-      files.forEach((file, idx) => {
-        names[idx] = normalizeScoreNameInput(file.instrument || "");
-      });
-      setInstrumentNames(names);
-      setReviewInstrumentNames(names);
 
       void (async () => {
         try {
@@ -138,7 +135,7 @@ export function AddFilesModal({
         }
       })();
     }
-  }, [defaultCategoryIds, files, isOpen]);
+  }, [isOpen, files.length, state.songs]);
 
   const toggleCategory = (categoryId: string) => {
     setSelectedCategories((prev) =>
