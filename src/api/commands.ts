@@ -226,6 +226,10 @@ export async function openFileLocation(filePath: string): Promise<void> {
   return invoke("open_file_location", { filePath });
 }
 
+export async function openSongTempDir(songId: string): Promise<void> {
+  return invoke("open_song_temp_dir", { songId });
+}
+
 // ── Categories ──
 
 export async function getCategories(): Promise<Category[]> {

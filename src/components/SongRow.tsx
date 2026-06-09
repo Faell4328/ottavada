@@ -74,6 +74,15 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(function Son
     }
   };
 
+  const handleOpenClientTempDir = async () => {
+    try {
+      await api.openSongTempDir(song.id);
+    } catch (err) {
+      console.error("Failed to open song temp dir:", err);
+      toast.error("Erro ao abrir local da partitura");
+    }
+  };
+
   const handleReindex = async () => {
     try {
       const selected = await open({ directory: true, multiple: false });
@@ -171,11 +180,21 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(function Son
               disabled={false}
             >
               {!isNotFound && (isClient ? (
-                <ContextMenuItem
-                  label="Abrir"
-                  onClick={(e) => handleMenuAction(e, onToggle)}
-                  isLast={!openLocalTarget}
-                />
+                <>
+                  <ContextMenuItem
+                    label="Abrir"
+                    onClick={(e) => handleMenuAction(e, onToggle)}
+                  />
+                  <ContextMenuItem
+                    label="Abrir local"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void handleOpenClientTempDir();
+                      onMenuClose();
+                    }}
+                    isLast
+                  />
+                </>
               ) : (
                 <ContextMenuItem
                   label="Abrir"

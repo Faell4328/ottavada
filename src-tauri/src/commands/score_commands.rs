@@ -715,6 +715,47 @@ pub fn use_score_as_base(
     db.get_song_list_item_by_id(song_id)
 }
 
+#[tauri::command]
+pub fn open_song_temp_dir(
+    db: State<'_, Database>,
+    store: State<'_, SystemStore>,
+    song_id: String,
+) -> Result<(), AppError> {
+    let settings = store.get_app_settings()?;
+
+    if settings.computer_type != ComputerType::Client {
+        return Err(AppError::Generic(
+            "Operação disponível apenas no cliente".into(),
+        ));
+    }
+
+    let app_data_dir = store.app_data_dir().clone();
+    let archive_path = app_data_dir
+        .join("cloud")
+        .join("songs")
+        .join(format!("{}.tar.zst", song_id));
+    let temp_dir = app_data_dir.join("tmp").join("scores");
+
+    let song = db.get_song_list_item_by_id(&song_id)?;
+    let song_dir_name = sanitize_file_name_component(&song.name);
+    let song_temp_dir = temp_dir.join(&song_dir_name);
+
+    if archive_path.is_file() {
+        for score in &song.scores {
+            let output_file_stem =
+                build_client_extracted_score_name(&song.name, score.name.as_deref());
+            extract_score_file_from_archive(
+                &archive_path,
+                &score.id,
+                &output_file_stem,
+                &song_temp_dir,
+            )?;
+        }
+    }
+
+    open_file_location_on_system(&song_temp_dir.to_string_lossy())
+}
+
 #[cfg(test)]
 mod tests {
     use std::fs;
@@ -792,6 +833,67 @@ mod tests {
         );
 
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn extracts_multiple_scores_from_same_archive() {
+        let dir = tempdir().expect("temp dir");
+        let archive_path = dir.path().join("song-3.tar.zst");
+        write_test_tar_zst(
+            &archive_path,
+            &[
+                ("score-a.musx", b"content A"),
+                ("score-b.pdf", b"content B"),
+                ("score-c.mid", b"content C"),
+            ],
+        );
+
+        let output_dir = dir.path().join("out");
+
+        let extracted_a = extract_score_file_from_archive(
+            &archive_path,
+            "score-a",
+            "HINO NACIONAL - Flauta",
+            &output_dir,
+        )
+        .expect("extract score-a");
+        assert_eq!(
+            extracted_a.file_name().and_then(|n| n.to_str()),
+            Some("HINO NACIONAL - Flauta.musx")
+        );
+        assert_eq!(fs::read_to_string(&extracted_a).expect("read"), "content A");
+
+        let extracted_b = extract_score_file_from_archive(
+            &archive_path,
+            "score-b",
+            "HINO NACIONAL - Trompete",
+            &output_dir,
+        )
+        .expect("extract score-b");
+        assert_eq!(
+            extracted_b.file_name().and_then(|n| n.to_str()),
+            Some("HINO NACIONAL - Trompete.pdf")
+        );
+        assert_eq!(fs::read_to_string(&extracted_b).expect("read"), "content B");
+
+        let extracted_c = extract_score_file_from_archive(
+            &archive_path,
+            "score-c",
+            "HINO NACIONAL - Violino",
+            &output_dir,
+        )
+        .expect("extract score-c");
+        assert_eq!(
+            extracted_c.file_name().and_then(|n| n.to_str()),
+            Some("HINO NACIONAL - Violino.mid")
+        );
+        assert_eq!(fs::read_to_string(&extracted_c).expect("read"), "content C");
+
+        let dir_entries: Vec<_> = fs::read_dir(&output_dir)
+            .expect("read output dir")
+            .map(|e| e.expect("entry").file_name().to_string_lossy().to_string())
+            .collect();
+        assert_eq!(dir_entries.len(), 3);
     }
 
     #[test]
