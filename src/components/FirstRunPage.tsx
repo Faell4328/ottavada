@@ -19,14 +19,17 @@ export default function FirstRunPage() {
   const [computerId, setComputerId] = useState("");
   const [organizationName, setOrganizationName] = useState("");
   const [computerName, setComputerName] = useState("");
-  const [computerType, setComputerType] = useState<"Server" | "Client" | "">("");
+  const [computerType, setComputerType] = useState<"Server" | "Client" | "">(
+    "",
+  );
   const [step, setStep] = useState<Step>("intro");
   const [rcloneProvider, setRcloneProvider] = useState<RcloneProvider>("koofr");
   const [rcloneEmail, setRcloneEmail] = useState("");
   const [rcloneAppPassword, setRcloneAppPassword] = useState("");
   const [rcloneConfigGenerated, setRcloneConfigGenerated] = useState(false);
   const [rcloneConfigured, setRcloneConfigured] = useState(false);
-  const [isGeneratingRcloneConfig, setIsGeneratingRcloneConfig] = useState(false);
+  const [isGeneratingRcloneConfig, setIsGeneratingRcloneConfig] =
+    useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const { testRclone } = useRcloneTest({
@@ -36,7 +39,8 @@ export default function FirstRunPage() {
   });
 
   useEffect(() => {
-    void api.generateComputerId()
+    void api
+      .generateComputerId()
       .then(setComputerId)
       .catch(() => {
         toast.error("Não foi possível criar o identificador deste computador.");
@@ -69,7 +73,8 @@ export default function FirstRunPage() {
       await api.generateRcloneConfig({
         provider: rcloneProvider,
         email: rcloneProvider === "koofr" ? rcloneEmail.trim() : null,
-        appPassword: rcloneProvider === "koofr" ? rcloneAppPassword.trim() : null,
+        appPassword:
+          rcloneProvider === "koofr" ? rcloneAppPassword.trim() : null,
       });
 
       const wasConfigured = await testRclone({ silent: true });
@@ -84,13 +89,16 @@ export default function FirstRunPage() {
       toast.success(
         rcloneProvider === "google_drive"
           ? "Conexão com o Google Drive pronta para uso."
-          : "Conexão com o Koofr pronta para uso."
+          : "Conexão com o Koofr pronta para uso.",
       );
     } catch (error) {
       setRcloneConfigGenerated(false);
       setRcloneConfigured(false);
       toast.error(
-        getFriendlyRcloneErrorMessage(error, "Não foi possível configurar a conexão com a nuvem")
+        getFriendlyRcloneErrorMessage(
+          error,
+          "Não foi possível configurar a conexão com a nuvem",
+        ),
       );
     } finally {
       setIsGeneratingRcloneConfig(false);
@@ -122,7 +130,9 @@ export default function FirstRunPage() {
 
   async function handleWithRclone() {
     if (!rcloneConfigGenerated) {
-      toast.error("Configure e teste a conexão com a nuvem antes de continuar.");
+      toast.error(
+        "Configure e teste a conexão com a nuvem antes de continuar.",
+      );
       return;
     }
 
@@ -152,7 +162,7 @@ export default function FirstRunPage() {
         computerName.trim(),
         organizationName.trim() || null,
         computerType,
-        JSON.stringify({ provider: rcloneProvider })
+        JSON.stringify({ provider: rcloneProvider }),
       );
     } catch (error) {
       toast.error("Não foi possível concluir a configuração inicial.");
@@ -162,7 +172,7 @@ export default function FirstRunPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-[#33465d] to-[#5d6d82]">
-      <div className="w-full max-w-2xl rounded-xl bg-white p-8 shadow-2xl">
+      <div className="my-10 w-full max-w-2xl rounded-xl bg-white p-8 shadow-2xl">
         {step !== "intro" && (
           <div className="mb-8 flex flex-col items-center">
             <img
@@ -174,7 +184,8 @@ export default function FirstRunPage() {
             />
             <h1 className="text-2xl font-bold text-[#2f4259]">Score Maestro</h1>
             <p className="text-center text-sm text-[#6b849e]">
-              Organize suas partituras com segurança, clareza e menos retrabalho.
+              Organize suas partituras com segurança, clareza e menos
+              retrabalho.
             </p>
           </div>
         )}
@@ -182,11 +193,14 @@ export default function FirstRunPage() {
         {step === "intro" && (
           <>
             <div className="mb-6 rounded-xl border border-[#c5cfdb] bg-[#f8fafd] p-5">
-              <h2 className="mb-3 text-lg font-semibold text-[#34485d]">Antes de começar</h2>
+              <h2 className="mb-3 text-lg font-semibold text-[#34485d]">
+                Antes de começar
+              </h2>
               <p className="text-sm leading-6 text-[#6b849e]">
-                Para conseguir utilizar a ferramenta corretamente, assista ao vídeo de introdução
-                no site oficial: scoremaestro.rhafaell.com.br/#tutorial. Ele mostra o fluxo básico
-                e o que você precisa fazer no primeiro acesso.
+                Para conseguir utilizar a ferramenta corretamente, assista ao
+                vídeo de introdução no site oficial:
+                scoremaestro.rhafaell.com.br/#tutorial. Ele mostra o fluxo
+                básico e o que você precisa fazer no primeiro acesso.
               </p>
               <button
                 type="button"
@@ -197,8 +211,14 @@ export default function FirstRunPage() {
               </button>
             </div>
 
-            <div className="mb-6 overflow-hidden rounded-xl border border-[#c5cfdb] bg-[#f8fafd]">
-              <video autoPlay muted playsInline preload="auto" className="h-auto w-full bg-black">
+            <div className="mb-6 overflow-hidden rounded-xl">
+              <video
+                autoPlay
+                muted
+                playsInline
+                preload="auto"
+                className="h-auto mx-auto w-4/5 2xl:w-full bg-black"
+              >
                 <source src="/intro.webm" type="video/webm" />
                 <source src="/intro.mp4" type="video/mp4" />
                 Seu navegador não suporta reprodução de vídeo.
@@ -222,7 +242,8 @@ export default function FirstRunPage() {
             </h2>
 
             <p className="mb-6 text-sm text-[#6b849e]">
-              Isso define como este computador vai funcionar dentro do Score Maestro.
+              Isso define como este computador vai funcionar dentro do Score
+              Maestro.
             </p>
 
             <div
@@ -241,12 +262,17 @@ export default function FirstRunPage() {
                       : "border-[#c5cfdb]"
                   }`}
                 >
-                  {computerType === "Server" && <div className="h-2 w-2 rounded-full bg-white" />}
+                  {computerType === "Server" && (
+                    <div className="h-2 w-2 rounded-full bg-white" />
+                  )}
                 </div>
                 <div>
-                  <h3 className="mb-1 font-semibold text-[#34485d]">Servidor</h3>
+                  <h3 className="mb-1 font-semibold text-[#34485d]">
+                    Servidor
+                  </h3>
                   <p className="text-xs text-[#6b849e]">
-                    Use no computador principal, onde você organiza, revisa e confirma as alterações. Só pode existir um servidor.
+                    Use no computador principal, onde você organiza, revisa e
+                    confirma as alterações. Só pode existir um servidor.
                   </p>
                 </div>
               </div>
@@ -268,12 +294,16 @@ export default function FirstRunPage() {
                       : "border-[#c5cfdb]"
                   }`}
                 >
-                  {computerType === "Client" && <div className="h-2 w-2 rounded-full bg-white" />}
+                  {computerType === "Client" && (
+                    <div className="h-2 w-2 rounded-full bg-white" />
+                  )}
                 </div>
                 <div>
                   <h3 className="mb-1 font-semibold text-[#34485d]">Cliente</h3>
                   <p className="text-xs text-[#6b849e]">
-                    Use em computadores de consulta, para visualizar e copiar partituras com menos responsabilidades. Pode existir mais de um cliente.
+                    Use em computadores de consulta, para visualizar e copiar
+                    partituras com menos responsabilidades. Pode existir mais de
+                    um cliente.
                   </p>
                 </div>
               </div>
@@ -291,10 +321,13 @@ export default function FirstRunPage() {
 
         {step === "name" && (
           <>
-            <h2 className="mb-4 text-lg font-semibold text-[#34485d]">Configure este computador</h2>
+            <h2 className="mb-4 text-lg font-semibold text-[#34485d]">
+              Configure este computador
+            </h2>
 
             <p className="mb-6 text-sm text-[#6b849e]">
-              Dê nomes simples e fáceis de reconhecer. Você pode mudar isso depois nas configurações.
+              Dê nomes simples e fáceis de reconhecer. Você pode mudar isso
+              depois nas configurações.
             </p>
 
             <div className="mb-6">
@@ -341,10 +374,13 @@ export default function FirstRunPage() {
 
         {step === "rclone-setup" && (
           <>
-            <h2 className="mb-4 text-lg font-semibold text-[#34485d]">Configure o Rclone</h2>
+            <h2 className="mb-4 text-lg font-semibold text-[#34485d]">
+              Configure o Rclone
+            </h2>
 
             <p className="mb-6 text-sm text-[#6b849e]">
-              Escolha o provedor de nuvem e conclua a configuração em uma única ação.
+              Escolha o provedor de nuvem e conclua a configuração em uma única
+              ação.
             </p>
 
             <div className="mb-4 rounded-xl border border-[#c5cfdb] bg-[#f8fafd] p-4">
@@ -384,7 +420,9 @@ export default function FirstRunPage() {
                       : "border-[#c5cfdb] bg-white/70 hover:border-[#7ba0d4]"
                   }`}
                 >
-                  <p className="text-sm font-semibold text-[#34485d]">Google Drive</p>
+                  <p className="text-sm font-semibold text-[#34485d]">
+                    Google Drive
+                  </p>
                   <p className="mt-1 text-xs text-[#6b849e]">
                     Autentique pelo navegador usando o fluxo padrão do rclone.
                   </p>
@@ -434,7 +472,11 @@ export default function FirstRunPage() {
               ) : (
                 <div className="text-xs text-[#6b849e]">
                   <p>
-                    Clique em <span className="font-semibold text-[#34485d]">Abrir navegador para autenticar</span> para concluir a autorização do Google Drive.
+                    Clique em{" "}
+                    <span className="font-semibold text-[#34485d]">
+                      Abrir navegador para autenticar
+                    </span>{" "}
+                    para concluir a autorização do Google Drive.
                   </p>
                 </div>
               )}
@@ -447,16 +489,20 @@ export default function FirstRunPage() {
               }}
               disabled={
                 isGeneratingRcloneConfig ||
-                (rcloneProvider === "koofr" && (!rcloneEmail.trim() || !rcloneAppPassword.trim()))
+                (rcloneProvider === "koofr" &&
+                  (!rcloneEmail.trim() || !rcloneAppPassword.trim()))
               }
               className={`mb-4 flex h-10 w-full items-center justify-center gap-2 rounded-lg border-0 text-sm font-bold transition-colors cursor-pointer ${
                 isGeneratingRcloneConfig ||
-                (rcloneProvider === "koofr" && (!rcloneEmail.trim() || !rcloneAppPassword.trim()))
+                (rcloneProvider === "koofr" &&
+                  (!rcloneEmail.trim() || !rcloneAppPassword.trim()))
                   ? "cursor-not-allowed bg-[#9db3d1] text-white"
                   : "bg-[#4f84d7] text-white hover:bg-[#3d6fb8]"
               }`}
             >
-              {isGeneratingRcloneConfig && <Loader2 className="h-4 w-4 animate-spin" />}
+              {isGeneratingRcloneConfig && (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              )}
               {isGeneratingRcloneConfig
                 ? "Configurando..."
                 : rcloneProvider === "google_drive"
@@ -469,12 +515,18 @@ export default function FirstRunPage() {
                 <div className="flex items-start gap-2">
                   <CheckCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-green-600" />
                   <div>
-                    <p className="text-xs font-semibold text-green-800">Rclone configurado e testado com sucesso</p>
+                    <p className="text-xs font-semibold text-green-800">
+                      Rclone configurado e testado com sucesso
+                    </p>
                     <p className="mt-1 text-xs text-green-700">
-                      Remote padrão: <code className="bg-green-100 px-1">{rcloneProvider === "koofr" ? "koofr" : "gdrive"}</code>
+                      Remote padrão:{" "}
+                      <code className="bg-green-100 px-1">
+                        {rcloneProvider === "koofr" ? "koofr" : "gdrive"}
+                      </code>
                     </p>
                     <p className="text-xs text-green-700">
-                      Caminho padrão: <code className="bg-green-100 px-1">ScoreMaestro</code>
+                      Caminho padrão:{" "}
+                      <code className="bg-green-100 px-1">ScoreMaestro</code>
                     </p>
                   </div>
                 </div>
@@ -508,35 +560,49 @@ export default function FirstRunPage() {
 
         {step === "confirm" && (
           <>
-            <h2 className="mb-6 text-lg font-semibold text-[#34485d]">Confirme suas configurações</h2>
+            <h2 className="mb-6 text-lg font-semibold text-[#34485d]">
+              Confirme suas configurações
+            </h2>
 
             <div className="mb-6 space-y-4">
               <div className="rounded-lg border border-[#c5cfdb] bg-[#f8fafd] p-4">
-                <p className="mb-1 text-xs text-[#8b9db2]">Nome do computador</p>
+                <p className="mb-1 text-xs text-[#8b9db2]">
+                  Nome do computador
+                </p>
                 <p className="text-sm font-semibold text-[#34485d]">
                   {computerName || "(não preenchido)"}
                 </p>
               </div>
 
               <div className="rounded-lg border border-[#c5cfdb] bg-[#f8fafd] p-4">
-                <p className="mb-1 text-xs text-[#8b9db2]">Organização ou instituição</p>
+                <p className="mb-1 text-xs text-[#8b9db2]">
+                  Organização ou instituição
+                </p>
                 <p className="text-sm font-semibold text-[#34485d]">
                   {organizationName || "(não preenchido)"}
                 </p>
               </div>
 
               <div className="rounded-lg border border-[#c5cfdb] bg-[#f8fafd] p-4">
-                <p className="mb-1 text-xs text-[#8b9db2]">Tipo de computador</p>
+                <p className="mb-1 text-xs text-[#8b9db2]">
+                  Tipo de computador
+                </p>
                 <p className="text-sm font-semibold text-[#34485d]">
                   {computerType === "Server" ? "Servidor" : "Cliente"}
                 </p>
               </div>
 
               <div className="rounded-lg border border-[#c5cfdb] bg-[#f8fafd] p-4">
-                <p className="mb-1 text-xs text-[#8b9db2]">Modo de sincronização</p>
+                <p className="mb-1 text-xs text-[#8b9db2]">
+                  Modo de sincronização
+                </p>
                 <p className="text-sm font-semibold text-[#34485d]">
                   <span className="text-green-600">Rclone</span>
-                  <span className="text-xs text-[#6b849e]"> ({rcloneProvider === "koofr" ? "koofr" : "gdrive"}:ScoreMaestro)</span>
+                  <span className="text-xs text-[#6b849e]">
+                    {" "}
+                    ({rcloneProvider === "koofr" ? "koofr" : "gdrive"}
+                    :ScoreMaestro)
+                  </span>
                 </p>
               </div>
             </div>
