@@ -15,10 +15,12 @@ export function normalizeSongNameForSave(value: string): string {
 export function normalizeScoreNameInput(value: string): string {
   // Keep raw typing behavior (including leading/trailing spaces) to avoid
   // cursor jumps and unexpected input changes while the user is editing.
-  return value;
+  return value.replaceAll("_", " ");
 }
 
-export function normalizeScoreNameForSave(value: string | null | undefined): string | null {
+export function normalizeScoreNameForSave(
+  value: string | null | undefined,
+): string | null {
   if (!value) {
     return null;
   }

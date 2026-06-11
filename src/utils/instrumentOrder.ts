@@ -56,6 +56,7 @@ function isScoreOrGrade(text: string): boolean {
 }
 
 export function getInstrumentRank(name: string | null | undefined): number {
+  console.log(name);
   if (!name || !name.trim()) {
     return 0;
   }
@@ -130,8 +131,12 @@ export function getInstrumentRank(name: string | null | undefined): number {
     return 22;
   }
 
+  if (includesAny(normalized, ["percu"])) {
+    return 23;
+  }
+
   if (hasAnyToken(normalized, ["violin", "violino"])) {
-    return numberedRank(23, getSectionNumber(normalized));
+    return numberedRank(24, getSectionNumber(normalized));
   }
 
   if (includesAny(normalized, ["viola"])) {
@@ -149,7 +154,10 @@ export function getInstrumentRank(name: string | null | undefined): number {
   return Number.MAX_SAFE_INTEGER;
 }
 
-export function compareInstrumentNames(a: string | null | undefined, b: string | null | undefined): number {
+export function compareInstrumentNames(
+  a: string | null | undefined,
+  b: string | null | undefined,
+): number {
   const rankA = getInstrumentRank(a);
   const rankB = getInstrumentRank(b);
 

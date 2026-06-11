@@ -89,7 +89,7 @@ fn normalize_instrument_probe(value: &str) -> String {
 }
 
 fn looks_like_known_instrument(value: &str) -> bool {
-    let normalized = normalize_instrument_probe(value);
+    let normalized = normalize_instrument_probe(value).replace("_", " ");
     if normalized.is_empty() {
         return false;
     }
@@ -97,100 +97,43 @@ fn looks_like_known_instrument(value: &str) -> bool {
     const PREFIXES: &[&str] = &[
         "grade",
         "score",
-        "full score",
-        "conductor score",
-        "partitura completa",
-        "partitura geral",
+        "completa",
+        "geral",
         "regencia",
         "piccolo",
-        "flautim",
-        "flute",
-        "flauta",
+        "flut",
         "oboe",
-        "oboé",
-        "english horn",
-        "corne inglês",
         "clarinet",
-        "clarinete",
-        "bass clarinet",
-        "clarinete baixo",
         "bassoon",
         "fagote",
         "contrabassoon",
         "contrafagote",
-        "alto sax",
-        "sax alto",
-        "saxofone alto",
-        "tenor sax",
-        "sax tenor",
-        "saxofone tenor",
+        "alto",
+        "tenor",
+        "saxo",
         "baritone",
-        "baritone sax",
-        "sax baritone",
-        "saxofone baritono",
         "horn",
         "trompa",
         "trumpet",
-        "trompete",
         "trombone",
-        "bass trombone",
-        "trombone baixo",
         "tuba",
         "timpani",
         "tímpanos",
         "percussion",
         "percussão",
         "harp",
-        "harpa",
         "piano",
         "celesta",
         "violin",
-        "violino",
         "viola",
         "cello",
         "violoncello",
-        "violoncelo",
         "contrabass",
         "double bass",
         "contrabaixo",
     ];
 
-    PREFIXES.iter().any(|prefix| normalized.starts_with(prefix))
-}
-
-fn looks_like_non_instrument_descriptor(value: &str) -> bool {
-    let normalized = normalize_instrument_probe(value);
-    if normalized.is_empty() {
-        return false;
-    }
-
-    const FIRST_WORDS: &[&str] = &[
-        "part",
-        "parte",
-        "section",
-        "arr",
-        "arranjo",
-        "arrangement",
-        "score",
-        "grade",
-        "partitura",
-        "regencia",
-        "versao",
-        "version",
-    ];
-
-    let first_word = normalized.split_whitespace().next().unwrap_or("");
-    if FIRST_WORDS.contains(&first_word) {
-        return true;
-    }
-
-    const PHRASES: &[&str] = &[
-        "full score",
-        "conductor score",
-        "partitura completa",
-        "partitura geral",
-    ];
-    PHRASES.iter().any(|phrase| normalized.starts_with(phrase))
+    PREFIXES.iter().any(|prefix| normalized.contains(prefix))
 }
 
 /// Extrai o nome do instrumento a partir do nome do arquivo.
@@ -199,9 +142,7 @@ fn parse_instrument_from_file_stem(file_stem: &str, song_name: &str) -> Option<S
     if let Some(idx) = file_stem.rfind(" - ") {
         let normalized = normalize_optional_score_name(Some(&file_stem[idx + 3..]));
         return normalized.filter(|candidate| {
-            normalize_song_name(candidate) != song_name
-                && !looks_like_non_instrument_descriptor(candidate)
-                && looks_like_known_instrument(candidate)
+            normalize_song_name(candidate) != song_name && looks_like_known_instrument(candidate)
         });
     }
 

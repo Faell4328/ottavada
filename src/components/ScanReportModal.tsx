@@ -2,8 +2,14 @@ import { ListChecks } from "lucide-react";
 import type { ReactNode } from "react";
 
 import type { ScanResult } from "../api/commands";
-import { compareInstrumentNames, getInstrumentRank } from "../utils/instrumentOrder";
-import { normalizeScoreNameForSave, normalizeSongNameForSave } from "../utils/nameFormat";
+import {
+  compareInstrumentNames,
+  getInstrumentRank,
+} from "../utils/instrumentOrder";
+import {
+  normalizeScoreNameForSave,
+  normalizeSongNameForSave,
+} from "../utils/nameFormat";
 import { Modal } from "./ui";
 
 interface ScanReportModalProps {
@@ -30,7 +36,9 @@ export function ScanReportModal({
     ...report.changed_files.map((item) => `Partitura alterada: ${item}`),
     ...report.deleted_files.map((item) => `A partitura ${item} foi deletada.`),
     ...report.recovered_files.map((item) => `Partitura recuperada: ${item}`),
-    ...report.failed_files.map(([path, error]) => `Falha ao processar ${path}: ${error}`),
+    ...report.failed_files.map(
+      ([path, error]) => `Falha ao processar ${path}: ${error}`,
+    ),
   ];
   const sections = buildReviewSections(reportItems);
   const hasAnyChanges = sections.some((section) => section.groups.length > 0);
@@ -41,7 +49,7 @@ export function ScanReportModal({
       onClose={onClose}
       title="Relatório da verificação"
       maxWidth="max-w-3xl"
-      footer={(
+      footer={
         <div className="flex w-full justify-end gap-3">
           <button
             type="button"
@@ -60,7 +68,7 @@ export function ScanReportModal({
             {isConfirming ? "Aplicando..." : "Continuar"}
           </button>
         </div>
-      )}
+      }
     >
       <div className="space-y-4">
         {hasAnyChanges ? (
@@ -73,7 +81,11 @@ export function ScanReportModal({
             </div>
             <div className="mt-3 space-y-4">
               {sections.map((section) => (
-                <ActionSectionCard key={section.title} title={section.title} groups={section.groups} />
+                <ActionSectionCard
+                  key={section.title}
+                  title={section.title}
+                  groups={section.groups}
+                />
               ))}
             </div>
           </section>
@@ -88,7 +100,13 @@ export function ScanReportModal({
 }
 
 type ReviewAction = "adding" | "modified" | "deleted";
-type ReviewEntity = "category" | "composer" | "arranger" | "song" | "score" | "other";
+type ReviewEntity =
+  | "category"
+  | "composer"
+  | "arranger"
+  | "song"
+  | "score"
+  | "other";
 
 type ReviewItem = {
   action: ReviewAction;
@@ -113,25 +131,53 @@ type ReviewSection = {
 function buildReviewSections(reportItems: string[]): ReviewSection[] {
   const parsedItems = coalesceExtensionOnlyScoreChanges(
     coalesceScoreRenameAdditions(
-      dedupeReviewItems(reportItems.map(parseReviewItem).filter((item): item is ReviewItem => item !== null))
-    )
+      dedupeReviewItems(
+        reportItems
+          .map(parseReviewItem)
+          .filter((item): item is ReviewItem => item !== null),
+      ),
+    ),
   );
-  const createdSongNames = new Set(parsedItems.filter((item) => item.entity === "song" && item.action === "adding").map((item) => normalizeKey(item.songName ?? item.value ?? item.raw)));
-  const modifiedSongNames = new Set(parsedItems.filter((item) => item.entity === "song" && item.action === "modified").map((item) => normalizeKey(item.songName ?? item.value ?? item.raw)));
-  const deletedSongNames = new Set(parsedItems.filter((item) => item.entity === "song" && item.action === "deleted").map((item) => normalizeKey(item.songName ?? item.value ?? item.raw)));
+  const createdSongNames = new Set(
+    parsedItems
+      .filter((item) => item.entity === "song" && item.action === "adding")
+      .map((item) => normalizeKey(item.songName ?? item.value ?? item.raw)),
+  );
+  const modifiedSongNames = new Set(
+    parsedItems
+      .filter((item) => item.entity === "song" && item.action === "modified")
+      .map((item) => normalizeKey(item.songName ?? item.value ?? item.raw)),
+  );
+  const deletedSongNames = new Set(
+    parsedItems
+      .filter((item) => item.entity === "song" && item.action === "deleted")
+      .map((item) => normalizeKey(item.songName ?? item.value ?? item.raw)),
+  );
 
   const sections: ReviewSection[] = [
     {
       title: "Adicionando",
-      groups: buildActionGroups(parsedItems, "adding", { createdSongNames, modifiedSongNames, deletedSongNames }),
+      groups: buildActionGroups(parsedItems, "adding", {
+        createdSongNames,
+        modifiedSongNames,
+        deletedSongNames,
+      }),
     },
     {
       title: "Modificado",
-      groups: buildActionGroups(parsedItems, "modified", { createdSongNames, modifiedSongNames, deletedSongNames }),
+      groups: buildActionGroups(parsedItems, "modified", {
+        createdSongNames,
+        modifiedSongNames,
+        deletedSongNames,
+      }),
     },
     {
       title: "Deletado",
-      groups: buildActionGroups(parsedItems, "deleted", { createdSongNames, modifiedSongNames, deletedSongNames }),
+      groups: buildActionGroups(parsedItems, "deleted", {
+        createdSongNames,
+        modifiedSongNames,
+        deletedSongNames,
+      }),
     },
   ];
 
@@ -145,10 +191,17 @@ function normalizeKey(value: string): string {
 function parseReviewItem(raw: string): ReviewItem | null {
   const songCreatedMatch = raw.match(/^Música criada:\s*(.+)$/);
   if (songCreatedMatch) {
-    return { action: "adding", entity: "song", songName: songCreatedMatch[1].trim(), raw };
+    return {
+      action: "adding",
+      entity: "song",
+      songName: songCreatedMatch[1].trim(),
+      raw,
+    };
   }
 
-  const songRenamedMatch = raw.match(/^A música\s+(.+?)\s+teve o nome alterado\.$/);
+  const songRenamedMatch = raw.match(
+    /^A música\s+(.+?)\s+teve o nome alterado\.$/,
+  );
   if (songRenamedMatch) {
     return {
       action: "modified",
@@ -161,11 +214,16 @@ function parseReviewItem(raw: string): ReviewItem | null {
 
   const songUpdatedMatch = raw.match(/^Música alterada:\s*(.+)$/);
   if (songUpdatedMatch) {
-    return { action: "modified", entity: "song", songName: songUpdatedMatch[1].trim(), raw };
+    return {
+      action: "modified",
+      entity: "song",
+      songName: songUpdatedMatch[1].trim(),
+      raw,
+    };
   }
 
   const songStatusChangeMatch = raw.match(
-    /^A música\s+(.+?)\s+saiu de\s+(.+?)\s+e\s+(?:voltou para principal|foi para\s+(.+?))\.$/
+    /^A música\s+(.+?)\s+saiu de\s+(.+?)\s+e\s+(?:voltou para principal|foi para\s+(.+?))\.$/,
   );
   if (songStatusChangeMatch) {
     return {
@@ -179,15 +237,27 @@ function parseReviewItem(raw: string): ReviewItem | null {
 
   const songRemovedMatch = raw.match(/^A música\s+(.+?)\s+foi deletada\.$/);
   if (songRemovedMatch) {
-    return { action: "deleted", entity: "song", songName: songRemovedMatch[1].trim(), raw };
+    return {
+      action: "deleted",
+      entity: "song",
+      songName: songRemovedMatch[1].trim(),
+      raw,
+    };
   }
 
   const categoryCreatedMatch = raw.match(/^Categoria criada:\s*(.+)$/);
   if (categoryCreatedMatch) {
-    return { action: "adding", entity: "category", value: categoryCreatedMatch[1].trim(), raw };
+    return {
+      action: "adding",
+      entity: "category",
+      value: categoryCreatedMatch[1].trim(),
+      raw,
+    };
   }
 
-  const categoryAddedToSongMatch = raw.match(/^A categoria\s+(.+?)\s+foi adicionada à música\s+(.+)\.$/);
+  const categoryAddedToSongMatch = raw.match(
+    /^A categoria\s+(.+?)\s+foi adicionada à música\s+(.+)\.$/,
+  );
   if (categoryAddedToSongMatch) {
     if (categoryAddedToSongMatch[1].trim().toLowerCase() === "sem categoria") {
       return null;
@@ -202,14 +272,25 @@ function parseReviewItem(raw: string): ReviewItem | null {
     };
   }
 
-  const categoryRemovedMatch = raw.match(/^A categoria\s+(.+?)\s+foi deletada\.$/);
+  const categoryRemovedMatch = raw.match(
+    /^A categoria\s+(.+?)\s+foi deletada\.$/,
+  );
   if (categoryRemovedMatch) {
-    return { action: "deleted", entity: "category", value: categoryRemovedMatch[1].trim(), raw };
+    return {
+      action: "deleted",
+      entity: "category",
+      value: categoryRemovedMatch[1].trim(),
+      raw,
+    };
   }
 
-  const categoryRemovedFromSongMatch = raw.match(/^A categoria\s+(.+?)\s+foi removida da música\s+(.+)\.$/);
+  const categoryRemovedFromSongMatch = raw.match(
+    /^A categoria\s+(.+?)\s+foi removida da música\s+(.+)\.$/,
+  );
   if (categoryRemovedFromSongMatch) {
-    if (categoryRemovedFromSongMatch[1].trim().toLowerCase() === "sem categoria") {
+    if (
+      categoryRemovedFromSongMatch[1].trim().toLowerCase() === "sem categoria"
+    ) {
       return null;
     }
 
@@ -222,49 +303,111 @@ function parseReviewItem(raw: string): ReviewItem | null {
     };
   }
 
-  const composerAddedMatch = raw.match(/^O compositor\s+(.+?)\s+foi adicionado à música\s+(.+)\.$/);
+  const composerAddedMatch = raw.match(
+    /^O compositor\s+(.+?)\s+foi adicionado à música\s+(.+)\.$/,
+  );
   if (composerAddedMatch) {
-    return { action: "adding", entity: "composer", songName: composerAddedMatch[2].trim(), value: composerAddedMatch[1].trim(), raw };
+    return {
+      action: "adding",
+      entity: "composer",
+      songName: composerAddedMatch[2].trim(),
+      value: composerAddedMatch[1].trim(),
+      raw,
+    };
   }
 
-  const composerModifiedMatch = raw.match(/^O compositor\s+(.+?)\s+foi modificado na música\s+(.+)\.$/);
+  const composerModifiedMatch = raw.match(
+    /^O compositor\s+(.+?)\s+foi modificado na música\s+(.+)\.$/,
+  );
   if (composerModifiedMatch) {
-    return { action: "modified", entity: "composer", songName: composerModifiedMatch[2].trim(), value: composerModifiedMatch[1].trim(), raw };
+    return {
+      action: "modified",
+      entity: "composer",
+      songName: composerModifiedMatch[2].trim(),
+      value: composerModifiedMatch[1].trim(),
+      raw,
+    };
   }
 
-  const composerRemovedMatch = raw.match(/^O compositor\s+(.+?)\s+foi (?:deletado|removido) da música\s+(.+)\.$/);
+  const composerRemovedMatch = raw.match(
+    /^O compositor\s+(.+?)\s+foi (?:deletado|removido) da música\s+(.+)\.$/,
+  );
   if (composerRemovedMatch) {
-    return { action: "deleted", entity: "composer", songName: composerRemovedMatch[2].trim(), value: composerRemovedMatch[1].trim(), raw };
+    return {
+      action: "deleted",
+      entity: "composer",
+      songName: composerRemovedMatch[2].trim(),
+      value: composerRemovedMatch[1].trim(),
+      raw,
+    };
   }
 
-  const arrangerAddedMatch = raw.match(/^O arranjador\s+(.+?)\s+foi adicionado à música\s+(.+)\.$/);
+  const arrangerAddedMatch = raw.match(
+    /^O arranjador\s+(.+?)\s+foi adicionado à música\s+(.+)\.$/,
+  );
   if (arrangerAddedMatch) {
-    return { action: "adding", entity: "arranger", songName: arrangerAddedMatch[2].trim(), value: arrangerAddedMatch[1].trim(), raw };
+    return {
+      action: "adding",
+      entity: "arranger",
+      songName: arrangerAddedMatch[2].trim(),
+      value: arrangerAddedMatch[1].trim(),
+      raw,
+    };
   }
 
-  const arrangerModifiedMatch = raw.match(/^O arranjador\s+(.+?)\s+foi modificado na música\s+(.+)\.$/);
+  const arrangerModifiedMatch = raw.match(
+    /^O arranjador\s+(.+?)\s+foi modificado na música\s+(.+)\.$/,
+  );
   if (arrangerModifiedMatch) {
-    return { action: "modified", entity: "arranger", songName: arrangerModifiedMatch[2].trim(), value: arrangerModifiedMatch[1].trim(), raw };
+    return {
+      action: "modified",
+      entity: "arranger",
+      songName: arrangerModifiedMatch[2].trim(),
+      value: arrangerModifiedMatch[1].trim(),
+      raw,
+    };
   }
 
-  const arrangerRemovedMatch = raw.match(/^O arranjador\s+(.+?)\s+foi (?:deletado|removido) da música\s+(.+)\.$/);
+  const arrangerRemovedMatch = raw.match(
+    /^O arranjador\s+(.+?)\s+foi (?:deletado|removido) da música\s+(.+)\.$/,
+  );
   if (arrangerRemovedMatch) {
-    return { action: "deleted", entity: "arranger", songName: arrangerRemovedMatch[2].trim(), value: arrangerRemovedMatch[1].trim(), raw };
+    return {
+      action: "deleted",
+      entity: "arranger",
+      songName: arrangerRemovedMatch[2].trim(),
+      value: arrangerRemovedMatch[1].trim(),
+      raw,
+    };
   }
 
   const scoreAddedMatch = raw.match(/^Partitura adicionada:\s*(.+)$/);
   if (scoreAddedMatch) {
     const parsed = parseScoreAdditionReference(scoreAddedMatch[1].trim());
-    return { action: "adding", entity: "score", songName: parsed.songName, scoreName: parsed.scoreName, raw };
+    return {
+      action: "adding",
+      entity: "score",
+      songName: parsed.songName,
+      scoreName: parsed.scoreName,
+      raw,
+    };
   }
 
   const scoreChangedMatch = raw.match(/^Partitura alterada:\s*(.+)$/);
   if (scoreChangedMatch) {
     const parsed = parseScoreReference(scoreChangedMatch[1].trim());
-    return { action: "modified", entity: "score", songName: parsed.songName, scoreName: parsed.scoreName, raw };
+    return {
+      action: "modified",
+      entity: "score",
+      songName: parsed.songName,
+      scoreName: parsed.scoreName,
+      raw,
+    };
   }
 
-  const scoreRenamedMatch = raw.match(/^A partitura\s+(.+?)\s+teve o nome alterado\.$/);
+  const scoreRenamedMatch = raw.match(
+    /^A partitura\s+(.+?)\s+teve o nome alterado\.$/,
+  );
   if (scoreRenamedMatch) {
     return {
       action: "modified",
@@ -275,7 +418,9 @@ function parseReviewItem(raw: string): ReviewItem | null {
     };
   }
 
-  const scoreRenamedWithSongMatch = raw.match(/^A partitura\s+(.+?)\s+teve o nome alterado na música\s+(.+)\.$/);
+  const scoreRenamedWithSongMatch = raw.match(
+    /^A partitura\s+(.+?)\s+teve o nome alterado na música\s+(.+)\.$/,
+  );
   if (scoreRenamedWithSongMatch) {
     return {
       action: "modified",
@@ -290,10 +435,18 @@ function parseReviewItem(raw: string): ReviewItem | null {
   const scoreRemovedMatch = raw.match(/^A partitura\s+(.+?)\s+foi deletada\.$/);
   if (scoreRemovedMatch) {
     const parsed = parseScoreReference(scoreRemovedMatch[1].trim());
-    return { action: "deleted", entity: "score", songName: parsed.songName, scoreName: parsed.scoreName, raw };
+    return {
+      action: "deleted",
+      entity: "score",
+      songName: parsed.songName,
+      scoreName: parsed.scoreName,
+      raw,
+    };
   }
 
-  const scoreExtensionOnlyMatch = raw.match(/^A partitura\s+(.+?)\s+teve a extensão alterada na música\s+(.+)\.$/);
+  const scoreExtensionOnlyMatch = raw.match(
+    /^A partitura\s+(.+?)\s+teve a extensão alterada na música\s+(.+)\.$/,
+  );
   if (scoreExtensionOnlyMatch) {
     return {
       action: "modified",
@@ -321,7 +474,9 @@ function parseReviewItem(raw: string): ReviewItem | null {
     };
   }
 
-  const statusChangeMatch = raw.match(/^A partitura\s+(.+?)\s+saiu de\s+(.+?)\s+e\s+(?:voltou para main|foi para\s+(.+?))\s+na música\s+(.+)\.$/);
+  const statusChangeMatch = raw.match(
+    /^A partitura\s+(.+?)\s+saiu de\s+(.+?)\s+e\s+(?:voltou para main|foi para\s+(.+?))\s+na música\s+(.+)\.$/,
+  );
   if (statusChangeMatch) {
     return {
       action: "modified",
@@ -384,13 +539,22 @@ function coalesceExtensionOnlyScoreChanges(items: ReviewItem[]): ReviewItem[] {
       continue;
     }
 
-    if (item.entity !== "score" || !item.scoreName || item.action === "modified") {
+    if (
+      item.entity !== "score" ||
+      !item.scoreName ||
+      item.action === "modified"
+    ) {
       result.push(item);
       continue;
     }
 
-    const partnerBucket = item.action === "adding" ? deletionsByKey : additionsByKey;
-    const partner = findMatchingScorePartner(partnerBucket, item.songName, item.scoreName);
+    const partnerBucket =
+      item.action === "adding" ? deletionsByKey : additionsByKey;
+    const partner = findMatchingScorePartner(
+      partnerBucket,
+      item.songName,
+      item.scoreName,
+    );
 
     if (partner) {
       consumed.add(partner);
@@ -399,7 +563,10 @@ function coalesceExtensionOnlyScoreChanges(items: ReviewItem[]): ReviewItem[] {
         entity: "score",
         songName: item.songName ?? partner.songName,
         scoreName: item.scoreName,
-        customText: buildExtensionOnlyScoreChangeText(item.songName ?? partner.songName ?? "", item.scoreName),
+        customText: buildExtensionOnlyScoreChangeText(
+          item.songName ?? partner.songName ?? "",
+          item.scoreName,
+        ),
         raw: `${partner.raw} || ${item.raw}`,
       });
       continue;
@@ -415,7 +582,12 @@ function coalesceScoreRenameAdditions(items: ReviewItem[]): ReviewItem[] {
   const renameKeys = new Set<string>();
 
   for (const item of items) {
-    if (item.entity !== "score" || item.action !== "modified" || !item.scoreName || !item.songName) {
+    if (
+      item.entity !== "score" ||
+      item.action !== "modified" ||
+      !item.scoreName ||
+      !item.songName
+    ) {
       continue;
     }
 
@@ -423,11 +595,18 @@ function coalesceScoreRenameAdditions(items: ReviewItem[]): ReviewItem[] {
       continue;
     }
 
-    renameKeys.add(`${normalizeKey(item.songName)}|${normalizeKey(stripFileExtension(item.scoreName))}`);
+    renameKeys.add(
+      `${normalizeKey(item.songName)}|${normalizeKey(stripFileExtension(item.scoreName))}`,
+    );
   }
 
   return items.filter((item) => {
-    if (item.entity !== "score" || item.action !== "adding" || !item.scoreName || !item.songName) {
+    if (
+      item.entity !== "score" ||
+      item.action !== "adding" ||
+      !item.scoreName ||
+      !item.songName
+    ) {
       return true;
     }
 
@@ -436,7 +615,10 @@ function coalesceScoreRenameAdditions(items: ReviewItem[]): ReviewItem[] {
   });
 }
 
-function buildScoreChangeKeys(songName: string | undefined, scoreName: string): string[] {
+function buildScoreChangeKeys(
+  songName: string | undefined,
+  scoreName: string,
+): string[] {
   const normalizedScoreName = normalizeKey(stripFileExtension(scoreName));
   const normalizedSongName = normalizeKey(songName ?? "");
 
@@ -450,7 +632,7 @@ function buildScoreChangeKeys(songName: string | undefined, scoreName: string): 
 function findMatchingScorePartner(
   bucket: Map<string, ReviewItem[]>,
   songName: string | undefined,
-  scoreName: string
+  scoreName: string,
 ): ReviewItem | undefined {
   for (const key of buildScoreChangeKeys(songName, scoreName)) {
     const partner = bucket.get(key)?.shift();
@@ -466,7 +648,10 @@ function stripFileExtension(value: string): string {
   return value.replace(/\.[^.]+$/, "");
 }
 
-function buildExtensionOnlyScoreChangeText(songName: string, scoreName: string): string {
+function buildExtensionOnlyScoreChangeText(
+  songName: string,
+  scoreName: string,
+): string {
   return `A partitura ${scoreName} teve a extensão alterada na música ${songName}.`;
 }
 
@@ -477,13 +662,16 @@ function buildActionGroups(
     createdSongNames: Set<string>;
     modifiedSongNames: Set<string>;
     deletedSongNames: Set<string>;
-  }
+  },
 ): EntityGroup[] {
   const categoryItems: ReactNode[] = [];
   const composerItems: ReactNode[] = [];
   const arrangerItems: ReactNode[] = [];
   const songItems: ReactNode[] = [];
-  const scoreGroups = new Map<string, { action: ReviewAction; songName: string; scoreNames: string[] }>();
+  const scoreGroups = new Map<
+    string,
+    { action: ReviewAction; songName: string; scoreNames: string[] }
+  >();
   const customScoreGroups = new Map<
     string,
     {
@@ -503,26 +691,36 @@ function buildActionGroups(
 
   for (const item of matchingItems) {
     if (item.entity === "category") {
-      categoryItems.push(renderCategoryItem(action, item.value ?? item.raw, item.songName));
+      categoryItems.push(
+        renderCategoryItem(action, item.value ?? item.raw, item.songName),
+      );
       continue;
     }
 
     if (item.entity === "composer") {
       const songName = item.songName ?? item.raw;
       const resolvedAction = resolveEntityAction(action, songName, songSets);
-      composerItems.push(renderPersonItem("compositor", resolvedAction, item.value, songName));
+      composerItems.push(
+        renderPersonItem("compositor", resolvedAction, item.value, songName),
+      );
       continue;
     }
 
     if (item.entity === "arranger") {
       const songName = item.songName ?? item.raw;
       const resolvedAction = resolveEntityAction(action, songName, songSets);
-      arrangerItems.push(renderPersonItem("arranjador", resolvedAction, item.value, songName));
+      arrangerItems.push(
+        renderPersonItem("arranjador", resolvedAction, item.value, songName),
+      );
       continue;
     }
 
     if (item.entity === "song") {
-      songItems.push(item.customText ? renderCustomSongText(item.customText) : formatSongItem(action, item.songName ?? item.value ?? item.raw));
+      songItems.push(
+        item.customText
+          ? renderCustomSongText(item.customText)
+          : formatSongItem(action, item.songName ?? item.value ?? item.raw),
+      );
       continue;
     }
 
@@ -534,9 +732,20 @@ function buildActionGroups(
           const existingGroup = customScoreGroups.get(key);
 
           if (existingGroup) {
-            if (!existingGroup.scoreNames.some((existingName) => normalizeKey(existingName) === normalizeKey(statusChange.scoreName))) {
+            if (
+              !existingGroup.scoreNames.some(
+                (existingName) =>
+                  normalizeKey(existingName) ===
+                  normalizeKey(statusChange.scoreName),
+              )
+            ) {
               existingGroup.scoreNames.push(statusChange.scoreName);
-              existingGroup.scoreNames.sort((a, b) => compareInstrumentNames(formatScoreDisplayName(a), formatScoreDisplayName(b)));
+              existingGroup.scoreNames.sort((a, b) =>
+                compareInstrumentNames(
+                  formatScoreDisplayName(a),
+                  formatScoreDisplayName(b),
+                ),
+              );
             }
 
             continue;
@@ -562,9 +771,19 @@ function buildActionGroups(
       const group = scoreGroups.get(key);
 
       if (group) {
-        if (!group.scoreNames.some((existingName) => normalizeKey(existingName) === normalizeKey(scoreName))) {
+        if (
+          !group.scoreNames.some(
+            (existingName) =>
+              normalizeKey(existingName) === normalizeKey(scoreName),
+          )
+        ) {
           group.scoreNames.push(scoreName);
-          group.scoreNames.sort((a, b) => compareInstrumentNames(formatScoreDisplayName(a), formatScoreDisplayName(b)));
+          group.scoreNames.sort((a, b) =>
+            compareInstrumentNames(
+              formatScoreDisplayName(a),
+              formatScoreDisplayName(b),
+            ),
+          );
         }
       } else {
         scoreGroups.set(key, { action, songName, scoreNames: [scoreName] });
@@ -577,7 +796,11 @@ function buildActionGroups(
   for (const entry of scoreOrder) {
     if (entry.kind === "custom") {
       scoreItems.push({
-        songName: entry.item.songName ?? getScoreReviewSongNameFromText(entry.item.customText ?? entry.item.raw),
+        songName:
+          entry.item.songName ??
+          getScoreReviewSongNameFromText(
+            entry.item.customText ?? entry.item.raw,
+          ),
         content: renderCustomScoreText(entry.item.customText ?? entry.item.raw),
       });
       continue;
@@ -644,7 +867,9 @@ function buildActionGroups(
     const scoreGroupOrder: string[] = [];
 
     for (const item of scoreItems) {
-      const groupTitle = item.songName ? `Partituras · ${item.songName}` : "Partituras";
+      const groupTitle = item.songName
+        ? `Partituras · ${item.songName}`
+        : "Partituras";
 
       if (!scoreGroupItemsBySong.has(groupTitle)) {
         scoreGroupOrder.push(groupTitle);
@@ -655,7 +880,10 @@ function buildActionGroups(
     }
 
     for (const groupTitle of scoreGroupOrder) {
-      groups.push({ title: groupTitle, items: scoreGroupItemsBySong.get(groupTitle) ?? [] });
+      groups.push({
+        title: groupTitle,
+        items: scoreGroupItemsBySong.get(groupTitle) ?? [],
+      });
     }
   }
 
@@ -683,7 +911,7 @@ function resolveEntityAction(
     createdSongNames: Set<string>;
     modifiedSongNames: Set<string>;
     deletedSongNames: Set<string>;
-  }
+  },
 ): ReviewAction {
   const normalizedSongName = normalizeKey(songName);
 
@@ -706,12 +934,17 @@ function resolveEntityAction(
   return fallbackAction;
 }
 
-function renderCategoryItem(action: ReviewAction, categoryName: string, songName?: string): ReactNode {
+function renderCategoryItem(
+  action: ReviewAction,
+  categoryName: string,
+  songName?: string,
+): ReactNode {
   if (action === "adding") {
     if (songName) {
       return (
         <>
-          A categoria <strong>{categoryName}</strong> foi adicionada à música <strong>{songName}</strong>.
+          A categoria <strong>{categoryName}</strong> foi adicionada à música{" "}
+          <strong>{songName}</strong>.
         </>
       );
     }
@@ -727,7 +960,8 @@ function renderCategoryItem(action: ReviewAction, categoryName: string, songName
     if (songName) {
       return (
         <>
-          A categoria <strong>{categoryName}</strong> foi removida da música <strong>{songName}</strong>.
+          A categoria <strong>{categoryName}</strong> foi removida da música{" "}
+          <strong>{songName}</strong>.
         </>
       );
     }
@@ -750,14 +984,15 @@ function renderPersonItem(
   role: "compositor" | "arranjador",
   action: ReviewAction,
   value: string | undefined,
-  songName: string
+  songName: string,
 ): ReactNode {
   const personName = value ?? "sem nome";
 
   if (action === "adding") {
     return (
       <>
-        O {role} <strong>{personName}</strong> foi adicionado à música {songName}.
+        O {role} <strong>{personName}</strong> foi adicionado à música{" "}
+        {songName}.
       </>
     );
   }
@@ -765,14 +1000,16 @@ function renderPersonItem(
   if (action === "deleted") {
     return (
       <>
-        O {role} <strong>{personName}</strong> foi deletado da música {songName}.
+        O {role} <strong>{personName}</strong> foi deletado da música {songName}
+        .
       </>
     );
   }
 
   return (
     <>
-      O {role} da música <strong>{songName}</strong> foi alterado para <strong>{personName}</strong>.
+      O {role} da música <strong>{songName}</strong> foi alterado para{" "}
+      <strong>{personName}</strong>.
     </>
   );
 }
@@ -805,7 +1042,7 @@ function renderCustomSongText(text: string): ReactNode {
   const match = text.match(/^A música\s+(.+?)\s+teve o nome alterado\.$/);
   if (!match) {
     const statusChangeMatch = text.match(
-      /^A música\s+(.+?)\s+saiu de\s+(.+?)\s+e\s+(?:voltou para principal|foi para\s+(.+?))\.$/
+      /^A música\s+(.+?)\s+saiu de\s+(.+?)\s+e\s+(?:voltou para principal|foi para\s+(.+?))\.$/,
     );
 
     if (!statusChangeMatch) {
@@ -839,15 +1076,19 @@ function renderCustomSongText(text: string): ReactNode {
 
     return (
       <>
-        A música <strong>{songName}</strong> saiu de <strong>{labelForStatus(previousStatus)}</strong> e {returnsToMain ? (
+        A música <strong>{songName}</strong> saiu de{" "}
+        <strong>{labelForStatus(previousStatus)}</strong> e{" "}
+        {returnsToMain ? (
           <>
             voltou para <strong>principal</strong>
           </>
         ) : (
           <>
-            foi para <strong>{labelForStatus(nextStatus ?? "principal")}</strong>
+            foi para{" "}
+            <strong>{labelForStatus(nextStatus ?? "principal")}</strong>
           </>
-        )}.
+        )}
+        .
       </>
     );
   }
@@ -859,9 +1100,14 @@ function renderCustomSongText(text: string): ReactNode {
   );
 }
 
-function renderScoreItem(action: ReviewAction, scoreName: string, songName: string): ReactNode {
+function renderScoreItem(
+  action: ReviewAction,
+  scoreName: string,
+  songName: string,
+): ReactNode {
   const displayScoreName = formatScoreDisplayName(scoreName, songName);
-  const isStandaloneScoreName = normalizeKey(displayScoreName) === normalizeKey(songName);
+  const isStandaloneScoreName =
+    normalizeKey(displayScoreName) === normalizeKey(songName);
 
   if (action === "adding") {
     if (isStandaloneScoreName) {
@@ -874,7 +1120,8 @@ function renderScoreItem(action: ReviewAction, scoreName: string, songName: stri
 
     return (
       <>
-        A partitura <strong>{displayScoreName}</strong> foi adicionada na música <strong>{songName}</strong>.
+        A partitura <strong>{displayScoreName}</strong> foi adicionada na música{" "}
+        <strong>{songName}</strong>.
       </>
     );
   }
@@ -890,7 +1137,8 @@ function renderScoreItem(action: ReviewAction, scoreName: string, songName: stri
 
     return (
       <>
-        A partitura <strong>{displayScoreName}</strong> foi deletada na música <strong>{songName}</strong>.
+        A partitura <strong>{displayScoreName}</strong> foi deletada na música{" "}
+        <strong>{songName}</strong>.
       </>
     );
   }
@@ -905,54 +1153,64 @@ function renderScoreItem(action: ReviewAction, scoreName: string, songName: stri
 
   return (
     <>
-      A partitura <strong>{displayScoreName}</strong> foi alterada na música <strong>{songName}</strong>.
+      A partitura <strong>{displayScoreName}</strong> foi alterada na música{" "}
+      <strong>{songName}</strong>.
     </>
   );
 }
 
-function renderGroupedScoreItem(action: ReviewAction, songName: string, scoreNames: string[]): ReactNode {
-  const scoreList = joinStrongList(scoreNames.map((value) => formatScoreDisplayName(value, songName)));
+function renderGroupedScoreItem(
+  action: ReviewAction,
+  songName: string,
+  scoreNames: string[],
+): ReactNode {
+  const scoreList = joinStrongList(
+    scoreNames.map((value) => formatScoreDisplayName(value, songName)),
+  );
   const noun = scoreNames.length === 1 ? "A partitura" : "As partituras";
 
   if (action === "adding") {
-    return songName
-      ? (
-        <>
-          {noun} {scoreList} {scoreNames.length === 1 ? "foi adicionada" : "foram adicionadas"} na música <strong>{songName}</strong>.
-        </>
-      )
-      : (
-        <>
-          {noun} {scoreList} {scoreNames.length === 1 ? "foi adicionada" : "foram adicionadas"}.
-        </>
-      );
+    return songName ? (
+      <>
+        {noun} {scoreList}{" "}
+        {scoreNames.length === 1 ? "foi adicionada" : "foram adicionadas"} na
+        música <strong>{songName}</strong>.
+      </>
+    ) : (
+      <>
+        {noun} {scoreList}{" "}
+        {scoreNames.length === 1 ? "foi adicionada" : "foram adicionadas"}.
+      </>
+    );
   }
 
   if (action === "deleted") {
-    return songName
-      ? (
-        <>
-          {noun} {scoreList} {scoreNames.length === 1 ? "foi deletada" : "foram deletadas"} na música <strong>{songName}</strong>.
-        </>
-      )
-      : (
-        <>
-          {noun} {scoreList} {scoreNames.length === 1 ? "foi deletada" : "foram deletadas"}.
-        </>
-      );
-  }
-
-  return songName
-    ? (
+    return songName ? (
       <>
-        {noun} {scoreList} {scoreNames.length === 1 ? "foi alterada" : "foram alteradas"} na música <strong>{songName}</strong>.
+        {noun} {scoreList}{" "}
+        {scoreNames.length === 1 ? "foi deletada" : "foram deletadas"} na música{" "}
+        <strong>{songName}</strong>.
       </>
-    )
-    : (
+    ) : (
       <>
-        {noun} {scoreList} {scoreNames.length === 1 ? "foi alterada" : "foram alteradas"}.
+        {noun} {scoreList}{" "}
+        {scoreNames.length === 1 ? "foi deletada" : "foram deletadas"}.
       </>
     );
+  }
+
+  return songName ? (
+    <>
+      {noun} {scoreList}{" "}
+      {scoreNames.length === 1 ? "foi alterada" : "foram alteradas"} na música{" "}
+      <strong>{songName}</strong>.
+    </>
+  ) : (
+    <>
+      {noun} {scoreList}{" "}
+      {scoreNames.length === 1 ? "foi alterada" : "foram alteradas"}.
+    </>
+  );
 }
 
 function renderGroupedCustomScoreStatusItem(
@@ -960,9 +1218,11 @@ function renderGroupedCustomScoreStatusItem(
   songName: string,
   previousStatus: string,
   nextStatus: string,
-  scoreNames: string[]
+  scoreNames: string[],
 ): ReactNode {
-  const scoreList = joinStrongList(scoreNames.map((value) => formatScoreDisplayName(value, songName)));
+  const scoreList = joinStrongList(
+    scoreNames.map((value) => formatScoreDisplayName(value, songName)),
+  );
   const noun = scoreNames.length === 1 ? "A partitura" : "As partituras";
   const previousStatusLabel = formatStatusLabel(previousStatus);
   const nextStatusLabel = formatStatusLabel(nextStatus);
@@ -970,7 +1230,9 @@ function renderGroupedCustomScoreStatusItem(
   if (action === "deleted") {
     return (
       <>
-        {noun} {scoreList} {scoreNames.length === 1 ? "foi deletada" : "foram deletadas"} na música <strong>{songName}</strong>.
+        {noun} {scoreList}{" "}
+        {scoreNames.length === 1 ? "foi deletada" : "foram deletadas"} na música{" "}
+        <strong>{songName}</strong>.
       </>
     );
   }
@@ -978,14 +1240,19 @@ function renderGroupedCustomScoreStatusItem(
   if (nextStatus === "main") {
     return (
       <>
-        {noun} {scoreList} {scoreNames.length === 1 ? "saiu" : "saíram"} de {previousStatusLabel} e {scoreNames.length === 1 ? "voltou" : "voltaram"} para principal na música <strong>{songName}</strong>.
+        {noun} {scoreList} {scoreNames.length === 1 ? "saiu" : "saíram"} de{" "}
+        {previousStatusLabel} e{" "}
+        {scoreNames.length === 1 ? "voltou" : "voltaram"} para principal na
+        música <strong>{songName}</strong>.
       </>
     );
   }
 
   return (
     <>
-      {noun} {scoreList} {scoreNames.length === 1 ? "saiu" : "saíram"} de {previousStatusLabel} e {scoreNames.length === 1 ? "foi" : "foram"} para {nextStatusLabel} na música <strong>{songName}</strong>.
+      {noun} {scoreList} {scoreNames.length === 1 ? "saiu" : "saíram"} de{" "}
+      {previousStatusLabel} e {scoreNames.length === 1 ? "foi" : "foram"} para{" "}
+      {nextStatusLabel} na música <strong>{songName}</strong>.
     </>
   );
 }
@@ -1029,7 +1296,9 @@ function parseCustomScoreStatusChange(text: string): {
   previousStatus: string;
   nextStatus: string;
 } | null {
-  const statusChangeMatch = text.match(/^A partitura\s+(.+?)\s+saiu de\s+(.+?)\s+e\s+(?:voltou para main|foi para\s+(.+?))\s+na música\s+(.+)\.$/);
+  const statusChangeMatch = text.match(
+    /^A partitura\s+(.+?)\s+saiu de\s+(.+?)\s+e\s+(?:voltou para main|foi para\s+(.+?))\s+na música\s+(.+)\.$/,
+  );
   if (!statusChangeMatch) {
     return null;
   }
@@ -1043,11 +1312,14 @@ function parseCustomScoreStatusChange(text: string): {
 }
 
 function renderCustomScoreText(text: string): ReactNode {
-  const extensionOnlyMatch = text.match(/^A partitura\s+(.+?)\s+teve a extensão alterada na música\s+(.+)\.$/);
+  const extensionOnlyMatch = text.match(
+    /^A partitura\s+(.+?)\s+teve a extensão alterada na música\s+(.+)\.$/,
+  );
   if (extensionOnlyMatch) {
     const scoreName = formatScoreDisplayName(extensionOnlyMatch[1]);
     const songName = extensionOnlyMatch[2];
-    const isStandaloneScoreName = normalizeKey(scoreName) === normalizeKey(songName);
+    const isStandaloneScoreName =
+      normalizeKey(scoreName) === normalizeKey(songName);
     if (isStandaloneScoreName) {
       return (
         <>
@@ -1058,7 +1330,8 @@ function renderCustomScoreText(text: string): ReactNode {
 
     return (
       <>
-        A partitura <strong>{scoreName}</strong> teve a extensão alterada na música <strong>{songName}</strong>.
+        A partitura <strong>{scoreName}</strong> teve a extensão alterada na
+        música <strong>{songName}</strong>.
       </>
     );
   }
@@ -1068,7 +1341,11 @@ function renderCustomScoreText(text: string): ReactNode {
     const parsed = parseScoreReference(deleteMatch[1]);
     return (
       <>
-        A partitura <strong>{formatScoreDisplayName(parsed.scoreName, parsed.songName)}</strong> foi deletada.
+        A partitura{" "}
+        <strong>
+          {formatScoreDisplayName(parsed.scoreName, parsed.songName)}
+        </strong>{" "}
+        foi deletada.
       </>
     );
   }
@@ -1079,45 +1356,61 @@ function renderCustomScoreText(text: string): ReactNode {
     const previousStatus = statusChange.previousStatus;
     const nextStatus = statusChange.nextStatus;
     const songName = statusChange.songName;
-    const isStandaloneScoreName = normalizeKey(scoreName) === normalizeKey(songName);
+    const isStandaloneScoreName =
+      normalizeKey(scoreName) === normalizeKey(songName);
 
     if (isStandaloneScoreName) {
       if (nextStatus === "main") {
         return (
           <>
-            A partitura <strong>{scoreName}</strong> saiu de {formatStatusLabel(previousStatus)} e voltou para principal.
+            A partitura <strong>{scoreName}</strong> saiu de{" "}
+            {formatStatusLabel(previousStatus)} e voltou para principal.
           </>
         );
       }
 
       return (
         <>
-          A partitura <strong>{scoreName}</strong> saiu de {formatStatusLabel(previousStatus)} e foi para {formatStatusLabel(nextStatus)}.
+          A partitura <strong>{scoreName}</strong> saiu de{" "}
+          {formatStatusLabel(previousStatus)} e foi para{" "}
+          {formatStatusLabel(nextStatus)}.
         </>
       );
     }
 
     return (
       <>
-        A partitura <strong>{scoreName}</strong> saiu de {formatStatusLabel(previousStatus)} e {nextStatus === "main" ? "voltou para principal" : `foi para ${formatStatusLabel(nextStatus)}`} na música <strong>{songName}</strong>.
+        A partitura <strong>{scoreName}</strong> saiu de{" "}
+        {formatStatusLabel(previousStatus)} e{" "}
+        {nextStatus === "main"
+          ? "voltou para principal"
+          : `foi para ${formatStatusLabel(nextStatus)}`}{" "}
+        na música <strong>{songName}</strong>.
       </>
     );
   }
 
-  const renameMatch = text.match(/^A partitura\s+(.+?)\s+teve o nome alterado\.$/);
+  const renameMatch = text.match(
+    /^A partitura\s+(.+?)\s+teve o nome alterado\.$/,
+  );
   if (renameMatch) {
     return (
       <>
-        A partitura <strong>{formatScoreDisplayName(renameMatch[1])}</strong> teve o nome alterado.
+        A partitura <strong>{formatScoreDisplayName(renameMatch[1])}</strong>{" "}
+        teve o nome alterado.
       </>
     );
   }
 
-  const renameWithSongMatch = text.match(/^A partitura\s+(.+?)\s+teve o nome alterado na música\s+(.+)\.$/);
+  const renameWithSongMatch = text.match(
+    /^A partitura\s+(.+?)\s+teve o nome alterado na música\s+(.+)\.$/,
+  );
   if (renameWithSongMatch) {
     return (
       <>
-        A partitura <strong>{formatScoreDisplayName(renameWithSongMatch[1])}</strong> teve o nome alterado na música <strong>{renameWithSongMatch[2]}</strong>.
+        A partitura{" "}
+        <strong>{formatScoreDisplayName(renameWithSongMatch[1])}</strong> teve o
+        nome alterado na música <strong>{renameWithSongMatch[2]}</strong>.
       </>
     );
   }
@@ -1125,7 +1418,10 @@ function renderCustomScoreText(text: string): ReactNode {
   return text;
 }
 
-function parseScoreReference(rawPath: string): { songName: string; scoreName: string } {
+function parseScoreReference(rawPath: string): {
+  songName: string;
+  scoreName: string;
+} {
   const explicitSongMatch = rawPath.match(/^(.+?)\s+na música\s+(.+)$/);
   if (explicitSongMatch) {
     return {
@@ -1145,14 +1441,19 @@ function parseScoreReference(rawPath: string): { songName: string; scoreName: st
   const normalizedPath = rawPath.split("\\").join("/");
   const fileName = normalizedPath.split("/").pop() ?? normalizedPath;
   const pathSegments = normalizedPath.split("/").filter(Boolean);
-  const parentDirectoryName = pathSegments.length >= 2 ? pathSegments[pathSegments.length - 2].trim() : "";
+  const parentDirectoryName =
+    pathSegments.length >= 2
+      ? pathSegments[pathSegments.length - 2].trim()
+      : "";
   const lastDashIndex = fileName.lastIndexOf(" - ");
 
   if (lastDashIndex !== -1) {
     const songName = fileName.slice(0, lastDashIndex).trim();
     const rawScoreName = fileName.slice(lastDashIndex + 3).trim();
     const extensionMatch = rawScoreName.match(/(\.[^.]+)$/);
-    const scoreStem = extensionMatch ? rawScoreName.slice(0, -extensionMatch[1].length) : rawScoreName;
+    const scoreStem = extensionMatch
+      ? rawScoreName.slice(0, -extensionMatch[1].length)
+      : rawScoreName;
 
     if (getInstrumentRank(scoreStem) !== Number.MAX_SAFE_INTEGER) {
       return {
@@ -1163,7 +1464,10 @@ function parseScoreReference(rawPath: string): { songName: string; scoreName: st
   }
 
   return {
-    songName: parentDirectoryName || (normalizeSongNameForSave(stripFileExtension(fileName)) ?? stripFileExtension(fileName)),
+    songName:
+      parentDirectoryName ||
+      (normalizeSongNameForSave(stripFileExtension(fileName)) ??
+        stripFileExtension(fileName)),
     scoreName: fileName,
   };
 }
@@ -1172,11 +1476,18 @@ function formatScoreDisplayName(value: string, songName?: string): string {
   const trimmedValue = value.trim();
   const extensionMatch = trimmedValue.match(/(\.[^.]+)$/);
   const fileExtension = extensionMatch?.[1] ?? "";
-  const rawScoreStem = fileExtension ? trimmedValue.slice(0, -fileExtension.length).trim() : trimmedValue;
+  const rawScoreStem = fileExtension
+    ? trimmedValue.slice(0, -fileExtension.length).trim()
+    : trimmedValue;
   const normalized = normalizeScoreNameForSave(rawScoreStem) ?? rawScoreStem;
-  const normalizedSongName = songName ? normalizeScoreNameForSave(songName) ?? songName.trim() : null;
+  const normalizedSongName = songName
+    ? (normalizeScoreNameForSave(songName) ?? songName.trim())
+    : null;
 
-  if (normalizedSongName && normalizeKey(normalized) === normalizeKey(normalizedSongName)) {
+  if (
+    normalizedSongName &&
+    normalizeKey(normalized) === normalizeKey(normalizedSongName)
+  ) {
     return `Sem Instrumento${fileExtension}`;
   }
 
@@ -1187,7 +1498,10 @@ function formatScoreDisplayName(value: string, songName?: string): string {
   return `${normalized}${fileExtension}`;
 }
 
-function parseScoreAdditionReference(rawText: string): { songName: string; scoreName: string } {
+function parseScoreAdditionReference(rawText: string): {
+  songName: string;
+  scoreName: string;
+} {
   const additionWithSongMatch = rawText.match(/^(.+?)\s+na música\s+(.+)\.$/);
   if (additionWithSongMatch) {
     return {
@@ -1210,17 +1524,26 @@ function ActionSectionCard({
 
   return (
     <section className={`rounded-xl border p-4 ${sectionStyles.container}`}>
-      <div className={`text-sm font-semibold ${sectionStyles.title}`}>{title}</div>
+      <div className={`text-sm font-semibold ${sectionStyles.title}`}>
+        {title}
+      </div>
       <div className="mt-3 space-y-3">
         {groups.map((group) => (
-          <EntityGroupCard key={`${title}-${group.title}`} title={group.title} items={group.items} />
+          <EntityGroupCard
+            key={`${title}-${group.title}`}
+            title={group.title}
+            items={group.items}
+          />
         ))}
       </div>
     </section>
   );
 }
 
-function getActionSectionStyles(title: string): { container: string; title: string } {
+function getActionSectionStyles(title: string): {
+  container: string;
+  title: string;
+} {
   if (title === "Adicionando") {
     return {
       container: "border-emerald-200 bg-emerald-50",
@@ -1253,7 +1576,10 @@ function EntityGroupCard({
       <div className="text-sm font-medium text-[#2f4259]">{title}</div>
       <ul className="mt-2 space-y-2 text-sm text-[#4a6278]">
         {items.map((item, index) => (
-          <li key={`${title}-${index}`} className="rounded-md bg-white px-3 py-2 break-all whitespace-normal">
+          <li
+            key={`${title}-${index}`}
+            className="rounded-md bg-white px-3 py-2 break-all whitespace-normal"
+          >
             {item}
           </li>
         ))}
@@ -1261,4 +1587,3 @@ function EntityGroupCard({
     </section>
   );
 }
-

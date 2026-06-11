@@ -1,10 +1,24 @@
 import { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { Ban, ExternalLink, FolderOpen, Loader2, RotateCcw, Trash2 } from "lucide-react";
+import {
+  Ban,
+  ExternalLink,
+  FolderOpen,
+  Loader2,
+  RotateCcw,
+  Trash2,
+} from "lucide-react";
 import { useAppState } from "../context/AppContext";
 import type { IndexedFile, SongListItem } from "../types";
 import * as api from "../api/commands";
-import { Modal, ModalFooterButtons, FormField, TextInput, ErrorMessage, AutocompleteInput } from "./ui";
+import {
+  Modal,
+  ModalFooterButtons,
+  FormField,
+  TextInput,
+  ErrorMessage,
+  AutocompleteInput,
+} from "./ui";
 import { useScrollLock } from "../hooks/useScrollLock";
 import { CategoryCheckboxList } from "./ui/CategoryCheckboxList";
 import { getDirectoryPath, getFileName } from "../utils/paths";
@@ -46,62 +60,81 @@ export function AddFilesModal({
 }: AddFilesModalProps) {
   const { state } = useAppState();
   const visibleCategories = state.categories.filter(
-    (category) => category.name.toLowerCase() !== "sem categoria"
+    (category) => category.name.toLowerCase() !== "sem categoria",
   );
   const songsForDuplicateCheck = existingSongs ?? state.songs;
   const [allSongSuggestions, setAllSongSuggestions] = useState(state.songs);
   const composerSuggestions = useMemo(
     () => getUniqueSongAuthors(allSongSuggestions, "composer"),
-    [allSongSuggestions]
+    [allSongSuggestions],
   );
   const arrangerSuggestions = useMemo(
     () => getUniqueSongAuthors(allSongSuggestions, "arranger"),
-    [allSongSuggestions]
+    [allSongSuggestions],
   );
   const [title, setTitle] = useState(() =>
-    files.length > 0 ? normalizeSongNameInput(files[0].name || "") : ""
+    files.length > 0 ? normalizeSongNameInput(files[0].name || "") : "",
   );
   const [composer, setComposer] = useState("");
   const [arranger, setArranger] = useState("");
-  const [selectedCategories, setSelectedCategories] = useState<string[]>(() => [...defaultCategoryIds]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(() => [
+    ...defaultCategoryIds,
+  ]);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
-  const [instrumentNames, setInstrumentNames] = useState<Record<number, string>>(() => {
+  const [instrumentNames, setInstrumentNames] = useState<
+    Record<number, string>
+  >(() => {
     const names: Record<number, string> = {};
     files.forEach((file, idx) => {
       names[idx] = normalizeScoreNameInput(file.instrument || "");
     });
     return names;
   });
-  const [reviewInstrumentNames, setReviewInstrumentNames] = useState<Record<number, string>>(() => {
+  const [reviewInstrumentNames, setReviewInstrumentNames] = useState<
+    Record<number, string>
+  >(() => {
     const names: Record<number, string> = {};
     files.forEach((file, idx) => {
       names[idx] = normalizeScoreNameInput(file.instrument || "");
     });
     return names;
   });
-  const [removedFileIndices, setRemovedFileIndices] = useState<Set<number>>(new Set());
-  const [ignoredFileIndices, setIgnoredFileIndices] = useState<Set<number>>(new Set());
+
+  const [removedFileIndices, setRemovedFileIndices] = useState<Set<number>>(
+    new Set(),
+  );
+  const [ignoredFileIndices, setIgnoredFileIndices] = useState<Set<number>>(
+    new Set(),
+  );
   const [pendingDeleteFile, setPendingDeleteFile] = useState<{
     idx: number;
     path: string;
     fileName: string;
   } | null>(null);
   const [openingScorePath, setOpeningScorePath] = useState<string | null>(null);
-  const [openingLocationPath, setOpeningLocationPath] = useState<string | null>(null);
+  const [openingLocationPath, setOpeningLocationPath] = useState<string | null>(
+    null,
+  );
   useScrollLock(pendingDeleteFile !== null);
-  const normalizedTitle = useMemo(() => normalizeSongNameForSave(title), [title]);
+  const normalizedTitle = useMemo(
+    () => normalizeSongNameForSave(title),
+    [title],
+  );
   const existingSong = useMemo(
     () => findSongByName(songsForDuplicateCheck, normalizedTitle),
-    [normalizedTitle, songsForDuplicateCheck]
+    [normalizedTitle, songsForDuplicateCheck],
   );
   const fileEntries = useMemo(
-    () => files.map((file, idx) => ({ file, idx })).filter(({ idx }) => !removedFileIndices.has(idx)),
-    [files, removedFileIndices]
+    () =>
+      files
+        .map((file, idx) => ({ file, idx }))
+        .filter(({ idx }) => !removedFileIndices.has(idx)),
+    [files, removedFileIndices],
   );
   const reviewableFileEntries = useMemo(
     () => fileEntries.filter(({ idx }) => !ignoredFileIndices.has(idx)),
-    [fileEntries, ignoredFileIndices]
+    [fileEntries, ignoredFileIndices],
   );
   const {
     normalizedInstrumentNames,
@@ -114,9 +147,14 @@ export function AddFilesModal({
         reviewableFileEntries,
         reviewInstrumentNames,
         songsForDuplicateCheck,
-        normalizedTitle
+        normalizedTitle,
       ),
-    [normalizedTitle, reviewInstrumentNames, reviewableFileEntries, songsForDuplicateCheck]
+    [
+      normalizedTitle,
+      reviewInstrumentNames,
+      reviewableFileEntries,
+      songsForDuplicateCheck,
+    ],
   );
   const hasFilesToImport = fileEntries.length > 0;
   const isDuplicateSong = existingSong !== null;
@@ -141,7 +179,7 @@ export function AddFilesModal({
     setSelectedCategories((prev) =>
       prev.includes(categoryId)
         ? prev.filter((id) => id !== categoryId)
-        : [...prev, categoryId]
+        : [...prev, categoryId],
     );
   };
 
@@ -224,7 +262,8 @@ export function AddFilesModal({
       });
       setPendingDeleteFile(null);
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Erro ao excluir arquivo";
+      const errorMsg =
+        err instanceof Error ? err.message : "Erro ao excluir arquivo";
       setError(errorMsg);
     }
   };
@@ -276,13 +315,15 @@ export function AddFilesModal({
 
     try {
       const filteredFiles = fileEntries.map(({ file, idx }) => {
-        const status: IndexedFile["status"] = ignoredFileIndices.has(idx) ? "ignored" : "main";
+        const status: IndexedFile["status"] = ignoredFileIndices.has(idx)
+          ? "ignored"
+          : "main";
 
         return {
           path: file.path,
           name: normalizedTitle,
           instrument: normalizeScoreNameForSave(
-            instrumentNames[idx] ?? file.instrument
+            instrumentNames[idx] ?? file.instrument,
           ),
           extension: file.extension,
           status,
@@ -293,7 +334,7 @@ export function AddFilesModal({
         filteredFiles,
         selectedCategories,
         composer.trim() || null,
-        arranger.trim() || null
+        arranger.trim() || null,
       );
 
       await onSuccess(importResult.added_count);
@@ -307,7 +348,10 @@ export function AddFilesModal({
   };
 
   const instrumentCount = fileEntries.length;
-  const visibleFiles = sortIndexedFileEntriesForReview(fileEntries, reviewInstrumentNames);
+  const visibleFiles = sortIndexedFileEntriesForReview(
+    fileEntries,
+    reviewInstrumentNames,
+  );
 
   const reviewItems = useMemo(() => {
     const items: Array<
@@ -326,12 +370,20 @@ export function AddFilesModal({
           entries: Array<{ file: IndexedFile; idx: number }>;
         }
     > = [];
-    const batchGroups = new Map<string, { normalizedInstrument: string; entries: Array<{ file: IndexedFile; idx: number }> }>();
+    const batchGroups = new Map<
+      string,
+      {
+        normalizedInstrument: string;
+        entries: Array<{ file: IndexedFile; idx: number }>;
+      }
+    >();
 
     visibleFiles.forEach(({ file, idx }) => {
       const isIgnored = ignoredFileIndices.has(idx);
-      const conflict = isIgnored ? null : duplicateMap.get(idx) ?? null;
-      const normalizedInstrument = isIgnored ? null : normalizedInstrumentNames.get(idx);
+      const conflict = isIgnored ? null : (duplicateMap.get(idx) ?? null);
+      const normalizedInstrument = isIgnored
+        ? null
+        : normalizedInstrumentNames.get(idx);
       const isBatchDuplicate =
         normalizedInstrument !== null &&
         normalizedInstrument !== undefined &&
@@ -358,14 +410,23 @@ export function AddFilesModal({
         file,
         idx,
         conflict,
-        conflictMessage: conflict ? describeScoreConflict(conflict, normalizedTitle) : null,
+        conflictMessage: conflict
+          ? describeScoreConflict(conflict, normalizedTitle)
+          : null,
         isLocked: conflict !== null,
         isIgnored,
       });
     });
 
     return items;
-  }, [duplicateMap, ignoredFileIndices, normalizedInstrumentCounts, normalizedInstrumentNames, normalizedTitle, visibleFiles]);
+  }, [
+    duplicateMap,
+    ignoredFileIndices,
+    normalizedInstrumentCounts,
+    normalizedInstrumentNames,
+    normalizedTitle,
+    visibleFiles,
+  ]);
 
   const pendingIssueMessages = useMemo(() => {
     const messages: string[] = [];
@@ -373,7 +434,7 @@ export function AddFilesModal({
 
     if (isDuplicateSong) {
       messages.push(
-        `A música ${existingSong?.name ?? normalizedTitle} já existe. Altere o nome da música para continuar.`
+        `A música ${existingSong?.name ?? normalizedTitle} já existe. Altere o nome da música para continuar.`,
       );
     }
 
@@ -381,11 +442,13 @@ export function AddFilesModal({
       if (item.kind === "group") {
         const firstEntry = item.entries[0];
         const instrumentName = firstEntry
-          ? reviewInstrumentNames[firstEntry.idx] || firstEntry.file.instrument || item.normalizedInstrument
+          ? reviewInstrumentNames[firstEntry.idx] ||
+            firstEntry.file.instrument ||
+            item.normalizedInstrument
           : item.normalizedInstrument;
 
         messages.push(
-          `${item.entries.length} partituras usam o mesmo instrumento (${instrumentName}). Renomeie ou delete uma delas para continuar.`
+          `${item.entries.length} partituras usam o mesmo instrumento (${instrumentName}). Renomeie ou delete uma delas para continuar.`,
         );
         return;
       }
@@ -421,7 +484,9 @@ export function AddFilesModal({
     >
       {hasPendingIssues && pendingIssueMessages.length > 0 && (
         <div className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-          <p className="font-semibold">Revise as pendências abaixo antes de salvar.</p>
+          <p className="font-semibold">
+            Revise as pendências abaixo antes de salvar.
+          </p>
           <ul className="mt-1 list-disc space-y-1 pl-4">
             {pendingIssueMessages.map((message) => (
               <li key={message}>{message}</li>
@@ -478,17 +543,29 @@ export function AddFilesModal({
             {reviewItems.map((item) => {
               if (item.kind === "group") {
                 return (
-                  <div key={item.normalizedInstrument} className="rounded border border-amber-200 bg-amber-50 p-2 space-y-3">
+                  <div
+                    key={item.normalizedInstrument}
+                    className="rounded border border-amber-200 bg-amber-50 p-2 space-y-3"
+                  >
                     {item.entries.map(({ file, idx }, index) => {
                       const fileName = getFileName(file.path) || file.name;
                       const directoryPath = getDirectoryPath(file.path);
-                      const isBusy = openingScorePath === file.path || openingLocationPath === file.path;
+                      const isBusy =
+                        openingScorePath === file.path ||
+                        openingLocationPath === file.path;
                       const isIgnored = ignoredFileIndices.has(idx);
-                      const conflict = isIgnored ? null : duplicateMap.get(idx) ?? null;
+                      const conflict = isIgnored
+                        ? null
+                        : (duplicateMap.get(idx) ?? null);
                       const isLocked = conflict !== null;
 
                       return (
-                        <div key={idx} className={index > 0 ? "border-t border-amber-200 pt-3" : ""}>
+                        <div
+                          key={idx}
+                          className={
+                            index > 0 ? "border-t border-amber-200 pt-3" : ""
+                          }
+                        >
                           <div className="flex items-center justify-between">
                             <div className="min-w-0 flex-1 pr-2">
                               <p className="text-xs text-[#5d738b] font-semibold break-all whitespace-normal">
@@ -509,7 +586,9 @@ export function AddFilesModal({
                               </button>
                               <button
                                 type="button"
-                                onClick={() => openDeleteFileModal(idx, file.path, fileName)}
+                                onClick={() =>
+                                  openDeleteFileModal(idx, file.path, fileName)
+                                }
                                 className="p-1 text-[#8b9db2] hover:text-red-500 transition-colors"
                                 title="Mover para lixeira"
                               >
@@ -574,12 +653,18 @@ export function AddFilesModal({
 
               const fileName = getFileName(item.file.path) || item.file.name;
               const directoryPath = getDirectoryPath(item.file.path);
-              const isBusy = openingScorePath === item.file.path || openingLocationPath === item.file.path;
+              const isBusy =
+                openingScorePath === item.file.path ||
+                openingLocationPath === item.file.path;
 
               return (
                 <div
                   key={item.idx}
-                  className={item.conflictMessage ? "rounded border border-amber-200 bg-amber-50 p-2 space-y-2" : "space-y-2"}
+                  className={
+                    item.conflictMessage
+                      ? "rounded border border-amber-200 bg-amber-50 p-2 space-y-2"
+                      : "space-y-2"
+                  }
                 >
                   {item.conflictMessage && (
                     <p className="text-xs font-semibold text-amber-700">
@@ -599,15 +684,33 @@ export function AddFilesModal({
                     <div className="flex items-center gap-1">
                       <button
                         type="button"
-                        onClick={() => (item.isIgnored ? unignoreFile(item.idx) : ignoreFile(item.idx))}
+                        onClick={() =>
+                          item.isIgnored
+                            ? unignoreFile(item.idx)
+                            : ignoreFile(item.idx)
+                        }
                         className={`p-1 transition-colors ${item.isIgnored ? "text-[#4f84d7] hover:text-[#345f9e]" : "text-[#8b9db2] hover:text-[#4f84d7]"}`}
-                        title={item.isIgnored ? "Designorar arquivo" : "Ignorar arquivo"}
+                        title={
+                          item.isIgnored
+                            ? "Designorar arquivo"
+                            : "Ignorar arquivo"
+                        }
                       >
-                        {item.isIgnored ? <RotateCcw className="h-4 w-4" /> : <Ban className="h-4 w-4" />}
+                        {item.isIgnored ? (
+                          <RotateCcw className="h-4 w-4" />
+                        ) : (
+                          <Ban className="h-4 w-4" />
+                        )}
                       </button>
                       <button
                         type="button"
-                        onClick={() => openDeleteFileModal(item.idx, item.file.path, fileName)}
+                        onClick={() =>
+                          openDeleteFileModal(
+                            item.idx,
+                            item.file.path,
+                            fileName,
+                          )
+                        }
                         disabled={item.isLocked}
                         className="p-1 text-[#8b9db2] hover:text-red-500 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
                         title="Mover para lixeira"
@@ -653,7 +756,7 @@ export function AddFilesModal({
                       ) : (
                         <FolderOpen className="h-3.5 w-3.5" />
                       )}
-                      Abrir 
+                      Abrir
                     </button>
                   </div>
 
@@ -668,7 +771,7 @@ export function AddFilesModal({
                       commitInstrumentName(item.idx);
                     }}
                     placeholder="Nome do instrumento"
-                      autoFocus={visibleFiles[0]?.idx === item.idx}
+                    autoFocus={visibleFiles[0]?.idx === item.idx}
                     disabled={item.isIgnored}
                     readOnly={item.isLocked}
                   />
@@ -683,12 +786,16 @@ export function AddFilesModal({
         ? createPortal(
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
               <div className="w-full max-w-md rounded-lg border border-[#c5cfdb] bg-[#f8fafd] p-6 shadow-xl">
-                <h2 className="mb-3 text-lg font-semibold text-[#2f4259]">Mover para lixeira</h2>
+                <h2 className="mb-3 text-lg font-semibold text-[#2f4259]">
+                  Mover para lixeira
+                </h2>
                 <p className="mb-2 text-sm text-[#4a6278]">
-                  Você realmente deseja mover o arquivo <strong>{pendingDeleteFile.fileName}</strong> para a lixeira?
+                  Você realmente deseja mover o arquivo{" "}
+                  <strong>{pendingDeleteFile.fileName}</strong> para a lixeira?
                 </p>
                 <p className="mb-6 text-sm text-[#4a6278]">
-                  Se não quiser mover para lixeira, clique em Ignorar para manter o arquivo e salvá-lo como ignorado.
+                  Se não quiser mover para lixeira, clique em Ignorar para
+                  manter o arquivo e salvá-lo como ignorado.
                 </p>
                 <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
                   <button
@@ -720,7 +827,7 @@ export function AddFilesModal({
                 </div>
               </div>
             </div>,
-            document.body
+            document.body,
           )
         : null}
 
