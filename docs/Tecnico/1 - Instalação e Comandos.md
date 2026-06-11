@@ -22,7 +22,17 @@ O projeto foi desenvolvido com foco em Windows, por isso a explicação será ap
 
 - `rustup target add x86_64-pc-windows-msvc` - se seu computador for `x64`.
 
+## Atualização
 
+
+
+A atualização utiliza o mecanismo nativo do Tauri. Para gerar as chaves privada e pública, execute o comando: `tauri signer generate`. Você será solicitado a informar uma senha. Após fornecê-la, serão geradas as chaves pública e privada. 
+
+Em seguida, adicione as chaves nos seguintes locais:
+
+- No arquivo `.env`
+
+- No arquivo `tauri.config.json`
 
 ## Autoassinado
 
