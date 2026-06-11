@@ -313,6 +313,7 @@
 ## Funcionalidades
 
 - edição e exclusão facilitada de categoria, compositor e arranjador;
+
 - adicionado status `ignored` na partitura;
 
 - adicionado status `main`, `draft` e `not_found` na música.
@@ -320,20 +321,33 @@
 ## Melhorias
 
 - indexação de diretórios;
+
 - modelagem do banco de dados;
+
 - modelagem dos arquivos `*.msgpack`;
 
-- 
 - sugestão de instrumentos no modal de adição;
+
 - melhorias na interface;
+
 - substituição da exclusão permanente por envio para lixeira;
+
 - geração de snapshot automático com 1MB.
 
 ## Correções
 
 - remoção de duplicações e padronização dos campos no `tauri-plugin-store`;
+
 - remoção de inconsistências no status `draft`;
+
 - remoção da criação manual de música;
 
 - remoção da opção "adicionar arquivo(s)";
+
 - remoção dos status `not_found` na partitura.
+
+# Versão 1.2.1
+
+## Melhorias
+
+- Melhoria na identificação de instrumenos

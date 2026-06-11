@@ -74,7 +74,6 @@ export default function TopBar({
       const selected = await open({ directory: true, multiple: false });
       if (selected) {
         let files = await api.scanDirectory(selected as string);
-        console.log(files);
         if (files.length === 0) {
           toast.error("Não encontrei nenhuma música nessa pasta.");
           return;
