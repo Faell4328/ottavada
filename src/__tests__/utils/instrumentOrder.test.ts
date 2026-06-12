@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { compareInstrumentNames } from "../../utils/instrumentOrder";
+import { compareInstrumentNames, getInstrumentRank } from "../../utils/instrumentOrder";
 
 describe("compareInstrumentNames", () => {
   it("prioritizes unnamed instruments first", () => {
@@ -36,8 +36,8 @@ describe("compareInstrumentNames", () => {
 
     expect(sorted).toEqual([
       "flute",
-      "clarinet in Bb 1",
       "clarinet Bb 3",
+      "clarinet in Bb 1",
       "alto saxophone 2",
       "trombone 2",
       "tuba",
@@ -56,14 +56,14 @@ describe("compareInstrumentNames", () => {
     const names = ["fagote", "flauta 1", "saxofone tenor", "violino 1"];
     const sorted = [...names].sort((a, b) => compareInstrumentNames(a, b));
 
-    expect(sorted).toEqual(["flauta 1", "fagote", "saxofone tenor", "violino 1"]);
+    expect(sorted).toEqual(["flauta 1", "saxofone tenor", "fagote", "violino 1"]);
   });
 
   it("accepts naming variations like 'in Bb'", () => {
     const names = ["clarinet Bb 2", "clarinet in Bb 1", "clarinet Bb 3"];
     const sorted = [...names].sort((a, b) => compareInstrumentNames(a, b));
 
-    expect(sorted).toEqual(["clarinet in Bb 1", "clarinet Bb 2", "clarinet Bb 3"]);
+    expect(sorted).toEqual(["clarinet Bb 2", "clarinet Bb 3", "clarinet in Bb 1"]);
   });
 
   it("supports violin with arabic and roman numerals", () => {
@@ -92,11 +92,11 @@ describe("compareInstrumentNames", () => {
       "Clarinet in Bb I",
       "Clarinet Sib 3",
       "Alto Saxophone 2",
-      "Trumpet Bb 1",
       "Horn in F II",
+      "Trumpet Bb 1",
       "Trombone III",
-      "Violino I",
       "Violin II",
+      "Violino I",
       "Contrabass",
     ]);
   });
@@ -105,6 +105,108 @@ describe("compareInstrumentNames", () => {
     const names = ["zither", "oboe", "accordion", "Bass Guitar", "xylophone"];
     const sorted = [...names].sort((a, b) => compareInstrumentNames(a, b));
 
-    expect(sorted).toEqual(["oboe", "accordion", "Bass Guitar", "xylophone", "zither"]);
+    expect(sorted).toEqual(["oboe", "xylophone", "accordion", "Bass Guitar", "zither"]);
+  });
+
+  it("recognizes English instrument names", () => {
+    expect(getInstrumentRank("piccolo")).toBe(1);
+    expect(getInstrumentRank("flute")).toBe(2);
+    expect(getInstrumentRank("alto flute")).toBe(3);
+    expect(getInstrumentRank("oboe")).toBe(4);
+    expect(getInstrumentRank("oboe d'amore")).toBe(5);
+    expect(getInstrumentRank("english horn")).toBe(6);
+    expect(getInstrumentRank("heckelphone")).toBe(7);
+    expect(getInstrumentRank("Eb clarinet")).toBe(8);
+    expect(getInstrumentRank("clarinet")).toBe(9);
+    expect(getInstrumentRank("bass clarinet")).toBe(10);
+    expect(getInstrumentRank("contralto clarinet")).toBe(11);
+    expect(getInstrumentRank("contrabass clarinet")).toBe(12);
+    expect(getInstrumentRank("soprano saxophone")).toBe(13);
+    expect(getInstrumentRank("alto saxophone")).toBe(14);
+    expect(getInstrumentRank("tenor saxophone")).toBe(15);
+    expect(getInstrumentRank("baritone saxophone")).toBe(16);
+    expect(getInstrumentRank("bass saxophone")).toBe(17);
+    expect(getInstrumentRank("bassoon")).toBe(18);
+    expect(getInstrumentRank("contrabassoon")).toBe(19);
+    expect(getInstrumentRank("horn")).toBe(20);
+    expect(getInstrumentRank("wagner tuba")).toBe(21);
+    expect(getInstrumentRank("piccolo trumpet")).toBe(22);
+    expect(getInstrumentRank("trumpet")).toBe(23);
+    expect(getInstrumentRank("bass trumpet")).toBe(24);
+    expect(getInstrumentRank("cornet")).toBe(25);
+    expect(getInstrumentRank("flugelhorn")).toBe(26);
+    expect(getInstrumentRank("alto trombone")).toBe(27);
+    expect(getInstrumentRank("trombone")).toBe(28);
+    expect(getInstrumentRank("bass trombone")).toBe(29);
+    expect(getInstrumentRank("euphonium")).toBe(30);
+    expect(getInstrumentRank("tuba")).toBe(31);
+    expect(getInstrumentRank("timpani")).toBe(32);
+    expect(getInstrumentRank("snare drum")).toBe(33);
+    expect(getInstrumentRank("bass drum")).toBe(34);
+    expect(getInstrumentRank("tom tom")).toBe(35);
+    expect(getInstrumentRank("drum set")).toBe(36);
+    expect(getInstrumentRank("bongos")).toBe(37);
+    expect(getInstrumentRank("congas")).toBe(38);
+    expect(getInstrumentRank("cymbals")).toBe(39);
+    expect(getInstrumentRank("triangle")).toBe(40);
+    expect(getInstrumentRank("tambourine")).toBe(41);
+    expect(getInstrumentRank("tambour")).toBe(42);
+    expect(getInstrumentRank("handbell")).toBe(43);
+    expect(getInstrumentRank("sleigh bells")).toBe(44);
+    expect(getInstrumentRank("castanets")).toBe(45);
+    expect(getInstrumentRank("wood block")).toBe(46);
+    expect(getInstrumentRank("temple blocks")).toBe(47);
+    expect(getInstrumentRank("maracas")).toBe(48);
+    expect(getInstrumentRank("gong")).toBe(49);
+    expect(getInstrumentRank("crotales")).toBe(50);
+    expect(getInstrumentRank("glockenspiel")).toBe(51);
+    expect(getInstrumentRank("xylophone")).toBe(52);
+    expect(getInstrumentRank("marimba")).toBe(53);
+    expect(getInstrumentRank("vibraphone")).toBe(54);
+    expect(getInstrumentRank("tubular bells")).toBe(55);
+    expect(getInstrumentRank("celesta")).toBe(56);
+    expect(getInstrumentRank("piano")).toBe(57);
+    expect(getInstrumentRank("harpsichord")).toBe(58);
+    expect(getInstrumentRank("pipe organ")).toBe(59);
+    expect(getInstrumentRank("accordion")).toBe(60);
+    expect(getInstrumentRank("harp")).toBe(61);
+    expect(getInstrumentRank("violin")).toBe(62);
+    expect(getInstrumentRank("viola")).toBe(63);
+    expect(getInstrumentRank("cello")).toBe(64);
+    expect(getInstrumentRank("violoncello")).toBe(64);
+    expect(getInstrumentRank("double bass")).toBe(65);
+    expect(getInstrumentRank("contrabass")).toBe(65);
+  });
+
+  it("maps baritone horn to euphonium rank (not french horn or sax)", () => {
+    expect(getInstrumentRank("baritone horn")).toBe(30);
+    expect(getInstrumentRank("baritone")).toBe(30);
+    expect(getInstrumentRank("baritone saxophone")).toBe(16);
+  });
+
+  it("sorts english names in proper orchestral order", () => {
+    const names = [
+      "harp",
+      "violin",
+      "piccolo",
+      "euphonium",
+      "bass drum",
+      "horn",
+      "bass clarinet",
+      "triangle",
+    ];
+
+    const sorted = [...names].sort((a, b) => compareInstrumentNames(a, b));
+
+    expect(sorted).toEqual([
+      "piccolo",
+      "bass clarinet",
+      "horn",
+      "euphonium",
+      "bass drum",
+      "triangle",
+      "harp",
+      "violin",
+    ]);
   });
 });

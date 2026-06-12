@@ -127,3 +127,102 @@ Amazing Grace/
 O **Score Maestro** foi desenvolvido e testado exclusivamente para Windows. Essa decisão foi tomada porque o público-alvo da aplicação, composto principalmente por músicos e outros usuários não técnicos, utiliza predominantemente esse sistema operacional.
 
 Além disso, muitas das ferramentas utilizadas para leitura, edição e manipulação de partituras possuem melhor suporte, maior adoção ou são disponibilizadas prioritariamente para o ecossistema Windows, tornando essa plataforma a escolha mais adequada para o desenvolvimento inicial do projeto.
+
+## 2.4. Lista de instrumentos suportados e a ordem
+
+A ordem dos instrumentos foi baseado no Finale e Sibelius.
+
+**Madeira**
+
+| Pos. | Instrumento (Português)  | Nome em Inglês             |
+| ---- | ------------------------ | -------------------------- |
+| 1    | Flautim                  | Piccolo                    |
+| 2    | Flauta                   | Flute                      |
+| 3    | Flauta Alto              | Alto Flute                 |
+| 4    | Oboé                     | Oboe                       |
+| 5    | Oboé d'Amore             | Oboe d'Amore               |
+| 6    | Corne Inglês             | horn english / Cor Anglais |
+| 7    | Heckelfone               | Heckelphone                |
+| 8    | Clarinete Mib (Soprinho) | E♭ Clarinet                |
+| 9    | Clarinete (Sib/Lá)       | Clarinet (B♭/A)            |
+| 10   | Clarinete Baixo          | Bass Clarinet              |
+| 11   | Clarinete Contralto      | Contralto Clarinet         |
+| 12   | Clarinete Contrabaixo    | Contrabass Clarinet        |
+| 13   | Saxofone Soprano         | Soprano Saxophone          |
+| 14   | Saxofone Alto            | Alto Saxophone             |
+| 15   | Saxofone Tenor           | Tenor Saxophone            |
+| 16   | Saxofone Barítono        | Baritone Saxophone         |
+| 17   | Saxofone Baixo           | Bass Saxophone             |
+| 18   | Fagote                   | Bassoon                    |
+| 19   | Contrafagote             | Contrabassoon              |
+
+**Metais**
+
+| Pos. | Instrumento (Português)  | Nome em Inglês            |
+| ---- | ------------------------ | ------------------------- |
+| 20   | Trompa (Trompa Francesa) | Horn (French Horn)        |
+| 21   | Trompa Wagneriana        | Wagner Tuba               |
+| 22   | Trompete Piccolo         | Piccolo Trumpet           |
+| 23   | Trompete                 | Trumpet                   |
+| 24   | Trompete Baixo           | Bass Trumpet              |
+| 25   | Cornetim                 | Cornet (B♭)               |
+| 26   | Fliscorno                | Flugelhorn                |
+| 27   | Trombone Alto            | Alto Trombone             |
+| 28   | Trombone (Tenor)         | Trombone                  |
+| 29   | Trombone Baixo           | Bass Trombone             |
+| 30   | Eufônio (Barítono)       | Euphonium / Baritone Horn |
+| 31   | Tuba                     | Tuba                      |
+
+**Percussão**
+
+| Pos. | Instrumento (Português) | Nome em Inglês         |
+| ---- | ----------------------- | ---------------------- |
+| 32   | Tímpanos                | Timpani                |
+| 33   | Caixa Clara             | Snare Drum             |
+| 34   | Bumbo                   | Bass Drum              |
+| 35   | Tom-tom                 | Tom-tom (single drum)  |
+| 36   | Bateria                 | Drum set               |
+| 37   | Bongôs                  | Bongos                 |
+| 38   | Congas                  | Congas                 |
+| 39   | Pratos                  | Cymbals (crash & ride) |
+| 40   | Triângulo               | Triangle               |
+| 41   | Pandeiro                | Tambourine             |
+| 42   | Adufe                   | Tambour (frame drum)   |
+| 43   | Sinos de Mão            | Handbells              |
+| 44   | Sinos de Trenó          | Sleigh bells           |
+| 45   | Castanholas             | Castanets              |
+| 46   | Bloco de Madeira        | Wood block             |
+| 47   | Blocos de Templo        | Temple blocks          |
+| 48   | Maracas                 | Maracas                |
+| 49   | Tam-Tam (Gongo)         | Tam-tam (gong)         |
+| 50   | Crótalos                | Crotales               |
+| 51   | Glockenspiel            | Glockenspiel           |
+| 52   | Xilofone                | Xylophone              |
+| 53   | Marimba                 | Marimba                |
+| 54   | Vibrafone               | Vibraphone             |
+| 55   | Sinos Tubulares         | Tubular bells          |
+
+**Teclados**
+
+| Pos. | Instrumento (Português) | Nome em Inglês |
+| ---- | ----------------------- | -------------- |
+| 56   | Celesta                 | Celesta        |
+| 57   | Piano                   | Piano          |
+| 58   | Cravo                   | Harpsichord    |
+| 59   | Órgão de Tubos          | Pipe organ     |
+| 60   | Acordeão                | Accordion      |
+
+**Harpa**
+
+| Posição | Inglês | Português |
+| ------- | ------ | --------- |
+| 61      | harp   | harpa     |
+
+**Cordas de Arco**
+
+| Posição | Inglês                   | Português   |
+| ------- | ------------------------ | ----------- |
+| 62      | violin                   | violino     |
+| 63      | viola                    | viola       |
+| 64      | cello (violoncello)      | violoncelo  |
+| 65      | double bass / contrabass | contrabaixo |

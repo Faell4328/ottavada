@@ -24,3 +24,5 @@ dist-ssr
 *.sw?
 
 .env
+# Meu script usado para enviar uma mensagem no telegram
+script.bat
