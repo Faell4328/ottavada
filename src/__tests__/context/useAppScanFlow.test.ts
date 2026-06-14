@@ -2,11 +2,10 @@ import { describe, it, expect, vi } from "vitest";
 
 import {
   getScanFailureToastMessage,
-  shouldDispatchRcloneProgressUpdate,
   shouldRunStartupServerScan,
   shouldUseFullCloudSync,
-  // preview path is exercised through the new helper below
 } from "../../context/useAppScanFlow";
+import { shouldDispatchRcloneProgressUpdate } from "../../utils/rcloneProgress";
 
 describe("shouldUseFullCloudSync", () => {
   it("forces a full sync when requested manually", () => {

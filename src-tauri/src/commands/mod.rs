@@ -3,6 +3,7 @@ pub mod category_commands;
 pub mod common;
 pub mod rclone_commands;
 pub mod scan_commands;
+pub mod scan_report;
 pub mod score_commands;
 pub mod settings_commands;
 pub mod song_commands;

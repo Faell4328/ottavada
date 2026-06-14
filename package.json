@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
+    "test:full": "npm run test && cargo test --manifest-path ./src-tauri/Cargo.toml",
     "tauri:build:win:x32": "dotenv -e src-tauri/.env -- tauri build --target i686-pc-windows-msvc && script.bat",
     "tauri:build:win:x64": "dotenv -e src-tauri/.env -- tauri build --target x86_64-pc-windows-msvc && script.bat"
   },

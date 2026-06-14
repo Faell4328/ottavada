@@ -16,8 +16,6 @@ interface UseAppBootstrapParams {
   enabled?: boolean;
 }
 
-let automaticBackupStarted = false;
-
 export function useAppBootstrap({
   state,
   dispatch,
@@ -28,6 +26,7 @@ export function useAppBootstrap({
   enabled = true,
 }: UseAppBootstrapParams) {
   const skipNextAutoSongReloadRef = useRef(false);
+  const automaticBackupStartedRef = useRef(false);
 
   useEffect(() => {
     if (!enabled) {
@@ -54,8 +53,8 @@ export function useAppBootstrap({
             });
           }
 
-          if (!automaticBackupStarted) {
-            automaticBackupStarted = true;
+          if (!automaticBackupStartedRef.current) {
+            automaticBackupStartedRef.current = true;
 
             void (async () => {
               try {

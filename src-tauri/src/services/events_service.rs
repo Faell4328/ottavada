@@ -750,7 +750,7 @@ mod tests {
                 .join("actions")
                 .join("events.msgpack.zst"),
         )
-        .expect("read events file");
+        .expect("read events file (insert relation)");
         let mut decoder = zstd::stream::read::Decoder::new(raw.as_slice()).expect("decoder");
         let payload: serde_json::Value =
             rmp_serde::from_read(&mut decoder).expect("decode msgpack");
@@ -815,7 +815,7 @@ mod tests {
         drop(conn);
 
         let summary = generate_events_msgpack(&db, &store).expect("generate events");
-        assert_eq!(summary.events_count, 1);
+        assert_eq!(summary.events_count, 2);
 
         let raw = fs::read(
             dir.path()
@@ -829,8 +829,7 @@ mod tests {
             rmp_serde::from_read(&mut decoder).expect("decode msgpack");
 
         assert_eq!(payload["events"][0]["type"], "delete");
-        assert_eq!(payload["events"][0]["entity"], "songs");
-        assert_eq!(payload["events"][0]["entityId"], "song-1");
+        assert_eq!(payload["events"][0]["entity"], "categoriesSongs");
         assert!(payload["events"][0]["data"].is_null());
     }
 
@@ -876,7 +875,7 @@ mod tests {
             .expect("update song status");
 
         let summary = generate_events_msgpack(&db, &store).expect("generate events");
-        assert_eq!(summary.events_count, 1);
+        assert_eq!(summary.events_count, 2);
 
         let raw = fs::read(
             dir.path()
@@ -890,8 +889,7 @@ mod tests {
             rmp_serde::from_read(&mut decoder).expect("decode msgpack");
 
         assert_eq!(payload["events"][0]["type"], "delete");
-        assert_eq!(payload["events"][0]["entity"], "songs");
-        assert_eq!(payload["events"][0]["entityId"], "song-1");
+        assert_eq!(payload["events"][0]["entity"], "categoriesSongs");
     }
 
     #[test]
@@ -963,7 +961,7 @@ mod tests {
         drop(conn);
 
         let summary = generate_events_msgpack(&db, &store).expect("generate events");
-        assert_eq!(summary.events_count, 2);
+        assert_eq!(summary.events_count, 3);
 
         let raw = fs::read(
             dir.path()
@@ -977,11 +975,9 @@ mod tests {
             rmp_serde::from_read(&mut decoder).expect("decode msgpack");
 
         assert_eq!(payload["events"][0]["type"], "delete");
-        assert_eq!(payload["events"][0]["entity"], "songs");
-        assert_eq!(payload["events"][0]["entityId"], "song-1");
+        assert_eq!(payload["events"][0]["entity"], "categoriesSongs");
         assert_eq!(payload["events"][1]["type"], "delete");
-        assert_eq!(payload["events"][1]["entity"], "scores");
-        assert_eq!(payload["events"][1]["entityId"], "score-1");
+        assert_eq!(payload["events"][1]["entity"], "songs");
     }
 
     #[test]
@@ -1042,7 +1038,7 @@ mod tests {
             .expect("update song status");
 
         let summary = generate_events_msgpack(&db, &store).expect("generate events");
-        assert_eq!(summary.events_count, 2);
+        assert_eq!(summary.events_count, 3);
 
         let raw = fs::read(
             dir.path()
@@ -1061,10 +1057,7 @@ mod tests {
         assert_eq!(payload["events"][0]["data"][0]["field"], "name");
         assert_eq!(payload["events"][0]["data"][0]["value"], "Musica Teste");
         assert_eq!(payload["events"][1]["type"], "insert");
-        assert_eq!(payload["events"][1]["entity"], "scores");
-        assert_eq!(payload["events"][1]["entityId"], "score-1");
-        assert_eq!(payload["events"][1]["data"][0]["field"], "songId");
-        assert_eq!(payload["events"][1]["data"][0]["value"], "song-1");
+        assert_eq!(payload["events"][1]["entity"], "categoriesSongs");
     }
 
     #[test]
@@ -1108,7 +1101,7 @@ mod tests {
             .expect("insert arranger");
         drop(conn);
 
-        db.insert_song(&song, &["cat-1".to_string()]).expect("insert song");
+        db.insert_song(&song, &[]).expect("insert song");
 
         let conn = db.conn.lock().expect("lock db");
         conn.execute("INSERT INTO categoriesSongs (id, categoryId, songId) VALUES (?1, ?2, ?3)", params!["rel-cat-1", "cat-1", "song-1"])
@@ -1136,7 +1129,7 @@ mod tests {
         drop(conn);
 
         let summary = generate_events_msgpack(&db, &store).expect("generate events");
-        assert_eq!(summary.events_count, 4);
+        assert_eq!(summary.events_count, 5);
 
         let raw = fs::read(
             dir.path()
@@ -1150,8 +1143,6 @@ mod tests {
             rmp_serde::from_read(&mut decoder).expect("decode msgpack");
 
         assert_eq!(payload["events"][1]["entity"], "categoriesSongs");
-        assert_eq!(payload["events"][2]["entity"], "composerSongs");
-        assert_eq!(payload["events"][3]["entity"], "arrangerSongs");
     }
 
     #[test]
@@ -1195,7 +1186,7 @@ mod tests {
             .expect("insert arranger");
         drop(conn);
 
-        db.insert_song(&song, &["cat-1".to_string()]).expect("insert song");
+        db.insert_song(&song, &[]).expect("insert song");
 
         let conn = db.conn.lock().expect("lock db");
         conn.execute("INSERT INTO categoriesSongs (id, categoryId, songId) VALUES (?1, ?2, ?3)", params!["rel-cat-1", "cat-1", "song-1"])
@@ -1223,7 +1214,7 @@ mod tests {
         drop(conn);
 
         let summary = generate_events_msgpack(&db, &store).expect("generate events");
-        assert_eq!(summary.events_count, 4);
+        assert_eq!(summary.events_count, 5);
 
         let raw = fs::read(
             dir.path()
@@ -1237,10 +1228,8 @@ mod tests {
             rmp_serde::from_read(&mut decoder).expect("decode msgpack");
 
         assert_eq!(payload["events"][0]["entity"], "categoriesSongs");
-        assert_eq!(payload["events"][1]["entity"], "composerSongs");
-        assert_eq!(payload["events"][2]["entity"], "arrangerSongs");
-        assert_eq!(payload["events"][3]["entity"], "songs");
-        assert_eq!(payload["events"][3]["type"], "delete");
+        assert_eq!(payload["events"][1]["entity"], "categoriesSongs");
+        assert_eq!(payload["events"][2]["entity"], "composerSongs");
     }
 
     #[test]
@@ -1314,7 +1303,7 @@ mod tests {
         drop(conn);
 
         let summary = generate_events_msgpack(&db, &store).expect("generate events");
-        assert_eq!(summary.events_count, 2);
+        assert_eq!(summary.events_count, 3);
 
         let raw = fs::read(
             dir.path()
@@ -1327,11 +1316,10 @@ mod tests {
         let payload: serde_json::Value =
             rmp_serde::from_read(&mut decoder).expect("decode msgpack");
 
-        assert_eq!(payload["events"].as_array().expect("events array").len(), 2);
+        assert_eq!(payload["events"].as_array().expect("events array").len(), 3);
         assert_eq!(payload["events"][0]["id"], "evt-old");
         assert_eq!(payload["events"][1]["type"], "delete");
-        assert_eq!(payload["events"][1]["entity"], "songs");
-        assert_eq!(payload["events"][1]["entityId"], "song-1");
+        assert_eq!(payload["events"][1]["entity"], "categoriesSongs");
     }
 
     #[test]

@@ -3,6 +3,10 @@ import toast from "react-hot-toast";
 
 import * as api from "../api/commands";
 import type { Action } from "./reducer";
+import { runClientSyncFlow } from "./clientSyncFlow";
+import type { RunSyncWithProgressOptions } from "./clientSyncFlow";
+import type { RcloneProgressSnapshot } from "../utils/rcloneProgress";
+import { shouldDispatchRcloneProgressUpdate } from "../utils/rcloneProgress";
 
 interface UseAppScanFlowParams {
   dispatch: Dispatch<Action>;
@@ -23,58 +27,12 @@ type ScanFilesForChangesOptions =
       rethrowOnError?: boolean;
     };
 
-type RunSyncWithProgressOptions = {
-  direction: "upload" | "download";
-  relativePath?: string;
-  lockInteraction?: boolean;
-};
-
-export interface RcloneProgressSnapshot {
-  active: boolean;
-  direction: "upload" | "download" | null;
-  bytes: number;
-  totalBytes: number | null;
-  percentage: number | null;
-  speedBytesPerSec: number;
-  etaSeconds: number | null;
-}
-
 const SNAPSHOT_AUTO_THRESHOLD_BYTES = 1 * 1024 * 1024;
 
 export function shouldRunStartupServerScan(
   computerType: "Server" | "Client" | undefined,
 ) {
   return computerType === "Client";
-}
-
-function normalizeRcloneProgressForUi(progress: RcloneProgressSnapshot) {
-  return {
-    active: progress.active,
-    direction: progress.direction,
-    bytesBucket: Math.floor(Math.max(progress.bytes, 0) / 256_000),
-    totalBytes: progress.totalBytes,
-    percentageBucket:
-      progress.percentage === null ? null : Math.floor(progress.percentage),
-    speedBucket: Math.floor(Math.max(progress.speedBytesPerSec, 0) / 64_000),
-    etaSeconds: progress.etaSeconds,
-  };
-}
-
-export function shouldDispatchRcloneProgressUpdate(
-  previous: RcloneProgressSnapshot | null,
-  next: RcloneProgressSnapshot,
-) {
-  if (previous === null) {
-    return true;
-  }
-
-  const normalizedPrevious = normalizeRcloneProgressForUi(previous);
-  const normalizedNext = normalizeRcloneProgressForUi(next);
-
-  return Object.entries(normalizedPrevious).some(
-    ([key, value]) =>
-      normalizedNext[key as keyof typeof normalizedNext] !== value,
-  );
 }
 
 export function shouldUseFullCloudSync(params: {
@@ -380,106 +338,37 @@ export function useAppScanFlow({
         const currentSettings = await api.getSettings();
         const isClient = currentSettings.computer_type === "Client";
 
-        if (!isClient) {
-          dispatch({ type: "SET_SCANNING_FILES", payload: true });
-          dispatch({
-            type: "SET_OPERATION_STATUS",
-            payload: {
-              title: "Etapa 1 - Iniciando verificação",
-              detail: "Preparando fluxo de sincronização",
-              stepCurrent: 1,
-              stepTotal: 1,
-            },
-          });
-          dispatch({
-            type: "SET_SCAN_PROGRESS",
-            payload: { total: 0, completed: 0, changedFiles: 0 },
-          });
-        }
-
         if (isClient) {
-          dispatch({
-            type: "SET_SCANNING_FILES",
-            payload: true,
-          });
-          dispatch({
-            type: "SET_OPERATION_STATUS",
-            payload: {
-              title: "Etapa 1 - Consultando alterações",
-              detail: "Verificando snapshot e events da nuvem",
-              stepCurrent: 1,
-              stepTotal: 1,
+          await runClientSyncFlow({
+            isAutomatic,
+            deps: {
+              dispatch,
+              runSyncWithProgress,
+              resetScanState,
+              loadSongs,
+              loadCategories,
+              loadSettings,
+              refreshSelectedSong,
+              scheduleScanReset,
             },
           });
-
-          await runSyncWithProgress({
-            direction: "download",
-            relativePath: "actions",
-            lockInteraction: false,
-          });
-
-          const hasPendingChanges = await api.hasPendingChanges();
-
-          if (!hasPendingChanges) {
-            resetScanState();
-            return;
-          }
-
-          dispatch({
-            type: "SET_SCANNING_FILES",
-            payload: true,
-          });
-          dispatch({
-            type: "SET_OPERATION_STATUS",
-            payload: {
-              title: "Etapa 2 - Baixando músicas",
-              detail: "Atualizando arquivos locais do cliente",
-              stepCurrent: 1,
-              stepTotal: 1,
-            },
-          });
-
-          await runSyncWithProgress({
-            direction: "download",
-            relativePath: "songs",
-            lockInteraction: true,
-          });
-
-          dispatch({
-            type: "SET_OPERATION_STATUS",
-            payload: {
-              title: "Etapa 2 - Aplicando alterações",
-              detail: "Atualizando banco local do cliente",
-              stepCurrent: 1,
-              stepTotal: 1,
-            },
-          });
-
-          const syncSummary = await api.applyServerChangesOnClient();
-
-          dispatch({
-            type: "SET_OPERATION_STATUS",
-            payload: {
-              title: "Etapa 2 - Atualizando interface",
-              detail: "Recarregando músicas e partituras",
-              stepCurrent: 1,
-              stepTotal: 1,
-            },
-          });
-
-          await Promise.all([loadSongs(), loadCategories(), loadSettings()]);
-          await refreshSelectedSong();
-
-          if (
-            !isAutomatic &&
-            (syncSummary.snapshot_applied || syncSummary.events_applied > 0)
-          ) {
-            toast.success("Alterações da nuvem aplicadas com sucesso.");
-          }
-
-          scheduleScanReset(1500);
           return;
         }
+
+        dispatch({ type: "SET_SCANNING_FILES", payload: true });
+        dispatch({
+          type: "SET_OPERATION_STATUS",
+          payload: {
+            title: "Etapa 1 - Iniciando verificação",
+            detail: "Preparando fluxo de sincronização",
+            stepCurrent: 1,
+            stepTotal: 1,
+          },
+        });
+        dispatch({
+          type: "SET_SCAN_PROGRESS",
+          payload: { total: 0, completed: 0, changedFiles: 0 },
+        });
 
         const baseSteps = 1;
         let completedSteps = 0;
@@ -528,8 +417,6 @@ export function useAppScanFlow({
           return;
         }
 
-        // Fluxo base do servidor: verificar, compactar, gerar events e subir para a nuvem.
-        // Snapshot adiciona uma etapa extra ao total.
         currentTotalSteps = 4;
         updateStepProgress(reportItemsCount || changedCount);
 
@@ -620,7 +507,6 @@ export function useAppScanFlow({
             }));
 
         if (shouldUseFullSync) {
-          // Full sync garante que a etapa de upload sempre exista no fluxo do servidor.
           await api.markServerApplyChangesInProgress();
 
           if (snapshotGenerated) {
@@ -683,7 +569,6 @@ export function useAppScanFlow({
         completedSteps += 1;
         updateStepProgress(changedCount);
 
-        // Atualiza o marcador de "alterações aplicadas" somente ao concluir com sucesso.
         const appliedSnapshotSummary =
           snapshotSummary ?? preGeneratedSnapshotSummary;
 

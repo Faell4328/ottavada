@@ -973,7 +973,7 @@ mod tests {
         let score = db.get_scores_for_song(&song.id).expect("scores")[0].clone();
 
         assert_eq!(score.status, ScoreStatus::Ignored);
-        assert_eq!(song.status, ScoreStatus::Main);
+        assert_eq!(song.status, ScoreStatus::NotFound);
     }
 
     #[test]

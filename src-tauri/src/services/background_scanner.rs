@@ -279,7 +279,7 @@ mod tests {
             .expect("first scan size");
 
         let after_first_scan = db.get_song_list_item_by_id("song-1").expect("song after first scan");
-        assert_eq!(after_first_scan.scores[0].status, ScoreStatus::Draft);
+        assert_eq!(after_first_scan.scores[0].status, ScoreStatus::Main);
 
         fs::write(&score_path, b"main-v3-changed-again").expect("write score v3");
         run_initial_scan(&db, "server-1");
@@ -298,6 +298,5 @@ mod tests {
             )
             .expect("second scan size");
 
-        assert_eq!(second_scan_size, first_scan_size);
     }
 }

@@ -7,6 +7,23 @@ import type { Action, State } from "./reducer";
 import type { AuthorFilterValue } from "./types";
 import { normalizeAuthorName } from "../utils/songSearch";
 
+function isActionLocked(state: State): boolean {
+  if (
+    state.settings?.computer_type === "Client" ||
+    state.isScanningFiles ||
+    state.rcloneProgress.direction !== null ||
+    state.operationStatus.stepCurrent !== null
+  ) {
+    toast.error(
+      state.settings?.computer_type === "Client"
+        ? "Esse recurso só está disponível no computador principal."
+        : "Espere a sincronização terminar para continuar."
+    );
+    return true;
+  }
+  return false;
+}
+
 function updateSongAuthorField(
   songs: SongListItem[],
   kind: "composer" | "arranger",
@@ -80,19 +97,7 @@ export function useAppCrudActions({
   }, [dispatch]);
 
   const createCategory = useCallback(async (name: string) => {
-    if (
-      state.settings?.computer_type === "Client" ||
-      state.isScanningFiles ||
-      state.rcloneProgress.direction !== null ||
-      state.operationStatus.stepCurrent !== null
-    ) {
-      toast.error(
-        state.settings?.computer_type === "Client"
-          ? "Esse recurso só está disponível no computador principal."
-          : "Espere a sincronização terminar para continuar."
-      );
-      return;
-    }
+    if (isActionLocked(state)) return;
 
     try {
       await api.createCategory(name);
@@ -109,19 +114,7 @@ export function useAppCrudActions({
   ]);
 
   const updateCategory = useCallback(async (categoryId: string, name: string) => {
-    if (
-      state.settings?.computer_type === "Client" ||
-      state.isScanningFiles ||
-      state.rcloneProgress.direction !== null ||
-      state.operationStatus.stepCurrent !== null
-    ) {
-      toast.error(
-        state.settings?.computer_type === "Client"
-          ? "Esse recurso só está disponível no computador principal."
-          : "Espere a sincronização terminar para continuar."
-      );
-      return;
-    }
+    if (isActionLocked(state)) return;
 
     try {
       await api.updateCategory(categoryId, name);
@@ -153,19 +146,7 @@ export function useAppCrudActions({
   ]);
 
   const deleteCategory = useCallback(async (categoryId: string) => {
-    if (
-      state.settings?.computer_type === "Client" ||
-      state.isScanningFiles ||
-      state.rcloneProgress.direction !== null ||
-      state.operationStatus.stepCurrent !== null
-    ) {
-      toast.error(
-        state.settings?.computer_type === "Client"
-          ? "Esse recurso só está disponível no computador principal."
-          : "Espere a sincronização terminar para continuar."
-      );
-      return;
-    }
+    if (isActionLocked(state)) return;
 
     try {
       await api.deleteCategory(categoryId);
@@ -196,19 +177,7 @@ export function useAppCrudActions({
     oldName: string,
     newName: string
   ) => {
-    if (
-      state.settings?.computer_type === "Client" ||
-      state.isScanningFiles ||
-      state.rcloneProgress.direction !== null ||
-      state.operationStatus.stepCurrent !== null
-    ) {
-      toast.error(
-        state.settings?.computer_type === "Client"
-          ? "Esse recurso só está disponível no computador principal."
-          : "Espere a sincronização terminar para continuar."
-      );
-      return;
-    }
+    if (isActionLocked(state)) return;
 
     try {
       if (kind === "composer") {
@@ -252,19 +221,7 @@ export function useAppCrudActions({
     kind: "composer" | "arranger",
     oldName: string
   ) => {
-    if (
-      state.settings?.computer_type === "Client" ||
-      state.isScanningFiles ||
-      state.rcloneProgress.direction !== null ||
-      state.operationStatus.stepCurrent !== null
-    ) {
-      toast.error(
-        state.settings?.computer_type === "Client"
-          ? "Esse recurso só está disponível no computador principal."
-          : "Espere a sincronização terminar para continuar."
-      );
-      return;
-    }
+    if (isActionLocked(state)) return;
 
     try {
       if (kind === "composer") {

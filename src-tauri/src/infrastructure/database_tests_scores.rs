@@ -43,15 +43,6 @@ mod tests {
         }
     }
 
-    fn make_category(id: &str, name: &str) -> Category {
-        Category {
-            id: id.to_string(),
-            name: name.to_string(),
-            updated_at: now(),
-            updated_by: "test-computer".to_string(),
-        }
-    }
-
     fn count_changed_field_for_entity(db: &Database, entity: &str) -> i64 {
         let conn = db.conn.lock().unwrap();
         conn.query_row(
@@ -60,312 +51,6 @@ mod tests {
             |row| row.get(0),
         )
         .unwrap()
-    }
-
-    #[test]
-    fn records_telemetry_errors_in_the_local_queue() {
-        let db = make_db();
-
-        db.record_telemetry_error("server-1", "Falha ao enviar telemetria", 1_710_684_000)
-            .expect("record telemetry error");
-
-        let errors = db.list_telemetry_errors().expect("list telemetry errors");
-        assert_eq!(errors.len(), 1);
-        assert_eq!(errors[0].id.len(), 36);
-        assert_eq!(errors[0].message, "Falha ao enviar telemetria");
-        assert_eq!(errors[0].timestamp, 1_710_684_000);
-    }
-
-    #[test]
-    fn telemetry_summary_counts_are_zero_for_an_empty_database() {
-        let db = make_db();
-
-        let counts = db.get_telemetry_summary_counts().expect("telemetry counts");
-
-        assert_eq!(counts.music_count, 0);
-        assert_eq!(counts.music_main, 0);
-        assert_eq!(counts.music_draft, 0);
-        assert_eq!(counts.scores_count, 0);
-        assert_eq!(counts.scores_main, 0);
-        assert_eq!(counts.scores_draft, 0);
-    }
-
-    // ── Paths ──
-
-    #[test]
-    fn test_split_file_path() {
-        let (file_path, file_name) =
-            crate::services::indexer::split_file_path("/home/user/music/Canon.musx");
-        assert_eq!(file_path, "/home/user/music");
-        assert_eq!(file_name, "Canon.musx");
-    }
-
-    // ── Song CRUD ──
-
-    #[test]
-    fn test_insert_and_get_all_songs() {
-        let db = make_db();
-        db.insert_song(&make_song("s1", "Canon in D"), &[]).unwrap();
-        db.insert_song(&make_song("s2", "Moonlight Sonata"), &[])
-            .unwrap();
-
-        let songs = db.get_all_songs().unwrap();
-        assert_eq!(songs.len(), 2);
-    }
-
-    #[test]
-    fn test_get_all_songs_empty() {
-        let db = make_db();
-        let songs = db.get_all_songs().unwrap();
-        assert!(songs.is_empty());
-    }
-
-    #[test]
-    fn test_get_all_songs_returns_alphabetical_order_case_insensitive() {
-        let db = make_db();
-        db.insert_song(&make_song("s1", "zeta"), &[]).unwrap();
-        db.insert_song(&make_song("s2", "Alpha"), &[]).unwrap();
-        db.insert_song(&make_song("s3", "beta"), &[]).unwrap();
-
-        let songs = db.get_all_songs().unwrap();
-        let names: Vec<&str> = songs.iter().map(|song| song.name.as_str()).collect();
-
-        assert_eq!(names, vec!["Alpha", "beta", "zeta"]);
-    }
-
-    #[test]
-    fn test_get_song_by_id() {
-        let db = make_db();
-        db.insert_song(&make_song("s1", "Canon in D"), &[]).unwrap();
-
-        let song = db.get_song_by_id("s1").unwrap();
-        assert_eq!(song.name, "Canon in D");
-        assert_eq!(song.composer, Some("Bach".to_string()));
-    }
-
-    #[test]
-    fn test_get_song_by_id_missing() {
-        let db = make_db();
-        let result = db.get_song_by_id("nonexistent");
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_get_song_list_item_by_id() {
-        let db = make_db();
-        let cat = make_category("c1", "Hinos");
-        db.insert_category(&cat).unwrap();
-        db.insert_song(&make_song("s1", "Canon"), &["c1".to_string()])
-            .unwrap();
-        db.insert_score(&make_score(&db, "sc1", "s1", Some("Violino")))
-            .unwrap();
-
-        let item = db.get_song_list_item_by_id("s1").unwrap();
-        assert_eq!(item.name, "Canon");
-        assert_eq!(item.scores.len(), 1);
-        assert_eq!(item.category_ids.len(), 1);
-    }
-
-    #[test]
-    fn test_get_song_list_item_by_id_missing() {
-        let db = make_db();
-        let result = db.get_song_list_item_by_id("nonexistent");
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_toggle_favorite() {
-        let db = make_db();
-        db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
-
-        let fav = db.toggle_favorite("s1").unwrap();
-        assert!(fav);
-
-        let fav = db.toggle_favorite("s1").unwrap();
-        assert!(!fav);
-    }
-
-    #[test]
-    fn test_get_favorited_songs() {
-        let db = make_db();
-        db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
-        db.insert_song(&make_song("s2", "Moonlight"), &[]).unwrap();
-        db.toggle_favorite("s1").unwrap();
-
-        let favs = db.get_favorited_songs().unwrap();
-        assert_eq!(favs.len(), 1);
-        assert_eq!(favs[0].id, "s1");
-    }
-
-    #[test]
-    fn test_update_song() {
-        let db = make_db();
-        db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
-
-        let mut updated = make_song("s1", "Canon in D Major");
-        updated.composer = Some("Pachelbel".to_string());
-        db.update_song(&updated, &[]).unwrap();
-
-        let song = db.get_song_by_id("s1").unwrap();
-        assert_eq!(song.name, "Canon in D Major");
-        assert_eq!(song.composer, Some("Pachelbel".to_string()));
-    }
-
-    #[test]
-    fn test_update_song_categories() {
-        let db = make_db();
-        let cat1 = make_category("c1", "Hinos");
-        let cat2 = make_category("c2", "Clássicas");
-        db.insert_category(&cat1).unwrap();
-        db.insert_category(&cat2).unwrap();
-
-        db.insert_song(&make_song("s1", "Canon"), &["c1".to_string()])
-            .unwrap();
-
-        let songs = db.get_all_songs().unwrap();
-        assert_eq!(songs[0].category_ids.len(), 1);
-
-        let song = make_song("s1", "Canon");
-        db.update_song(&song, &["c1".to_string(), "c2".to_string()])
-            .unwrap();
-
-        let songs = db.get_all_songs().unwrap();
-        assert_eq!(songs[0].category_ids.len(), 2);
-
-        let song_events = count_changed_field_for_entity(&db, "songs");
-        let relation_events = count_changed_field_for_entity(&db, "categoriesSongs");
-        assert!(song_events > 0);
-        assert!(relation_events > 0);
-    }
-
-    #[test]
-    fn test_insert_song_category_ids_are_trimmed_deduplicated_and_blank_filtered() {
-        let db = make_db();
-        db.insert_category(&make_category("c1", "Hinos")).unwrap();
-        db.insert_category(&make_category("c2", "Clássicas"))
-            .unwrap();
-
-        let relation_events_before = count_changed_field_for_entity(&db, "categoriesSongs");
-        db.insert_song(
-            &make_song("s1", "Canon"),
-            &[
-                "c1".to_string(),
-                " c1 ".to_string(),
-                "c2".to_string(),
-                "c2".to_string(),
-                "   ".to_string(),
-            ],
-        )
-        .unwrap();
-
-        let song = db.get_song_list_item_by_id("s1").unwrap();
-        assert_eq!(song.category_ids, vec!["c1".to_string(), "c2".to_string()]);
-
-        let relation_events_after = count_changed_field_for_entity(&db, "categoriesSongs");
-        assert_eq!(relation_events_after - relation_events_before, 4);
-    }
-
-    #[test]
-    fn test_insert_song_uses_default_category_when_only_blank_categories_are_sent() {
-        let db = make_db();
-
-        db.insert_song(
-            &make_song("s1", "Canon"),
-            &["".to_string(), "   ".to_string()],
-        )
-        .unwrap();
-
-        let song = db.get_song_list_item_by_id("s1").unwrap();
-        assert_eq!(song.category_ids, vec!["default-category".to_string()]);
-    }
-
-    #[test]
-    fn test_update_song_removes_default_category_when_a_real_category_is_selected() {
-        let db = make_db();
-
-        let cat = make_category("c1", "Hinos");
-        db.insert_category(&cat).unwrap();
-
-        db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
-
-        db.update_song(
-            &make_song("s1", "Canon"),
-            &["default-category".to_string(), "c1".to_string()],
-        )
-        .unwrap();
-
-        let song = db.get_song_list_item_by_id("s1").unwrap();
-        assert_eq!(song.category_ids, vec!["c1".to_string()]);
-    }
-
-    #[test]
-    fn test_update_song_category_ids_are_deduplicated_for_changed_field_generation() {
-        let db = make_db();
-        db.insert_category(&make_category("c1", "Hinos")).unwrap();
-        db.insert_category(&make_category("c2", "Clássicas"))
-            .unwrap();
-        db.insert_song(&make_song("s1", "Canon"), &["c1".to_string()])
-            .unwrap();
-
-        let relation_events_before = count_changed_field_for_entity(&db, "categoriesSongs");
-        db.update_song(
-            &make_song("s1", "Canon"),
-            &[
-                "c1".to_string(),
-                "c1".to_string(),
-                "c2".to_string(),
-                " c2 ".to_string(),
-                "".to_string(),
-            ],
-        )
-        .unwrap();
-
-        let song = db.get_song_list_item_by_id("s1").unwrap();
-        assert_eq!(song.category_ids, vec!["c1".to_string(), "c2".to_string()]);
-
-        let relation_events_after = count_changed_field_for_entity(&db, "categoriesSongs");
-        assert_eq!(relation_events_after - relation_events_before, 2);
-    }
-
-    // ── Search ──
-
-    #[test]
-    fn test_search_songs() {
-        let db = make_db();
-        db.insert_song(&make_song("s1", "Canon in D"), &[]).unwrap();
-        db.insert_song(&make_song("s2", "Moonlight Sonata"), &[])
-            .unwrap();
-
-        let results = db.search_songs("Canon").unwrap();
-        assert_eq!(results.len(), 1);
-        assert_eq!(results[0].name, "Canon in D");
-    }
-
-    #[test]
-    fn test_search_songs_prefix() {
-        let db = make_db();
-        db.insert_song(&make_song("s1", "Canon in D"), &[]).unwrap();
-
-        let results = db.search_songs("Can").unwrap();
-        assert_eq!(results.len(), 1);
-    }
-
-    #[test]
-    fn test_search_songs_no_results() {
-        let db = make_db();
-        db.insert_song(&make_song("s1", "Canon in D"), &[]).unwrap();
-
-        let results = db.search_songs("Beethoven").unwrap();
-        assert!(results.is_empty());
-    }
-
-    #[test]
-    fn test_search_by_composer() {
-        let db = make_db();
-        db.insert_song(&make_song("s1", "Canon in D"), &[]).unwrap();
-
-        let results = db.search_songs("Bach").unwrap();
-        assert_eq!(results.len(), 1);
     }
 
     // ── Scores ──
@@ -998,9 +683,9 @@ mod tests {
         assert_eq!(song_status, ScoreStatus::NotFound.as_str());
     }
 
-    #[test]
     // ── Score Metadata for Scanning ──
 
+    #[test]
     fn test_get_all_scores_with_metadata() {
         let db = make_db();
         db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
@@ -1012,7 +697,6 @@ mod tests {
         let metadata = db.get_all_scores_with_metadata().unwrap();
         assert_eq!(metadata.len(), 2);
 
-        // Cada entrada tem (id, file_path, file_size, file_modified_at)
         for (id, path, size, _) in &metadata {
             assert!(!id.is_empty());
             assert!(!path.is_empty());
@@ -1099,7 +783,7 @@ mod tests {
             name: Some("Piano".to_string()),
             host_id: "test-computer".to_string(),
             file_path: dir_id,
-            file_name: "Canon.pdf".to_string(), // Mesmo arquivo no mesmo diretório
+            file_name: "Canon.pdf".to_string(),
             file_size: 1024,
             file_modified_at: now(),
             updated_at: now(),
@@ -1109,7 +793,7 @@ mod tests {
 
         db.insert_score(&score1).unwrap();
         let result = db.insert_score(&score2);
-        assert!(result.is_err()); // UNIQUE constraint violated
+        assert!(result.is_err());
     }
 
     #[test]
@@ -1140,7 +824,7 @@ mod tests {
             name: Some("Violino v2".to_string()),
             host_id: "test-computer".to_string(),
             file_path: dir2,
-            file_name: "Canon.pdf".to_string(), // Mesmo nome, diretório diferente - OK
+            file_name: "Canon.pdf".to_string(),
             file_size: 2048,
             file_modified_at: now(),
             updated_at: now(),
@@ -1149,187 +833,10 @@ mod tests {
         };
 
         db.insert_score(&score1).unwrap();
-        db.insert_score(&score2).unwrap(); // Deve funcionar
+        db.insert_score(&score2).unwrap();
 
         let songs = db.get_all_songs().unwrap();
         assert_eq!(songs[0].scores.len(), 2);
-    }
-
-    // ── Categories ──
-
-    #[test]
-    fn test_category_crud() {
-        let db = make_db();
-        let cat = make_category("c1", "Harpa Cristã");
-        let cat2 = make_category("c2", "Acordes");
-        db.insert_category(&cat).unwrap();
-        db.insert_category(&cat2).unwrap();
-
-        let categories = db.get_all_categories().unwrap();
-        assert_eq!(categories.len(), 3);
-        assert_eq!(categories[0].id, "default-category");
-        assert_eq!(categories[0].name, "Sem categoria");
-        assert_eq!(categories[1].name, "Acordes");
-        assert_eq!(categories[2].name, "Harpa Cristã");
-
-        db.delete_category("c1").unwrap();
-        db.delete_category("c2").unwrap();
-        let categories = db.get_all_categories().unwrap();
-        assert_eq!(categories.len(), 1);
-        assert_eq!(categories[0].id, "default-category");
-        assert_eq!(categories[0].name, "Sem categoria");
-    }
-
-    #[test]
-    fn test_update_category_renames_category() {
-        let db = make_db();
-        let cat = make_category("c1", "Harpa Cristã");
-        db.insert_category(&cat).unwrap();
-
-        db.update_category("c1", "Coral").unwrap();
-
-        let categories = db.get_all_categories().unwrap();
-        assert!(categories.iter().any(|c| c.id == "c1" && c.name == "Coral"));
-
-        let conn = db.conn.lock().unwrap();
-        let change_count: i64 = conn
-            .query_row(
-                "SELECT COUNT(*) FROM changedField WHERE entity = 'categories' AND entityId = ?1 AND field = 'name' AND value = 'Coral'",
-                ["c1"],
-                |row| row.get(0),
-            )
-            .unwrap();
-        assert_eq!(change_count, 1);
-    }
-
-    #[test]
-    fn test_update_default_category_is_rejected() {
-        let db = make_db();
-
-        let result = db.update_category("default-category", "Outra");
-
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_update_composer_renames_matching_songs() {
-        let db = make_db();
-        db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
-        db.insert_song(&make_song("s2", "Ave Maria"), &[]).unwrap();
-
-        db.update_composer("Bach", "Pachelbel").unwrap();
-
-        let songs = db.get_all_songs().unwrap();
-        assert!(songs
-            .iter()
-            .all(|song| song.composer.as_deref() == Some("Pachelbel")));
-    }
-
-    #[test]
-    fn test_delete_composer_clears_matching_songs() {
-        let db = make_db();
-        db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
-        db.insert_song(&make_song("s2", "Ave Maria"), &[]).unwrap();
-
-        db.delete_composer("Bach").unwrap();
-
-        let songs = db.get_all_songs().unwrap();
-        assert!(songs.iter().all(|song| song.composer.is_none()));
-    }
-
-    #[test]
-    fn test_update_arranger_renames_matching_songs() {
-        let db = make_db();
-
-        let mut song1 = make_song("s1", "Canon");
-        song1.arranger = Some("Ana".to_string());
-        let mut song2 = make_song("s2", "Ave Maria");
-        song2.arranger = Some("Ana".to_string());
-
-        db.insert_song(&song1, &[]).unwrap();
-        db.insert_song(&song2, &[]).unwrap();
-
-        db.update_arranger("Ana", "Bruno").unwrap();
-
-        let songs = db.get_all_songs().unwrap();
-        assert!(songs
-            .iter()
-            .all(|song| song.arranger.as_deref() == Some("Bruno")));
-    }
-
-    #[test]
-    fn test_delete_arranger_clears_matching_songs() {
-        let db = make_db();
-
-        let mut song1 = make_song("s1", "Canon");
-        song1.arranger = Some("Ana".to_string());
-        let mut song2 = make_song("s2", "Ave Maria");
-        song2.arranger = Some("Ana".to_string());
-
-        db.insert_song(&song1, &[]).unwrap();
-        db.insert_song(&song2, &[]).unwrap();
-
-        db.delete_arranger("Ana").unwrap();
-
-        let songs = db.get_all_songs().unwrap();
-        assert!(songs.iter().all(|song| song.arranger.is_none()));
-    }
-
-    #[test]
-    fn test_songs_by_category() {
-        let db = make_db();
-
-        let cat = make_category("c1", "Hinos");
-        db.insert_category(&cat).unwrap();
-
-        db.insert_song(&make_song("s1", "Canon"), &["c1".to_string()])
-            .unwrap();
-        db.insert_song(&make_song("s2", "Moonlight"), &[]).unwrap();
-
-        let songs = db.get_songs_by_category("c1").unwrap();
-        assert_eq!(songs.len(), 1);
-        assert_eq!(songs[0].name, "Canon");
-    }
-
-    #[test]
-    fn test_song_multiple_categories() {
-        let db = make_db();
-
-        let cat1 = make_category("c1", "Hinos");
-        let cat2 = make_category("c2", "Clássicas");
-        db.insert_category(&cat1).unwrap();
-        db.insert_category(&cat2).unwrap();
-
-        db.insert_song(
-            &make_song("s1", "Canon"),
-            &["c1".to_string(), "c2".to_string()],
-        )
-        .unwrap();
-
-        let songs = db.get_all_songs().unwrap();
-        assert_eq!(songs[0].category_ids.len(), 2);
-
-        let by_c1 = db.get_songs_by_category("c1").unwrap();
-        assert_eq!(by_c1.len(), 1);
-
-        let by_c2 = db.get_songs_by_category("c2").unwrap();
-        assert_eq!(by_c2.len(), 1);
-    }
-
-    #[test]
-    fn test_category_delete_removes_relationship() {
-        let db = make_db();
-
-        let cat = make_category("c1", "Hinos");
-        db.insert_category(&cat).unwrap();
-
-        db.insert_song(&make_song("s1", "Canon"), &["c1".to_string()])
-            .unwrap();
-        db.delete_category("c1").unwrap();
-
-        let songs = db.get_all_songs().unwrap();
-        assert_eq!(songs.len(), 1);
-        assert!(songs[0].category_ids.is_empty());
     }
 
     // ── Songs with Drafts ──
@@ -1361,7 +868,6 @@ mod tests {
         db.insert_score(&make_score(&db, "sc1", "s1", Some("Violino")))
             .unwrap();
 
-        // Deletar a música diretamente via SQL
         {
             let conn = db.conn.lock().unwrap();
             conn.execute("DELETE FROM songs WHERE id = 's1'", [])

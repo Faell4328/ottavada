@@ -27,17 +27,29 @@ Solução:
 **21-03-2026** - Problema com Google Drive.
 
 - Quebrei a cabeça ontem e hoje tentando fazer um simples update.
+
 - Então cheguei a três possibilidades:
+  
   1. Utilizar python de fundo com SKD.
+  
   - Tem os seguintes problemas:
+    
     1. Teria que ter python instalado no computador.
+    
     2. Teria que dar manutenção (atualização e ajuste no código).
+  
   1. Utilizar outro provedor de nuvem, pCloud.
+  
   - Tem os seguinte problemas:
+    
     1. Não é tão robusto e confiável como o Google Drive (padrão do mercado).
+    
     2. Nunca utilize e não faço ideia como funciona. Aparenta ser mais simples.
+  
   1. Utilizar rclone para tomar conta.
+  
   - Tem o seguinte problema:
+    
     1. Precisa ter o rclone instalado e manter atualizado.
        ! Minha escolha foi utilizar o rclone, devido a ter que fazer menos manutenção no código, é só simplesmente atualizar ele e pronto.
        ! Mas, caso eu veja que vai dar muita dor de cabeça, posso utilizar o rclone com pCloud (ou via API direto no código). Agora, minha decisão é o Google Drive, mas estarei estudando e testando o pCloud em paralelo.
@@ -229,3 +241,13 @@ Mudanças:
 - Utilizar metadados do sistema.
 
 - Maior personalização do software.
+
+**14/06/2026** - Dificuldade para identificar falsa alteração em arquivos músicas
+
+Estou estudando forma de identificar falsas alterações, principalmente em Finale, já que ele tem o problema crônico de sugerir salvar, mesmo que não tenha alterado nada no arquivo. Mas está sendo um verdadeiro desafio, já que cada versão do Finale tem uma forma de salvar os dados, então um arquivo do `.mus` salvo em um Finale 11, for aberto e salvo (mesmo sem alteração na partitura) o hash do arquivo será alterado. Também tem esse problema com `.musx`, mesmo convertendo para `.zip`, descompactado e verificando o `score.dat`. Esse problema não é exclusivo do Finale.
+
+Minha ideia de evitar falso positivo é evitar dor de cabeça para o usuário, uma partitura válida, por ficar `draft` e não ser enviada para o cliente, deixando o usuário na mão (já que partituras que são alterada é alterado para `draft` e não são enviadas para o cliente). 
+
+Eu cheguei a adicionar essa função no **Score Maestro**, sempre que uma partitura for alterada (data e hora de última alteração), verificar o hash do arquivo para realmente ver se foi alterado. Mas simplesmente isso não resolve, preciso encontrar outra forma simples para evitar isso, não pretendo manter hash e ter que tratar cada arquivo música, ex: `.musx` converter para `.zip` para depois verificar o hash do `score.dat`, para ter chance de mesmo assim dar problema e o mesmo processo ou similar para as outras extensões. Então, prefiro manter a simplicidade do aplicativo, verificando apenas alteração de data/hora de última alteração e tamanho do arquivo.
+
+A solução será deixar o modal de revisão de alteração mais organizado e inteligente: podendo marcar e desmarcar, efetivando apenas quando o usuário clicar em "confirmar".

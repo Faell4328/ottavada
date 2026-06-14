@@ -93,7 +93,17 @@ describe("ScanReportModal", () => {
         )
       ).length
     ).toBeGreaterThan(0);
-    expect(screen.getAllByText((_, element) => element?.textContent === "As partituras Clarinete.musx, CANON.musx e Oboes.musx foram alteradas na música Eis o Nosso Deus.").length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText((_, element) =>
+        Boolean(
+          element?.textContent?.includes("foram alteradas") &&
+          element?.textContent?.includes("Eis o Nosso Deus") &&
+          element?.textContent?.includes("Oboes.musx") &&
+          element?.textContent?.includes("Clarinete.musx") &&
+          element?.textContent?.includes("CANON.musx")
+        )
+      ).length
+    ).toBeGreaterThan(0);
     expect(screen.getAllByText((_, element) => element?.textContent === "As partituras Trompete.musx e Trombone.musx foram deletadas na música Eis o Nosso Deus.").length).toBeGreaterThan(0);
     expect(screen.queryAllByText((_, element) => element?.textContent?.includes("Sem Instrumento") ?? false).length).toBeGreaterThan(0);
     expect(screen.queryAllByText((_, element) => element?.textContent?.includes("03 VEZES SANTO.musx") ?? false).length).toBe(0);
