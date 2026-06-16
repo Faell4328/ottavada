@@ -737,7 +737,7 @@ export default function SettingsPage() {
         </Section>
 
         {/* Snapshot */}
-        {/*<Section title="Snapshot">
+        <div className="hidden" title="Snapshot">
           <div>
             <button
               type="button"
@@ -753,19 +753,22 @@ export default function SettingsPage() {
               }
               className="h-9 px-4 rounded border border-[#c5cfdb] bg-white hover:bg-[#f2f5fa] text-sm font-medium text-[#344b61] disabled:opacity-50 transition-colors cursor-pointer"
             >
-              {isGeneratingSnapshot ? "Gerando..." : "Forçar geração de snapshot"}
+              {isGeneratingSnapshot
+                ? "Gerando..."
+                : "Forçar geração de snapshot"}
             </button>
             <p className="text-xs text-[#8b9db2] mt-1">
-              Gera manualmente o arquivo <code>snapshot.msgpack.zst</code>, ignorando a regra de 2MB.
+              Gera manualmente o arquivo <code>snapshot.msgpack.zst</code>,
+              ignorando a regra de 2MB.
             </p>
             <p className="text-xs text-[#8b9db2] mt-1">
               Último snapshot: {lastSnapshotLabel}
             </p>
           </div>
-        </Section>*/}
+        </div>
 
         {/* Backup local */}
-        {/*<Section title="Backup local">
+        <div className="hidden" title="Backup local">
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
@@ -800,7 +803,7 @@ export default function SettingsPage() {
             Exporta e importa um backup local completo do banco de dados e das
             configurações.
           </p>
-        </Section>*/}
+        </div>
 
         {/* Backup cloud */}
         <Section title="Backup na nuvem">
@@ -986,23 +989,6 @@ function Section({
       <h2 className="text-sm font-bold text-[#34485d] mb-3 border-b border-[#d8e0ea] pb-1">
         {title}
       </h2>
-      {children}
-    </div>
-  );
-}
-
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="mb-3">
-      <label className="block text-xs font-semibold text-[#5c7089] mb-1">
-        {label}
-      </label>
       {children}
     </div>
   );

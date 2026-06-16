@@ -9,10 +9,9 @@
     "preview": "vite preview",
     "tauri:linux": "sh -lc 'set -a; . src-tauri/.env; set +a; APPIMAGE_EXTRACT_AND_RUN=1 tauri dev'",
     "tauri:win": "dotenv -e src-tauri/.env -- tauri dev",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:ui": "vitest --ui",
-    "test:full": "npm run test && cargo test --manifest-path ./src-tauri/Cargo.toml",
+    "test:front": "vitest run",
+    "test:back": "cargo test --manifest-path ./src-tauri/Cargo.toml",
+    "test:full": "npm run test:front && npm run test:back",
     "tauri:build:win:x32": "dotenv -e src-tauri/.env -- tauri build --target i686-pc-windows-msvc && script.bat",
     "tauri:build:win:x64": "dotenv -e src-tauri/.env -- tauri build --target x86_64-pc-windows-msvc && script.bat"
   },
