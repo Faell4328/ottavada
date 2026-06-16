@@ -7,7 +7,8 @@ use crate::infrastructure::store::SystemStore;
 use crate::services::backup_msgpack_service::{
     export_backup_msgpack, force_generate_backup_msgpack_in_cloud,
     generate_automatic_backup_msgpack, import_backup_msgpack, import_backup_msgpack_from_cloud,
-    BackupFileSummary, BackupImportSummary,
+    restore_database_from_cloud_backup, restore_song_files_from_cloud_archives,
+    validate_cloud_backup, BackupFileSummary, BackupImportSummary, CloudBackupValidation,
 };
 use crate::services::backup_songs_service::{
     generate_song_archives, regenerate_all_song_archives, SongArchiveSummary,
@@ -164,6 +165,64 @@ pub async fn force_generate_backup_cloud_file(
             require_server_settings(&store)?;
 
             force_generate_backup_msgpack_in_cloud(&db, &store)
+        },
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn validate_cloud_backup_cmd(
+    store: State<'_, SystemStore>,
+) -> Result<CloudBackupValidation, AppError> {
+    let app_data_dir = store.app_data_dir().clone();
+
+    run_blocking_with_store(
+        app_data_dir,
+        "Falha interna ao validar backup da nuvem",
+        move |store| validate_cloud_backup(&store),
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn restore_backup_db_from_cloud(
+    db: State<'_, Database>,
+    store: State<'_, SystemStore>,
+) -> Result<BackupImportSummary, AppError> {
+    let db = db.inner().clone();
+    let app_data_dir = store.app_data_dir().clone();
+
+    run_blocking_with_store(
+        app_data_dir,
+        "Falha interna ao restaurar banco do backup",
+        move |store| restore_database_from_cloud_backup(&db, &store),
+    )
+    .await
+}
+
+#[derive(serde::Serialize)]
+pub struct RestoreSongsResult {
+    songs_restored: usize,
+    scores_restored: usize,
+}
+
+#[tauri::command]
+pub async fn restore_songs_from_cloud_archives(
+    db: State<'_, Database>,
+    store: State<'_, SystemStore>,
+) -> Result<RestoreSongsResult, AppError> {
+    let db = db.inner().clone();
+    let app_data_dir = store.app_data_dir().clone();
+
+    run_blocking_with_store(
+        app_data_dir,
+        "Falha interna ao restaurar partituras",
+        move |store| {
+            let (songs, scores) = restore_song_files_from_cloud_archives(&db, store.app_data_dir())?;
+            Ok(RestoreSongsResult {
+                songs_restored: songs,
+                scores_restored: scores,
+            })
         },
     )
     .await

@@ -671,5 +671,5 @@ export function useAppScanFlow({
     ],
   );
 
-  return { previewScanFilesForChanges, scanFilesForChanges };
+  return { previewScanFilesForChanges, scanFilesForChanges, runSyncWithProgress };
 }

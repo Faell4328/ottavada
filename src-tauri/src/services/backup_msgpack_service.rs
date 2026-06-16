@@ -133,6 +133,15 @@ pub struct BackupImportSummary {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CloudBackupValidation {
+    pub found: bool,
+    pub generated_at: i64,
+    pub songs_count: usize,
+    pub scores_count: usize,
+    pub categories_count: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct BackupMessagePack {
     schema_version: u32,
     generated_at: i64,
@@ -386,6 +395,25 @@ pub fn import_backup_msgpack_from_cloud(
     let settings = store.get_app_settings()?;
     settings.require_server_only()?;
 
+    let _validation = validate_cloud_backup(store)?;
+
+    let mut summary = restore_database_from_cloud_backup(db, store)?;
+
+    sync_cloud_directory_with_rclone_impl(store, "download", Some("songs"))?;
+
+    let (songs_restored, scores_restored) =
+        restore_song_files_from_cloud_archives(db, store.app_data_dir())?;
+
+    summary.songs_restored = songs_restored;
+    summary.scores_restored = scores_restored;
+
+    Ok(summary)
+}
+
+pub fn validate_cloud_backup(store: &SystemStore) -> Result<CloudBackupValidation, AppError> {
+    let settings = store.get_app_settings()?;
+    settings.require_server_only()?;
+
     sync_cloud_directory_with_rclone_impl(store, "download", Some("backup"))?;
 
     let backup_dir = ensure_backup_cloud_dir(store.app_data_dir())?;
@@ -397,38 +425,121 @@ pub fn import_backup_msgpack_from_cloud(
         )
     })?;
 
-    let mut summary = restore_backup_from_path(db, store, &backup_path, &settings)?;
+    let payload = read_backup_payload_from_file(&backup_path)?;
 
-    sync_cloud_directory_with_rclone_impl(store, "download", Some("songs"))?;
+    Ok(CloudBackupValidation {
+        found: true,
+        generated_at: payload.generated_at,
+        songs_count: payload.songs.len(),
+        scores_count: payload.scores.len(),
+        categories_count: payload.categories.len(),
+    })
+}
 
-    let (songs_restored, scores_restored) =
-        restore_missing_songs_from_archives(db, store.app_data_dir())?;
+pub fn restore_database_from_cloud_backup(
+    db: &Database,
+    store: &SystemStore,
+) -> Result<BackupImportSummary, AppError> {
+    let settings = store.get_app_settings()?;
+    settings.require_server_only()?;
 
-    summary.songs_restored = songs_restored;
-    summary.scores_restored = scores_restored;
+    let backup_dir = ensure_backup_cloud_dir(store.app_data_dir())?;
+
+    let backup_path = find_latest_valid_backup(&backup_dir)?.ok_or_else(|| {
+        AppError::Generic(
+            "Nenhum backup valido encontrado na nuvem. Verifique se ja foi gerado um backup antes."
+                .to_string(),
+        )
+    })?;
+
+    let summary = restore_backup_from_path(db, store, &backup_path, &settings)?;
+
+    db.clear_changed_fields()?;
+
+    let mut updated_settings = store.get_app_settings()?;
+    updated_settings.last_snapshot_timestamp = None;
+    updated_settings.last_change_timestamp = None;
+    store.save_app_settings(&updated_settings)?;
 
     Ok(summary)
 }
 
-fn restore_missing_songs_from_archives(
+pub fn restore_song_files_from_cloud_archives(
     db: &Database,
     app_data_dir: &Path,
 ) -> Result<(usize, usize), AppError> {
-    let songs_dir = app_data_dir.join("cloud").join("songs");
+    let result = restore_missing_songs_from_archives(db, app_data_dir)?;
+
+    let tmp_dir = app_data_dir.join("tmp");
+    if tmp_dir.exists() {
+        let _ = empty_directory_contents(&tmp_dir);
+    }
+
+    Ok(result)
+}
+
+pub fn restore_missing_songs_from_archives(
+    db: &Database,
+    app_data_dir: &Path,
+) -> Result<(usize, usize), AppError> {
+    let songs_cloud_dir = app_data_dir.join("cloud").join("songs");
+    let temp_songs_root = app_data_dir.join("tmp").join("songs");
+
+    if temp_songs_root.exists() {
+        let _ = empty_directory_contents(&temp_songs_root);
+    }
+
+    let mut extracted_song_ids = std::collections::HashSet::new();
+
+    if songs_cloud_dir.is_dir() {
+        for entry in fs::read_dir(&songs_cloud_dir).map_err(|e| {
+            AppError::Generic(format!("Erro ao ler diretorio de musicas da nuvem: {}", e))
+        })? {
+            let entry = entry.map_err(|e| {
+                AppError::Generic(format!("Erro ao ler entrada do diretorio de musicas: {}", e))
+            })?;
+            let path = entry.path();
+            if !path.is_file() {
+                continue;
+            }
+            let Some(file_name) = path.file_name().and_then(|n| n.to_str()) else {
+                continue;
+            };
+            let Some(song_id) = file_name.strip_suffix(".tar.zst") else {
+                continue;
+            };
+
+            let temp_song_dir = temp_songs_root.join(song_id);
+            fs::create_dir_all(&temp_song_dir).map_err(|e| {
+                AppError::Generic(format!(
+                    "Erro ao criar diretorio temporario para musica {}: {}",
+                    song_id, e
+                ))
+            })?;
+
+            extract_full_archive(&path, &temp_song_dir, song_id)?;
+            extracted_song_ids.insert(song_id.to_string());
+        }
+    }
+
     let score_refs = query_song_score_refs(db)?;
 
-    let mut song_ids_seen = std::collections::HashSet::new();
+    let mut song_dirs_created = std::collections::HashSet::new();
     let mut scores_restored = 0_usize;
 
     for score_ref in &score_refs {
-        let song_dir = PathBuf::from(from_storage_path(&score_ref.song_path));
-
-        let score_file = song_dir.join(&score_ref.file_name);
-        if score_file.exists() {
+        if !extracted_song_ids.contains(&score_ref.song_id) {
             continue;
         }
 
-        if !song_ids_seen.contains(&score_ref.song_id) {
+        let song_dir = PathBuf::from(from_storage_path(&score_ref.song_path));
+        let destination = song_dir.join(&score_ref.file_name);
+
+        if destination.exists() {
+            continue;
+        }
+
+        if !song_dirs_created.contains(&score_ref.song_id) {
             fs::create_dir_all(&song_dir).map_err(|e| {
                 AppError::Generic(format!(
                     "Erro ao criar diretorio da musica {}: {}",
@@ -436,22 +547,24 @@ fn restore_missing_songs_from_archives(
                     e
                 ))
             })?;
-            song_ids_seen.insert(score_ref.song_id.clone());
+            song_dirs_created.insert(score_ref.song_id.clone());
         }
 
-        let archive_path = songs_dir.join(format!("{}.tar.zst", score_ref.song_id));
-        if !archive_path.is_file() {
-            continue;
-        }
-
-        match extract_score_from_archive(&archive_path, &score_ref.score_id, &song_dir, &score_ref.file_name) {
-            Ok(extracted_path) => {
+        let temp_song_dir = temp_songs_root.join(&score_ref.song_id);
+        match move_score_from_temp(&temp_song_dir, &score_ref.score_id, &destination) {
+            Ok(true) => {
                 info!(
                     "Partitura restaurada: {} -> {}",
                     score_ref.score_id,
-                    extracted_path.display()
+                    destination.display()
                 );
                 scores_restored += 1;
+            }
+            Ok(false) => {
+                warn!(
+                    "Partitura {} nao encontrada no diretorio temporario da musica {}",
+                    score_ref.score_id, score_ref.song_id
+                );
             }
             Err(e) => {
                 warn!(
@@ -462,7 +575,9 @@ fn restore_missing_songs_from_archives(
         }
     }
 
-    Ok((song_ids_seen.len(), scores_restored))
+    let _ = empty_directory_contents(&temp_songs_root);
+
+    Ok((song_dirs_created.len(), scores_restored))
 }
 
 fn query_song_score_refs(db: &Database) -> Result<Vec<SongScoreRef>, AppError> {
@@ -488,12 +603,11 @@ fn query_song_score_refs(db: &Database) -> Result<Vec<SongScoreRef>, AppError> {
     Ok(result?)
 }
 
-fn extract_score_from_archive(
+fn extract_full_archive(
     archive_path: &Path,
-    score_id: &str,
-    destination_dir: &Path,
-    output_file_name: &str,
-) -> Result<PathBuf, AppError> {
+    dest_dir: &Path,
+    song_id: &str,
+) -> Result<(), AppError> {
     let archive_file = File::open(archive_path).map_err(|e| {
         AppError::Generic(format!(
             "Erro ao abrir arquivo compactado {}: {}",
@@ -541,47 +655,78 @@ fn extract_score_from_archive(
         })?;
 
         let file_name = match entry_path.file_name().and_then(|n| n.to_str()) {
-            Some(name) => name,
+            Some(name) => name.to_owned(),
             None => continue,
         };
 
-        let file_stem = Path::new(file_name)
-            .file_stem()
-            .and_then(|s| s.to_str());
-
-        let is_target = file_stem == Some(score_id) || file_name == score_id;
-
-        if !is_target {
-            continue;
-        }
-
-        let output_path = destination_dir.join(output_file_name);
-        if output_path.exists() {
-            fs::remove_file(&output_path).map_err(|e| {
-                AppError::Generic(format!(
-                    "Erro ao limpar arquivo existente {}: {}",
-                    output_path.display(),
-                    e
-                ))
-            })?;
-        }
-
+        let output_path = dest_dir.join(&file_name);
         entry.unpack(&output_path).map_err(|e| {
             AppError::Generic(format!(
-                "Erro ao extrair partitura para {}: {}",
-                output_path.display(),
+                "Erro ao extrair partitura {} do pacote {}: {}",
+                file_name,
+                archive_path.display(),
                 e
             ))
         })?;
-
-        return Ok(output_path);
     }
 
-    Err(AppError::Generic(format!(
-        "Partitura {} nao encontrada no pacote {}",
-        score_id,
-        archive_path.display()
-    )))
+    info!(
+        "Arquivo da musica {} extraido para {}",
+        song_id,
+        dest_dir.display()
+    );
+
+    Ok(())
+}
+
+fn move_score_from_temp(
+    temp_song_dir: &Path,
+    score_id: &str,
+    destination: &Path,
+) -> Result<bool, AppError> {
+    for entry in fs::read_dir(temp_song_dir).map_err(|e| {
+        AppError::Generic(format!(
+            "Erro ao ler diretorio temporario {}: {}",
+            temp_song_dir.display(),
+            e
+        ))
+    })? {
+        let entry = entry.map_err(|e| {
+            AppError::Generic(format!("Erro ao ler entrada do diretorio temporario: {}", e))
+        })?;
+        let path = entry.path();
+        if !path.is_file() {
+            continue;
+        }
+        let Some(file_name) = path.file_name().and_then(|n| n.to_str()) else {
+            continue;
+        };
+        let stem = Path::new(file_name)
+            .file_stem()
+            .and_then(|s| s.to_str());
+
+        if stem == Some(score_id) || file_name == score_id {
+            if destination.exists() {
+                fs::remove_file(destination).map_err(|e| {
+                    AppError::Generic(format!(
+                        "Erro ao remover arquivo existente {}: {}",
+                        destination.display(),
+                        e
+                    ))
+                })?;
+            }
+            fs::copy(&path, destination).map_err(|e| {
+                AppError::Generic(format!(
+                    "Erro ao copiar partitura de {} para {}: {}",
+                    path.display(),
+                    destination.display(),
+                    e
+                ))
+            })?;
+            return Ok(true);
+        }
+    }
+    Ok(false)
 }
 
 fn collect_backup_payload(
@@ -852,6 +997,30 @@ fn resolve_output_path(
     }
 
     Ok(path)
+}
+
+fn empty_directory_contents(dir: &Path) -> Result<(), AppError> {
+    if !dir.is_dir() {
+        return Ok(());
+    }
+    for entry in fs::read_dir(dir).map_err(|e| {
+        AppError::Generic(format!("Erro ao ler diretorio para esvaziar {}: {}", dir.display(), e))
+    })? {
+        let entry = entry.map_err(|e| {
+            AppError::Generic(format!("Erro ao ler entrada em {}: {}", dir.display(), e))
+        })?;
+        let path = entry.path();
+        if path.is_dir() {
+            fs::remove_dir_all(&path).map_err(|e| {
+                AppError::Generic(format!("Erro ao remover diretorio {}: {}", path.display(), e))
+            })?;
+        } else {
+            fs::remove_file(&path).map_err(|e| {
+                AppError::Generic(format!("Erro ao remover arquivo {}: {}", path.display(), e))
+            })?;
+        }
+    }
+    Ok(())
 }
 
 #[cfg(test)]

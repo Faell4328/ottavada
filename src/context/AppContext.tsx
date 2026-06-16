@@ -109,7 +109,7 @@ export function AppProvider({ children, disableBootstrap = false }: AppProviderP
     dispatch({ type: "RESET_SCAN_REPORT" });
   }, [dispatch]);
 
-  const { previewScanFilesForChanges, scanFilesForChanges } = useAppScanFlow({
+  const { previewScanFilesForChanges, scanFilesForChanges, runSyncWithProgress } = useAppScanFlow({
     dispatch,
     computerType: state.settings?.computer_type,
     loadSongs,
@@ -163,10 +163,12 @@ export function AppProvider({ children, disableBootstrap = false }: AppProviderP
   const value: AppContextValue = useMemo(
     () => ({
       state,
+      dispatch,
       loadSongs,
       loadCategories,
       loadSettings,
       refreshSelectedSong,
+      runSyncWithProgress,
       setOperationStatus,
       resetOperationStatus,
       resetScanReport,
@@ -195,12 +197,14 @@ export function AppProvider({ children, disableBootstrap = false }: AppProviderP
     }),
     [
       state,
+      dispatch,
       loadSongs,
       loadCategories,
       loadSettings,
       refreshSelectedSong,
       setOperationStatus,
       resetOperationStatus,
+      runSyncWithProgress,
       resetScanReport,
       setSidebarView,
       selectSong,

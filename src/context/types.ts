@@ -1,15 +1,25 @@
-import type { ScanResult, SnapshotFileSummary } from "../api/commands";
+import { type Dispatch } from "react";
+
+import type { ScanResult, SnapshotFileSummary, RcloneSyncSummary } from "../api/commands";
 import type { AppSettings, ScoreListItem, SidebarView, SongListItem } from "../types";
-import type { State } from "./reducer";
+import type { Action, State } from "./reducer";
 
 export type AuthorFilterValue = "all" | "none" | string;
 
+export type RunSyncWithProgress = (opts: {
+  direction: "upload" | "download";
+  relativePath?: string;
+  lockInteraction?: boolean;
+}) => Promise<RcloneSyncSummary>;
+
 export interface AppContextValue {
   state: State;
+  dispatch: Dispatch<Action>;
   loadSongs: () => Promise<void>;
   loadCategories: () => Promise<void>;
   loadSettings: () => Promise<void>;
   refreshSelectedSong: () => Promise<void>;
+  runSyncWithProgress: RunSyncWithProgress;
   setOperationStatus: (payload: {
     title: string;
     detail?: string | null;

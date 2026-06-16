@@ -322,6 +322,9 @@ pub fn run() {
             commands::backup_commands::generate_automatic_backup_file,
             commands::backup_commands::force_generate_backup_cloud_file,
             commands::backup_commands::import_backup_cloud_file,
+            commands::backup_commands::validate_cloud_backup_cmd,
+            commands::backup_commands::restore_backup_db_from_cloud,
+            commands::backup_commands::restore_songs_from_cloud_archives,
             commands::backup_commands::apply_server_changes_on_client,
             // Rclone
             commands::rclone_commands::generate_rclone_config,

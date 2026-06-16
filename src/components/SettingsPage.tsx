@@ -13,6 +13,7 @@ import { OrganizationNameField } from "./OrganizationNameField";
 import { SupportContactsCard } from "./SupportContactsCard";
 import { formatBackupTimestamp } from "../utils/formatters";
 import { shouldRunCloudBackupOnProviderChange } from "../utils/rcloneProviderChange";
+import { runBackupImportFlow } from "../context/backupImportFlow";
 import type {
   AppContacts,
   AppSettings,
@@ -30,6 +31,7 @@ function getRcloneProviderLabel(provider: RcloneProvider) {
 export default function SettingsPage() {
   const {
     state,
+    dispatch,
     saveSettings,
     loadSettings,
     loadSongs,
@@ -37,6 +39,7 @@ export default function SettingsPage() {
     scanFilesForChanges,
     setOperationStatus,
     resetOperationStatus,
+    runSyncWithProgress,
   } = useAppState();
   const navigate = useNavigate();
   const isClient = isClientComputer(state.settings?.computer_type);
@@ -465,42 +468,25 @@ export default function SettingsPage() {
     }
 
     setIsImportingBackupCloud(true);
-    setOperationStatus({
-      title: "Importando backup da nuvem",
-      detail: "Baixando e aplicando o backup mais recente",
-      stepCurrent: 1,
-      stepTotal: 1,
-    });
     navigate("/");
     const loadingToastId = toast.loading("Importando o backup da nuvem...");
 
     void (async () => {
-      let shouldRunForcedSnapshot = false;
-      let refreshedSettings: AppSettings | null = null;
       try {
-        const summary = await api.importBackupCloudFile();
-        const restoredInfo =
-          summary.songs_restored > 0 || summary.scores_restored > 0
-            ? ` ${summary.songs_restored} música(s) e ${summary.scores_restored} partitura(s) foram restauradas da nuvem.`
-            : "";
-        toast.success(
-          `Backup da nuvem importado com sucesso. Ele é de ${formatBackupTimestamp(summary.generated_at)}; mudanças feitas depois disso não entram nesse backup.${restoredInfo}`,
-          { duration: 8000 },
-        );
-        refreshedSettings = await api.getSettings();
+        await runBackupImportFlow({
+          dispatch,
+          runSyncWithProgress,
+          loadSongs,
+          loadCategories,
+          loadSettings,
+        });
+        const refreshedSettings = await api.getSettings();
         setSettings(refreshedSettings);
-        await Promise.all([loadSettings(), loadSongs(), loadCategories()]);
-        shouldRunForcedSnapshot = true;
       } catch (error) {
         toast.error("Não foi possível importar o backup da nuvem.");
       } finally {
         toast.dismiss(loadingToastId);
         setIsImportingBackupCloud(false);
-        resetOperationStatus();
-      }
-
-      if (shouldRunForcedSnapshot) {
-        void handleForceSnapshot(refreshedSettings ?? undefined);
       }
     })();
   }
