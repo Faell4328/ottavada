@@ -1,10 +1,10 @@
 use std::fs;
 use std::fs::File;
-use std::io::BufReader;
 use std::path::{Path, PathBuf};
 
 use rusqlite::params;
 use serde::{Deserialize, Serialize};
+use tracing::{info, warn};
 
 use crate::commands::rclone_commands::sync_cloud_directory_with_rclone_impl;
 use crate::domain::errors::AppError;
@@ -12,12 +12,104 @@ use crate::domain::models::{AppSettings, OperationGuard};
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
 use crate::services::cloud_paths::ensure_backup_cloud_dir;
-use crate::services::msgpack_zstd::{serialize_msgpack_named, write_atomic};
-use crate::services::path_normalizer::to_storage_path;
+use crate::services::msgpack_zstd::{compress_zstd_with_threads, serialize_msgpack_named, write_atomic, ZSTD_LEVEL_BALANCED};
+use crate::services::path_normalizer::from_storage_path;
 
-const BACKUP_FILE_NAME: &str = "backup.msgpack";
+const BACKUP_FILE_PREFIX: &str = "backup - ";
+const BACKUP_FILE_EXTENSION: &str = ".msgpack.zst";
+const MAX_BACKUP_FILES: usize = 10;
+const MIN_BACKUP_SIZE_BYTES: u64 = 1024;
 const BACKUP_SCHEMA_VERSION: u32 = 1;
 const AUTO_BACKUP_INTERVAL_SECONDS: i64 = 60 * 60;
+
+fn backup_filename(timestamp: i64) -> String {
+    format!("{}{}{}", BACKUP_FILE_PREFIX, timestamp, BACKUP_FILE_EXTENSION)
+}
+
+fn parse_backup_timestamp(filename: &str) -> Option<i64> {
+    let without_prefix = filename.strip_prefix(BACKUP_FILE_PREFIX)?;
+    let without_extension = without_prefix.strip_suffix(BACKUP_FILE_EXTENSION)?;
+    without_extension.parse::<i64>().ok()
+}
+
+fn list_backup_files(backup_dir: &Path) -> Result<Vec<(i64, PathBuf)>, AppError> {
+    let mut backups: Vec<(i64, PathBuf)> = Vec::new();
+    if !backup_dir.is_dir() {
+        return Ok(backups);
+    }
+    for entry in fs::read_dir(backup_dir).map_err(|e| {
+        AppError::Generic(format!("Erro ao ler diretorio de backup: {}", e))
+    })? {
+        let entry = entry.map_err(|e| {
+            AppError::Generic(format!("Erro ao ler entrada do diretorio de backup: {}", e))
+        })?;
+        let path = entry.path();
+        if !path.is_file() {
+            continue;
+        }
+        let Some(file_name) = path.file_name().and_then(|n| n.to_str()) else {
+            continue;
+        };
+        let Some(timestamp) = parse_backup_timestamp(file_name) else {
+            continue;
+        };
+        backups.push((timestamp, path));
+    }
+    backups.sort_by(|a, b| b.0.cmp(&a.0));
+    Ok(backups)
+}
+
+fn cleanup_old_backups(backup_dir: &Path) -> Result<usize, AppError> {
+    let backups = list_backup_files(backup_dir)?;
+    let mut removed = 0;
+    for (_timestamp, path) in backups.iter().skip(MAX_BACKUP_FILES) {
+        if let Err(e) = fs::remove_file(path) {
+            warn!("Erro ao remover backup antigo {}: {}", path.display(), e);
+        } else {
+            removed += 1;
+        }
+    }
+    if removed > 0 {
+        info!("Removidos {} backups antigos", removed);
+    }
+    Ok(removed)
+}
+
+fn find_latest_valid_backup(backup_dir: &Path) -> Result<Option<PathBuf>, AppError> {
+    let backups = list_backup_files(backup_dir)?;
+    for (_timestamp, path) in &backups {
+        let Ok(metadata) = fs::metadata(path) else {
+            continue;
+        };
+        if metadata.len() > MIN_BACKUP_SIZE_BYTES {
+            return Ok(Some(path.clone()));
+        }
+    }
+    Ok(None)
+}
+
+fn read_backup_payload_from_file(path: &Path) -> Result<BackupMessagePack, AppError> {
+    let bytes = fs::read(path).map_err(|e| {
+        AppError::Generic(format!(
+            "Erro ao ler arquivo de backup {}: {}",
+            path.display(),
+            e
+        ))
+    })?;
+
+    let msgpack_bytes = match zstd::stream::decode_all(&bytes[..]) {
+        Ok(decoded) => decoded,
+        Err(_) => bytes,
+    };
+
+    rmp_serde::from_slice(&msgpack_bytes).map_err(|e| {
+        AppError::Generic(format!(
+            "Erro ao desserializar backup {}: {}",
+            path.display(),
+            e
+        ))
+    })
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BackupFileSummary {
@@ -36,6 +128,8 @@ pub struct BackupImportSummary {
     pub songs_count: usize,
     pub scores_count: usize,
     pub categories_count: usize,
+    pub songs_restored: usize,
+    pub scores_restored: usize,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -113,6 +207,14 @@ struct BackupSongStatusRecord {
     error_message: Option<String>,
 }
 
+#[derive(Debug, Clone)]
+struct SongScoreRef {
+    song_id: String,
+    song_path: String,
+    score_id: String,
+    file_name: String,
+}
+
 pub fn export_backup_msgpack(
     db: &Database,
     store: &SystemStore,
@@ -136,11 +238,6 @@ pub fn export_backup_msgpack(
     }
 
     write_atomic(&output_path, &bytes, "backup.msgpack")?;
-
-    validate_backup_file_integrity(&output_path, &payload).map_err(|e| {
-        let _ = fs::remove_file(&output_path);
-        e
-    })?;
 
     let file_size = fs::metadata(&output_path)
         .map_err(|e| {
@@ -166,12 +263,17 @@ pub fn import_backup_msgpack(
     let settings = store.get_app_settings()?;
     settings.require_server_only()?;
 
-    let file = File::open(&backup_path)
-        .map_err(|e| AppError::Generic(format!("Erro ao abrir backup.msgpack: {}", e)))?;
-    let reader = BufReader::new(file);
+    let path = PathBuf::from(&backup_path);
+    restore_backup_from_path(db, store, &path, &settings)
+}
 
-    let payload: BackupMessagePack = rmp_serde::from_read(reader)
-        .map_err(|e| AppError::Generic(format!("Erro ao desserializar backup.msgpack: {}", e)))?;
+fn restore_backup_from_path(
+    db: &Database,
+    store: &SystemStore,
+    path: &Path,
+    current_settings: &AppSettings,
+) -> Result<BackupImportSummary, AppError> {
+    let payload = read_backup_payload_from_file(path)?;
 
     if payload.schema_version != BACKUP_SCHEMA_VERSION {
         return Err(AppError::Generic(format!(
@@ -181,7 +283,7 @@ pub fn import_backup_msgpack(
     }
 
     let mut payload = payload;
-    if let Some(current_rclone_config) = settings.rclone_config.clone() {
+    if let Some(current_rclone_config) = current_settings.rclone_config.clone() {
         payload.settings.rclone_config = Some(current_rclone_config);
     }
 
@@ -198,11 +300,13 @@ pub fn import_backup_msgpack(
     }
 
     Ok(BackupImportSummary {
-        input_path: backup_path,
+        input_path: path.to_string_lossy().to_string(),
         generated_at: payload.generated_at,
         songs_count: payload.songs.len(),
         scores_count: payload.scores.len(),
         categories_count: payload.categories.len(),
+        songs_restored: 0,
+        scores_restored: 0,
     })
 }
 
@@ -236,18 +340,43 @@ fn generate_backup_msgpack_in_cloud(
         return Ok(None);
     }
 
-    let backup_path = ensure_backup_cloud_dir(store.app_data_dir())?.join(BACKUP_FILE_NAME);
+    let payload = collect_backup_payload(db, settings)?;
+    let msgpack_bytes = serialize_msgpack_named(&payload, "backup.msgpack")?;
+    let compressed = compress_zstd_with_threads(
+        &msgpack_bytes,
+        ZSTD_LEVEL_BALANCED,
+        "backup.msgpack.zst",
+    )?;
 
-    let summary =
-        export_backup_msgpack(db, store, Some(backup_path.to_string_lossy().to_string()))?;
+    let backup_dir = ensure_backup_cloud_dir(store.app_data_dir())?;
+    let backup_path = backup_dir.join(backup_filename(payload.generated_at));
+
+    write_atomic(&backup_path, &compressed, "backup.msgpack.zst")?;
+
+    let file_size = fs::metadata(&backup_path)
+        .map_err(|e| {
+            AppError::Generic(format!("Erro ao obter metadados do backup: {}", e))
+        })?
+        .len();
+
+    sync_cloud_directory_with_rclone_impl(store, "upload", Some("backup"))?;
+
+    cleanup_old_backups(&backup_dir)?;
 
     sync_cloud_directory_with_rclone_impl(store, "upload", Some("backup"))?;
 
     let mut updated_settings = store.get_app_settings()?;
-    updated_settings.last_backup_timestamp = Some(summary.generated_at);
+    updated_settings.last_backup_timestamp = Some(payload.generated_at);
     store.save_app_settings(&updated_settings)?;
 
-    Ok(Some(summary))
+    Ok(Some(BackupFileSummary {
+        output_path: backup_path.to_string_lossy().to_string(),
+        file_size,
+        generated_at: payload.generated_at,
+        songs_count: payload.songs.len(),
+        scores_count: payload.scores.len(),
+        categories_count: payload.categories.len(),
+    }))
 }
 
 pub fn import_backup_msgpack_from_cloud(
@@ -259,15 +388,200 @@ pub fn import_backup_msgpack_from_cloud(
 
     sync_cloud_directory_with_rclone_impl(store, "download", Some("backup"))?;
 
-    let backup_path = ensure_backup_cloud_dir(store.app_data_dir())?.join(BACKUP_FILE_NAME);
+    let backup_dir = ensure_backup_cloud_dir(store.app_data_dir())?;
 
-    if !backup_path.exists() {
-        return Err(AppError::Generic(
-            "Arquivo backup.msgpack nao encontrado na nuvem".to_string(),
-        ));
+    let backup_path = find_latest_valid_backup(&backup_dir)?.ok_or_else(|| {
+        AppError::Generic(
+            "Nenhum backup valido encontrado na nuvem. Verifique se ja foi gerado um backup antes."
+                .to_string(),
+        )
+    })?;
+
+    let mut summary = restore_backup_from_path(db, store, &backup_path, &settings)?;
+
+    sync_cloud_directory_with_rclone_impl(store, "download", Some("songs"))?;
+
+    let (songs_restored, scores_restored) =
+        restore_missing_songs_from_archives(db, store.app_data_dir())?;
+
+    summary.songs_restored = songs_restored;
+    summary.scores_restored = scores_restored;
+
+    Ok(summary)
+}
+
+fn restore_missing_songs_from_archives(
+    db: &Database,
+    app_data_dir: &Path,
+) -> Result<(usize, usize), AppError> {
+    let songs_dir = app_data_dir.join("cloud").join("songs");
+    let score_refs = query_song_score_refs(db)?;
+
+    let mut song_ids_seen = std::collections::HashSet::new();
+    let mut scores_restored = 0_usize;
+
+    for score_ref in &score_refs {
+        let song_dir = PathBuf::from(from_storage_path(&score_ref.song_path));
+
+        let score_file = song_dir.join(&score_ref.file_name);
+        if score_file.exists() {
+            continue;
+        }
+
+        if !song_ids_seen.contains(&score_ref.song_id) {
+            fs::create_dir_all(&song_dir).map_err(|e| {
+                AppError::Generic(format!(
+                    "Erro ao criar diretorio da musica {}: {}",
+                    song_dir.display(),
+                    e
+                ))
+            })?;
+            song_ids_seen.insert(score_ref.song_id.clone());
+        }
+
+        let archive_path = songs_dir.join(format!("{}.tar.zst", score_ref.song_id));
+        if !archive_path.is_file() {
+            continue;
+        }
+
+        match extract_score_from_archive(&archive_path, &score_ref.score_id, &song_dir, &score_ref.file_name) {
+            Ok(extracted_path) => {
+                info!(
+                    "Partitura restaurada: {} -> {}",
+                    score_ref.score_id,
+                    extracted_path.display()
+                );
+                scores_restored += 1;
+            }
+            Err(e) => {
+                warn!(
+                    "Nao foi possivel restaurar partitura {} da musica {}: {}",
+                    score_ref.score_id, score_ref.song_id, e
+                );
+            }
+        }
     }
 
-    import_backup_msgpack(db, store, backup_path.to_string_lossy().to_string())
+    Ok((song_ids_seen.len(), scores_restored))
+}
+
+fn query_song_score_refs(db: &Database) -> Result<Vec<SongScoreRef>, AppError> {
+    let conn = db.conn.lock().unwrap();
+    let mut stmt = conn.prepare(
+        "SELECT s.id, s.path, sc.id, sc.file_name
+         FROM songs s
+         JOIN scores sc ON sc.song_id = s.id
+         WHERE sc.status = 'main'
+         ORDER BY s.id, sc.id",
+    )?;
+
+    let rows = stmt.query_map([], |row| {
+        Ok(SongScoreRef {
+            song_id: row.get(0)?,
+            song_path: row.get(1)?,
+            score_id: row.get(2)?,
+            file_name: row.get(3)?,
+        })
+    })?;
+
+    let result: Result<Vec<_>, _> = rows.collect();
+    Ok(result?)
+}
+
+fn extract_score_from_archive(
+    archive_path: &Path,
+    score_id: &str,
+    destination_dir: &Path,
+    output_file_name: &str,
+) -> Result<PathBuf, AppError> {
+    let archive_file = File::open(archive_path).map_err(|e| {
+        AppError::Generic(format!(
+            "Erro ao abrir arquivo compactado {}: {}",
+            archive_path.display(),
+            e
+        ))
+    })?;
+
+    let decoder = zstd::stream::read::Decoder::new(archive_file).map_err(|e| {
+        AppError::Generic(format!(
+            "Erro ao descompactar arquivo {}: {}",
+            archive_path.display(),
+            e
+        ))
+    })?;
+
+    let mut archive = tar::Archive::new(decoder);
+    let entries = archive.entries().map_err(|e| {
+        AppError::Generic(format!(
+            "Erro ao listar arquivos do pacote {}: {}",
+            archive_path.display(),
+            e
+        ))
+    })?;
+
+    for entry_result in entries {
+        let mut entry = entry_result.map_err(|e| {
+            AppError::Generic(format!(
+                "Erro ao ler entrada do pacote {}: {}",
+                archive_path.display(),
+                e
+            ))
+        })?;
+
+        if !entry.header().entry_type().is_file() {
+            continue;
+        }
+
+        let entry_path = entry.path().map_err(|e| {
+            AppError::Generic(format!(
+                "Erro ao ler caminho dentro do pacote {}: {}",
+                archive_path.display(),
+                e
+            ))
+        })?;
+
+        let file_name = match entry_path.file_name().and_then(|n| n.to_str()) {
+            Some(name) => name,
+            None => continue,
+        };
+
+        let file_stem = Path::new(file_name)
+            .file_stem()
+            .and_then(|s| s.to_str());
+
+        let is_target = file_stem == Some(score_id) || file_name == score_id;
+
+        if !is_target {
+            continue;
+        }
+
+        let output_path = destination_dir.join(output_file_name);
+        if output_path.exists() {
+            fs::remove_file(&output_path).map_err(|e| {
+                AppError::Generic(format!(
+                    "Erro ao limpar arquivo existente {}: {}",
+                    output_path.display(),
+                    e
+                ))
+            })?;
+        }
+
+        entry.unpack(&output_path).map_err(|e| {
+            AppError::Generic(format!(
+                "Erro ao extrair partitura para {}: {}",
+                output_path.display(),
+                e
+            ))
+        })?;
+
+        return Ok(output_path);
+    }
+
+    Err(AppError::Generic(format!(
+        "Partitura {} nao encontrada no pacote {}",
+        score_id,
+        archive_path.display()
+    )))
 }
 
 fn collect_backup_payload(
@@ -303,7 +617,9 @@ fn collect_backup_payload(
                 name: row.get(1)?,
                 composer: row.get(2)?,
                 arranger: row.get(3)?,
-                path: to_storage_path(&row.get::<_, String>(4)?),
+                path: crate::services::path_normalizer::to_storage_path(
+                    &row.get::<_, String>(4)?,
+                ),
                 is_favorite: row.get::<_, bool>(5)?,
                 last_score_file_modified_at: row.get(6)?,
             })
@@ -323,7 +639,9 @@ fn collect_backup_payload(
                 song_id: row.get(1)?,
                 name: row.get(2)?,
                 host_id: row.get(3)?,
-                file_path: to_storage_path(&row.get::<_, String>(4)?),
+                file_path: crate::services::path_normalizer::to_storage_path(
+                    &row.get::<_, String>(4)?,
+                ),
                 file_name: row.get(5)?,
                 file_size: row.get(6)?,
                 file_modified_at: row.get(7)?,
@@ -373,7 +691,7 @@ fn collect_backup_payload(
         let mut stmt = conn.prepare(
             "SELECT songId AS id, songId AS song_id, status
              FROM songsBackup
-               ORDER BY songId ASC",
+             ORDER BY songId ASC",
         )?;
         let rows = stmt.query_map([], |row| {
             Ok(BackupSongStatusRecord {
@@ -412,64 +730,6 @@ fn should_generate_automatic_backup_from_timestamps(
     }
 }
 
-fn validate_backup_file_integrity(
-    output_path: &Path,
-    expected_payload: &BackupMessagePack,
-) -> Result<(), AppError> {
-    let bytes = fs::read(output_path).map_err(|e| {
-        AppError::Generic(format!(
-            "Erro ao validar backup.msgpack em {}: {}",
-            output_path.display(),
-            e
-        ))
-    })?;
-
-    let verified_payload: BackupMessagePack = rmp_serde::from_slice(&bytes).map_err(|e| {
-        AppError::Generic(format!(
-            "Erro ao desserializar backup.msgpack validado em {}: {}",
-            output_path.display(),
-            e
-        ))
-    })?;
-
-    let is_valid = verified_payload.schema_version == expected_payload.schema_version
-        && verified_payload.generated_at == expected_payload.generated_at
-        && verified_payload.settings.computer_id == expected_payload.settings.computer_id
-        && verified_payload.settings.computer_name == expected_payload.settings.computer_name
-        && verified_payload.settings.computer_type == expected_payload.settings.computer_type
-        && verified_payload.settings.google_drive_mode
-            == expected_payload.settings.google_drive_mode
-        && verified_payload.settings.first_run_completed
-            == expected_payload.settings.first_run_completed
-        && verified_payload.settings.database_local == expected_payload.settings.database_local
-        && verified_payload
-            .settings
-            .rclone_config
-            .as_ref()
-            .map(|config| config.provider.clone())
-            == expected_payload
-                .settings
-                .rclone_config
-                .as_ref()
-                .map(|config| config.provider.clone())
-        && verified_payload.settings.last_backup_timestamp
-            == expected_payload.settings.last_backup_timestamp
-        && verified_payload.categories.len() == expected_payload.categories.len()
-        && verified_payload.songs.len() == expected_payload.songs.len()
-        && verified_payload.scores.len() == expected_payload.scores.len()
-        && verified_payload.categories_songs.len() == expected_payload.categories_songs.len()
-        && verified_payload.changed_field.len() == expected_payload.changed_field.len()
-        && verified_payload.backup_songs.len() == expected_payload.backup_songs.len();
-
-    if !is_valid {
-        return Err(AppError::Generic(
-            "Falha na validacao de integridade de backup.msgpack".to_string(),
-        ));
-    }
-
-    Ok(())
-}
-
 fn restore_backup_payload(db: &Database, payload: &BackupMessagePack) -> Result<(), AppError> {
     {
         let mut conn = db.conn.lock().unwrap();
@@ -494,7 +754,8 @@ fn restore_backup_payload(db: &Database, payload: &BackupMessagePack) -> Result<
         }
 
         for song in &payload.songs {
-            let storage_path = to_storage_path(&song.path);
+            let storage_path =
+                crate::services::path_normalizer::to_storage_path(&song.path);
             tx.execute(
                 "INSERT INTO songs (id, name, composer, arranger, path, is_favorite, last_score_file_modified_at)
                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
@@ -516,7 +777,8 @@ fn restore_backup_payload(db: &Database, payload: &BackupMessagePack) -> Result<
                 .and_then(|ext| ext.to_str())
                 .map(|ext| ext.to_lowercase())
                 .unwrap_or_else(|| "score".to_string());
-            let storage_file_path = to_storage_path(&score.file_path);
+            let storage_file_path =
+                crate::services::path_normalizer::to_storage_path(&score.file_path);
 
             tx.execute(
                 "INSERT INTO scores (id, song_id, name, host_id, file_path, file_name, file_extension, file_size, file_modified_at, status)
@@ -580,7 +842,7 @@ fn resolve_output_path(
 ) -> Result<PathBuf, AppError> {
     let path = match output_path {
         Some(raw) if !raw.trim().is_empty() => PathBuf::from(raw),
-        _ => store.app_data_dir().join(BACKUP_FILE_NAME),
+        _ => store.app_data_dir().join("backup.msgpack"),
     };
 
     if path.file_name().is_none() {
@@ -603,6 +865,71 @@ mod tests {
     use super::should_generate_automatic_backup_from_timestamps;
     use super::AUTO_BACKUP_INTERVAL_SECONDS;
     use super::{export_backup_msgpack, import_backup_msgpack};
+    use super::{backup_filename, parse_backup_timestamp, list_backup_files, cleanup_old_backups, find_latest_valid_backup};
+
+    #[test]
+    fn backup_filename_roundtrips() {
+        let ts = 1710684000_i64;
+        let name = backup_filename(ts);
+        assert_eq!(parse_backup_timestamp(&name), Some(ts));
+    }
+
+    #[test]
+    fn parse_backup_timestamp_rejects_invalid() {
+        assert_eq!(parse_backup_timestamp("backup.msgpack"), None);
+        assert_eq!(parse_backup_timestamp("backup - abc.msgpack.zst"), None);
+        assert_eq!(parse_backup_timestamp("snapshot.msgpack.zst"), None);
+    }
+
+    #[test]
+    fn list_and_cleanup_backups() {
+        let dir = tempdir().expect("temp dir");
+        let backup_dir = dir.path();
+
+        for i in 0..15 {
+            let name = backup_filename(1000 + i as i64);
+            let path = backup_dir.join(&name);
+            std::fs::write(&path, b"x".repeat(2048)).expect("write backup");
+        }
+
+        let files = list_backup_files(backup_dir).expect("list");
+        assert_eq!(files.len(), 15);
+        assert_eq!(files[0].0, 1014); // newest first
+
+        cleanup_old_backups(backup_dir).expect("cleanup");
+
+        let remaining = list_backup_files(backup_dir).expect("list after");
+        assert_eq!(remaining.len(), 10);
+
+        let expected_timestamps: Vec<i64> = (1005..=1014).rev().collect();
+        let actual: Vec<i64> = remaining.iter().map(|(ts, _)| *ts).collect();
+        assert_eq!(actual, expected_timestamps);
+    }
+
+    #[test]
+    fn find_latest_valid_backup_filters_by_size() {
+        let dir = tempdir().expect("temp dir");
+
+        let small_path = dir.path().join(backup_filename(1000));
+        std::fs::write(&small_path, b"s").expect("write small");
+
+        let large_path = dir.path().join(backup_filename(2000));
+        std::fs::write(&large_path, b"x".repeat(2048)).expect("write large");
+
+        let found = find_latest_valid_backup(dir.path()).expect("find");
+        assert_eq!(found.unwrap(), large_path);
+    }
+
+    #[test]
+    fn find_latest_valid_backup_returns_none_when_all_too_small() {
+        let dir = tempdir().expect("temp dir");
+
+        let small_path = dir.path().join(backup_filename(1000));
+        std::fs::write(&small_path, b"s").expect("write small");
+
+        let found = find_latest_valid_backup(dir.path()).expect("find");
+        assert!(found.is_none());
+    }
 
     #[test]
     fn exports_and_imports_backup_msgpack() {
@@ -730,6 +1057,89 @@ mod tests {
             imported_settings.last_backup_timestamp,
             Some(export_summary.generated_at)
         );
+    }
+
+    #[test]
+    fn imports_compressed_backup_file() {
+        let source_dir = tempdir().expect("source temp dir");
+        let source_db = Database::new(&source_dir.path().join("source.db")).expect("source db");
+        let source_store = SystemStore::new(source_dir.path().to_path_buf());
+
+        let source_settings = crate::domain::models::AppSettings {
+            computer_id: "server-c".to_string(),
+            computer_name: Some("Servidor C".to_string()),
+            computer_type: crate::domain::models::ComputerType::Server,
+            first_run_completed: true,
+            ..Default::default()
+        };
+        source_store
+            .save_app_settings(&source_settings)
+            .expect("save source settings");
+
+        let category = Category {
+            id: "cat-2".to_string(),
+            name: "Popular".to_string(),
+            updated_at: chrono::Local::now().naive_local(),
+            updated_by: "server-c".to_string(),
+        };
+        source_db
+            .insert_category(&category)
+            .expect("insert category");
+
+        let song = Song {
+            id: "song-2".to_string(),
+            name: "Musica Teste 2".to_string(),
+            composer: None,
+            arranger: None,
+            path: "/music/song-2".to_string(),
+            is_favorite: false,
+            status: ScoreStatus::Main,
+            updated_at: chrono::Local::now().naive_local(),
+            updated_by: "server-c".to_string(),
+        };
+        source_db
+            .insert_song(&song, std::slice::from_ref(&category.id))
+            .expect("insert song");
+
+        let msgpack_bytes = {
+            let settings = source_store.get_app_settings().expect("settings");
+            let payload = super::collect_backup_payload(&source_db, settings).expect("payload");
+            super::serialize_msgpack_named(&payload, "backup").expect("serialize")
+        };
+        let compressed = super::compress_zstd_with_threads(
+            &msgpack_bytes,
+            super::ZSTD_LEVEL_BALANCED,
+            "backup",
+        )
+        .expect("compress");
+
+        let compressed_path = source_dir.path().join("backup - 1710684000.msgpack.zst");
+        std::fs::write(&compressed_path, &compressed).expect("write compressed");
+
+        let target_dir = tempdir().expect("target temp dir");
+        let target_db = Database::new(&target_dir.path().join("target.db")).expect("target db");
+        let target_store = SystemStore::new(target_dir.path().to_path_buf());
+
+        let target_settings = crate::domain::models::AppSettings {
+            computer_id: "server-d".to_string(),
+            computer_name: Some("Servidor D".to_string()),
+            computer_type: crate::domain::models::ComputerType::Server,
+            first_run_completed: true,
+            ..Default::default()
+        };
+        target_store
+            .save_app_settings(&target_settings)
+            .expect("save target settings");
+
+        let summary = super::restore_backup_from_path(
+            &target_db,
+            &target_store,
+            &compressed_path,
+            &target_store.get_app_settings().expect("settings"),
+        )
+        .expect("import compressed");
+
+        assert_eq!(summary.songs_count, 1);
     }
 
     #[test]

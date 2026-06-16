@@ -511,6 +511,8 @@ export interface BackupImportSummary {
   songs_count: number;
   scores_count: number;
   categories_count: number;
+  songs_restored: number;
+  scores_restored: number;
 }
 
 export async function exportBackupFile(outputPath?: string | null): Promise<BackupFileSummary> {

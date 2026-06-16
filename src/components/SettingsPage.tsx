@@ -454,8 +454,12 @@ export default function SettingsPage() {
       let refreshedSettings: AppSettings | null = null;
       try {
         const summary = await api.importBackupCloudFile();
+        const restoredInfo =
+          summary.songs_restored > 0 || summary.scores_restored > 0
+            ? ` ${summary.songs_restored} música(s) e ${summary.scores_restored} partitura(s) foram restauradas da nuvem.`
+            : "";
         toast.success(
-          `Backup da nuvem importado com sucesso. Ele é de ${formatBackupTimestamp(summary.generated_at)}; mudanças feitas depois disso não entram nesse backup.`,
+          `Backup da nuvem importado com sucesso. Ele é de ${formatBackupTimestamp(summary.generated_at)}; mudanças feitas depois disso não entram nesse backup.${restoredInfo}`,
           { duration: 8000 }
         );
         refreshedSettings = await api.getSettings();
@@ -801,7 +805,7 @@ export default function SettingsPage() {
         {/* Backup automático */}
         <Section title="Backup automático">
           <p className="text-xs text-[#8b9db2] mt-1">
-            O computador do maestro verifica automaticamente ao iniciar se já passou 1 dia desde o último backup na nuvem.
+            O computador do maestro gera um backup automaticamente a cada 1 hora, mantendo os 10 últimos na nuvem.
           </p>
           <p className="text-xs text-[#8b9db2] mt-1">
             Último backup automático: {lastBackupLabel}
