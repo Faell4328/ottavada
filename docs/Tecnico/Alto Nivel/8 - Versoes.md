@@ -350,4 +350,21 @@
 
 ## Melhorias
 
-- Melhoria na identificação de instrumenos
+- melhoria na identificação de instrumentos.
+
+# Versão 1.3
+
+## Funcionalidades
+
+- backup completo para a nuvem, recuperando os arquivos localmente.
+
+## Melhorias
+
+- adicionando mais instrumentos;
+- melhorando a ordem dos instrumentos;
+- melhorias na interface para usuário leigos;
+- usando caminho relatório para dar suporte a vários usuários.
+
+## Correções
+
+- mudando de "mover para lixeira" para "parar de indexar" em músicas `not_found`.
