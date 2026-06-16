@@ -264,6 +264,6 @@ describe("SongRow menu", () => {
     expect(screen.getByText("Sem partitura")).toBeInTheDocument();
     expect(screen.getByText("Sem partitura").closest("tr")).toHaveClass("bg-[#fff1f2]");
     expect(screen.getByText("Reindexar música")).toBeInTheDocument();
-    expect(screen.getByText("Mover para Lixeira")).toBeInTheDocument();
+    expect(screen.getByText("Parar de indexar")).toBeInTheDocument();
   });
 });

@@ -9,7 +9,3 @@ O conteúdo está organizado em três seções:
 - **Anotações**: funciona como um diário de desenvolvimento e ideias.
 
 > **Se esta é sua primeira vez lendo a documentação, comece pela seção Alto Nível e depois siga para Baixo Nível. O mais importante é entender o *porquê* antes de entender o *como*.**
-
----
-
-**Uma observação**: sei que é chato, mas quebrei a documentação em vários arquivos, com objetivo de ficar mais eficiente com agentes de IA.

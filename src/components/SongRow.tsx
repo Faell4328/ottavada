@@ -218,10 +218,11 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(function Son
                     disabled={isActionLocked}
                   />
                   <ContextMenuItem
-                    label="Mover para Lixeira"
+                    label="Parar de indexar"
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleDelete();
+                      onMenuClose();
+                      void onDelete(song.id);
                     }}
                     disabled={isActionLocked}
                     isLast

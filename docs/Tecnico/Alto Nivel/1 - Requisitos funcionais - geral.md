@@ -4,11 +4,28 @@
 
 O sistema deve enviar dados de telemetria:
 
-- a cada 5 minutos após sua abertura.
+- ao abrir ser aberto.
+- a cada 5 minutos.
 
 Os dados enviados deve ser:
 
-- xxx
+- ID do computador (gerado aleatoriamente na instalação).
+- Nome do computador.
+- Nome da organização.
+- Tipo de computador.
+- Versão do aplicativo.
+- Sistema operacional.
+- Arquitetura (x32 ou x64).
+- Quantidade de músicas.
+- Quantidade de músicas em status `main`.
+- Quantidade de músicas em status `draft`.
+- Quantidade de músicas em status `not_found`.
+- Quantidade de partituras em status `main`.
+- Quantidade de partituras em status `draft`.
+- Quantidade de partituras em status `ignored`.
+- Error
+
+>  Não é feito coleta de dados sensíveis, o único objetivo da telemetria é saber se o aplicativo está sendo realmente usado, por quem e quais problemas está ocorrendo no Score Maestro.
 
 ## 1.2. Atualizações
 
