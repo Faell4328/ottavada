@@ -15,6 +15,7 @@ use crate::domain::models::*;
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
 use crate::services::indexer::{get_file_metadata, paths_match, split_file_path};
+use crate::services::backup_draft_ignored_service::remove_backup_file_for_draft_ignored_score;
 use crate::services::name_formatter::normalize_optional_score_name;
 use crate::services::path_normalizer::from_storage_path;
 #[cfg(target_os = "windows")]
@@ -575,7 +576,18 @@ pub fn update_score_status(
 
     let next_status = resolve_manual_score_status(current_score.status.clone(), &status)?;
 
-    db.update_score_status(&score_id, next_status, &settings.computer_id, None)?;
+    db.update_score_status(&score_id, next_status.clone(), &settings.computer_id, None)?;
+
+    if matches!(current_score.status, ScoreStatus::Draft | ScoreStatus::Ignored)
+        && !matches!(next_status, ScoreStatus::Draft | ScoreStatus::Ignored)
+    {
+        let _ = remove_backup_file_for_draft_ignored_score(
+            &store,
+            &score_id,
+            &current_score.file_extension,
+        );
+    }
+
     let _ = refresh_library_summary_cache(&db, &store);
 
     info!(
@@ -594,6 +606,16 @@ pub fn delete_score(
     require_server_settings(&store)?;
 
     info!("Deletando partitura: {}", score_id);
+
+    let song_id = db.get_song_id_for_score(&score_id)?;
+    let song = db.get_song_list_item_by_id(&song_id)?;
+    if let Some(score) = song.scores.iter().find(|sc| sc.id == score_id) {
+        if matches!(score.status, ScoreStatus::Draft | ScoreStatus::Ignored) {
+            let _ =
+                remove_backup_file_for_draft_ignored_score(&store, &score_id, &score.file_extension);
+        }
+    }
+
     delete_score_core(&db, &score_id)
         .map(|_| {
             info!("Partitura deletada com sucesso: {}", score_id);

@@ -768,7 +768,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Backup local */}
-        <div className="hidden" title="Backup local">
+        <div title="Backup local">
           <div className="flex flex-wrap gap-2">
             <button
               type="button"

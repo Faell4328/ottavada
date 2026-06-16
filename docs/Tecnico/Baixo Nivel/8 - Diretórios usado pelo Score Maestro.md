@@ -45,10 +45,17 @@ Diretório onde fica os **backups** para serem enviados a **nuvem**:
 
 ---
 
+Diretório onde fica as partituras **draft** e **ignored** para não se perder no bakcup:
+
+- `C:\Users\<user>\AppData\Roaming\ScoreMaestro\cloud\backup` (Windows).
+- `/home/<user>/.local/share/com.rhafa.score-maestro/cloud/backup` (Linux).
+
+---
+
 **Diretório das configurações do `rclone`**:
 
-- `C:\Users\<user>\AppData\Roaming\ScoreMaestro\rclone` (Windows).
-- `/home/<user>/.local/share/com.rhafa.score-maestro/rclone` (Linux).
+- `C:\Users\<user>\AppData\Roaming\ScoreMaestro\cloudbackup_scores_draft_ignored` (Windows).
+- `/home/<user>/.local/share/com.rhafa.score-maestro/cloud/backup_scores_draft_ignored` (Linux).
 
 ---
 

@@ -24,7 +24,7 @@ export async function runBackupImportFlow(deps: BackupImportDeps) {
       title: "Etapa 1 - Baixando backup",
       detail: "Baixando arquivos de backup da nuvem",
       stepCurrent: 1,
-      stepTotal: 4,
+      stepTotal: 5,
     },
   });
 
@@ -50,7 +50,7 @@ export async function runBackupImportFlow(deps: BackupImportDeps) {
       title: "Etapa 2 - Restaurando banco",
       detail: `Restaurando ${validation.songs_count} músicas e ${validation.scores_count} partituras`,
       stepCurrent: 2,
-      stepTotal: 4,
+      stepTotal: 5,
     },
   });
 
@@ -62,7 +62,7 @@ export async function runBackupImportFlow(deps: BackupImportDeps) {
       title: "Etapa 3 - Baixando músicas",
       detail: "Baixando arquivos de partituras da nuvem",
       stepCurrent: 3,
-      stepTotal: 4,
+      stepTotal: 5,
     },
   });
 
@@ -78,11 +78,29 @@ export async function runBackupImportFlow(deps: BackupImportDeps) {
       title: "Etapa 4 - Restaurando partituras",
       detail: "Extraindo partituras para os diretórios",
       stepCurrent: 4,
-      stepTotal: 4,
+      stepTotal: 5,
     },
   });
 
   const restoreResult = await api.restoreSongsFromCloudArchives();
+
+  dispatch({
+    type: "SET_OPERATION_STATUS",
+    payload: {
+      title: "Etapa 5 - Restaurando rascunhos",
+      detail: "Restaurando partituras draft e ignored",
+      stepCurrent: 5,
+      stepTotal: 5,
+    },
+  });
+
+  await runSyncWithProgress({
+    direction: "download",
+    relativePath: "backup_scores_draft_ignored",
+    lockInteraction: true,
+  });
+
+  const draftIgnoredRestored = await api.restoreDraftIgnoredFromCloud();
 
   dispatch({
     type: "SET_OPERATION_STATUS",
@@ -101,8 +119,13 @@ export async function runBackupImportFlow(deps: BackupImportDeps) {
       ? ` ${restoreResult.songs_restored} música(s) e ${restoreResult.scores_restored} partitura(s) foram restauradas da nuvem.`
       : "";
 
+  const draftIgnoredInfo =
+    draftIgnoredRestored > 0
+      ? ` ${draftIgnoredRestored} partitura(s) draft/ignored restauradas.`
+      : "";
+
   toast.success(
-    `Backup da nuvem importado com sucesso. Ele é de ${formatTimestamp(dbSummary.generated_at)}; mudanças feitas depois disso não entram nesse backup.${restoredInfo}`,
+    `Backup da nuvem importado com sucesso. Ele é de ${formatTimestamp(dbSummary.generated_at)}; mudanças feitas depois disso não entram nesse backup.${restoredInfo}${draftIgnoredInfo}`,
     { duration: 8000 },
   );
 

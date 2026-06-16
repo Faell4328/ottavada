@@ -7,6 +7,7 @@ pub const CLOUD_DIR_NAME: &str = "cloud";
 pub const CLOUD_SYNC_DIR_NAME: &str = "sync";
 pub const CLOUD_ACTIONS_DIR_NAME: &str = "actions";
 pub const CLOUD_BACKUP_DIR_NAME: &str = "backup";
+pub const CLOUD_BACKUP_DRAFT_IGNORED_DIR_NAME: &str = "backup_scores_draft_ignored";
 const SERVER_APPLY_IN_PROGRESS_FILE_NAME: &str = "server-apply-in-progress.lock";
 
 pub fn ensure_cloud_root_dir(app_data_dir: &Path) -> Result<PathBuf, AppError> {
@@ -58,6 +59,20 @@ pub fn ensure_backup_cloud_dir(app_data_dir: &Path) -> Result<PathBuf, AppError>
     Ok(backup_dir)
 }
 
+pub fn ensure_draft_ignored_backup_dir(app_data_dir: &Path) -> Result<PathBuf, AppError> {
+    let cloud_dir = ensure_cloud_root_dir(app_data_dir)?;
+    let backup_dir = cloud_dir.join(CLOUD_BACKUP_DRAFT_IGNORED_DIR_NAME);
+
+    fs::create_dir_all(&backup_dir).map_err(|e| {
+        AppError::Generic(format!(
+            "Erro ao preparar pasta local de backup de partituras draft/ignored: {}",
+            e
+        ))
+    })?;
+
+    Ok(backup_dir)
+}
+
 pub fn server_apply_in_progress_path(app_data_dir: &Path) -> PathBuf {
     app_data_dir.join(SERVER_APPLY_IN_PROGRESS_FILE_NAME)
 }
@@ -88,7 +103,8 @@ mod tests {
 
     use super::{
         clear_server_apply_in_progress, ensure_actions_cloud_dir, ensure_backup_cloud_dir,
-        ensure_sync_cloud_dir, has_server_apply_in_progress, mark_server_apply_in_progress,
+        ensure_draft_ignored_backup_dir, ensure_sync_cloud_dir, has_server_apply_in_progress,
+        mark_server_apply_in_progress,
     };
 
     #[test]
@@ -118,6 +134,22 @@ mod tests {
         let backup_dir = ensure_backup_cloud_dir(dir.path()).expect("ensure backup dir");
 
         assert_eq!(backup_dir, dir.path().join("cloud").join("backup"));
+        assert!(backup_dir.exists());
+    }
+
+    #[test]
+    fn creates_draft_ignored_backup_dir() {
+        let dir = tempdir().expect("temp dir");
+
+        let backup_dir =
+            ensure_draft_ignored_backup_dir(dir.path()).expect("ensure draft/ignored backup dir");
+
+        assert_eq!(
+            backup_dir,
+            dir.path()
+                .join("cloud")
+                .join("backup_scores_draft_ignored")
+        );
         assert!(backup_dir.exists());
     }
 

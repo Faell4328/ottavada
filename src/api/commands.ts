@@ -559,3 +559,7 @@ export async function restoreBackupDbFromCloud(): Promise<BackupImportSummary> {
 export async function restoreSongsFromCloudArchives(): Promise<RestoreSongsResult> {
   return invoke("restore_songs_from_cloud_archives");
 }
+
+export async function restoreDraftIgnoredFromCloud(): Promise<number> {
+  return invoke("restore_draft_ignored_from_cloud");
+}

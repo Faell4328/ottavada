@@ -14,6 +14,7 @@ use crate::infrastructure::store::SystemStore;
 use crate::services::cloud_paths::ensure_backup_cloud_dir;
 use crate::services::msgpack_zstd::{compress_zstd_with_threads, serialize_msgpack_named, write_atomic, ZSTD_LEVEL_BALANCED};
 use crate::services::path_normalizer::from_storage_path;
+use crate::services::backup_draft_ignored_service::backup_draft_ignored_scores;
 
 const BACKUP_FILE_PREFIX: &str = "backup - ";
 const BACKUP_FILE_EXTENSION: &str = ".msgpack.zst";
@@ -365,7 +366,12 @@ fn generate_backup_msgpack_in_cloud(
 
     let backup_dir = ensure_backup_cloud_dir(store.app_data_dir())?;
 
-    sync_cloud_directory_with_rclone_impl(store, "download", Some("backup"))?;
+    if let Err(err) = sync_cloud_directory_with_rclone_impl(store, "download", Some("backup")) {
+        warn!(
+            "Nao foi possivel baixar backups existentes (primeira vez?): {}",
+            err
+        );
+    }
 
     let backup_path = backup_dir.join(backup_filename(payload.generated_at));
 
@@ -382,6 +388,20 @@ fn generate_backup_msgpack_in_cloud(
     cleanup_old_backups(&backup_dir)?;
 
     sync_cloud_directory_with_rclone_impl(store, "upload", Some("backup"))?;
+
+    match backup_draft_ignored_scores(db, store) {
+        Ok(count) => {
+            if count > 0 {
+                info!("Backup de {} partituras draft/ignored concluido", count);
+            }
+        }
+        Err(err) => {
+            warn!(
+                "Erro ao fazer backup de partituras draft/ignored: {}",
+                err
+            );
+        }
+    }
 
     let mut updated_settings = store.get_app_settings()?;
     updated_settings.last_backup_timestamp = Some(payload.generated_at);
@@ -415,6 +435,17 @@ pub fn import_backup_msgpack_from_cloud(
 
     summary.songs_restored = songs_restored;
     summary.scores_restored = scores_restored;
+
+    match crate::services::backup_draft_ignored_service::restore_draft_ignored_scores_from_backup(db, store) {
+        Ok(count) => {
+            if count > 0 {
+                info!("{} partituras draft/ignored restauradas do backup", count);
+            }
+        }
+        Err(err) => {
+            warn!("Erro ao restaurar partituras draft/ignored: {}", err);
+        }
+    }
 
     Ok(summary)
 }

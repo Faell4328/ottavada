@@ -13,6 +13,7 @@ use crate::services::backup_msgpack_service::{
 use crate::services::backup_songs_service::{
     generate_song_archives, regenerate_all_song_archives, SongArchiveSummary,
 };
+use crate::services::backup_draft_ignored_service::restore_draft_ignored_scores_from_backup;
 use crate::services::client_sync_service::{apply_server_changes_for_client, ClientSyncSummary};
 use crate::services::cloud_paths::ensure_cloud_root_dir;
 use crate::services::events_service::{generate_events_msgpack, EventsFileSummary};
@@ -223,6 +224,25 @@ pub async fn restore_songs_from_cloud_archives(
                 songs_restored: songs,
                 scores_restored: scores,
             })
+        },
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn restore_draft_ignored_from_cloud(
+    db: State<'_, Database>,
+    store: State<'_, SystemStore>,
+) -> Result<usize, AppError> {
+    let db = db.inner().clone();
+    let app_data_dir = store.app_data_dir().clone();
+
+    run_blocking_with_store(
+        app_data_dir,
+        "Falha interna ao restaurar partituras draft/ignored",
+        move |store| {
+            require_server_settings(&store)?;
+            restore_draft_ignored_scores_from_backup(&db, &store)
         },
     )
     .await
