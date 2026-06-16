@@ -12,8 +12,10 @@ interface RcloneProviderModalProps {
   onApprove: (provider: RcloneProvider) => Promise<void>;
 }
 
-
-function getPrimaryActionLabel(provider: RcloneProvider, currentProvider: RcloneProvider) {
+function getPrimaryActionLabel(
+  provider: RcloneProvider,
+  currentProvider: RcloneProvider,
+) {
   if (provider === "google_drive") {
     return provider === currentProvider
       ? "Atualizar e testar Google Drive"
@@ -33,7 +35,8 @@ export function RcloneProviderModal({
   onTest,
   onApprove,
 }: RcloneProviderModalProps) {
-  const [selectedProvider, setSelectedProvider] = useState<RcloneProvider>(currentProvider);
+  const [selectedProvider, setSelectedProvider] =
+    useState<RcloneProvider>(currentProvider);
   const [email, setEmail] = useState("");
   const [appPassword, setAppPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -101,12 +104,13 @@ export function RcloneProviderModal({
             className="flex-1 rounded bg-[#4f84d7] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#3d6fb8] disabled:cursor-not-allowed disabled:opacity-50"
             disabled={
               isSubmitting ||
-              (selectedProvider === "koofr" && (!email.trim() || !appPassword.trim()))
+              (selectedProvider === "koofr" &&
+                (!email.trim() || !appPassword.trim()))
             }
           >
             {isSubmitting
-                ? "Testando..."
-                : getPrimaryActionLabel(selectedProvider, currentProvider)}
+              ? "Testando..."
+              : getPrimaryActionLabel(selectedProvider, currentProvider)}
           </button>
         </div>
       }
@@ -170,13 +174,15 @@ export function RcloneProviderModal({
 
         {selectedProvider === "koofr" ? (
           <div className="space-y-3 rounded-xl border border-[#c5cfdb] bg-white p-4">
-            <p className="text-sm font-semibold text-[#34485d]">Credenciais do Koofr</p>
+            <p className="text-sm font-semibold text-[#34485d]">Koofr</p>
             <p className="text-xs text-[#6b849e]">
-              Informe uma nova credencial se quiser trocar ou renovar o acesso.
+              Informe o email e a senha de aplicativo do Koofr.
             </p>
 
             <div>
-              <label className="mb-1.5 block text-xs font-semibold text-[#34485d]">Email</label>
+              <label className="mb-1.5 block text-xs font-semibold text-[#34485d]">
+                Email
+              </label>
               <input
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -186,7 +192,9 @@ export function RcloneProviderModal({
             </div>
 
             <div>
-              <label className="mb-1.5 block text-xs font-semibold text-[#34485d]">Senha do aplicativo</label>
+              <label className="mb-1.5 block text-xs font-semibold text-[#34485d]">
+                Senha do aplicativo
+              </label>
               <input
                 type="password"
                 value={appPassword}
@@ -198,12 +206,10 @@ export function RcloneProviderModal({
           </div>
         ) : (
           <div className="rounded-xl border border-[#c5cfdb] bg-white p-4">
-            <p className="text-sm font-semibold text-[#34485d]">Autenticação do Google Drive</p>
+            <p className="text-sm font-semibold text-[#34485d]">Google Drive</p>
             <p className="mt-1 text-xs text-[#6b849e]">
-              Ao confirmar, o navegador será aberto para gerar a configuração.
-            </p>
-            <p className="mt-1 text-xs text-[#6b849e]">
-              O teste é executado automaticamente na mesma etapa antes de aplicar.
+              Ao clicar no botão será aberto seu navegador para escolher a conta
+              Google
             </p>
           </div>
         )}

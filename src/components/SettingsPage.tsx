@@ -13,7 +13,12 @@ import { OrganizationNameField } from "./OrganizationNameField";
 import { SupportContactsCard } from "./SupportContactsCard";
 import { formatBackupTimestamp } from "../utils/formatters";
 import { shouldRunCloudBackupOnProviderChange } from "../utils/rcloneProviderChange";
-import type { AppContacts, AppSettings, RcloneProvider, UpdateInfo } from "../types";
+import type {
+  AppContacts,
+  AppSettings,
+  RcloneProvider,
+  UpdateInfo,
+} from "../types";
 import { isClientComputer } from "../utils/computer";
 import { getFriendlyRcloneErrorMessage } from "../utils/rcloneErrors";
 import packageJson from "../../package.json";
@@ -50,10 +55,11 @@ export default function SettingsPage() {
       google_service_account: null,
       rclone_config: null,
       library_summary: null,
-    }
+    },
   );
   const [isTogglingType, setIsTogglingType] = useState(false);
-  const [isChangeComputerTypeModalOpen, setIsChangeComputerTypeModalOpen] = useState(false);
+  const [isChangeComputerTypeModalOpen, setIsChangeComputerTypeModalOpen] =
+    useState(false);
   const [isGeneratingSnapshot, setIsGeneratingSnapshot] = useState(false);
   const [isExportingBackup, setIsExportingBackup] = useState(false);
   const [isImportingBackup, setIsImportingBackup] = useState(false);
@@ -61,14 +67,21 @@ export default function SettingsPage() {
   const [isGeneratingBackupCloud, setIsGeneratingBackupCloud] = useState(false);
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const [isInstallingUpdate, setIsInstallingUpdate] = useState(false);
-  const [availableUpdate, setAvailableUpdate] = useState<UpdateInfo | null>(null);
+  const [availableUpdate, setAvailableUpdate] = useState<UpdateInfo | null>(
+    null,
+  );
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
-  const [supportContacts, setSupportContacts] = useState<AppContacts>({ email: null, phone: null });
+  const [supportContacts, setSupportContacts] = useState<AppContacts>({
+    email: null,
+    phone: null,
+  });
   const [rcloneProvider, setRcloneProvider] = useState<RcloneProvider>("koofr");
   const [rcloneConfigGenerated, setRcloneConfigGenerated] = useState(false);
   const [hasRcloneConfigChange, setHasRcloneConfigChange] = useState(false);
-  const [isRcloneProviderModalOpen, setIsRcloneProviderModalOpen] = useState(false);
-  const [isRcloneLicenseModalOpen, setIsRcloneLicenseModalOpen] = useState(false);
+  const [isRcloneProviderModalOpen, setIsRcloneProviderModalOpen] =
+    useState(false);
+  const [isRcloneLicenseModalOpen, setIsRcloneLicenseModalOpen] =
+    useState(false);
   const isMountedRef = useRef(true);
 
   const isSettingsOperationInProgress =
@@ -131,11 +144,14 @@ export default function SettingsPage() {
       toast.success(
         setup.provider === "google_drive"
           ? "Conexão com o Google Drive concluída."
-          : "Conexão com o Koofr concluída."
+          : "Conexão com o Koofr concluída.",
       );
     } catch (error) {
       toast.error(
-        getFriendlyRcloneErrorMessage(error, "Não foi possível configurar a conexão com a nuvem")
+        getFriendlyRcloneErrorMessage(
+          error,
+          "Não foi possível configurar a conexão com a nuvem",
+        ),
       );
       throw error;
     }
@@ -147,7 +163,7 @@ export default function SettingsPage() {
       toast.success(
         provider === "google_drive"
           ? "Conexão com o Google Drive validada."
-          : "Conexão com o Koofr validada."
+          : "Conexão com o Koofr validada.",
       );
     } catch (error) {
       toast.error(
@@ -155,8 +171,8 @@ export default function SettingsPage() {
           error,
           provider === "google_drive"
             ? "Não foi possível testar o Google Drive"
-            : "Não foi possível testar o Koofr"
-        )
+            : "Não foi possível testar o Koofr",
+        ),
       );
       throw error;
     }
@@ -205,7 +221,9 @@ export default function SettingsPage() {
 
   function handleBackNavigation() {
     if (isSettingsOperationInProgress) {
-      toast.error("Espere a operação terminar antes de sair das configurações.");
+      toast.error(
+        "Espere a operação terminar antes de sair das configurações.",
+      );
       return;
     }
 
@@ -227,7 +245,7 @@ export default function SettingsPage() {
       toast.success(
         result === "Server"
           ? "Este computador agora é o computador do maestro."
-          : "Este computador agora é um computador de ensaio."
+          : "Este computador agora é um computador de ensaio.",
       );
       await loadSettings();
     } catch (err) {
@@ -244,7 +262,10 @@ export default function SettingsPage() {
       return;
     }
 
-    if (settings.computer_type === "Server" && !settings.organization_name?.trim()) {
+    if (
+      settings.computer_type === "Server" &&
+      !settings.organization_name?.trim()
+    ) {
       toast.error("Digite o nome da organização ou instituição.");
       return;
     }
@@ -308,7 +329,9 @@ export default function SettingsPage() {
       stepTotal: 1,
     });
     navigate("/");
-    const loadingToastId = toast.loading("Organizando os dados e aplicando as alterações...");
+    const loadingToastId = toast.loading(
+      "Organizando os dados e aplicando as alterações...",
+    );
     try {
       const snapshotSummary = await api.generateSnapshotFile(true);
       await loadSettings();
@@ -359,7 +382,7 @@ export default function SettingsPage() {
     try {
       const summary = await api.exportBackupFile(String(selectedPath));
       toast.success(
-        `Backup salvo com sucesso. Incluí ${summary.songs_count} música(s) e ${summary.scores_count} partitura(s).`
+        `Backup salvo com sucesso. Incluí ${summary.songs_count} música(s) e ${summary.scores_count} partitura(s).`,
       );
     } catch (error) {
       toast.error("Não foi possível salvar o backup local.");
@@ -407,7 +430,7 @@ export default function SettingsPage() {
         const summary = await api.importBackupFile(selectedPath);
         toast.success(
           `Backup importado com sucesso. Ele é de ${formatBackupTimestamp(summary.generated_at)}; mudanças feitas depois disso não entram nesse backup.`,
-          { duration: 8000 }
+          { duration: 8000 },
         );
         refreshedSettings = await api.getSettings();
         setSettings(refreshedSettings);
@@ -435,7 +458,9 @@ export default function SettingsPage() {
     }
 
     if (!settings.rclone_config) {
-      toast.error("Configure a conexão com a nuvem antes de importar o backup.");
+      toast.error(
+        "Configure a conexão com a nuvem antes de importar o backup.",
+      );
       return;
     }
 
@@ -460,7 +485,7 @@ export default function SettingsPage() {
             : "";
         toast.success(
           `Backup da nuvem importado com sucesso. Ele é de ${formatBackupTimestamp(summary.generated_at)}; mudanças feitas depois disso não entram nesse backup.${restoredInfo}`,
-          { duration: 8000 }
+          { duration: 8000 },
         );
         refreshedSettings = await api.getSettings();
         setSettings(refreshedSettings);
@@ -513,7 +538,7 @@ export default function SettingsPage() {
         `Backup da nuvem pronto em ${formatBackupTimestamp(summary.generated_at)}.`,
         {
           duration: 8000,
-        }
+        },
       );
     } catch (error) {
       toast.error("Não foi possível salvar o backup na nuvem.");
@@ -611,7 +636,8 @@ export default function SettingsPage() {
                   {state.operationStatus.title || "Processando..."}
                 </p>
                 <p className="mt-1 text-xs text-[#5e7390]">
-                  {state.operationStatus.detail || "Aguarde enquanto o aplicativo conclui a operação."}
+                  {state.operationStatus.detail ||
+                    "Aguarde enquanto o aplicativo conclui a operação."}
                 </p>
               </div>
             </div>
@@ -620,19 +646,20 @@ export default function SettingsPage() {
 
         {/* Computador */}
         <Section title="Computador">
-          <Field label="Nome do computador">
-            <input
-              value={settings.computer_name ?? ""}
-              onChange={(e) =>
-                update({
-                  computer_name: e.target.value || null,
-                })
-              }
-              disabled={isSyncLocked}
-              className="w-full h-9 rounded border border-[#c5cfdb] bg-white px-3 text-sm text-[#4d6075] outline-none focus:border-[#7ba0d4]"
-              placeholder="Ex: Estúdio, Home, Sala Ensaio..."
-            />
-          </Field>
+          <p className="mb-1.5 block text-sm font-semibold text-[#34485d]">
+            Nome do computador
+          </p>
+          <input
+            value={settings.computer_name ?? ""}
+            onChange={(e) =>
+              update({
+                computer_name: e.target.value || null,
+              })
+            }
+            disabled={isSyncLocked}
+            className="w-full h-9 rounded border border-[#c5cfdb] bg-white px-3 text-sm text-[#4d6075] outline-none focus:border-[#7ba0d4]"
+            placeholder="Ex: Estúdio, Home, Sala Ensaio..."
+          />
 
           <OrganizationNameField
             computerType={settings.computer_type}
@@ -645,52 +672,69 @@ export default function SettingsPage() {
             }
           />
 
-          <Field label="Tipo de computador">
-            <div className="flex items-center gap-2">
-              <div className="flex-1 h-9 rounded border border-[#c5cfdb] bg-[#f0f3f8] px-3 text-sm text-[#4d6075] flex items-center">
-                {settings.computer_type === "Server" ? "Computador do Maestro" : "Computador de Ensaio"}
-              </div>
-              <button
-                type="button"
-                onClick={handleComputerTypeChange}
-                disabled={isTogglingType || isSyncLocked}
-                className="h-9 px-4 rounded border border-[#c5cfdb] bg-white hover:bg-[#f2f5fa] text-sm font-medium text-[#344b61] disabled:opacity-50 transition-colors cursor-pointer"
-              >
-                {isTogglingType ? "Alternando..." : "Alternar"}
-              </button>
-            </div>
-            <p className="text-xs text-[#8b9db2] mt-1">
+          <br />
+
+          <p className="mb-1.5 block text-sm font-semibold text-[#34485d]">
+            Tipo de computador
+          </p>
+          <div className="flex items-center gap-2">
+            <div className="flex-1 h-9 rounded border border-[#c5cfdb] bg-[#f0f3f8] px-3 text-sm text-[#4d6075] flex items-center">
               {settings.computer_type === "Server"
-                ? "Computador do maestro - indexa e sincroniza partituras. Clique em 'Alternar' para mudar para Computador de Ensaio."
-                : "Computador de ensaio - consulta e propõe alterações. Clique em 'Alternar' para mudar para Computador do Maestro."}
-            </p>
-          </Field>
+                ? "Computador do Maestro"
+                : "Computador de Ensaio"}
+            </div>
+            <button
+              type="button"
+              onClick={handleComputerTypeChange}
+              disabled={isTogglingType || isSyncLocked}
+              className="h-9 px-4 rounded border border-[#c5cfdb] bg-white hover:bg-[#f2f5fa] text-sm font-medium text-[#344b61] disabled:opacity-50 transition-colors cursor-pointer"
+            >
+              {isTogglingType ? "Alternando..." : "Alternar"}
+            </button>
+          </div>
+          <p className="text-xs text-[#8b9db2] mt-1">
+            {settings.computer_type === "Server"
+              ? "Computador do maestro - indexa e sincroniza partituras. Clique em 'Alternar' para mudar para Computador de Ensaio."
+              : "Computador de ensaio - consulta e propõe alterações. Clique em 'Alternar' para mudar para Computador do Maestro."}
+          </p>
         </Section>
 
-        <Section title="Provedor de Nuvem">
+        <Section title="Provedor de nuvem">
           <div className="rounded-xl border border-[#c5cfdb] bg-[#f8fafd] p-4">
             <p className="mt-1 text-xs text-[#6b849e]">
-              Provedor atual: <span className="font-semibold text-[#34485d]">{getRcloneProviderLabel(rcloneProvider)}</span>
+              Provedor atual:{" "}
+              <span className="font-semibold text-[#34485d]">
+                {getRcloneProviderLabel(rcloneProvider)}
+              </span>
             </p>
             <p className="mt-1 text-xs text-[#6b849e]">
-              Remote padrão: <span className="font-semibold text-[#34485d]">{rcloneProvider === "koofr" ? "koofr" : "gdrive"}</span>
+              Remote padrão:{" "}
+              <span className="font-semibold text-[#34485d]">
+                {rcloneProvider === "koofr" ? "koofr" : "gdrive"}
+              </span>
             </p>
             <p className="mt-1 text-xs text-[#6b849e]">
-              Caminho padrão: <span className="font-semibold text-[#34485d]">ScoreMaestro</span>
+              Caminho padrão:{" "}
+              <span className="font-semibold text-[#34485d]">ScoreMaestro</span>
             </p>
 
             {rcloneConfigGenerated ? (
               <div className="mt-3 rounded-lg border border-green-200 bg-green-50 p-3">
-                <p className="text-xs font-semibold text-green-800">Configuração pronta</p>
+                <p className="text-xs font-semibold text-green-800">
+                  Configuração pronta
+                </p>
                 <p className="mt-1 text-xs text-green-700">
                   A configuração do rclone já foi gerada para este provedor.
                 </p>
               </div>
             ) : (
               <div className="mt-3 rounded-lg border border-yellow-200 bg-yellow-50 p-3">
-                <p className="text-xs font-semibold text-yellow-800">Configuração pendente</p>
+                <p className="text-xs font-semibold text-yellow-800">
+                  Configuração pendente
+                </p>
                 <p className="mt-1 text-xs text-yellow-700">
-                  Clique para abrir o modal e gerar ou trocar o provedor de nuvem.
+                  Clique para abrir o modal e gerar ou trocar o provedor de
+                  nuvem.
                 </p>
               </div>
             )}
@@ -701,13 +745,13 @@ export default function SettingsPage() {
               disabled={isSettingsOperationInProgress}
               className="mt-4 h-9 rounded border border-[#4f84d7] bg-[#4f84d7] px-4 text-sm font-medium text-white transition-colors hover:bg-[#3d6fb8] cursor-pointer"
             >
-              Mudar provedor de nuvem
+              Mudar de conta ou de provedor de nuvem
             </button>
           </div>
         </Section>
 
         {/* Snapshot */}
-        <Section title="Snapshot">
+        {/*<Section title="Snapshot">
           <div>
             <button
               type="button"
@@ -732,15 +776,20 @@ export default function SettingsPage() {
               Último snapshot: {lastSnapshotLabel}
             </p>
           </div>
-        </Section>
+        </Section>*/}
 
         {/* Backup local */}
-        <Section title="Backup local">
+        {/*<Section title="Backup local">
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
               onClick={handleExportBackup}
-              disabled={isExportingBackup || settings.computer_type !== "Server" || isClient || isSyncLocked}
+              disabled={
+                isExportingBackup ||
+                settings.computer_type !== "Server" ||
+                isClient ||
+                isSyncLocked
+              }
               className="h-9 px-4 rounded border border-[#c5cfdb] bg-white hover:bg-[#f2f5fa] text-sm font-medium text-[#344b61] disabled:opacity-50 transition-colors cursor-pointer"
             >
               {isExportingBackup ? "Exportando..." : "Exportar backup local"}
@@ -749,7 +798,12 @@ export default function SettingsPage() {
             <button
               type="button"
               onClick={handleImportBackup}
-              disabled={isImportingBackup || settings.computer_type !== "Server" || isClient || isSyncLocked}
+              disabled={
+                isImportingBackup ||
+                settings.computer_type !== "Server" ||
+                isClient ||
+                isSyncLocked
+              }
               className="h-9 px-4 rounded border border-[#c5cfdb] bg-white hover:bg-[#f2f5fa] text-sm font-medium text-[#344b61] disabled:opacity-50 transition-colors cursor-pointer"
             >
               {isImportingBackup ? "Importando..." : "Importar backup local"}
@@ -757,9 +811,10 @@ export default function SettingsPage() {
           </div>
 
           <p className="text-xs text-[#8b9db2] mt-1">
-            Exporta e importa um backup local completo do banco de dados e das configurações.
+            Exporta e importa um backup local completo do banco de dados e das
+            configurações.
           </p>
-        </Section>
+        </Section>*/}
 
         {/* Backup cloud */}
         <Section title="Backup na nuvem">
@@ -793,19 +848,21 @@ export default function SettingsPage() {
               }
               className="h-9 px-4 rounded border border-[#c5cfdb] bg-white hover:bg-[#f2f5fa] text-sm font-medium text-[#344b61] disabled:opacity-50 transition-colors cursor-pointer"
             >
-              {isImportingBackupCloud ? "Importando..." : "Importar backup cloud"}
+              {isImportingBackupCloud ? "Importando..." : "Importar backup"}
             </button>
           </div>
 
           <p className="text-xs text-[#8b9db2] mt-1">
-            Gera e envia o backup para a nuvem imediatamente, ou baixa o backup da nuvem para o computador.
+            Gera e envia o backup para a nuvem imediatamente, ou baixa o backup
+            da nuvem para o computador.
           </p>
         </Section>
 
         {/* Backup automático */}
         <Section title="Backup automático">
           <p className="text-xs text-[#8b9db2] mt-1">
-            O computador do maestro gera um backup automaticamente a cada 1 hora, mantendo os 10 últimos na nuvem.
+            O computador do maestro gera um backup automaticamente a cada 1
+            hora, mantendo os 10 últimos na nuvem.
           </p>
           <p className="text-xs text-[#8b9db2] mt-1">
             Último backup automático: {lastBackupLabel}
@@ -820,7 +877,9 @@ export default function SettingsPage() {
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6b849e]">
                   Versão do software
                 </p>
-                <p className="mt-1 text-sm font-semibold text-[#34485d]">{packageJson.version}</p>
+                <p className="mt-1 text-sm font-semibold text-[#34485d]">
+                  {packageJson.version}
+                </p>
               </div>
 
               <button
@@ -864,7 +923,10 @@ export default function SettingsPage() {
         </Section>
 
         <Section title="Contato">
-          <SupportContactsCard email={supportContacts.email} phone={supportContacts.phone} />
+          <SupportContactsCard
+            email={supportContacts.email}
+            phone={supportContacts.phone}
+          />
         </Section>
 
         {/* Save */}
@@ -880,17 +942,15 @@ export default function SettingsPage() {
         </div>
 
         {/* Footer */}
-        {
-          (Math.round(Math.random()*10) == 1) ? (
-            <div className="mt-12 text-center text-xs text-[#8b9db2]">
-              In total, 200 cups of coffee were consumed and it is increasing ☕📈
-            </div>
-          ):(
-            <div className="mt-12 text-center text-xs text-[#8b9db2]">
-              Made by Rhafaell (@Faell4328) with lots of coffee ☕
-            </div>
-          )
-        }
+        {Math.round(Math.random() * 10) == 1 ? (
+          <div className="mt-12 text-center text-xs text-[#8b9db2]">
+            In total, 200 cups of coffee were consumed and it is increasing ☕📈
+          </div>
+        ) : (
+          <div className="mt-12 text-center text-xs text-[#8b9db2]">
+            Made by Rhafaell (@Faell4328) with lots of coffee ☕
+          </div>
+        )}
       </div>
 
       {/* Change Computer Type Modal */}
@@ -973,7 +1033,9 @@ function SummaryColumn({
 }) {
   return (
     <div className="rounded-lg border border-[#e1e7ef] bg-[#f8fafd] p-3">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6b849e]">{label}</p>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6b849e]">
+        {label}
+      </p>
       <div className="mt-2 space-y-1 text-sm text-[#34485d]">
         <div className="flex items-center justify-between">
           <span>Main</span>
