@@ -7,6 +7,7 @@ use crate::infrastructure::database::Database;
 use crate::services::indexer::{
     get_file_metadata, paths_match, scan_directory, split_file_path, FileChangeDetector,
 };
+use crate::services::path_normalizer::from_storage_path;
 
 #[derive(Debug, Clone)]
 struct ScoreMetadataEntry {
@@ -170,7 +171,8 @@ pub fn run_initial_scan(db: &Database, host_id: &str) {
 }
 
 fn build_score_full_path(file_path: &str, file_name: &str) -> String {
-    let base_path = Path::new(file_path);
+    let expanded_file_path = from_storage_path(file_path);
+    let base_path = Path::new(&expanded_file_path);
     let legacy_full_path = base_path
         .file_name()
         .and_then(|name| name.to_str())

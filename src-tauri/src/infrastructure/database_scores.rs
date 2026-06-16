@@ -4,6 +4,7 @@ use crate::domain::errors::AppError;
 use crate::domain::models::datetime_utils;
 use crate::domain::models::*;
 use crate::infrastructure::database::Database;
+use crate::services::path_normalizer::to_storage_path;
 
 impl Database {
     // ── Scores ──
@@ -12,6 +13,7 @@ impl Database {
         let conn = self.conn.lock().unwrap();
         let file_modified_at_ts = score.file_modified_at.and_utc().timestamp();
         let file_extension = Self::extract_file_extension(&score.file_name).unwrap_or_default();
+        let storage_file_path = to_storage_path(&score.file_path);
 
         conn.execute(
             "INSERT INTO scores (id, song_id, name, host_id, file_path, file_name, file_extension, file_size, file_modified_at, status)
@@ -21,7 +23,7 @@ impl Database {
                 score.song_id,
                 score.name,
                 score.host_id,
-                score.file_path,
+                storage_file_path,
                 score.file_name,
                 file_extension,
                 score.file_size,
@@ -38,7 +40,7 @@ impl Database {
                    ELSE ?2
                  END
                          WHERE id = ?3",
-            params![score.file_path, file_modified_at_ts, score.song_id],
+            params![storage_file_path, file_modified_at_ts, score.song_id],
         )?;
 
         Self::insert_changed_field(
@@ -104,6 +106,7 @@ impl Database {
         let conn = self.conn.lock().unwrap();
         let file_modified_at_ts = file_modified_at.and_utc().timestamp();
         let file_extension = Self::extract_file_extension(file_name).unwrap_or_default();
+        let storage_file_path = to_storage_path(file_path);
 
         let (original_name, original_file_path, original_file_name, original_status) = conn
             .query_row(
@@ -120,7 +123,7 @@ impl Database {
             )
             .map_err(|e| crate::infrastructure::database::to_not_found(AppError::ScoreNotFound(score_id.to_string()))(e))?;
 
-        let file_changed = original_file_path != file_path || original_file_name != file_name;
+        let file_changed = original_file_path != storage_file_path || original_file_name != file_name;
         let name_change_value = name.clone().or(original_name.clone());
 
         conn.execute(
@@ -135,7 +138,7 @@ impl Database {
              WHERE id = ?8",
             params![
                 name,
-                file_path,
+                storage_file_path,
                 file_name,
                 file_extension,
                 file_size,
@@ -159,7 +162,7 @@ impl Database {
                    ELSE ?2
                  END
                          WHERE id = ?3",
-            params![file_path, file_modified_at_ts, song_id],
+            params![storage_file_path, file_modified_at_ts, song_id],
         )?;
 
         if original_name != name {

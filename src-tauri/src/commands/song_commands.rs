@@ -13,6 +13,7 @@ use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
 use crate::services::indexer::{self, get_file_metadata, paths_match};
 use crate::services::name_formatter::{normalize_optional_score_name, normalize_song_name};
+use crate::services::path_normalizer::from_storage_path;
 
 fn normalized_required_song_name(name: &str) -> Result<String, AppError> {
     let normalized = normalize_song_name(name);
@@ -113,7 +114,8 @@ fn delete_song_with_files_core(
     song_id: &str,
 ) -> Result<(), AppError> {
     let song = db.get_song_list_item_by_id(song_id)?;
-    remove_path_if_exists(std::path::Path::new(&song.path))?;
+    let expanded_path = from_storage_path(&song.path);
+    remove_path_if_exists(std::path::Path::new(&expanded_path))?;
     delete_song_core(db, store, song_id)
 }
 
@@ -130,7 +132,8 @@ fn normalize_author_change_name(name: &str, fallback_message: &str) -> Result<St
 pub fn delete_file_path(store: State<'_, SystemStore>, file_path: String) -> Result<(), AppError> {
     require_server_settings(&store)?;
 
-    let path = std::path::Path::new(&file_path);
+    let expanded = from_storage_path(&file_path);
+    let path = std::path::Path::new(&expanded);
     info!("Excluindo arquivo da tela de revisão: {}", path.display());
     remove_path_if_exists(path)
 }

@@ -13,6 +13,7 @@ use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
 use crate::services::cloud_paths::ensure_backup_cloud_dir;
 use crate::services::msgpack_zstd::{serialize_msgpack_named, write_atomic};
+use crate::services::path_normalizer::to_storage_path;
 
 const BACKUP_FILE_NAME: &str = "backup.msgpack";
 const BACKUP_SCHEMA_VERSION: u32 = 1;
@@ -302,7 +303,7 @@ fn collect_backup_payload(
                 name: row.get(1)?,
                 composer: row.get(2)?,
                 arranger: row.get(3)?,
-                path: row.get(4)?,
+                path: to_storage_path(&row.get::<_, String>(4)?),
                 is_favorite: row.get::<_, bool>(5)?,
                 last_score_file_modified_at: row.get(6)?,
             })
@@ -322,7 +323,7 @@ fn collect_backup_payload(
                 song_id: row.get(1)?,
                 name: row.get(2)?,
                 host_id: row.get(3)?,
-                file_path: row.get(4)?,
+                file_path: to_storage_path(&row.get::<_, String>(4)?),
                 file_name: row.get(5)?,
                 file_size: row.get(6)?,
                 file_modified_at: row.get(7)?,
@@ -493,6 +494,7 @@ fn restore_backup_payload(db: &Database, payload: &BackupMessagePack) -> Result<
         }
 
         for song in &payload.songs {
+            let storage_path = to_storage_path(&song.path);
             tx.execute(
                 "INSERT INTO songs (id, name, composer, arranger, path, is_favorite, last_score_file_modified_at)
                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
@@ -501,7 +503,7 @@ fn restore_backup_payload(db: &Database, payload: &BackupMessagePack) -> Result<
                     song.name,
                     song.composer,
                     song.arranger,
-                    song.path,
+                    storage_path,
                     song.is_favorite,
                     song.last_score_file_modified_at,
                 ],
@@ -514,6 +516,7 @@ fn restore_backup_payload(db: &Database, payload: &BackupMessagePack) -> Result<
                 .and_then(|ext| ext.to_str())
                 .map(|ext| ext.to_lowercase())
                 .unwrap_or_else(|| "score".to_string());
+            let storage_file_path = to_storage_path(&score.file_path);
 
             tx.execute(
                 "INSERT INTO scores (id, song_id, name, host_id, file_path, file_name, file_extension, file_size, file_modified_at, status)
@@ -523,7 +526,7 @@ fn restore_backup_payload(db: &Database, payload: &BackupMessagePack) -> Result<
                     score.song_id,
                     score.name,
                     score.host_id,
-                    score.file_path,
+                    storage_file_path,
                     score.file_name,
                     file_extension,
                     score.file_size,

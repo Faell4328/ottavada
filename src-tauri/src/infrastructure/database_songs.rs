@@ -5,6 +5,7 @@ use crate::domain::models::*;
 use crate::infrastructure::database::{
     to_not_found, ChangedFieldRecord, Database, DEFAULT_CATEGORY_ID, SONGS_SELECT_FIELDS, parse_datetime,
 };
+use crate::services::path_normalizer::to_storage_path;
 
 impl Database {
     fn get_category_ids(conn: &rusqlite::Connection, song_id: &str) -> Result<Vec<String>, AppError> {
@@ -166,6 +167,8 @@ impl Database {
             ));
         }
 
+        let storage_path = to_storage_path(&song.path);
+
         conn.execute(
             "INSERT INTO songs (id, name, composer, arranger, path, is_favorite, status, last_score_file_modified_at)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
@@ -174,7 +177,7 @@ impl Database {
                 song.name,
                 song.composer,
                 song.arranger,
-                song.path,
+                storage_path,
                 song.is_favorite,
                 song.status.as_str(),
                 now_ts,
@@ -261,6 +264,8 @@ impl Database {
 
         let old_category_ids = Self::get_category_ids(&conn, &song.id)?;
 
+        let storage_path = to_storage_path(&song.path);
+
         conn.execute(
             "UPDATE songs SET name = ?1, composer = ?2, arranger = ?3, path = ?4, is_favorite = ?5
              WHERE id = ?6",
@@ -268,7 +273,7 @@ impl Database {
                 song.name,
                 song.composer,
                 song.arranger,
-                song.path,
+                storage_path,
                 song.is_favorite,
                 song.id,
             ],

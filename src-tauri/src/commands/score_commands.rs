@@ -16,6 +16,7 @@ use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
 use crate::services::indexer::{get_file_metadata, paths_match, split_file_path};
 use crate::services::name_formatter::normalize_optional_score_name;
+use crate::services::path_normalizer::from_storage_path;
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
 
@@ -517,27 +518,30 @@ pub async fn open_file(
 
 #[tauri::command]
 pub fn open_file_path(file_path: String) -> Result<(), AppError> {
-    let path = Path::new(&file_path);
+    let expanded = from_storage_path(&file_path);
+    let path = Path::new(&expanded);
     ensure_supported_score_file(path)?;
-    open_path_on_system(&file_path)
+    open_path_on_system(&expanded)
 }
 
 #[tauri::command]
 pub fn open_file_location(db: State<'_, Database>, file_path: String) -> Result<(), AppError> {
-    let path = Path::new(&file_path);
+    let expanded = from_storage_path(&file_path);
+    let path = Path::new(&expanded);
     if path.exists() && path.is_dir() {
-        return open_file_location_on_system(&file_path);
+        return open_file_location_on_system(&expanded);
     }
 
     if path.exists() && path.is_file() {
         ensure_supported_score_file(path)?;
-        return open_file_location_on_system(&file_path);
+        return open_file_location_on_system(&expanded);
     }
 
     let resolved_path = db.get_score_file_path(&file_path)?;
-    let resolved = Path::new(&resolved_path);
+    let expanded_resolved = from_storage_path(&resolved_path);
+    let resolved = Path::new(&expanded_resolved);
     ensure_supported_score_file(resolved)?;
-    open_file_location_on_system(&resolved_path)
+    open_file_location_on_system(&expanded_resolved)
 }
 
 #[tauri::command]

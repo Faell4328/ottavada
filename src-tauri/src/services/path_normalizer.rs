@@ -1,0 +1,180 @@
+/// Obtém o diretório de perfil do usuário (equivalente a `%USERPROFILE%` no Windows).
+pub fn get_user_profile() -> Option<String> {
+    #[cfg(target_os = "windows")]
+    {
+        std::env::var("USERPROFILE").ok()
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        std::env::var("HOME").ok()
+    }
+}
+
+/// Converte um caminho absoluto para o formato de armazenamento com `%USERPROFILE%`.
+///
+/// Apenas aplica a conversão se o caminho estiver dentro do diretório de perfil do usuário.
+/// Caso contrário, retorna o caminho original.
+pub fn to_storage_path(path: &str) -> String {
+    let trimmed = path.trim();
+    if trimmed.is_empty() {
+        return trimmed.to_string();
+    }
+
+    let Some(home) = get_user_profile() else {
+        return trimmed.to_string();
+    };
+
+    if home.trim().is_empty() {
+        return trimmed.to_string();
+    }
+
+    let (home_for_check, path_for_check) = normalize_for_comparison(&home, trimmed);
+
+    if !path_for_check.starts_with(&home_for_check) {
+        return trimmed.to_string();
+    }
+
+    let remainder = &trimmed[home.len()..];
+    let remainder = remainder.trim_start_matches('\\').trim_start_matches('/');
+
+    if remainder.is_empty() {
+        "%USERPROFILE%".to_string()
+    } else {
+        format!("%USERPROFILE%\\{}", remainder)
+    }
+}
+
+/// Expande `%USERPROFILE%` de volta para o caminho absoluto real (para operações no sistema de arquivos).
+///
+/// Se o caminho não começar com `%USERPROFILE%`, retorna o original.
+pub fn from_storage_path(path: &str) -> String {
+    let trimmed = path.trim();
+    if trimmed.is_empty() {
+        return trimmed.to_string();
+    }
+
+    let upper = trimmed.to_uppercase();
+    if !upper.starts_with("%USERPROFILE%") {
+        return trimmed.to_string();
+    }
+
+    let Some(home) = get_user_profile() else {
+        return trimmed.to_string();
+    };
+
+    let remainder = &trimmed["%USERPROFILE%".len()..];
+    let remainder = remainder.trim_start_matches('\\').trim_start_matches('/');
+
+    if remainder.is_empty() {
+        home
+    } else {
+        format!("{}\\{}", home.trim_end_matches('\\'), remainder)
+    }
+}
+
+fn normalize_for_comparison(home: &str, path: &str) -> (String, String) {
+    let home_normalized = home.replace('\\', "/").to_lowercase();
+    let path_normalized = path.replace('\\', "/").to_lowercase();
+
+    let home_normalized = home_normalized.trim_end_matches('/').to_string();
+    let path_normalized = path_normalized.trim_end_matches('/').to_string();
+
+    (home_normalized, path_normalized)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::env;
+
+    fn with_userprofile(value: &str, test: impl FnOnce()) {
+        let key = if cfg!(target_os = "windows") {
+            "USERPROFILE"
+        } else {
+            "HOME"
+        };
+        let old = env::var(key).ok();
+        unsafe { env::set_var(key, value) };
+        test();
+        match old {
+            Some(v) => unsafe { env::set_var(key, v) },
+            None => unsafe { env::remove_var(key) },
+        }
+    }
+
+    #[test]
+    fn storage_path_empty_returns_empty() {
+        assert_eq!(to_storage_path(""), "");
+    }
+
+    #[test]
+    fn storage_path_outside_profile_returns_unchanged() {
+        with_userprofile(r"C:\Users\john", || {
+            assert_eq!(to_storage_path(r"C:\music\song"), r"C:\music\song");
+        });
+    }
+
+    #[test]
+    fn storage_path_inside_profile_converts() {
+        with_userprofile(r"C:\Users\john", || {
+            assert_eq!(
+                to_storage_path(r"C:\Users\john\Documents\Song"),
+                r"%USERPROFILE%\Documents\Song"
+            );
+        });
+    }
+
+    #[test]
+    fn storage_path_exact_profile() {
+        with_userprofile(r"C:\Users\john", || {
+            assert_eq!(to_storage_path(r"C:\Users\john"), r"%USERPROFILE%");
+        });
+    }
+
+    #[test]
+    fn storage_path_case_insensitive() {
+        with_userprofile(r"C:\Users\John", || {
+            assert_eq!(
+                to_storage_path(r"c:\users\john\Documents\Song"),
+                r"%USERPROFILE%\Documents\Song"
+            );
+        });
+    }
+
+    #[test]
+    fn from_storage_path_expands_correctly() {
+        with_userprofile(r"C:\Users\john", || {
+            assert_eq!(
+                from_storage_path(r"%USERPROFILE%\Documents\Song"),
+                r"C:\Users\john\Documents\Song"
+            );
+        });
+    }
+
+    #[test]
+    fn from_storage_path_exact() {
+        with_userprofile(r"C:\Users\john", || {
+            assert_eq!(from_storage_path(r"%USERPROFILE%"), r"C:\Users\john");
+        });
+    }
+
+    #[test]
+    fn from_storage_path_no_placeholder_returns_unchanged() {
+        with_userprofile(r"C:\Users\john", || {
+            assert_eq!(
+                from_storage_path(r"C:\music\song"),
+                r"C:\music\song"
+            );
+        });
+    }
+
+    #[test]
+    fn roundtrip_preserves_semantics() {
+        with_userprofile(r"C:\Users\john", || {
+            let original = r"C:\Users\john\Documents\Song";
+            let stored = to_storage_path(original);
+            let restored = from_storage_path(&stored);
+            assert_eq!(restored.to_lowercase(), original.to_lowercase());
+        });
+    }
+}

@@ -11,6 +11,7 @@ use tracing::{error, info, warn};
 
 use crate::domain::errors::AppError;
 use crate::infrastructure::database::Database;
+use crate::services::path_normalizer::from_storage_path;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct SongArchiveResult {
@@ -178,7 +179,8 @@ fn list_scores_for_archive(
             return Ok(None);
         }
 
-        let source_path = PathBuf::from(&dir_path).join(&file_name);
+        let expanded_dir = from_storage_path(&dir_path);
+        let source_path = PathBuf::from(&expanded_dir).join(&file_name);
 
         let extension = Path::new(&file_name)
             .extension()

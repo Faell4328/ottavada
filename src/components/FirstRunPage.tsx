@@ -174,19 +174,14 @@ export default function FirstRunPage() {
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-[#33465d] to-[#5d6d82]">
       <div className="my-10 w-full max-w-2xl rounded-xl bg-white p-8 shadow-2xl">
         {step !== "intro" && (
-          <div className="mb-8 flex flex-col items-center">
+          <div className="mb-4 flex flex-col items-center">
             <img
               src="/icon.png"
               alt="Score Maestro"
               loading="eager"
               fetchPriority="high"
-              className="mb-3 h-16 w-16 rounded-2xl object-cover"
+              className="mb-3 h-20 w-20 rounded-2xl object-cover"
             />
-            <h1 className="text-2xl font-bold text-[#2f4259]">Score Maestro</h1>
-            <p className="text-center text-sm text-[#6b849e]">
-              Organize suas partituras com segurança, clareza e menos
-              retrabalho.
-            </p>
           </div>
         )}
 
@@ -237,11 +232,11 @@ export default function FirstRunPage() {
 
         {step === "type" && (
           <>
-            <h2 className="mb-4 text-lg font-semibold text-[#34485d]">
+            <h2 className="mb-4 text-lg font-semibold text-[#34485d] text-center">
               Qual tipo de computador você está configurando?
             </h2>
 
-            <p className="mb-6 text-sm text-[#6b849e]">
+            <p className="mb-6 text-sm text-[#6b849e] text-center">
               Isso define como este computador vai funcionar dentro do Score
               Maestro.
             </p>
@@ -323,11 +318,11 @@ export default function FirstRunPage() {
 
         {step === "name" && (
           <>
-            <h2 className="mb-4 text-lg font-semibold text-[#34485d]">
+            <h2 className="mb-4 text-lg font-semibold text-[#34485d] text-center">
               Configure este computador
             </h2>
 
-            <p className="mb-6 text-sm text-[#6b849e]">
+            <p className="mb-6 text-sm text-[#6b849e] text-center">
               Dê nomes simples e fáceis de reconhecer. Você pode mudar isso
               depois nas configurações.
             </p>
@@ -376,11 +371,11 @@ export default function FirstRunPage() {
 
         {step === "rclone-setup" && (
           <>
-            <h2 className="mb-4 text-lg font-semibold text-[#34485d]">
+            <h2 className="mb-4 text-lg font-semibold text-[#34485d] text-center">
               Escolha e conecte ao Provedor de Nuvem
             </h2>
 
-            <p className="mb-6 text-sm text-[#6b849e]">
+            <p className="w-4/5 mx-auto mb-6 text-sm text-[#6b849e] text-center">
               <b>Importante: </b>
               <span>
                 tando o Computador do Maestro e o Computador do Ensaio, devem
@@ -389,12 +384,17 @@ export default function FirstRunPage() {
             </p>
 
             <div className="mb-4 rounded-xl border border-[#c5cfdb] bg-[#f8fafd] p-4">
-              <div className="mb-3">
+              <div className="mb-3 pb-3">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8b9db2]">
                   Provedor de nuvem
                 </p>
               </div>
 
+              <div className="mb-2 flex items-center gap-2">
+                <span className="rounded-full bg-[#e8eef7] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.2em] text-[#4f84d7]">
+                  Recomendado
+                </span>
+              </div>
               <div className="grid gap-3 md:grid-cols-2">
                 <button
                   type="button"
@@ -405,15 +405,7 @@ export default function FirstRunPage() {
                       : "border-[#c5cfdb] bg-white/70 hover:border-[#7ba0d4]"
                   }`}
                 >
-                  <div className="mb-2 flex items-center gap-2">
-                    <span className="rounded-full bg-[#e8eef7] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.2em] text-[#4f84d7]">
-                      Recomendado
-                    </span>
-                  </div>
                   <p className="text-sm font-semibold text-[#34485d]">Koofr</p>
-                  <p className="mt-1 text-xs text-[#6b849e]">
-                    Use a senha de aplicativo criada em https://app.koofr.net/.
-                  </p>
                 </button>
 
                 <button
@@ -428,9 +420,6 @@ export default function FirstRunPage() {
                   <p className="text-sm font-semibold text-[#34485d]">
                     Google Drive
                   </p>
-                  <p className="mt-1 text-xs text-[#6b849e]">
-                    Autentique pelo navegador usando o fluxo padrão do rclone.
-                  </p>
                 </button>
               </div>
             </div>
@@ -440,14 +429,13 @@ export default function FirstRunPage() {
                 <p className="text-sm font-semibold text-[#34485d]">
                   {getRcloneProviderLabel(rcloneProvider)}
                 </p>
-                <p className="text-xs text-[#6b849e]">
+                <p className="mt-2 text-xs text-[#6b849e]">
                   {rcloneProvider === "google_drive"
-                    ? "Clique em Abrir navegador para autenticar e concluir a autorização."
+                    ? "Ao clicar no botão será aberto seu navegador para escolher a conta Google"
                     : "Informe o email e a senha de aplicativo do Koofr."}
                 </p>
               </div>
-
-              {rcloneProvider === "koofr" ? (
+              {rcloneProvider === "koofr" && (
                 <div className="space-y-3">
                   <div>
                     <label className="mb-2 block text-xs font-semibold text-[#34485d]">
@@ -473,16 +461,6 @@ export default function FirstRunPage() {
                       placeholder="Senha criada no Koofr"
                     />
                   </div>
-                </div>
-              ) : (
-                <div className="text-xs text-[#6b849e]">
-                  <p>
-                    Clique em{" "}
-                    <span className="font-semibold text-[#34485d]">
-                      Abrir navegador para autenticar
-                    </span>{" "}
-                    para concluir a autorização do Google Drive.
-                  </p>
                 </div>
               )}
             </div>

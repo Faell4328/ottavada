@@ -14,6 +14,7 @@ use crate::infrastructure::store::SystemStore;
 use crate::services::indexer::{
     get_file_metadata, paths_match, scan_directory, split_file_path, FileChangeDetector,
 };
+use crate::services::path_normalizer::from_storage_path;
 
 #[derive(Debug, Clone)]
 struct ScoreMetadataEntry {
@@ -114,7 +115,8 @@ fn scan_files_for_changes_impl(
                 continue;
             }
 
-            let current_files = scan_directory(Path::new(&song.path));
+            let expanded_song_path = from_storage_path(&song.path);
+            let current_files = scan_directory(Path::new(&expanded_song_path));
 
             for current_file in current_files {
                 let current_path = &current_file.path;
@@ -170,7 +172,8 @@ fn scan_files_for_changes_impl(
             .filter(|score| score.status == ScoreStatus::Main)
             .collect();
 
-        let current_files = scan_directory(Path::new(&song.path));
+        let expanded_song_path = from_storage_path(&song.path);
+        let current_files = scan_directory(Path::new(&expanded_song_path));
 
         for score in &scanable_scores {
             let full_path = build_score_full_path(&score.file_path, &score.file_name);
@@ -360,7 +363,8 @@ fn preview_scan_files_for_changes_impl(
                 continue;
             }
 
-            let current_files = scan_directory(Path::new(&song.path));
+            let expanded_song_path = from_storage_path(&song.path);
+            let current_files = scan_directory(Path::new(&expanded_song_path));
 
             for current_file in current_files {
                 let current_path = &current_file.path;
@@ -382,7 +386,8 @@ fn preview_scan_files_for_changes_impl(
             .filter(|score| score.status == ScoreStatus::Main)
             .collect();
 
-        let current_files = scan_directory(Path::new(&song.path));
+        let expanded_song_path = from_storage_path(&song.path);
+        let current_files = scan_directory(Path::new(&expanded_song_path));
 
         for score in &scanable_scores {
             let full_path = build_score_full_path(&score.file_path, &score.file_name);
@@ -475,7 +480,8 @@ fn preview_scan_files_for_changes_impl(
 }
 
 fn build_score_full_path(file_path: &str, file_name: &str) -> String {
-    let base_path = Path::new(file_path);
+    let expanded_file_path = from_storage_path(file_path);
+    let base_path = Path::new(&expanded_file_path);
     let legacy_full_path = base_path
         .file_name()
         .and_then(|name| name.to_str())

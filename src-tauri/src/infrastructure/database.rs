@@ -4,6 +4,7 @@ use std::path::Path;
 use std::sync::{Arc, Mutex};
 
 use crate::domain::errors::AppError;
+use crate::services::path_normalizer::from_storage_path;
 
 pub(crate) const DEFAULT_CATEGORY_ID: &str = "default-category";
 pub(crate) const DEFAULT_CATEGORY_NAME: &str = "Sem categoria";
@@ -64,7 +65,8 @@ impl Database {
     }
 
     pub(crate) fn build_score_full_path(file_path: &str, file_name: &str) -> String {
-        let trimmed_dir = file_path.trim();
+        let expanded_file_path = from_storage_path(file_path);
+        let trimmed_dir = expanded_file_path.trim();
         let trimmed_name = file_name.trim();
 
         if trimmed_name.is_empty() {
