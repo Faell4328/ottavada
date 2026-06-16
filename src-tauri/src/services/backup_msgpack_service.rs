@@ -350,6 +350,12 @@ fn generate_backup_msgpack_in_cloud(
     }
 
     let payload = collect_backup_payload(db, settings)?;
+
+    if !force && payload.songs.is_empty() {
+        info!("Biblioteca vazia: backup automático pulado");
+        return Ok(None);
+    }
+
     let msgpack_bytes = serialize_msgpack_named(&payload, "backup.msgpack")?;
     let compressed = compress_zstd_with_threads(
         &msgpack_bytes,
@@ -358,6 +364,9 @@ fn generate_backup_msgpack_in_cloud(
     )?;
 
     let backup_dir = ensure_backup_cloud_dir(store.app_data_dir())?;
+
+    sync_cloud_directory_with_rclone_impl(store, "download", Some("backup"))?;
+
     let backup_path = backup_dir.join(backup_filename(payload.generated_at));
 
     write_atomic(&backup_path, &compressed, "backup.msgpack.zst")?;
@@ -1033,8 +1042,11 @@ mod tests {
 
     use super::should_generate_automatic_backup_from_timestamps;
     use super::AUTO_BACKUP_INTERVAL_SECONDS;
-    use super::{export_backup_msgpack, import_backup_msgpack};
-    use super::{backup_filename, parse_backup_timestamp, list_backup_files, cleanup_old_backups, find_latest_valid_backup};
+    use super::{
+        backup_filename, cleanup_old_backups, export_backup_msgpack, find_latest_valid_backup,
+        generate_automatic_backup_msgpack, import_backup_msgpack, list_backup_files,
+        parse_backup_timestamp,
+    };
 
     #[test]
     fn backup_filename_roundtrips() {
@@ -1324,5 +1336,23 @@ mod tests {
             Some(now - (AUTO_BACKUP_INTERVAL_SECONDS + 10)),
             now
         ));
+    }
+
+    #[test]
+    fn automatic_backup_skipped_when_library_empty() {
+        let dir = tempdir().expect("temp dir");
+        let db = Database::new(&dir.path().join("empty.db")).expect("db");
+        let store = SystemStore::new(dir.path().to_path_buf());
+
+        let settings = crate::domain::models::AppSettings {
+            computer_id: "server-empty".to_string(),
+            computer_type: crate::domain::models::ComputerType::Server,
+            first_run_completed: true,
+            ..Default::default()
+        };
+        store.save_app_settings(&settings).expect("save settings");
+
+        let result = generate_automatic_backup_msgpack(&db, &store).expect("generate");
+        assert!(result.is_none(), "backup deve ser None quando biblioteca vazia");
     }
 }
