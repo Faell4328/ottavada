@@ -122,7 +122,7 @@ describe("ChangeComputerTypeModal", () => {
     );
 
     expect(screen.getByText(/Deixará de indexar diretórios locais/)).toBeInTheDocument();
-    expect(screen.getByText(/Passará a consultar partituras no servidor/)).toBeInTheDocument();
+    expect(screen.getByText(/Passará a consultar partituras no computador do maestro/)).toBeInTheDocument();
     expect(screen.getByText(/Poderá apenas propor alterações/)).toBeInTheDocument();
   });
 
@@ -140,6 +140,6 @@ describe("ChangeComputerTypeModal", () => {
     );
 
     expect(screen.getByText(/Passará a indexar diretórios locais/)).toBeInTheDocument();
-    expect(screen.getByText("Servidor")).toBeInTheDocument();
+    expect(screen.getByText("Computador do Maestro")).toBeInTheDocument();
   });
 });

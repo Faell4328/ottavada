@@ -38,8 +38,8 @@ O usuário deve poder:
   - compositor;
   - arranjador;
   - categorias;
-- definir música como **rascunho** (apenas se a música estiver como **principal**);
-- definir música como **principal** (apenas se a música estiver como **rascunho**);
+- definir música como **não permitir envio** (apenas se a música estiver como **permitir envio**);
+- definir música como **permitir envio** (apenas se a música estiver como **não permitir envio**);
 - deletar música (aqui tem duas escolhas)
   - parar de indexar diretório
   - deletar diretório e arquivos (também parando de indexar)
@@ -61,7 +61,7 @@ O usuário deve poder:
 - editar o nome do instrumento;
 - utilizar uma partitura como base para criar uma nova;
 - excluir definitivamente o arquivo da partitura;
-- definir uma partitura como **principal**.
+- definir uma partitura como **permitir envio**.
 
 ## 3.2. Partitura indisponível
 
@@ -187,3 +187,23 @@ O backup deve ser **gerado automaticamente todos os dias**.
 Um backup **não deve substituir** o outro.
 
 Backups **mais velhos que 7 dias** devem ser **deletados**.
+
+---
+
+# 9. Relatório de alterações
+
+O relatório é executado quando o usuário clica em "aplicar alterações", depois da etapa de "consultar alterações". O objetivo é mostrar o que foi adicionado, alterado e deletado, permitindo o usuário cancelar adições, alterações e remoções.
+
+O relatório deve ser direto e resumido, sendo claro para o usuário.
+
+## 9.1. Seções
+
+- **adicionado** - mostra tudo que foi adicionado.
+
+- **alterado** - mostra tudo que foi alterado.
+
+- **removido** - mostra tudo que foi removido.
+
+### 9.2. Música adicionada
+
+Quando uma música for adicionada via indexação, deve mostrar: "A músicas `xxx` foi adicionada com `xxx` partituras".

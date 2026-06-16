@@ -22,7 +22,10 @@ export interface ScoreRowProps {
   onMenuOpen: (id: string) => void;
   onMenuClose: () => void;
   onEdit: () => void;
-  onStatusChange: (scoreId: string, status: "main" | "draft" | "ignored") => Promise<void>;
+  onStatusChange: (
+    scoreId: string,
+    status: "main" | "draft" | "ignored",
+  ) => Promise<void>;
   onDelete: (scoreId: string) => Promise<void>;
   onUseAsBase: () => void;
   computerType?: string;
@@ -49,7 +52,8 @@ function ScoreRow({
   const isClient = isClientComputer(computerType);
   const isActionLocked = isClient || isLocked;
   const statusKey = normalizeScoreStatus(score.status);
-  const rowBackgroundClass = displayIndex % 2 === 0 ? "bg-[#f4f7fb]" : "bg-[#fff]";
+  const rowBackgroundClass =
+    displayIndex % 2 === 0 ? "bg-[#f4f7fb]" : "bg-[#fff]";
 
   const openScoreFile = async () => {
     setIsOpening(true);
@@ -81,21 +85,17 @@ function ScoreRow({
     nextStatus: "main" | "draft" | "ignored",
     title: string,
     message: string,
-    errorMessage: string
+    errorMessage: string,
   ) => {
-    confirmation.requestConfirmation(
-      title,
-      message,
-      async () => {
-        try {
-          await onStatusChange(score.id, nextStatus);
-          onMenuClose();
-        } catch (err) {
-          console.error("Failed to change score status:", err);
-          toast.error(errorMessage);
-        }
+    confirmation.requestConfirmation(title, message, async () => {
+      try {
+        await onStatusChange(score.id, nextStatus);
+        onMenuClose();
+      } catch (err) {
+        console.error("Failed to change score status:", err);
+        toast.error(errorMessage);
       }
-    );
+    });
   };
 
   const renderStatusAction = () => {
@@ -103,27 +103,27 @@ function ScoreRow({
       return (
         <>
           <ContextMenuItem
-            label="Definir como rascunho"
+            label="Não permitir envio"
             onClick={(e) => {
               e.stopPropagation();
               requestStatusChange(
                 "draft",
-                "Definir como rascunho",
-                'Você realmente deseja mudar o arquivo para "Rascunho"?',
-                "Erro ao definir como rascunho"
+                "Não permitir envio",
+                "Você realmente deseja não permitir o envio desta partitura?",
+                "Erro ao não permitir envio",
               );
             }}
             disabled={isActionLocked}
           />
           <ContextMenuItem
-            label="Definir para ignorar"
+            label="Ignorar partitura"
             onClick={(e) => {
               e.stopPropagation();
               requestStatusChange(
                 "ignored",
-                "Definir como ignorar",
-                'Você realmente deseja marcar esta partitura como "Ignorada"?',
-                "Erro ao definir para ignorar"
+                "Ignorar partitura",
+                "Você realmente deseja ignorada essa partitura?",
+                "Erro ao ignorar partitura",
               );
             }}
             disabled={isActionLocked}
@@ -136,14 +136,14 @@ function ScoreRow({
       return (
         <>
           <ContextMenuItem
-            label="Definir como principal"
+            label="Permitir para envio"
             onClick={(e) => {
               e.stopPropagation();
               requestStatusChange(
                 "main",
-                "Definir como principal",
-                'Você realmente deseja mudar o arquivo para "Principal"?',
-                "Erro ao definir como principal"
+                "Permitir para envio",
+                "Você realmente deseja permitir o envio desta partitura?",
+                "Erro ao permitir envio",
               );
             }}
             disabled={isActionLocked}
@@ -156,7 +156,7 @@ function ScoreRow({
                 "ignored",
                 "Definir como ignorar",
                 'Você realmente deseja marcar esta partitura como "Ignorada"?',
-                "Erro ao definir como ignorar"
+                "Erro ao definir como ignorar",
               );
             }}
             disabled={isActionLocked}
@@ -168,27 +168,27 @@ function ScoreRow({
     return (
       <>
         <ContextMenuItem
-          label="Definir como principal"
+          label="Permitir para envio"
           onClick={(e) => {
             e.stopPropagation();
             requestStatusChange(
               "main",
-              "Definir como principal",
-              'Você realmente deseja mudar o arquivo para "Principal"?',
-              "Erro ao definir como principal"
+              "Permitir para envio",
+              "Você realmente deseja permitir o envio desta partitura?",
+              "Erro ao permitir envio",
             );
           }}
           disabled={isActionLocked}
         />
         <ContextMenuItem
-          label="Definir como rascunho"
+          label="Não permitir envio"
           onClick={(e) => {
             e.stopPropagation();
             requestStatusChange(
               "draft",
-              "Definir como rascunho",
-              'Você realmente deseja reativar esta partitura como "Rascunho"?',
-              "Erro ao definir como rascunho"
+              "Não permitir envio",
+              "Você realmente deseja reativar esta partitura sem permitir o envio?",
+              "Erro ao não permitir envio",
             );
           }}
           disabled={isActionLocked}
@@ -209,7 +209,7 @@ function ScoreRow({
           console.error("Failed to delete score:", err);
           toast.error("Erro ao mover partitura para lixeira");
         }
-      }
+      },
     );
   };
 
@@ -230,14 +230,18 @@ function ScoreRow({
       >
         <td className="px-3.5 py-1.5 pl-9">
           <span className="flex items-center gap-1.5">
-            <FileMusic className={`h-3.5 w-3.5 text-[#8fa3b8] ${isOpening ? "animate-pulse" : ""}`} />
+            <FileMusic
+              className={`h-3.5 w-3.5 text-[#8fa3b8] ${isOpening ? "animate-pulse" : ""}`}
+            />
             {score.name ?? "Sem instrumento"}
           </span>
         </td>
-        <td className="px-3.5 py-1.5 text-xs text-[#8b9db2]">.{score.file_extension}</td>
-        <td className="px-2 py-1.5 text-xs font-medium">
+        <td className="px-3.5 py-1.5 text-xs text-[#8b9db2]">
+          .{score.file_extension}
+        </td>
+        <td className="px-2 py-1.5">
           <div className="flex items-center justify-between">
-            <span className={`inline-block text-[#4a6278] ${getScoreStatusBadgeClass(statusKey)}`}>
+            <span className={getScoreStatusBadgeClass(statusKey)}>
               {getScoreStatusLabel(score.status)}
             </span>
 
@@ -329,11 +333,15 @@ function ScoreRow({
   );
 }
 
-export function areScoreRowPropsEqual(prev: ScoreRowProps, next: ScoreRowProps) {
+export function areScoreRowPropsEqual(
+  prev: ScoreRowProps,
+  next: ScoreRowProps,
+) {
   return (
     prev.score.id === next.score.id &&
     prev.score.name === next.score.name &&
-    normalizeScoreStatus(prev.score.status) === normalizeScoreStatus(next.score.status) &&
+    normalizeScoreStatus(prev.score.status) ===
+      normalizeScoreStatus(next.score.status) &&
     prev.displayIndex === next.displayIndex &&
     prev.isMenuOpen === next.isMenuOpen &&
     prev.isLocked === next.isLocked &&

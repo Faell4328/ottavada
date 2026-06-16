@@ -69,7 +69,7 @@ export async function runClientSyncFlow(params: { isAutomatic: boolean; deps: Cl
     type: "SET_OPERATION_STATUS",
     payload: {
       title: "Etapa 2 - Baixando músicas",
-      detail: "Atualizando arquivos locais do cliente",
+      detail: "Atualizando arquivos locais do computador de ensaio",
       stepCurrent: 1,
       stepTotal: 1,
     },
@@ -85,7 +85,7 @@ export async function runClientSyncFlow(params: { isAutomatic: boolean; deps: Cl
     type: "SET_OPERATION_STATUS",
     payload: {
       title: "Etapa 2 - Aplicando alterações",
-      detail: "Atualizando banco local do cliente",
+      detail: "Atualizando banco local do computador de ensaio",
       stepCurrent: 1,
       stepTotal: 1,
     },

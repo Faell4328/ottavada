@@ -51,7 +51,7 @@ describe("ScoreRow menu", () => {
             isLocked={false}
           />
         </tbody>
-      </table>
+      </table>,
     );
 
     const menuLabels = screen
@@ -64,14 +64,16 @@ describe("ScoreRow menu", () => {
       "Abrir local",
       "Editar",
       "Usar como base",
-      "Definir como rascunho",
-      "Definir para ignorar",
+      "Não permitir envio",
+      "Ignorar partitura",
       "Mover para Lixeira",
     ]);
   });
 
   it("opens the score location from the overflow menu", async () => {
-    const openFileLocationSpy = vi.spyOn(api, "openFileLocation").mockResolvedValue(undefined);
+    const openFileLocationSpy = vi
+      .spyOn(api, "openFileLocation")
+      .mockResolvedValue(undefined);
 
     render(
       <table>
@@ -92,7 +94,7 @@ describe("ScoreRow menu", () => {
             isLocked={false}
           />
         </tbody>
-      </table>
+      </table>,
     );
 
     fireEvent.click(screen.getByText("Abrir local"));

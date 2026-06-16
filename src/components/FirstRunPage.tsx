@@ -268,11 +268,11 @@ export default function FirstRunPage() {
                 </div>
                 <div>
                   <h3 className="mb-1 font-semibold text-[#34485d]">
-                    Servidor
+                    Computador do Maestro
                   </h3>
                   <p className="text-xs text-[#6b849e]">
-                    Use no computador principal, onde você organiza, revisa e
-                    confirma as alterações. Só pode existir um servidor.
+                    Use no computador onde você organiza, revisa e confirma as
+                    alterações. Só pode existir um computador do maestro.
                   </p>
                 </div>
               </div>
@@ -299,11 +299,13 @@ export default function FirstRunPage() {
                   )}
                 </div>
                 <div>
-                  <h3 className="mb-1 font-semibold text-[#34485d]">Cliente</h3>
+                  <h3 className="mb-1 font-semibold text-[#34485d]">
+                    Computador de Ensaio
+                  </h3>
                   <p className="text-xs text-[#6b849e]">
-                    Use em computadores de consulta, para visualizar e copiar
-                    partituras com menos responsabilidades. Pode existir mais de
-                    um cliente.
+                    Use em computadores para visualizar e copiar partituras com
+                    menos responsabilidades. Pode existir mais de um computador
+                    de ensaio.
                   </p>
                 </div>
               </div>
@@ -375,12 +377,15 @@ export default function FirstRunPage() {
         {step === "rclone-setup" && (
           <>
             <h2 className="mb-4 text-lg font-semibold text-[#34485d]">
-              Configure o Rclone
+              Escolha e conecte ao Provedor de Nuvem
             </h2>
 
             <p className="mb-6 text-sm text-[#6b849e]">
-              Escolha o provedor de nuvem e conclua a configuração em uma única
-              ação.
+              <b>Importante: </b>
+              <span>
+                tando o Computador do Maestro e o Computador do Ensaio, devem
+                usar o mesmo provedor e conta
+              </span>
             </p>
 
             <div className="mb-4 rounded-xl border border-[#c5cfdb] bg-[#f8fafd] p-4">
@@ -588,7 +593,9 @@ export default function FirstRunPage() {
                   Tipo de computador
                 </p>
                 <p className="text-sm font-semibold text-[#34485d]">
-                  {computerType === "Server" ? "Servidor" : "Cliente"}
+                  {computerType === "Server"
+                    ? "Computador do Maestro"
+                    : "Computador de Ensaio"}
                 </p>
               </div>
 

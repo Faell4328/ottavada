@@ -226,8 +226,8 @@ export default function SettingsPage() {
       }));
       toast.success(
         result === "Server"
-          ? "Este computador agora é o principal."
-          : "Este computador agora é secundário."
+          ? "Este computador agora é o computador do maestro."
+          : "Este computador agora é um computador de ensaio."
       );
       await loadSettings();
     } catch (err) {
@@ -644,7 +644,7 @@ export default function SettingsPage() {
           <Field label="Tipo de computador">
             <div className="flex items-center gap-2">
               <div className="flex-1 h-9 rounded border border-[#c5cfdb] bg-[#f0f3f8] px-3 text-sm text-[#4d6075] flex items-center">
-                {settings.computer_type === "Server" ? "Servidor" : "Cliente"}
+                {settings.computer_type === "Server" ? "Computador do Maestro" : "Computador de Ensaio"}
               </div>
               <button
                 type="button"
@@ -657,8 +657,8 @@ export default function SettingsPage() {
             </div>
             <p className="text-xs text-[#8b9db2] mt-1">
               {settings.computer_type === "Server"
-                ? "Computador mestre - indexa e sincroniza partituras. Clique em 'Alternar' para mudar para Cliente."
-                : "Computador secundário - consulta e propõe alterações. Clique em 'Alternar' para mudar para Servidor."}
+                ? "Computador do maestro - indexa e sincroniza partituras. Clique em 'Alternar' para mudar para Computador de Ensaio."
+                : "Computador de ensaio - consulta e propõe alterações. Clique em 'Alternar' para mudar para Computador do Maestro."}
             </p>
           </Field>
         </Section>
@@ -801,7 +801,7 @@ export default function SettingsPage() {
         {/* Backup automático */}
         <Section title="Backup automático">
           <p className="text-xs text-[#8b9db2] mt-1">
-            O servidor verifica automaticamente ao iniciar se já passou 1 dia desde o último backup na nuvem.
+            O computador do maestro verifica automaticamente ao iniciar se já passou 1 dia desde o último backup na nuvem.
           </p>
           <p className="text-xs text-[#8b9db2] mt-1">
             Último backup automático: {lastBackupLabel}

@@ -15,7 +15,7 @@ vi.mock("../../api/commands", () => ({
 
 const clientSettings: AppSettings = {
   computer_id: "client-1",
-  computer_name: "Cliente",
+  computer_name: "Computador de Ensaio",
   organization_name: null,
   computer_type: "Client",
   google_drive_mode: "Local",

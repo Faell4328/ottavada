@@ -388,7 +388,7 @@ export function useAppScanFlow({
           type: "SET_OPERATION_STATUS",
           payload: {
             title: "Etapa 1 - Verificando alterações",
-            detail: "Comparando arquivos locais (servidor)",
+            detail: "Comparando arquivos locais (computador do maestro)",
             stepCurrent: 1,
             stepTotal: currentTotalSteps,
           },

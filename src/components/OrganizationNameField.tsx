@@ -25,8 +25,8 @@ export function OrganizationNameField({
       />
       <p className="text-xs text-[#8b9db2] mt-1">
         {computerType === "Server"
-          ? "Usado para identificar a organização no computador principal."
-          : "Opcional no cliente, mas útil para identificar a organização."}
+          ? "Usado para identificar a organização no computador do maestro."
+          : "Opcional no computador de ensaio, mas útil para identificar a organização."}
       </p>
     </div>
   );

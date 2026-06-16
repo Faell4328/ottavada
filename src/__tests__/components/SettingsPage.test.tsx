@@ -15,6 +15,6 @@ describe("OrganizationNameField", () => {
     );
 
     expect(screen.getByPlaceholderText("Ex: Orquestra, Igreja, Ministério...")).toBeInTheDocument();
-    expect(screen.getByText("Opcional no cliente, mas útil para identificar a organização.")).toBeInTheDocument();
+    expect(screen.getByText("Opcional no computador de ensaio, mas útil para identificar a organização.")).toBeInTheDocument();
   });
 });

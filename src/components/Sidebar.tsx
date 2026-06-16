@@ -51,7 +51,7 @@ export default function Sidebar() {
     state.operationStatus.stepCurrent !== null;
   const isCategoryLocked = isClient || isSyncLocked;
   const categoryLockedTitle = isClient
-    ? "Esse recurso só está disponível no computador principal."
+    ? "Esse recurso só está disponível no computador do maestro."
     : "Espere a sincronização terminar para continuar.";
   const libraryViews: Array<{
     view: SidebarView;

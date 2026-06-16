@@ -1,15 +1,17 @@
-export type ScoreStatusKey = "draft" | "ignored" | "main";
+export type ScoreStatusKey = "main" | "draft" | "ignored" | "not_found";
 
 const SCORE_STATUS_LABELS: Record<ScoreStatusKey, string> = {
-  draft: "Rascunho",
+  main: "Envio permitido",
+  draft: "Envio não permitido",
   ignored: "Ignorada",
-  main: "Principal",
+  not_found: "Sem partitura",
 };
 
 const SCORE_STATUS_BADGE_CLASSES: Record<ScoreStatusKey, string> = {
-  draft: "bg-orange-100 p-2 rounded-full",
-  ignored: "bg-slate-100 p-2 rounded-full",
-  main: "bg-green-100 p-2 rounded-full",
+  main: "inline-flex items-center rounded-full bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-800",
+  draft: "inline-flex items-center rounded-full bg-orange-100 px-2.5 py-1 text-xs font-semibold text-orange-800",
+  ignored: "inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700",
+  not_found: "inline-flex items-center rounded-full bg-rose-100 px-2.5 py-1 text-xs font-semibold text-rose-800",
 };
 
 export function normalizeScoreStatus(status: unknown): string {

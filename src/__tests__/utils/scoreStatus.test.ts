@@ -7,7 +7,8 @@ describe("scoreStatus", () => {
     expect(normalizeScoreStatus("draft")).toBe("draft");
     expect(normalizeScoreStatus("ignored")).toBe("ignored");
     expect(normalizeScoreStatus("main")).toBe("main");
-    expect(getScoreStatusLabel("main")).toBe("Principal");
+    expect(getScoreStatusLabel("main")).toBe("Envio permitido");
     expect(getScoreStatusLabel("ignored")).toBe("Ignorada");
+    expect(getScoreStatusLabel("not_found")).toBe("Sem partitura");
   });
 });

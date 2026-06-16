@@ -18,7 +18,7 @@ export function ChangeComputerTypeModal({
   const [countdown, setCountdown] = useState(5);
   const [isConfirming, setIsConfirming] = useState(false);
 
-  const newType = currentType === "Server" ? "Cliente" : "Servidor";
+  const newType = currentType === "Server" ? "Computador de Ensaio" : "Computador do Maestro";
 
   useScrollLock(isOpen);
 
@@ -68,7 +68,7 @@ export function ChangeComputerTypeModal({
         <div className="px-6 pb-6 space-y-4">
           <p className="text-sm text-[#4d6075] text-center">
             Você está alterando o tipo de computador de{" "}
-            <strong>{currentType === "Server" ? "Servidor" : "Cliente"}</strong> para{" "}
+            <strong>{currentType === "Server" ? "Computador do Maestro" : "Computador de Ensaio"}</strong> para{" "}
             <strong>{newType}</strong>.
           </p>
 
@@ -79,7 +79,7 @@ export function ChangeComputerTypeModal({
             {currentType === "Server" ? (
               <ul className="text-xs text-[#7d6608] space-y-1 list-disc list-inside">
                 <li>Deixará de indexar diretórios locais</li>
-                <li>Passará a consultar partituras no servidor</li>
+                <li>Passará a consultar partituras no computador do maestro</li>
                 <li>Poderá apenas propor alterações</li>
                 <li>Não poderá adicionar novas músicas ou partituras</li>
               </ul>

@@ -7,6 +7,7 @@ import toast from "react-hot-toast";
 import type { SongListItem } from "../types";
 import { ContextMenu, ContextMenuItem } from "./ui/ContextMenu";
 import { isClientComputer } from "../utils/computer";
+import { getScoreStatusBadgeClass, getScoreStatusLabel } from "../utils/scoreStatus";
 import * as api from "../api/commands";
 
 export interface SongRowProps {
@@ -160,17 +161,9 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(function Son
         <td className={`px-3.5 py-2 ${isHighlighted ? "text-[#965050]" : "text-[#5c7089]"}`}>{author || "—"}</td>
         <td className="px-3.5 py-2">
           <div className="flex items-center justify-between">
-            {isNotFound ? (
-              <span className="inline-flex items-center rounded-full bg-rose-100 px-2.5 py-1 text-xs font-semibold text-rose-800">
-                Sem partitura
-              </span>
-            ) : isDraft ? (
-              <span className="inline-flex items-center rounded-full bg-orange-100 px-2.5 py-1 text-xs font-semibold text-orange-800">
-                Rascunho
-              </span>
-            ) : (
-              <span className="text-xs font-medium text-[#6b849e]">Principal</span>
-            )}
+            <span className={getScoreStatusBadgeClass(song.status)}>
+              {getScoreStatusLabel(song.status)}
+            </span>
             <ContextMenu
               isOpen={isMenuOpen}
               onToggle={(e) => {
@@ -238,7 +231,7 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(function Son
               {!isClient && !isNotFound && (
                 <>
                   <ContextMenuItem
-                    label={isDraft ? "Definir como principal" : "Definir como rascunho"}
+                    label={isDraft ? "Permitir para envio" : "Não permitir envio"}
                     onClick={(e) =>
                       handleMenuAction(e, () => {
                         void Promise.resolve(onStatusChange(song.id, isDraft ? "main" : "draft")).catch((err) => {

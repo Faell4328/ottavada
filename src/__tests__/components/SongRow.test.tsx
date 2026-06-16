@@ -172,7 +172,7 @@ describe("SongRow menu", () => {
       </table>
     );
 
-    fireEvent.click(screen.getByText("Definir como rascunho"));
+    fireEvent.click(screen.getByText("Não permitir envio"));
 
     await waitFor(() => {
       expect(onStatusChange).toHaveBeenCalledWith(song.id, "draft");
@@ -205,8 +205,8 @@ describe("SongRow menu", () => {
       </table>
     );
 
-    expect(screen.getByText("Principal")).toBeInTheDocument();
-    expect(screen.getByText("Principal").closest("tr")).toHaveClass("bg-white");
+    expect(screen.getByText("Envio permitido")).toBeInTheDocument();
+    expect(screen.getByText("Envio permitido").closest("tr")).toHaveClass("bg-white");
 
     rerender(
       <table>
@@ -231,8 +231,8 @@ describe("SongRow menu", () => {
       </table>
     );
 
-    expect(screen.getByText("Rascunho")).toBeInTheDocument();
-    expect(screen.getByText("Rascunho").closest("tr")).toHaveClass("bg-[#fff7ed]");
+    expect(screen.getByText("Envio não permitido")).toBeInTheDocument();
+    expect(screen.getByText("Envio não permitido").closest("tr")).toHaveClass("bg-[#fff7ed]");
   });
 
   it("renders not_found songs with dedicated styling and actions", () => {

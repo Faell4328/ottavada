@@ -223,7 +223,7 @@ describe("SongsList", () => {
       await triggerUpdateSongStatus?.("song-1", "draft");
     });
 
-    expect(await screen.findByText("Rascunho")).toBeInTheDocument();
+    expect(await screen.findByText("Envio não permitido")).toBeInTheDocument();
     expect(screen.queryByText("Flauta")).not.toBeInTheDocument();
   });
 

@@ -39,7 +39,7 @@ export default function TopBar({
     state.rcloneProgress.active ||
     state.operationStatus.stepCurrent !== null;
   const clientBlockedTitle =
-    "Esse recurso só está disponível no computador principal.";
+    "Esse recurso só está disponível no computador do maestro.";
   const syncBlockedTitle = "Espere a sincronização terminar para continuar.";
   const updateBlockedTitle = getUpdateActionBlockedMessage();
   const [pendingFiles, setPendingFiles] = useState<IndexedFile[]>([]);
