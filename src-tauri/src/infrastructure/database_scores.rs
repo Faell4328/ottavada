@@ -10,7 +10,7 @@ impl Database {
     // ── Scores ──
 
     pub fn insert_score(&self, score: &Score) -> Result<(), AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         let file_modified_at_ts = score.file_modified_at.and_utc().timestamp();
         let file_extension = Self::extract_file_extension(&score.file_name).unwrap_or_default();
         let storage_file_path = to_storage_path(&score.file_path);
@@ -103,7 +103,7 @@ impl Database {
         _now: chrono::NaiveDateTime,
         _updated_by: &str,
     ) -> Result<(), AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         let file_modified_at_ts = file_modified_at.and_utc().timestamp();
         let file_extension = Self::extract_file_extension(file_name).unwrap_or_default();
         let storage_file_path = to_storage_path(file_path);
@@ -212,7 +212,7 @@ impl Database {
     }
 
     pub fn delete_score(&self, score_id: &str) -> Result<(), AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
 
         let (song_id, file_name): (String, String) = conn
             .query_row(
@@ -250,7 +250,7 @@ impl Database {
     }
 
     pub fn get_score_file_path(&self, score_id: &str) -> Result<String, AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         conn.query_row(
             "SELECT s.file_path, s.file_name FROM scores s WHERE s.id = ?1",
             params![score_id],
@@ -317,7 +317,7 @@ impl Database {
     pub fn get_all_scores_with_metadata(
         &self,
     ) -> Result<Vec<(String, String, u64, String)>, AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         Self::query_score_metadata(
             &conn,
             "SELECT s.id, s.file_path, s.file_name, s.file_size, s.file_modified_at
@@ -330,7 +330,7 @@ impl Database {
         &self,
         host_id: &str,
     ) -> Result<Vec<(String, String, String, String, Option<String>, u64, String, String)>, AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         Self::query_score_metadata_with_song_id(
             &conn,
             "SELECT s.song_id, s.id, s.file_path, s.file_name, s.name, s.file_size, s.file_modified_at, s.status
@@ -347,7 +347,7 @@ impl Database {
         _updated_by: &str,
         file_metadata: Option<(u64, chrono::NaiveDateTime)>,
     ) -> Result<(), AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
 
         let old_status = conn
             .query_row(
@@ -423,7 +423,7 @@ impl Database {
     }
 
     pub fn get_song_id_for_score(&self, score_id: &str) -> Result<String, AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         conn.query_row(
             "SELECT song_id FROM scores WHERE id = ?1",
             params![score_id],
@@ -436,7 +436,7 @@ impl Database {
 
     #[allow(dead_code)]
     pub fn mark_all_song_archives_for_regeneration(&self) -> Result<usize, AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
 
         conn.execute(
             "INSERT OR IGNORE INTO songsBackup (songId, status)
@@ -460,7 +460,7 @@ impl Database {
         song_id: &str,
         status: &BackupStatus,
     ) -> Result<(), AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         let status_str = status.as_str();
 
         conn.execute(
@@ -478,7 +478,7 @@ impl Database {
         song_id: &str,
         status: &BackupStatus,
     ) -> Result<(), AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         let status_str = status.as_str();
 
         conn.execute(
@@ -494,7 +494,7 @@ impl Database {
         &self,
         song_id: &str,
     ) -> Result<Option<SongBackupStatus>, AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         let mut stmt = conn.prepare(
             "SELECT songId, status
              FROM songsBackup WHERE songId = ?1",
@@ -518,7 +518,7 @@ impl Database {
     }
 
     pub fn get_all_backup_songs_status(&self) -> Result<Vec<SongBackupStatus>, AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         let mut stmt = conn.prepare(
             "SELECT songId, status
                FROM songsBackup ORDER BY songId ASC",
@@ -542,7 +542,7 @@ impl Database {
         &self,
         status: &BackupStatus,
     ) -> Result<Vec<SongBackupStatus>, AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         let status_str = status.as_str();
         let mut stmt = conn.prepare(
             "SELECT songId, status
@@ -564,7 +564,7 @@ impl Database {
     }
 
     pub fn delete_backup_song_status(&self, song_id: &str) -> Result<(), AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         conn.execute(
             "DELETE FROM songsBackup WHERE songId = ?1",
             params![song_id],
@@ -573,7 +573,7 @@ impl Database {
     }
 
     pub fn clear_backup_errors(&self) -> Result<(), AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         conn.execute("DELETE FROM songsBackup WHERE status = 'error'", [])?;
         Ok(())
     }

@@ -267,7 +267,7 @@ pub fn has_pending_server_changes(db: &Database, store: &SystemStore) -> Result<
 
 fn apply_snapshot(db: &Database, payload: &SnapshotMessagePack) -> Result<(), AppError> {
     {
-        let mut conn = db.conn.lock().unwrap();
+        let mut conn = db.lock_conn();
         let tx = conn.transaction()?;
 
         let composer_name_by_id: HashMap<String, String> = payload
@@ -453,7 +453,7 @@ fn apply_snapshot(db: &Database, payload: &SnapshotMessagePack) -> Result<(), Ap
 }
 
 fn apply_events(db: &Database, events: &[EventMessagePack]) -> Result<(), AppError> {
-    let mut conn = db.conn.lock().unwrap();
+    let mut conn = db.lock_conn();
     let tx = conn.transaction()?;
 
     let mut pending_category_songs: HashMap<String, PendingCategorySong> = HashMap::new();

@@ -157,7 +157,7 @@ impl Database {
     // ── Songs ──
 
     pub fn insert_song(&self, song: &Song, category_ids: &[String]) -> Result<(), AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         let now_ts = chrono::Local::now().timestamp();
         let category_ids = Self::normalize_category_ids(category_ids);
 
@@ -244,7 +244,7 @@ impl Database {
     }
 
     pub fn update_song(&self, song: &Song, category_ids: &[String]) -> Result<(), AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         let category_ids = Self::normalize_category_ids(category_ids);
 
         let original_song = conn
@@ -319,7 +319,7 @@ impl Database {
                 "songs",
                 &song.id,
                 Some("name"),
-                Some(song.name.clone()).or(Some(original_song.0)),
+                Some(original_song.0),
             )?;
         }
 
@@ -330,7 +330,7 @@ impl Database {
                 "songs",
                 &song.id,
                 Some("composer"),
-                song.composer.clone().or(original_song.1),
+                original_song.1,
             )?;
         }
 
@@ -341,7 +341,7 @@ impl Database {
                 "songs",
                 &song.id,
                 Some("arranger"),
-                song.arranger.clone().or(original_song.2),
+                original_song.2,
             )?;
         }
 
@@ -362,7 +362,7 @@ impl Database {
     }
 
     pub fn get_song_by_id(&self, song_id: &str) -> Result<Song, AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
 
         conn.query_row(
             "SELECT id, name, composer, arranger, path, is_favorite, status FROM songs WHERE id = ?1",
@@ -385,7 +385,7 @@ impl Database {
     }
 
     pub fn get_song_list_item_by_id(&self, song_id: &str) -> Result<SongListItem, AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         let mut items = Self::query_song_list_items(
             &conn,
             &format!("SELECT {SONGS_SELECT_FIELDS} FROM songs WHERE id = ?1"),
@@ -398,7 +398,7 @@ impl Database {
     }
 
     pub fn get_library_summary_counts(&self) -> Result<LibrarySummary, AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         let mut summary = LibrarySummary::default();
 
         let mut stmt = conn.prepare(
@@ -434,7 +434,7 @@ impl Database {
     }
 
     pub fn get_all_songs(&self) -> Result<Vec<SongListItem>, AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         Self::query_song_list_items(
             &conn,
             &format!("SELECT {SONGS_SELECT_FIELDS} FROM songs ORDER BY name COLLATE NOCASE ASC, id ASC"),
@@ -444,7 +444,7 @@ impl Database {
     }
 
     pub fn get_all_song_summaries(&self) -> Result<Vec<SongListItem>, AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         Self::query_song_list_items(
             &conn,
             &format!("SELECT {SONGS_SELECT_FIELDS} FROM songs ORDER BY name COLLATE NOCASE ASC, id ASC"),
@@ -454,7 +454,7 @@ impl Database {
     }
 
     pub fn get_favorited_songs(&self) -> Result<Vec<SongListItem>, AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         Self::query_song_list_items(
             &conn,
             &format!("SELECT {SONGS_SELECT_FIELDS} FROM songs WHERE is_favorite = 1 ORDER BY name COLLATE NOCASE ASC, id ASC"),
@@ -464,7 +464,7 @@ impl Database {
     }
 
     pub fn get_favorited_song_summaries(&self) -> Result<Vec<SongListItem>, AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         Self::query_song_list_items(
             &conn,
             &format!("SELECT {SONGS_SELECT_FIELDS} FROM songs WHERE is_favorite = 1 ORDER BY name COLLATE NOCASE ASC, id ASC"),
@@ -474,7 +474,7 @@ impl Database {
     }
 
     pub fn toggle_favorite(&self, song_id: &str) -> Result<bool, AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
 
         conn.execute(
             "UPDATE songs SET is_favorite = CASE WHEN is_favorite = 1 THEN 0 ELSE 1 END WHERE id = ?1",
@@ -491,7 +491,7 @@ impl Database {
     }
 
     pub fn search_songs(&self, query: &str) -> Result<Vec<SongListItem>, AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         let like_query = format!("%{}%", query.trim());
         Self::query_song_list_items(
             &conn,
@@ -508,7 +508,7 @@ impl Database {
 
     #[allow(dead_code)]
     pub fn search_song_summaries(&self, query: &str) -> Result<Vec<SongListItem>, AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         let like_query = format!("%{}%", query.trim());
         Self::query_song_list_items(
             &conn,
@@ -524,7 +524,7 @@ impl Database {
     }
 
     pub fn get_songs_by_category(&self, category_id: &str) -> Result<Vec<SongListItem>, AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         Self::query_song_list_items(
             &conn,
             "SELECT s.id, s.name, s.composer, s.arranger, s.path, datetime('now') AS updated_at, s.is_favorite, s.status
@@ -541,7 +541,7 @@ impl Database {
         &self,
         category_id: &str,
     ) -> Result<Vec<SongListItem>, AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         Self::query_song_list_items(
             &conn,
             "SELECT s.id, s.name, s.composer, s.arranger, s.path, datetime('now') AS updated_at, s.is_favorite, s.status
@@ -555,7 +555,7 @@ impl Database {
     }
 
     pub fn get_songs_with_drafts(&self) -> Result<Vec<SongListItem>, AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         Self::query_song_list_items(
             &conn,
             "SELECT DISTINCT s.id, s.name, s.composer, s.arranger, s.path, datetime('now') AS updated_at, s.is_favorite, s.status
@@ -569,7 +569,7 @@ impl Database {
     }
 
     pub fn get_song_summaries_with_drafts(&self) -> Result<Vec<SongListItem>, AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         Self::query_song_list_items(
             &conn,
             "SELECT DISTINCT s.id, s.name, s.composer, s.arranger, s.path, datetime('now') AS updated_at, s.is_favorite, s.status
@@ -583,7 +583,7 @@ impl Database {
     }
 
     pub fn get_songs_with_not_found(&self) -> Result<Vec<SongListItem>, AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         Self::query_song_list_items(
             &conn,
             "SELECT s.id, s.name, s.composer, s.arranger, s.path, datetime('now') AS updated_at, s.is_favorite, s.status
@@ -596,7 +596,7 @@ impl Database {
     }
 
     pub fn get_song_summaries_with_not_found(&self) -> Result<Vec<SongListItem>, AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         Self::query_song_list_items(
             &conn,
             "SELECT s.id, s.name, s.composer, s.arranger, s.path, datetime('now') AS updated_at, s.is_favorite, s.status
@@ -609,7 +609,7 @@ impl Database {
     }
 
     pub fn get_scores_for_song(&self, song_id: &str) -> Result<Vec<ScoreListItem>, AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         let mut grouped = Self::get_scores_for_songs(&conn, &[song_id.to_string()])?;
         Ok(grouped.remove(song_id).unwrap_or_default())
     }
@@ -620,7 +620,7 @@ impl Database {
         status: ScoreStatus,
         _updated_by: &str,
     ) -> Result<(), AppError> {
-        let mut conn = self.conn.lock().unwrap();
+        let mut conn = self.lock_conn();
         let tx = conn.transaction()?;
 
         let current_status: String = tx
@@ -702,7 +702,7 @@ impl Database {
     // ── Categories ──
 
     pub fn insert_category(&self, category: &Category) -> Result<(), AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         conn.execute(
             "INSERT INTO categories (id, name) VALUES (?1, ?2)",
             params![category.id, category.name,],
@@ -725,7 +725,7 @@ impl Database {
         category_id: &str,
         name: &str,
     ) -> Result<(), AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
 
         if category_id == DEFAULT_CATEGORY_ID {
             return Err(AppError::Generic(
@@ -787,7 +787,7 @@ impl Database {
         old_name: &str,
         new_name: Option<&str>,
     ) -> Result<usize, AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         let trimmed_old_name = old_name.trim();
 
         if trimmed_old_name.is_empty() {
@@ -862,7 +862,7 @@ impl Database {
     }
 
     pub fn get_all_categories(&self) -> Result<Vec<Category>, AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         Self::ensure_default_category_with_conn(&conn)?;
         let mut stmt = conn.prepare(
             "SELECT id, name FROM categories
@@ -885,7 +885,7 @@ impl Database {
     }
 
     pub fn delete_category(&self, category_id: &str) -> Result<(), AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
 
         if category_id == DEFAULT_CATEGORY_ID {
             return Err(AppError::Generic(
@@ -931,7 +931,7 @@ impl Database {
     }
 
     pub fn delete_song(&self, song_id: &str) -> Result<(), AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
 
         let (song_name, score_rows): (String, Vec<(String, String)>) = {
             let song_name: String = conn.query_row(
@@ -1013,7 +1013,7 @@ impl Database {
     // ===== Métodos para rastreamento de atualização do banco de dados =====
 
     pub fn get_latest_songs_update_timestamp(&self) -> Result<Option<i64>, AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
 
         match conn.query_row(
             "SELECT last_score_file_modified_at FROM songs ORDER BY last_score_file_modified_at DESC LIMIT 1",
@@ -1027,7 +1027,7 @@ impl Database {
     }
 
     pub fn get_changed_fields_ordered(&self) -> Result<Vec<ChangedFieldRecord>, AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         let mut stmt = conn.prepare(
             "SELECT id, type, entity, entityId, field, value, timestamp
              FROM changedField
@@ -1051,8 +1051,17 @@ impl Database {
     }
 
     pub fn clear_changed_fields(&self) -> Result<usize, AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         let deleted = conn.execute("DELETE FROM changedField", [])?;
+        Ok(deleted)
+    }
+
+    pub fn clear_changed_fields_before(&self, timestamp: i64) -> Result<usize, AppError> {
+        let conn = self.lock_conn();
+        let deleted = conn.execute(
+            "DELETE FROM changedField WHERE timestamp <= ?1",
+            params![timestamp],
+        )?;
         Ok(deleted)
     }
 
@@ -1061,7 +1070,7 @@ impl Database {
         entity: &str,
         entity_id: &str,
     ) -> Result<usize, AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         let deleted = conn.execute(
             "DELETE FROM changedField WHERE entity = ?1 AND entityId = ?2",
             params![entity, entity_id],
@@ -1070,21 +1079,21 @@ impl Database {
     }
 
     pub fn has_pending_changes(&self) -> Result<bool, AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         let count: i64 =
             conn.query_row("SELECT COUNT(1) FROM changedField", [], |row| row.get(0))?;
         Ok(count > 0)
     }
 
     pub fn get_pending_changes_count(&self) -> Result<usize, AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         let count: i64 =
             conn.query_row("SELECT COUNT(1) FROM changedField", [], |row| row.get(0))?;
         Ok(count as usize)
     }
 
     pub fn get_latest_changed_field_timestamp(&self) -> Result<Option<i64>, AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         let latest = conn.query_row("SELECT MAX(timestamp) FROM changedField", [], |row| {
             row.get::<_, Option<i64>>(0)
         })?;
@@ -1094,7 +1103,7 @@ impl Database {
     pub fn get_telemetry_summary_counts(
         &self,
     ) -> Result<crate::services::telemetry_service::TelemetrySummaryCounts, AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         let mut stmt = conn.prepare(
             "WITH score_status_by_song AS (
                 SELECT
@@ -1135,7 +1144,7 @@ impl Database {
     pub fn list_telemetry_errors(
         &self,
     ) -> Result<Vec<crate::services::telemetry_service::TelemetryErrorPayload>, AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         let mut stmt =
             conn.prepare("SELECT id, message, timestamp FROM errors ORDER BY timestamp ASC")?;
 
@@ -1163,14 +1172,14 @@ impl Database {
         &self,
         now_timestamp: i64,
     ) -> Result<(), AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         let cutoff = now_timestamp - 7 * 24 * 60 * 60;
         conn.execute("DELETE FROM errors WHERE timestamp < ?1", params![cutoff])?;
         Ok(())
     }
 
     pub fn clear_telemetry_errors(&self) -> Result<(), AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         conn.execute("DELETE FROM errors", [])?;
         Ok(())
     }
@@ -1181,7 +1190,7 @@ impl Database {
         message: &str,
         timestamp: i64,
     ) -> Result<(), AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         let id = uuid::Uuid::new_v4().to_string();
         let date = chrono::DateTime::from_timestamp(timestamp, 0)
             .map(|value| value.format("%Y-%m-%d").to_string())

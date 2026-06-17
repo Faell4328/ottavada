@@ -71,7 +71,7 @@ mod tests {
         let categories = db.get_all_categories().unwrap();
         assert!(categories.iter().any(|c| c.id == "c1" && c.name == "Coral"));
 
-        let conn = db.conn.lock().unwrap();
+        let conn = db.lock_conn();
         let change_count: i64 = conn
             .query_row(
                 "SELECT COUNT(*) FROM changedField WHERE entity = 'categories' AND entityId = ?1 AND field = 'name' AND value = 'Coral'",

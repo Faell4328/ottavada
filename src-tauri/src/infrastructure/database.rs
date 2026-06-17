@@ -1,7 +1,7 @@
 use rusqlite::{params, Connection, OptionalExtension};
 use std::collections::HashSet;
 use std::path::Path;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, MutexGuard};
 
 use crate::domain::errors::AppError;
 use crate::services::path_normalizer::from_storage_path;
@@ -118,8 +118,13 @@ impl Database {
         Ok(db)
     }
 
+    /// Lock the DB connection, recovering from poison if a previous thread panicked.
+    pub fn lock_conn(&self) -> MutexGuard<'_, Connection> {
+        self.conn.lock().unwrap_or_else(|poison| poison.into_inner())
+    }
+
     fn initialize_schema(&self) -> Result<(), AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         Self::initialize_schema_with_conn(&conn)
     }
 
@@ -326,7 +331,7 @@ impl Database {
     }
 
     pub fn ensure_default_category(&self) -> Result<(), AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn();
         Self::ensure_default_category_with_conn(&conn)
     }
 

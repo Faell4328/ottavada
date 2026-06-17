@@ -79,7 +79,7 @@ fn should_generate_archive(row: &SongBackupRow, songs_dir: &Path) -> bool {
 }
 
 fn upsert_processing_status(db: &Database, song_id: &str) -> Result<(), AppError> {
-    let conn = db.conn.lock().unwrap();
+    let conn = db.lock_conn();
 
     conn.execute(
         "INSERT INTO songsBackup (songId, status)
@@ -93,7 +93,7 @@ fn upsert_processing_status(db: &Database, song_id: &str) -> Result<(), AppError
 }
 
 fn update_backup_status(db: &Database, song_id: &str, status: &str) -> Result<(), AppError> {
-    let conn = db.conn.lock().unwrap();
+    let conn = db.lock_conn();
     conn.execute(
         "UPDATE songsBackup
          SET status = ?1
@@ -104,7 +104,7 @@ fn update_backup_status(db: &Database, song_id: &str, status: &str) -> Result<()
 }
 
 fn list_song_backup_rows(db: &Database, songs_dir: &Path) -> Result<Vec<SongBackupRow>, AppError> {
-    let conn = db.conn.lock().unwrap();
+    let conn = db.lock_conn();
     let mut stmt = conn.prepare(
         "SELECT
             s.id,
@@ -161,7 +161,7 @@ fn list_scores_for_archive(
     db: &Database,
     song_id: &str,
 ) -> Result<Vec<ScoreArchiveEntry>, AppError> {
-    let conn = db.conn.lock().unwrap();
+    let conn = db.lock_conn();
     let mut stmt = conn.prepare(
         "SELECT id, file_path, file_name, status
          FROM scores
@@ -297,7 +297,7 @@ fn copy_and_rename_scores_parallel(
                 }
 
                 if let Err(err) = copy_single_score(&entries[idx], temp_dir) {
-                    let mut guard = first_error.lock().unwrap();
+                    let mut guard = first_error.lock().unwrap_or_else(|poison| poison.into_inner());
                     if guard.is_none() {
                         *guard = Some(err.to_string());
                     }
@@ -308,7 +308,7 @@ fn copy_and_rename_scores_parallel(
         }
     });
 
-    if let Some(error) = first_error.lock().unwrap().clone() {
+    if let Some(error) = first_error.lock().unwrap_or_else(|poison| poison.into_inner()).clone() {
         return Err(AppError::Generic(error));
     }
 

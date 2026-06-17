@@ -44,7 +44,7 @@ mod tests {
     }
 
     fn count_changed_field_for_entity(db: &Database, entity: &str) -> i64 {
-        let conn = db.conn.lock().unwrap();
+        let conn = db.lock_conn();
         conn.query_row(
             "SELECT COUNT(*) FROM changedField WHERE entity = ?1",
             [entity],
@@ -230,7 +230,7 @@ mod tests {
             .unwrap();
 
         {
-            let conn = db.conn.lock().unwrap();
+            let conn = db.lock_conn();
             conn.execute(
                 "UPDATE songsBackup
                  SET status = ?1
@@ -258,7 +258,7 @@ mod tests {
         assert!(songs[0].scores[0].file_path.contains("score.musx"));
         assert_eq!(songs[0].scores[0].status, ScoreStatus::Main);
 
-        let conn = db.conn.lock().unwrap();
+        let conn = db.lock_conn();
         let backup = conn
             .query_row(
                 "SELECT status FROM songsBackup WHERE songId = ?1",
@@ -275,7 +275,7 @@ mod tests {
         db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
 
         {
-            let conn = db.conn.lock().unwrap();
+            let conn = db.lock_conn();
             conn.execute(
                 "INSERT INTO songsBackup (songId, status)
                  VALUES (?1, ?2)",
@@ -287,7 +287,7 @@ mod tests {
         db.insert_score(&make_score(&db, "sc1", "s1", Some("Violino")))
             .unwrap();
 
-        let conn = db.conn.lock().unwrap();
+        let conn = db.lock_conn();
         let backup = conn
             .query_row(
                 "SELECT status FROM songsBackup WHERE songId = ?1",
@@ -331,7 +331,7 @@ mod tests {
 
         db.delete_score("sc1").unwrap();
 
-        let conn = db.conn.lock().unwrap();
+        let conn = db.lock_conn();
         let backup = conn
             .query_row(
                 "SELECT status FROM songsBackup WHERE songId = ?1",
@@ -407,7 +407,7 @@ mod tests {
         db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
 
         let legacy_full_path = "/music/scores/Canon - Violino.musx";
-        let conn = db.conn.lock().unwrap();
+        let conn = db.lock_conn();
         conn.execute(
             "INSERT INTO scores (id, song_id, name, host_id, file_path, file_name, file_extension, file_size, file_modified_at, status)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
@@ -468,7 +468,7 @@ mod tests {
         let songs = db.get_all_songs().unwrap();
         assert_eq!(songs[0].scores[0].status, ScoreStatus::Draft);
 
-        let conn = db.conn.lock().unwrap();
+        let conn = db.lock_conn();
         let status_events: i64 = conn
             .query_row(
                 "SELECT COUNT(*) FROM changedField WHERE entity = 'scores' AND field = 'status'",
@@ -513,7 +513,7 @@ mod tests {
         db.update_score_status("sc1", ScoreStatus::Draft, "test-computer", None)
             .unwrap();
 
-        let conn = db.conn.lock().unwrap();
+        let conn = db.lock_conn();
         let draft_events: i64 = conn
             .query_row(
                 "SELECT COUNT(*) FROM changedField
@@ -540,7 +540,7 @@ mod tests {
 
         assert!(db.has_pending_changes().unwrap());
 
-        let conn = db.conn.lock().unwrap();
+        let conn = db.lock_conn();
         let ignored_events: i64 = conn
             .query_row(
                 "SELECT COUNT(*) FROM changedField WHERE entity = 'scores' AND field = 'status' AND value = 'ignored' AND type = 'update'",
@@ -573,7 +573,7 @@ mod tests {
             .unwrap();
 
         {
-            let conn = db.conn.lock().unwrap();
+            let conn = db.lock_conn();
             conn.execute(
                 "UPDATE songsBackup SET status = 'ok' WHERE songId = ?1",
                 ["s1"],
@@ -584,7 +584,7 @@ mod tests {
         db.update_score_status("sc1", ScoreStatus::Main, "test-computer", None)
             .unwrap();
 
-        let conn = db.conn.lock().unwrap();
+        let conn = db.lock_conn();
         let status: String = conn
             .query_row(
                 "SELECT status FROM songsBackup WHERE songId = ?1",
@@ -607,7 +607,7 @@ mod tests {
                 .unwrap();
 
             {
-                let conn = db.conn.lock().unwrap();
+                let conn = db.lock_conn();
                 conn.execute(
                     "UPDATE songsBackup SET status = 'ok' WHERE songId = ?1",
                     ["s1"],
@@ -618,7 +618,7 @@ mod tests {
             db.update_score_status("sc1", status.clone(), "test-computer", None)
                 .unwrap();
 
-            let conn = db.conn.lock().unwrap();
+            let conn = db.lock_conn();
             let backup: String = conn
                 .query_row(
                     "SELECT status FROM songsBackup WHERE songId = ?1",
@@ -647,7 +647,7 @@ mod tests {
         db.update_song_status_for_song("s1", ScoreStatus::Draft, "test-computer")
             .unwrap();
 
-        let conn = db.conn.lock().unwrap();
+        let conn = db.lock_conn();
         let main_status: String = conn
             .query_row("SELECT status FROM scores WHERE id = ?1", ["sc1"], |row| {
                 row.get(0)
@@ -673,7 +673,7 @@ mod tests {
 
         db.delete_score("sc1").unwrap();
 
-        let conn = db.conn.lock().unwrap();
+        let conn = db.lock_conn();
         let song_status: String = conn
             .query_row("SELECT status FROM songs WHERE id = ?1", ["s1"], |row| {
                 row.get(0)
@@ -869,7 +869,7 @@ mod tests {
             .unwrap();
 
         {
-            let conn = db.conn.lock().unwrap();
+            let conn = db.lock_conn();
             conn.execute("DELETE FROM songs WHERE id = 's1'", [])
                 .unwrap();
         }

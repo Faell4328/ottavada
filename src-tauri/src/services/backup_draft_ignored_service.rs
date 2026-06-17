@@ -208,7 +208,7 @@ struct DraftIgnoredScore {
 }
 
 fn query_draft_ignored_scores(db: &Database) -> Result<Vec<DraftIgnoredScore>, AppError> {
-    let conn = db.conn.lock().unwrap();
+    let conn = db.lock_conn();
     let mut stmt = conn.prepare(
         "SELECT id, file_path, file_name, file_extension
          FROM scores

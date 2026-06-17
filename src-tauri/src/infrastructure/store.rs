@@ -51,12 +51,16 @@ impl SystemStore {
         }
     }
 
-    /// Salva as configurações no arquivo JSON
+    /// Salva as configurações no arquivo JSON com gravação atômica (temp + rename)
     fn save_store(&self, data: &serde_json::Value) -> Result<(), AppError> {
         let json_str = serde_json::to_string_pretty(data)
             .map_err(|e| AppError::Generic(format!("Erro ao serializar store: {}", e)))?;
-        fs::write(&self.store_path, json_str)
+
+        let temp_path = self.store_path.with_extension("tmp");
+        fs::write(&temp_path, json_str)
             .map_err(|e| AppError::Generic(format!("Erro ao escrever store: {}", e)))?;
+        fs::rename(&temp_path, &self.store_path)
+            .map_err(|e| AppError::Generic(format!("Erro ao finalizar gravação do store: {}", e)))?;
         Ok(())
     }
 

@@ -53,7 +53,7 @@ mod tests {
     }
 
     fn count_changed_field_for_entity(db: &Database, entity: &str) -> i64 {
-        let conn = db.conn.lock().unwrap();
+        let conn = db.lock_conn();
         conn.query_row(
             "SELECT COUNT(*) FROM changedField WHERE entity = ?1",
             [entity],
@@ -338,5 +338,48 @@ mod tests {
 
         let results = db.search_songs("Bach").unwrap();
         assert_eq!(results.len(), 1);
+    }
+
+    #[test]
+    fn test_clear_changed_fields_before_preserves_newer_entries() {
+        let db = make_db();
+        let conn = db.lock_conn();
+
+        conn.execute(
+            "INSERT INTO changedField (id, type, entity, entityId, field, value, timestamp)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            rusqlite::params!["id-100", "create", "songs", "song-1", "name", "", 100],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO changedField (id, type, entity, entityId, field, value, timestamp)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            rusqlite::params!["id-200", "create", "songs", "song-2", "name", "", 200],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO changedField (id, type, entity, entityId, field, value, timestamp)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            rusqlite::params!["id-300", "create", "songs", "song-3", "name", "", 300],
+        )
+        .unwrap();
+        drop(conn);
+
+        let deleted = db.clear_changed_fields_before(150).unwrap();
+        assert_eq!(deleted, 1);
+
+        assert_eq!(db.get_pending_changes_count().unwrap(), 2);
+
+        let deleted = db.clear_changed_fields_before(250).unwrap();
+        assert_eq!(deleted, 1);
+
+        assert_eq!(db.get_pending_changes_count().unwrap(), 1);
+
+        let remaining = db.get_changed_fields_ordered().unwrap();
+        assert_eq!(remaining.len(), 1);
+        assert_eq!(remaining[0].timestamp, 300);
+
+        db.clear_changed_fields_before(400).unwrap();
+        assert_eq!(db.get_pending_changes_count().unwrap(), 0);
     }
 }

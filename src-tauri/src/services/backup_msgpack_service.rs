@@ -336,9 +336,9 @@ fn restore_backup_from_path(
 
     payload.settings.library_summary = Some(compute_library_summary_from_payload(&payload));
 
-    store.save_app_settings(&payload.settings)?;
-
     restore_backup_payload(db, &payload)?;
+
+    store.save_app_settings(&payload.settings)?;
 
     Ok(BackupImportSummary {
         input_path: path.to_string_lossy().to_string(),
@@ -631,7 +631,7 @@ pub fn restore_missing_songs_from_archives(
 }
 
 fn query_song_score_refs(db: &Database) -> Result<Vec<SongScoreRef>, AppError> {
-    let conn = db.conn.lock().unwrap();
+    let conn = db.lock_conn();
     let mut stmt = conn.prepare(
         "SELECT s.id, s.path, sc.id, sc.file_name
          FROM songs s
@@ -784,7 +784,7 @@ fn collect_backup_payload(
     db: &Database,
     settings: AppSettings,
 ) -> Result<BackupMessagePack, AppError> {
-    let conn = db.conn.lock().unwrap();
+    let conn = db.lock_conn();
     let generated_at = chrono::Local::now().timestamp();
 
     let mut settings = settings;
@@ -926,7 +926,7 @@ fn should_generate_automatic_backup_from_timestamps(
 
 fn restore_backup_payload(db: &Database, payload: &BackupMessagePack) -> Result<(), AppError> {
     {
-        let mut conn = db.conn.lock().unwrap();
+        let mut conn = db.lock_conn();
         let tx = conn.transaction()?;
 
         tx.execute_batch(

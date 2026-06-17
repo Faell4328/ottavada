@@ -97,6 +97,8 @@ export function AppProvider({ children, disableBootstrap = false }: AppProviderP
     detail?: string | null;
     stepCurrent?: number | null;
     stepTotal?: number | null;
+    itemCurrent?: number | null;
+    itemTotal?: number | null;
   }) => {
     dispatch({ type: "SET_OPERATION_STATUS", payload });
   }, [dispatch]);

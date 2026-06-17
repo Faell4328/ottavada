@@ -399,7 +399,7 @@ fn get_song_category_relations(
     db: &Database,
     song_id: &str,
 ) -> Result<Vec<SongRelationRecord>, AppError> {
-    let conn = db.conn.lock().unwrap();
+    let conn = db.lock_conn();
     let mut stmt = conn.prepare(
         "SELECT id, categoryId FROM categoriesSongs WHERE songId = ?1 ORDER BY categoryId ASC, id ASC",
     )?;
@@ -419,7 +419,7 @@ fn get_song_named_relations(
     table_name: &str,
     foreign_key_name: &str,
 ) -> Result<Vec<SongRelationRecord>, AppError> {
-    let conn = db.conn.lock().unwrap();
+    let conn = db.lock_conn();
     let sql = format!(
         "SELECT id, {} FROM {} WHERE songId = ?1 ORDER BY {} ASC, id ASC",
         foreign_key_name, table_name, foreign_key_name

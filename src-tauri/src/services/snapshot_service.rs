@@ -109,6 +109,8 @@ pub fn generate_snapshot_msgpack(
     let cloud_dir = ensure_actions_cloud_dir(store.app_data_dir())?;
     let _cloud_root_dir = ensure_cloud_root_dir(store.app_data_dir())?;
 
+    let last_change_timestamp = db.get_latest_changed_field_timestamp()?;
+
     let all_songs = db.get_all_songs()?;
     let all_categories = db.get_all_categories()?;
 
@@ -246,8 +248,6 @@ pub fn generate_snapshot_msgpack(
         songs,
     };
 
-    let last_change_timestamp = db.get_latest_changed_field_timestamp()?;
-
     let msgpack_bytes = serialize_msgpack_named(&payload, "snapshot.msgpack")?;
 
     let compressed_bytes = compress_snapshot_with_retry(&msgpack_bytes)?;
@@ -264,7 +264,7 @@ pub fn generate_snapshot_msgpack(
         })?
         .len();
 
-    let cleared_changed_fields = db.clear_changed_fields()?;
+    let cleared_changed_fields = db.clear_changed_fields_before(last_change_timestamp.unwrap_or(0))?;
 
     clear_events_artifacts(&cloud_dir)?;
 
