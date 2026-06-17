@@ -290,9 +290,9 @@ export default function SongsList() {
           <table className="w-full border-collapse">
             <thead>
               <tr className="border-b border-[#ced7e3] bg-[#eef2f6] text-xs font-bold text-[#34485d] sticky top-0">
-                <th className="text-left px-3.5 py-2.5 font-bold w-1/3">Título</th>
-                <th className="text-left px-3.5 py-2.5 font-bold w-1/3">Compositor / Arranjador</th>
-                <th className="text-left px-3.5 py-2.5 font-bold w-1/3"></th>
+                <th className="text-left px-3.5 py-2.5 font-bold w-1/2">Título</th>
+                <th className="text-left px-3.5 py-2.5 font-bold w-1/4">Compositor / Arranjador</th>
+                <th className="text-left px-3.5 py-2.5 font-bold w-1/4"></th>
               </tr>
             </thead>
             <tbody>

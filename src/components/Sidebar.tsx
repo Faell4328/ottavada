@@ -13,6 +13,7 @@ import { useAppState } from "../context/AppContext";
 import type { SidebarView } from "../types";
 import { isClientComputer } from "../utils/computer";
 import { isSidebarViewActive } from "../utils/sidebarView";
+import { getRelatedAuthorOptions } from "../utils/songSearch";
 import { useConfirmation } from "../hooks/useConfirmation";
 import { ConfirmationModal } from "./ui/ConfirmationModal";
 import { EditCategoryModal } from "./EditCategoryModal";
@@ -81,24 +82,20 @@ export default function Sidebar() {
   ];
 
   const composerOptions = useMemo(() => {
-    const values = new Set<string>();
-    state.songs.forEach(
-      (song) => song.composer?.trim() && values.add(song.composer.trim()),
+    return getRelatedAuthorOptions(
+      state.songs,
+      "composer",
+      state.authorFilters.arranger,
     );
-    return [...values].sort((left, right) =>
-      left.localeCompare(right, "pt-BR", { sensitivity: "base" }),
-    );
-  }, [state.songs]);
+  }, [state.songs, state.authorFilters.arranger]);
 
   const arrangerOptions = useMemo(() => {
-    const values = new Set<string>();
-    state.songs.forEach(
-      (song) => song.arranger?.trim() && values.add(song.arranger.trim()),
+    return getRelatedAuthorOptions(
+      state.songs,
+      "arranger",
+      state.authorFilters.composer,
     );
-    return [...values].sort((left, right) =>
-      left.localeCompare(right, "pt-BR", { sensitivity: "base" }),
-    );
-  }, [state.songs]);
+  }, [state.songs, state.authorFilters.composer]);
 
   async function handleCreateCategory() {
     if (isCategoryLocked) {

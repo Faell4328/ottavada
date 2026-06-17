@@ -40,6 +40,34 @@ export function getUniqueSongAuthors(songs: SongListItem[], field: "composer" | 
   return [...values.values()].sort((left, right) => left.localeCompare(right, "pt-BR", { sensitivity: "base" }));
 }
 
+export function getRelatedAuthorOptions(
+  songs: SongListItem[],
+  targetField: "composer" | "arranger",
+  relatedFilter: string
+): string[] {
+  const relatedField: "composer" | "arranger" = targetField === "composer" ? "arranger" : "composer";
+
+  const filteredSongs = relatedFilter === "all"
+    ? songs
+    : songs.filter((song) => {
+        const value = song[relatedField];
+        if (relatedFilter === "none") return !value?.trim();
+        return normalizeAuthorName(value) === normalizeAuthorName(relatedFilter);
+      });
+
+  const values = new Set<string>();
+  for (const song of filteredSongs) {
+    const value = song[targetField]?.trim();
+    if (value) {
+      values.add(value);
+    }
+  }
+
+  return [...values].sort((left, right) =>
+    left.localeCompare(right, "pt-BR", { sensitivity: "base" }),
+  );
+}
+
 export function songMatchesAuthorFilter(
   song: SongListItem,
   filters: { composer: string; arranger: string }
