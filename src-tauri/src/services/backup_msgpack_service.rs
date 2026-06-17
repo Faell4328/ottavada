@@ -8,13 +8,15 @@ use tracing::{info, warn};
 
 use crate::commands::rclone_commands::sync_cloud_directory_with_rclone_impl;
 use crate::domain::errors::AppError;
-use crate::domain::models::{AppSettings, OperationGuard};
+use crate::domain::models::{AppSettings, LibraryStatusSummary, LibrarySummary, OperationGuard};
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
-use crate::services::cloud_paths::ensure_backup_cloud_dir;
-use crate::services::msgpack_zstd::{compress_zstd_with_threads, serialize_msgpack_named, write_atomic, ZSTD_LEVEL_BALANCED};
-use crate::services::path_normalizer::from_storage_path;
 use crate::services::backup_draft_ignored_service::backup_draft_ignored_scores;
+use crate::services::cloud_paths::ensure_backup_cloud_dir;
+use crate::services::msgpack_zstd::{
+    compress_zstd_with_threads, serialize_msgpack_named, write_atomic, ZSTD_LEVEL_BALANCED,
+};
+use crate::services::path_normalizer::from_storage_path;
 
 const BACKUP_FILE_PREFIX: &str = "backup - ";
 const BACKUP_FILE_EXTENSION: &str = ".msgpack.zst";
@@ -24,7 +26,10 @@ const BACKUP_SCHEMA_VERSION: u32 = 1;
 const AUTO_BACKUP_INTERVAL_SECONDS: i64 = 60 * 60;
 
 fn backup_filename(timestamp: i64) -> String {
-    format!("{}{}{}", BACKUP_FILE_PREFIX, timestamp, BACKUP_FILE_EXTENSION)
+    format!(
+        "{}{}{}",
+        BACKUP_FILE_PREFIX, timestamp, BACKUP_FILE_EXTENSION
+    )
 }
 
 fn parse_backup_timestamp(filename: &str) -> Option<i64> {
@@ -38,9 +43,9 @@ fn list_backup_files(backup_dir: &Path) -> Result<Vec<(i64, PathBuf)>, AppError>
     if !backup_dir.is_dir() {
         return Ok(backups);
     }
-    for entry in fs::read_dir(backup_dir).map_err(|e| {
-        AppError::Generic(format!("Erro ao ler diretorio de backup: {}", e))
-    })? {
+    for entry in fs::read_dir(backup_dir)
+        .map_err(|e| AppError::Generic(format!("Erro ao ler diretorio de backup: {}", e)))?
+    {
         let entry = entry.map_err(|e| {
             AppError::Generic(format!("Erro ao ler entrada do diretorio de backup: {}", e))
         })?;
@@ -277,6 +282,38 @@ pub fn import_backup_msgpack(
     restore_backup_from_path(db, store, &path, &settings)
 }
 
+fn compute_library_summary_from_payload(payload: &BackupMessagePack) -> LibrarySummary {
+    let mut main_scores = 0_usize;
+    let mut draft_scores = 0_usize;
+    let mut main_song_ids = std::collections::HashSet::new();
+    let mut draft_song_ids = std::collections::HashSet::new();
+
+    for score in &payload.scores {
+        match score.status.as_str() {
+            "main" => {
+                main_scores += 1;
+                main_song_ids.insert(&score.song_id);
+            }
+            "draft" => {
+                draft_scores += 1;
+                draft_song_ids.insert(&score.song_id);
+            }
+            _ => {}
+        }
+    }
+
+    LibrarySummary {
+        main: LibraryStatusSummary {
+            songs_count: main_song_ids.len(),
+            scores_count: main_scores,
+        },
+        draft: LibraryStatusSummary {
+            songs_count: draft_song_ids.len(),
+            scores_count: draft_scores,
+        },
+    }
+}
+
 fn restore_backup_from_path(
     db: &Database,
     store: &SystemStore,
@@ -297,17 +334,11 @@ fn restore_backup_from_path(
         payload.settings.rclone_config = Some(current_rclone_config);
     }
 
+    payload.settings.library_summary = Some(compute_library_summary_from_payload(&payload));
+
+    store.save_app_settings(&payload.settings)?;
+
     restore_backup_payload(db, &payload)?;
-
-    let library_summary = db.get_library_summary_counts()?;
-    payload.settings.library_summary = Some(library_summary);
-
-    if let Err(e) = store.save_app_settings(&payload.settings) {
-        return Err(AppError::Generic(format!(
-            "Banco restaurado, mas falhou ao restaurar configuracoes do app-store: {}",
-            e
-        )));
-    }
 
     Ok(BackupImportSummary {
         input_path: path.to_string_lossy().to_string(),
@@ -358,49 +389,29 @@ fn generate_backup_msgpack_in_cloud(
     }
 
     let msgpack_bytes = serialize_msgpack_named(&payload, "backup.msgpack")?;
-    let compressed = compress_zstd_with_threads(
-        &msgpack_bytes,
-        ZSTD_LEVEL_BALANCED,
-        "backup.msgpack.zst",
-    )?;
+    let compressed =
+        compress_zstd_with_threads(&msgpack_bytes, ZSTD_LEVEL_BALANCED, "backup.msgpack.zst")?;
 
     let backup_dir = ensure_backup_cloud_dir(store.app_data_dir())?;
 
-    if let Err(err) = sync_cloud_directory_with_rclone_impl(store, "download", Some("backup")) {
-        warn!(
-            "Nao foi possivel baixar backups existentes (primeira vez?): {}",
-            err
-        );
-    }
+    sync_cloud_directory_with_rclone_impl(store, "download", Some("backup"))
+        .map_err(|e| AppError::Generic(format!("Nao foi possivel baixar backups existentes: {}", e)))?;
 
     let backup_path = backup_dir.join(backup_filename(payload.generated_at));
 
     write_atomic(&backup_path, &compressed, "backup.msgpack.zst")?;
 
     let file_size = fs::metadata(&backup_path)
-        .map_err(|e| {
-            AppError::Generic(format!("Erro ao obter metadados do backup: {}", e))
-        })?
+        .map_err(|e| AppError::Generic(format!("Erro ao obter metadados do backup: {}", e)))?
         .len();
-
-    sync_cloud_directory_with_rclone_impl(store, "upload", Some("backup"))?;
 
     cleanup_old_backups(&backup_dir)?;
 
     sync_cloud_directory_with_rclone_impl(store, "upload", Some("backup"))?;
 
-    match backup_draft_ignored_scores(db, store) {
-        Ok(count) => {
-            if count > 0 {
-                info!("Backup de {} partituras draft/ignored concluido", count);
-            }
-        }
-        Err(err) => {
-            warn!(
-                "Erro ao fazer backup de partituras draft/ignored: {}",
-                err
-            );
-        }
+    let draft_count = backup_draft_ignored_scores(db, store)?;
+    if draft_count > 0 {
+        info!("Backup de {} partituras draft/ignored concluido", draft_count);
     }
 
     let mut updated_settings = store.get_app_settings()?;
@@ -426,9 +437,9 @@ pub fn import_backup_msgpack_from_cloud(
 
     let _validation = validate_cloud_backup(store)?;
 
-    let mut summary = restore_database_from_cloud_backup(db, store)?;
-
     sync_cloud_directory_with_rclone_impl(store, "download", Some("songs"))?;
+
+    let mut summary = restore_database_from_cloud_backup(db, store)?;
 
     let (songs_restored, scores_restored) =
         restore_song_files_from_cloud_archives(db, store.app_data_dir())?;
@@ -436,15 +447,11 @@ pub fn import_backup_msgpack_from_cloud(
     summary.songs_restored = songs_restored;
     summary.scores_restored = scores_restored;
 
-    match crate::services::backup_draft_ignored_service::restore_draft_ignored_scores_from_backup(db, store) {
-        Ok(count) => {
-            if count > 0 {
-                info!("{} partituras draft/ignored restauradas do backup", count);
-            }
-        }
-        Err(err) => {
-            warn!("Erro ao restaurar partituras draft/ignored: {}", err);
-        }
+    let draft_count = crate::services::backup_draft_ignored_service::restore_draft_ignored_scores_from_backup(
+        db, store,
+    )?;
+    if draft_count > 0 {
+        info!("{} partituras draft/ignored restauradas do backup", draft_count);
     }
 
     Ok(summary)
@@ -536,7 +543,10 @@ pub fn restore_missing_songs_from_archives(
             AppError::Generic(format!("Erro ao ler diretorio de musicas da nuvem: {}", e))
         })? {
             let entry = entry.map_err(|e| {
-                AppError::Generic(format!("Erro ao ler entrada do diretorio de musicas: {}", e))
+                AppError::Generic(format!(
+                    "Erro ao ler entrada do diretorio de musicas: {}",
+                    e
+                ))
             })?;
             let path = entry.path();
             if !path.is_file() {
@@ -732,7 +742,10 @@ fn move_score_from_temp(
         ))
     })? {
         let entry = entry.map_err(|e| {
-            AppError::Generic(format!("Erro ao ler entrada do diretorio temporario: {}", e))
+            AppError::Generic(format!(
+                "Erro ao ler entrada do diretorio temporario: {}",
+                e
+            ))
         })?;
         let path = entry.path();
         if !path.is_file() {
@@ -741,9 +754,7 @@ fn move_score_from_temp(
         let Some(file_name) = path.file_name().and_then(|n| n.to_str()) else {
             continue;
         };
-        let stem = Path::new(file_name)
-            .file_stem()
-            .and_then(|s| s.to_str());
+        let stem = Path::new(file_name).file_stem().and_then(|s| s.to_str());
 
         if stem == Some(score_id) || file_name == score_id {
             if destination.exists() {
@@ -802,9 +813,7 @@ fn collect_backup_payload(
                 name: row.get(1)?,
                 composer: row.get(2)?,
                 arranger: row.get(3)?,
-                path: crate::services::path_normalizer::to_storage_path(
-                    &row.get::<_, String>(4)?,
-                ),
+                path: crate::services::path_normalizer::to_storage_path(&row.get::<_, String>(4)?),
                 is_favorite: row.get::<_, bool>(5)?,
                 last_score_file_modified_at: row.get(6)?,
             })
@@ -939,8 +948,7 @@ fn restore_backup_payload(db: &Database, payload: &BackupMessagePack) -> Result<
         }
 
         for song in &payload.songs {
-            let storage_path =
-                crate::services::path_normalizer::to_storage_path(&song.path);
+            let storage_path = crate::services::path_normalizer::to_storage_path(&song.path);
             tx.execute(
                 "INSERT INTO songs (id, name, composer, arranger, path, is_favorite, last_score_file_modified_at)
                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
@@ -1044,7 +1052,11 @@ fn empty_directory_contents(dir: &Path) -> Result<(), AppError> {
         return Ok(());
     }
     for entry in fs::read_dir(dir).map_err(|e| {
-        AppError::Generic(format!("Erro ao ler diretorio para esvaziar {}: {}", dir.display(), e))
+        AppError::Generic(format!(
+            "Erro ao ler diretorio para esvaziar {}: {}",
+            dir.display(),
+            e
+        ))
     })? {
         let entry = entry.map_err(|e| {
             AppError::Generic(format!("Erro ao ler entrada em {}: {}", dir.display(), e))
@@ -1052,7 +1064,11 @@ fn empty_directory_contents(dir: &Path) -> Result<(), AppError> {
         let path = entry.path();
         if path.is_dir() {
             fs::remove_dir_all(&path).map_err(|e| {
-                AppError::Generic(format!("Erro ao remover diretorio {}: {}", path.display(), e))
+                AppError::Generic(format!(
+                    "Erro ao remover diretorio {}: {}",
+                    path.display(),
+                    e
+                ))
             })?;
         } else {
             fs::remove_file(&path).map_err(|e| {
@@ -1318,12 +1334,9 @@ mod tests {
             let payload = super::collect_backup_payload(&source_db, settings).expect("payload");
             super::serialize_msgpack_named(&payload, "backup").expect("serialize")
         };
-        let compressed = super::compress_zstd_with_threads(
-            &msgpack_bytes,
-            super::ZSTD_LEVEL_BALANCED,
-            "backup",
-        )
-        .expect("compress");
+        let compressed =
+            super::compress_zstd_with_threads(&msgpack_bytes, super::ZSTD_LEVEL_BALANCED, "backup")
+                .expect("compress");
 
         let compressed_path = source_dir.path().join("backup - 1710684000.msgpack.zst");
         std::fs::write(&compressed_path, &compressed).expect("write compressed");
@@ -1384,6 +1397,9 @@ mod tests {
         store.save_app_settings(&settings).expect("save settings");
 
         let result = generate_automatic_backup_msgpack(&db, &store).expect("generate");
-        assert!(result.is_none(), "backup deve ser None quando biblioteca vazia");
+        assert!(
+            result.is_none(),
+            "backup deve ser None quando biblioteca vazia"
+        );
     }
 }

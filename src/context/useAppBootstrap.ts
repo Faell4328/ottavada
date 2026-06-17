@@ -53,15 +53,15 @@ export function useAppBootstrap({
             });
           }
 
-          if (!automaticBackupStartedRef.current) {
+          if (
+            !automaticBackupStartedRef.current &&
+            currentSettings.computer_type === "Server" &&
+            currentSettings.rclone_config
+          ) {
             automaticBackupStartedRef.current = true;
 
             void (async () => {
               try {
-                if (
-                  currentSettings.computer_type === "Server" &&
-                  currentSettings.rclone_config
-                ) {
                   const backupSummary = await api.generateAutomaticBackupFile();
                   if (backupSummary) {
                     try {
@@ -79,7 +79,6 @@ export function useAppBootstrap({
                       }
                     );
                   }
-                }
               } catch (backupError) {
                 console.error("Failed to generate automatic backup:", backupError);
               }

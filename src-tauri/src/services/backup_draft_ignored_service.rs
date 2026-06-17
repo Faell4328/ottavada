@@ -26,16 +26,17 @@ pub fn backup_draft_ignored_scores(
         .is_some();
 
     if has_rclone {
-        if let Err(err) = sync_cloud_directory_with_rclone_impl(
+        sync_cloud_directory_with_rclone_impl(
             store,
             "download",
             Some(BACKUP_DRAFT_IGNORED_RELATIVE_PATH),
-        ) {
-            warn!(
-                "Nao foi possivel baixar backups draft/ignored existentes (primeira vez?): {}",
-                err
-            );
-        }
+        )
+        .map_err(|e| {
+            AppError::Generic(format!(
+                "Nao foi possivel baixar backups draft/ignored existentes: {}",
+                e
+            ))
+        })?;
     }
 
     let backup_dir = ensure_draft_ignored_backup_dir(store.app_data_dir())?;

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useAppState } from "../context/AppContext";
 import type { SongListItem } from "../types";
 import { Modal, ModalFooterButtons, FormField, TextInput, ErrorMessage, AutocompleteInput } from "./ui";
@@ -45,6 +45,7 @@ export function EditMusicModal({
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
+  const generationRef = useRef(0);
 
   useEffect(() => {
     if (isOpen && score) {
@@ -61,18 +62,25 @@ export function EditMusicModal({
       return;
     }
 
+    const generation = ++generationRef.current;
+
     void (async () => {
       try {
         const [songs, fullSong] = await Promise.all([
           api.getAllSongSummaries(),
           api.getSongListItemById(score.id),
         ]);
+
+        if (generation !== generationRef.current) return;
+
         setAllSongSuggestions(songs);
         setTitle(fullSong.name || score.name || "");
         setComposer(fullSong.composer || score.composer || "");
         setArranger(fullSong.arranger || score.arranger || "");
         setSelectedCategories(fullSong.category_ids || score.category_ids || []);
       } catch (error) {
+        if (generation !== generationRef.current) return;
+
         console.error("Failed to load autocomplete suggestions:", error);
         setAllSongSuggestions(state.songs);
         setSelectedCategories(score.category_ids || []);

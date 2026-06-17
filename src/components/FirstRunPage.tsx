@@ -144,7 +144,8 @@ export default function FirstRunPage() {
     try {
       await api.deleteRcloneTestFile();
     } catch (error) {
-      console.warn("Aviso ao deletar arquivo de teste local:", error);
+      console.error("Erro ao deletar arquivo de teste local:", error);
+      toast.error("Erro ao remover arquivo de teste da nuvem.");
     }
 
     setStep("confirm");

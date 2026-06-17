@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { EditMusicModal } from "../../components/EditMusicModal";
+import { AppProvider } from "../../context/AppContext";
 import type { SongListItem } from "../../types";
 import { renderWithAppProvider } from "../utils/renderWithAppProvider";
 
@@ -195,4 +196,64 @@ describe("EditMusicModal", () => {
     });
   });
 
+  it("should discard stale async response when modal reopens with different song", async () => {
+    const { invoke } = await import("@tauri-apps/api/core");
+    const baseImpl = vi.mocked(invoke).getMockImplementation()!;
+
+    let resolveStale!: (value: unknown) => void;
+    const staleResult = new Promise<unknown>((resolve) => {
+      resolveStale = resolve;
+    });
+
+    let staleIntercepted = false;
+    vi.mocked(invoke).mockImplementation((cmd: string, args?: any) => {
+      if (cmd === "get_song_list_item_by_id" && args?.songId === "s1" && !staleIntercepted) {
+        staleIntercepted = true;
+        return staleResult;
+      }
+      return baseImpl(cmd, args);
+    });
+
+    const songB: SongListItem = {
+      id: "s2",
+      name: "Fur Elise",
+      composer: "Beethoven",
+      arranger: null,
+      path: "/music/fur-elise",
+      updated_at: "2024-01-01 12:00:00",
+      is_favorite: false,
+      status: "main",
+      category_ids: ["c2"],
+      scores: [],
+    };
+
+    const { rerender } = renderWithAppProvider(
+      <EditMusicModal isOpen={true} score={sampleSong} onClose={mockOnClose} onSave={mockOnSave} />
+    );
+
+    rerender(
+      <AppProvider disableBootstrap>
+        <EditMusicModal isOpen={true} score={songB} onClose={mockOnClose} onSave={mockOnSave} />
+      </AppProvider>
+    );
+
+    resolveStale({
+      id: "s1",
+      name: "STALE Canon",
+      composer: "STALE Pachelbel",
+      arranger: "STALE Arranged",
+      path: "/music/canon-in-d",
+      updated_at: "2024-01-01 12:00:00",
+      is_favorite: false,
+      category_ids: ["c1"],
+      scores: [],
+    });
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue("Fur Elise")).toBeInTheDocument();
+    });
+
+    expect(screen.queryByDisplayValue("STALE Canon")).not.toBeInTheDocument();
+    expect(screen.queryByDisplayValue("STALE Pachelbel")).not.toBeInTheDocument();
+  });
 });

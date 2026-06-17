@@ -420,6 +420,7 @@ export function useAppCrudActions({
     } catch (err) {
       console.error("Failed to complete first run:", err);
       toast.error("Não foi possível concluir a configuração inicial.");
+      throw err;
     }
   }, [dispatch, loadCategories, loadSettings, loadSongs, refreshSelectedSong]);
 
