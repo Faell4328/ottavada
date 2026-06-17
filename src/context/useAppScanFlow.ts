@@ -29,7 +29,7 @@ type ScanFilesForChangesOptions =
 
 const SNAPSHOT_AUTO_THRESHOLD_BYTES = 1 * 1024 * 1024;
 
-export function shouldRunStartupServerScan(
+export function shouldRunStartupClientScan(
   computerType: "Server" | "Client" | undefined,
 ) {
   return computerType === "Client";
@@ -506,8 +506,11 @@ export function useAppScanFlow({
               hasDetectedFileChanges,
             }));
 
+        let applyChangesMarked = false;
+
         if (shouldUseFullSync) {
           await api.markServerApplyChangesInProgress();
+          applyChangesMarked = true;
 
           if (snapshotGenerated) {
             let uploadError: unknown = null;
@@ -558,10 +561,12 @@ export function useAppScanFlow({
           if (uploadPaths.length === 0) {
             if (!isAutomatic) {
               await api.markServerApplyChangesInProgress();
+              applyChangesMarked = true;
               await runSyncWithProgress({ direction: "upload" });
             }
           } else {
             await api.markServerApplyChangesInProgress();
+            applyChangesMarked = true;
             await runSelectiveUploadWithProgress(uploadPaths);
           }
         }
@@ -580,7 +585,9 @@ export function useAppScanFlow({
         } else {
           await api.markLocalChangesAsApplied();
         }
-        await api.clearServerApplyChangesInProgress();
+        if (applyChangesMarked) {
+          await api.clearServerApplyChangesInProgress();
+        }
         await loadSettings();
         updateStepProgress(changedCount);
 

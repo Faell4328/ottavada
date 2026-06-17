@@ -804,6 +804,13 @@ impl Database {
             }
         }
 
+        if !matches!(field_name, "composer" | "arranger") {
+            return Err(AppError::Generic(format!(
+                "Campo inválido para atualização de autor: {}",
+                field_name
+            )));
+        }
+
         let select_sql = format!(
             "SELECT id FROM songs WHERE {} IS NOT NULL AND LOWER(TRIM({})) = LOWER(?1)",
             field_name, field_name

@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 
 import {
   getScanFailureToastMessage,
-  shouldRunStartupServerScan,
+  shouldRunStartupClientScan,
   shouldUseFullCloudSync,
 } from "../../context/useAppScanFlow";
 import { shouldDispatchRcloneProgressUpdate } from "../../utils/rcloneProgress";
@@ -111,21 +111,21 @@ describe("shouldDispatchRcloneProgressUpdate", () => {
   });
 });
 
-describe("shouldRunStartupServerScan", () => {
+describe("shouldRunStartupClientScan", () => {
   it("skips the startup scan on the server when there are no pending changes", () => {
-    expect(shouldRunStartupServerScan("Server")).toBe(false);
+    expect(shouldRunStartupClientScan("Server")).toBe(false);
   });
 
   it("skips the startup scan on the server when there are pending changes", () => {
-    expect(shouldRunStartupServerScan("Server")).toBe(false);
+    expect(shouldRunStartupClientScan("Server")).toBe(false);
   });
 
   it("skips the startup scan on the server when an apply was interrupted", () => {
-    expect(shouldRunStartupServerScan("Server")).toBe(false);
+    expect(shouldRunStartupClientScan("Server")).toBe(false);
   });
 
   it("keeps the client startup scan enabled", () => {
-    expect(shouldRunStartupServerScan("Client")).toBe(true);
+    expect(shouldRunStartupClientScan("Client")).toBe(true);
   });
 });
 

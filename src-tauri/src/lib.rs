@@ -187,7 +187,9 @@ pub fn run() {
             app.manage(db.clone());
             app.manage(initial_scan_completed.clone());
 
-            services::telemetry_service::spawn_telemetry_worker(db.clone(), app_data_dir.clone());
+            let telemetry_shutdown =
+                services::telemetry_service::spawn_telemetry_worker(db.clone(), app_data_dir.clone());
+            app.manage(telemetry_shutdown);
 
             // Inicializar store de configurações
             let store = SystemStore::new(app_data_dir.clone());

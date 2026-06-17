@@ -1,3 +1,5 @@
+use std::sync::atomic::AtomicBool;
+use std::sync::Arc;
 use std::time::Duration;
 
 use chrono::Utc;
@@ -160,15 +162,29 @@ pub fn send_telemetry_once(db: &Database, store: &SystemStore) -> Result<(), App
     Ok(())
 }
 
-pub fn spawn_telemetry_worker(db: Database, store_path: std::path::PathBuf) {
+pub fn spawn_telemetry_worker(db: Database, store_path: std::path::PathBuf) -> Arc<AtomicBool> {
+    let shutdown = Arc::new(AtomicBool::new(false));
+    let shutdown_clone = Arc::clone(&shutdown);
+
     std::thread::spawn(move || loop {
+        if shutdown_clone.load(std::sync::atomic::Ordering::Relaxed) {
+            break;
+        }
+
         std::thread::sleep(Duration::from_secs(TELEMETRY_INTERVAL_SECONDS));
+
+        if shutdown_clone.load(std::sync::atomic::Ordering::Relaxed) {
+            break;
+        }
+
         let store = SystemStore::new(store_path.clone());
 
         if let Err(error) = send_telemetry_once(&db, &store) {
             error!("Falha ao enviar telemetria: {}", error);
         }
     });
+
+    shutdown
 }
 
 #[cfg(test)]

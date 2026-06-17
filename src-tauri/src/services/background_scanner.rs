@@ -126,6 +126,39 @@ pub fn run_initial_scan(db: &Database, host_id: &str) {
             }
         }
 
+        for score in song_scores.iter().filter(|s| s.status == ScoreStatus::Draft) {
+            let full_path = build_score_full_path(&score.file_path, &score.file_name);
+            let path = Path::new(&full_path);
+
+            if !path.exists() || !path.is_file() {
+                continue;
+            }
+
+            if let Ok((current_size, current_modified_at)) = get_file_metadata(path) {
+                let new_status = resolve_recovered_score_status(
+                    db,
+                    &score.score_id,
+                    current_size,
+                    current_modified_at,
+                    score.stored_size,
+                    &score.stored_modified_at_str,
+                );
+
+                if db
+                    .update_score_status(
+                        &score.score_id,
+                        new_status,
+                        host_id,
+                        Some((current_size, current_modified_at)),
+                    )
+                    .is_ok()
+                {
+                    recovered_count += 1;
+                    info!("✓ Score recuperado: {}", full_path);
+                }
+            }
+        }
+
         for current_file in current_files {
             let current_path = &current_file.path;
             if song_scores.iter().any(|score| {
@@ -165,8 +198,8 @@ pub fn run_initial_scan(db: &Database, host_id: &str) {
     }
 
     info!(
-        "Verificação inicial concluída: {} alterações, {} adicionados, {} deletados",
-        changed_count, added_count, deleted_count
+        "Verificação inicial concluída: {} alterações, {} adicionados, {} deletados, {} recuperados",
+        changed_count, added_count, deleted_count, recovered_count
     );
 }
 
@@ -180,7 +213,7 @@ fn build_score_full_path(file_path: &str, file_name: &str) -> String {
         .unwrap_or(false);
 
     if legacy_full_path {
-        file_path.to_string()
+        expanded_file_path
     } else {
         base_path.join(file_name).to_string_lossy().to_string()
     }
@@ -201,12 +234,17 @@ fn parse_stored_modified_at(stored_modified_at_str: &str) -> chrono::NaiveDateTi
 fn resolve_recovered_score_status(
     _db: &Database,
     _score_id: &str,
-    _current_size: u64,
-    _current_modified_at: chrono::NaiveDateTime,
-    _stored_size: u64,
-    _stored_modified_at_str: &str,
+    current_size: u64,
+    current_modified_at: chrono::NaiveDateTime,
+    stored_size: u64,
+    stored_modified_at_str: &str,
 ) -> ScoreStatus {
-    ScoreStatus::Draft
+    let stored_modified_at = parse_stored_modified_at(stored_modified_at_str);
+    if current_size == stored_size && current_modified_at == stored_modified_at {
+        ScoreStatus::Main
+    } else {
+        ScoreStatus::Draft
+    }
 }
 
 #[cfg(test)]

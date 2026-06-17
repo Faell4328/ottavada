@@ -4,7 +4,7 @@ import toast from "react-hot-toast";
 import * as api from "../api/commands";
 import type { Action, State } from "./reducer";
 import { formatBackupTimestamp } from "../utils/formatters";
-import { shouldRunStartupServerScan } from "./useAppScanFlow";
+import { shouldRunStartupClientScan } from "./useAppScanFlow";
 
 interface UseAppBootstrapParams {
   state: State;
@@ -46,7 +46,7 @@ export function useAppBootstrap({
 
           if (
             startupScan &&
-            shouldRunStartupServerScan(currentSettings.computer_type)
+            shouldRunStartupClientScan(currentSettings.computer_type)
           ) {
             void startupScan().catch((error) => {
               console.error("Failed to run startup scan:", error);

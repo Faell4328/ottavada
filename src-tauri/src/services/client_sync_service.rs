@@ -351,7 +351,7 @@ fn apply_snapshot(db: &Database, payload: &SnapshotMessagePack) -> Result<(), Ap
             {
                 song.path.clone().unwrap()
             } else {
-                format!("/songs/{}", song.id)
+                song_stored_path(&song.id)
             };
 
             let composer_name = composer_name_by_song_id.get(&song.id).cloned().or_else(|| {
@@ -417,8 +417,8 @@ fn apply_snapshot(db: &Database, payload: &SnapshotMessagePack) -> Result<(), Ap
                         score_song_id,
                         score.name,
                         "server",
-                        format!("/cloud/songs/{}", score_song_id),
-                        format!("{}.{}", score.id, file_extension),
+                        cloud_score_stored_path(score_song_id),
+                        score_stored_file_name(&score.id, &file_extension),
                         file_extension,
                         score_updated_at,
                         score_status,
@@ -640,7 +640,7 @@ fn apply_upsert_field_event(
                     "UPDATE scores SET song_id = ?1, file_path = ?2 WHERE id = ?3",
                     params![
                         song_id,
-                        format!("/cloud/songs/{}", song_id),
+                        cloud_score_stored_path(&song_id),
                         event.entity_id
                     ],
                 )?;
@@ -702,7 +702,7 @@ fn apply_upsert_field_event(
                     tx.execute(
                         "UPDATE scores SET file_name = ?1 WHERE id = ?2",
                         params![
-                            format!("{}.{}", event.entity_id, extension),
+                            score_stored_file_name(&event.entity_id, &extension),
                             event.entity_id
                         ],
                     )?;
@@ -793,7 +793,7 @@ fn ensure_song_exists(
     tx.execute(
         "INSERT OR IGNORE INTO songs (id, name, composer, arranger, path, is_favorite, last_score_file_modified_at)
          VALUES (?1, '', NULL, NULL, ?3, 0, ?2)",
-        params![song_id, timestamp, format!("/songs/{}", song_id)],
+        params![song_id, timestamp, song_stored_path(song_id)],
     )?;
     Ok(())
 }
@@ -804,7 +804,7 @@ fn ensure_category_exists(
 ) -> Result<(), AppError> {
     tx.execute(
         "INSERT OR IGNORE INTO categories (id, name) VALUES (?1, ?2)",
-        params![category_id, format!("Categoria {}", category_id)],
+        params![category_id, category_fallback_name(category_id)],
     )?;
     Ok(())
 }
@@ -821,13 +821,29 @@ fn ensure_score_exists(
         params![
             score_id,
             song_id,
-            format!("/cloud/songs/{}", song_id),
-            format!("{}.score", score_id),
+            cloud_score_stored_path(song_id),
+            score_stored_file_name(score_id, "score"),
             "score",
             timestamp,
         ],
     )?;
     Ok(())
+}
+
+fn cloud_score_stored_path(song_id: &str) -> String {
+    format!("/cloud/songs/{}", song_id)
+}
+
+fn score_stored_file_name(score_id: &str, extension: &str) -> String {
+    format!("{}.{}", score_id, extension)
+}
+
+fn song_stored_path(song_id: &str) -> String {
+    format!("/songs/{}", song_id)
+}
+
+fn category_fallback_name(category_id: &str) -> String {
+    format!("Categoria {}", category_id)
 }
 
 fn normalize_extension(raw_extension: Option<&str>) -> Option<String> {

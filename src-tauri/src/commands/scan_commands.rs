@@ -489,7 +489,7 @@ fn build_score_full_path(file_path: &str, file_name: &str) -> String {
         .unwrap_or(false);
 
     if legacy_full_path {
-        file_path.to_string()
+        expanded_file_path
     } else {
         base_path.join(file_name).to_string_lossy().to_string()
     }

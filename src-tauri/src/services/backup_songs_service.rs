@@ -557,16 +557,25 @@ fn run_archive_jobs_parallel(
                         continue;
                     }
 
-                    let result = generate_archive_with_retry(
-                        &job.entries,
-                        &job.row.song_id,
-                        songs_dir,
-                        temp_root,
-                        zstd_threads,
-                        copy_threads,
-                    );
+                    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                        generate_archive_with_retry(
+                            &job.entries,
+                            &job.row.song_id,
+                            songs_dir,
+                            temp_root,
+                            zstd_threads,
+                            copy_threads,
+                        )
+                    }))
+                    .unwrap_or_else(|panic_payload| {
+                        let panic_msg = panic_payload
+                            .downcast_ref::<&str>()
+                            .copied()
+                            .or_else(|| panic_payload.downcast_ref::<String>().map(|s| s.as_str()))
+                            .unwrap_or("worker panic");
+                        Err(AppError::Generic(format!("Worker panicou: {}", panic_msg)))
+                    });
 
-                    // Se o receiver foi encerrado antecipadamente, só interrompe o worker.
                     if tx.send((idx, job.row.clone(), result)).is_err() {
                         break;
                     }
