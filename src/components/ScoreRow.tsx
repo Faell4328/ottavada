@@ -241,9 +241,13 @@ function ScoreRow({
         </td>
         <td className="px-2 py-1.5">
           <div className="flex items-center justify-between">
-            <span className={getScoreStatusBadgeClass(statusKey)}>
-              {getScoreStatusLabel(score.status)}
-            </span>
+            {isClient ? (
+              <span />
+            ) : (
+              <span className={getScoreStatusBadgeClass(statusKey)}>
+                {getScoreStatusLabel(score.status)}
+              </span>
+            )}
 
             <div className="flex items-center justify-end px-3">
               <ContextMenu

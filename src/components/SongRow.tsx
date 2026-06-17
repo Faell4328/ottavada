@@ -161,9 +161,13 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(function Son
         <td className={`px-3.5 py-2 ${isHighlighted ? "text-[#965050]" : "text-[#5c7089]"}`}>{author || "—"}</td>
         <td className="px-3.5 py-2">
           <div className="flex items-center justify-between">
-            <span className={getScoreStatusBadgeClass(song.status)}>
-              {getScoreStatusLabel(song.status)}
-            </span>
+            {isClient ? (
+              <span />
+            ) : (
+              <span className={getScoreStatusBadgeClass(song.status)}>
+                {getScoreStatusLabel(song.status)}
+              </span>
+            )}
             <ContextMenu
               isOpen={isMenuOpen}
               onToggle={(e) => {
