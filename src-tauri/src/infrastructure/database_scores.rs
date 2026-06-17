@@ -101,7 +101,6 @@ impl Database {
         file_size: u64,
         file_modified_at: chrono::NaiveDateTime,
         _now: chrono::NaiveDateTime,
-        _updated_by: &str,
     ) -> Result<(), AppError> {
         let conn = self.lock_conn();
         let file_modified_at_ts = file_modified_at.and_utc().timestamp();

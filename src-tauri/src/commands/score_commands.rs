@@ -466,7 +466,6 @@ pub fn update_score(
         file_size,
         file_modified_at,
         now,
-        &settings.computer_id,
     )
     .map(|_| {
         info!("Partitura atualizada com sucesso: {}", score_id);

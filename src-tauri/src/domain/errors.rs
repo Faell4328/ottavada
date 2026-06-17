@@ -14,9 +14,6 @@ pub enum AppError {
     #[error("Partitura não encontrada: {0}")]
     ScoreNotFound(String),
 
-    #[error("Categoria não encontrada: {0}")]
-    #[allow(dead_code)]
-    CategoryNotFound(String),
 
     #[error("Diretório inválido: {0}")]
     InvalidDirectory(String),

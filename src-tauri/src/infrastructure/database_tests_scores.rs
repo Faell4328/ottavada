@@ -249,7 +249,6 @@ mod tests {
             2048,
             now(),
             now(),
-            "test-computer",
         )
         .unwrap();
 

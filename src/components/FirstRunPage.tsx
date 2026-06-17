@@ -379,7 +379,7 @@ export default function FirstRunPage() {
             <p className="w-4/5 mx-auto mb-6 text-sm text-[#6b849e] text-center">
               <b>Importante: </b>
               <span>
-                tando o Computador do Maestro e o Computador do Ensaio, devem
+                Tanto o Computador do Maestro e o Computador do Ensaio, devem
                 usar o mesmo provedor e conta
               </span>
             </p>

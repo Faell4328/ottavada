@@ -10,7 +10,7 @@ pub(crate) const DEFAULT_CATEGORY_ID: &str = "default-category";
 pub(crate) const DEFAULT_CATEGORY_NAME: &str = "Sem categoria";
 
 pub(crate) const SONGS_SELECT_FIELDS: &str =
-    "id, name, composer, arranger, path, datetime('now') AS updated_at, is_favorite, status";
+    "id, name, composer, arranger, path, updated_at, is_favorite, status";
 
 pub(crate) fn to_not_found(not_found: AppError) -> impl FnOnce(rusqlite::Error) -> AppError {
     move |e| match e {
@@ -159,6 +159,7 @@ impl Database {
                 composer TEXT,
                 arranger TEXT,
                 path TEXT NOT NULL,
+                updated_at TEXT NOT NULL DEFAULT (datetime('now')),
                 is_favorite BOOLEAN NOT NULL DEFAULT 0,
                 status TEXT NOT NULL DEFAULT 'main',
                 last_score_file_modified_at INTEGER NOT NULL DEFAULT 0
@@ -203,6 +204,22 @@ impl Database {
             )?;
         }
 
+        let song_updated_at_exists = conn
+            .query_row(
+                "SELECT 1 FROM pragma_table_info('songs') WHERE name = 'updated_at' LIMIT 1",
+                [],
+                |_| Ok(()),
+            )
+            .optional()?
+            .is_some();
+
+        if !song_updated_at_exists {
+            conn.execute(
+                "ALTER TABLE songs ADD COLUMN updated_at TEXT NOT NULL DEFAULT (datetime('now'))",
+                [],
+            )?;
+        }
+
         conn.execute_batch(
             " 
             CREATE TABLE IF NOT EXISTS scores (
@@ -219,6 +236,18 @@ impl Database {
                 UNIQUE(file_path, file_name)
             );
         ",
+        )?;
+
+        conn.execute_batch(
+            "
+            CREATE TRIGGER IF NOT EXISTS trg_songs_updated_at
+                AFTER UPDATE ON songs
+                FOR EACH ROW
+                WHEN OLD.updated_at = NEW.updated_at
+            BEGIN
+                UPDATE songs SET updated_at = datetime('now') WHERE id = NEW.id;
+            END;
+            ",
         )?;
 
         conn.execute_batch(

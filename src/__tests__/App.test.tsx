@@ -2,7 +2,7 @@ import { render } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  checkForUpdates: vi.fn(() => new Promise(() => {})),
+  checkForUpdates: vi.fn(() => Promise.resolve()),
   installUpdate: vi.fn(),
   restoreMainWindow: vi.fn(),
 }));
