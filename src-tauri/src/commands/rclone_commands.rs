@@ -512,6 +512,18 @@ fn append_common_sync_flags(args: &mut Vec<&str>) {
     ]);
 }
 
+fn remote_directory_exists(remote_target: &str) -> bool {
+    let mut cmd = new_rclone_command();
+    let output = cmd
+        .args(["lsd", remote_target, "--max-depth", "1"])
+        .output();
+
+    match output {
+        Ok(output) => output.status.success(),
+        Err(_) => false,
+    }
+}
+
 fn resolve_sync_targets(
     store: &SystemStore,
     relative_path: Option<&str>,
@@ -1231,11 +1243,25 @@ pub fn sync_cloud_directory_with_rclone_impl(
             remote_target.clone(),
             "upload".to_string(),
         ),
-        RcloneSyncDirection::Download => (
-            remote_target.clone(),
-            local_target.clone(),
-            "download".to_string(),
-        ),
+        RcloneSyncDirection::Download => {
+            if !remote_directory_exists(&remote_target) {
+                info!(
+                    "Diretório remoto '{}' não existe, pulando download",
+                    remote_target
+                );
+                return Ok(RcloneSyncSummary {
+                    direction: "download".to_string(),
+                    source: remote_target.clone(),
+                    destination: local_target.clone(),
+                    duration_ms: 0,
+                });
+            }
+            (
+                remote_target.clone(),
+                local_target.clone(),
+                "download".to_string(),
+            )
+        }
     };
 
     info!(
