@@ -15,6 +15,7 @@ import {
   dedupeReviewItems,
   coalesceExtensionOnlyScoreChanges,
   coalesceScoreRenameAdditions,
+  coalesceScoreFileAndStatusChanges,
   type ReviewAction,
   type ReviewItem,
 } from "../utils/scanReport";
@@ -118,12 +119,14 @@ type ReviewSection = {
 };
 
 function buildReviewSections(reportItems: string[]): ReviewSection[] {
-  const parsedItems = coalesceExtensionOnlyScoreChanges(
-    coalesceScoreRenameAdditions(
-      dedupeReviewItems(
-        reportItems
-          .map(parseReviewItem)
-          .filter((item): item is ReviewItem => item !== null),
+  const parsedItems = coalesceScoreFileAndStatusChanges(
+    coalesceExtensionOnlyScoreChanges(
+      coalesceScoreRenameAdditions(
+        dedupeReviewItems(
+          reportItems
+            .map(parseReviewItem)
+            .filter((item): item is ReviewItem => item !== null),
+        ),
       ),
     ),
   );
@@ -197,6 +200,7 @@ function buildActionGroups(
       previousStatus: string;
       nextStatus: string;
       scoreNames: string[];
+      hasCombinedScores: boolean;
     }
   >();
   const scoreOrder: Array<
@@ -248,6 +252,7 @@ function buildActionGroups(
         if (statusChange) {
           const key = `${action}|${normalizeKey(statusChange.songName)}|${normalizeKey(statusChange.previousStatus)}|${normalizeKey(statusChange.nextStatus)}`;
           const existingGroup = customScoreGroups.get(key);
+          const isCombined = item.customText.includes("foi alterada e");
 
           if (existingGroup) {
             if (
@@ -266,6 +271,10 @@ function buildActionGroups(
               );
             }
 
+            if (isCombined) {
+              existingGroup.hasCombinedScores = true;
+            }
+
             continue;
           }
 
@@ -274,6 +283,7 @@ function buildActionGroups(
             previousStatus: statusChange.previousStatus,
             nextStatus: statusChange.nextStatus,
             scoreNames: [statusChange.scoreName],
+            hasCombinedScores: isCombined,
           });
           scoreOrder.push({ kind: "custom-group", key });
           continue;
@@ -338,6 +348,7 @@ function buildActionGroups(
           group.previousStatus,
           group.nextStatus,
           group.scoreNames,
+          group.hasCombinedScores,
         ),
       });
       continue;
@@ -529,20 +540,20 @@ function renderCustomSongText(text: string): ReactNode {
     const returnsToMain = text.includes("voltou para principal");
 
     const labelForStatus = (value: string) => {
-      if (value === "ignored") {
+      if (value === "ignored" || value === "ignorada") {
         return "ignorada";
       }
 
-      if (value === "draft") {
-        return "rascunho";
+      if (value === "draft" || value === "rascunho") {
+        return "Envio não permitido";
       }
 
-      if (value === "not_found") {
+      if (value === "not_found" || value === "sem partitura") {
         return "sem partitura";
       }
 
-      if (value === "main") {
-        return "principal";
+      if (value === "main" || value === "principal") {
+        return "Envio permitido";
       }
 
       return value;
@@ -554,12 +565,12 @@ function renderCustomSongText(text: string): ReactNode {
         <strong>{labelForStatus(previousStatus)}</strong> e{" "}
         {returnsToMain ? (
           <>
-            voltou para <strong>principal</strong>
+            voltou para <strong>{labelForStatus("main")}</strong>
           </>
         ) : (
           <>
             foi para{" "}
-            <strong>{labelForStatus(nextStatus ?? "principal")}</strong>
+            <strong>{labelForStatus(nextStatus ?? "main")}</strong>
           </>
         )}
         .
@@ -693,6 +704,7 @@ function renderGroupedCustomScoreStatusItem(
   previousStatus: string,
   nextStatus: string,
   scoreNames: string[],
+  hasCombinedScores?: boolean,
 ): ReactNode {
   const scoreList = joinStrongList(
     scoreNames.map((value) => formatScoreDisplayName(value, songName)),
@@ -700,6 +712,11 @@ function renderGroupedCustomScoreStatusItem(
   const noun = scoreNames.length === 1 ? "A partitura" : "As partituras";
   const previousStatusLabel = formatStatusLabel(previousStatus);
   const nextStatusLabel = formatStatusLabel(nextStatus);
+  const combinedPrefix = hasCombinedScores
+    ? scoreNames.length === 1
+      ? "foi alterada e "
+      : "foram alteradas e "
+    : "";
 
   if (action === "deleted") {
     return (
@@ -714,9 +731,11 @@ function renderGroupedCustomScoreStatusItem(
   if (nextStatus === "main") {
     return (
       <>
-        {noun} {scoreList} {scoreNames.length === 1 ? "saiu" : "saíram"} de{" "}
-        {previousStatusLabel} e{" "}
-        {scoreNames.length === 1 ? "voltou" : "voltaram"} para principal na
+        {noun} {scoreList} {combinedPrefix}
+        {scoreNames.length === 1 ? "saiu" : "saíram"} de{" "}
+        <strong>{previousStatusLabel}</strong> e{" "}
+        {scoreNames.length === 1 ? "voltou" : "voltaram"} para{" "}
+        <strong>{formatStatusLabel("main")}</strong> na
         música <strong>{songName}</strong>.
       </>
     );
@@ -724,9 +743,10 @@ function renderGroupedCustomScoreStatusItem(
 
   return (
     <>
-      {noun} {scoreList} {scoreNames.length === 1 ? "saiu" : "saíram"} de{" "}
-      {previousStatusLabel} e {scoreNames.length === 1 ? "foi" : "foram"} para{" "}
-      {nextStatusLabel} na música <strong>{songName}</strong>.
+      {noun} {scoreList} {combinedPrefix}
+      {scoreNames.length === 1 ? "saiu" : "saíram"} de{" "}
+      <strong>{previousStatusLabel}</strong> e {scoreNames.length === 1 ? "foi" : "foram"} para{" "}
+      <strong>{nextStatusLabel}</strong> na música <strong>{songName}</strong>.
     </>
   );
 }
@@ -797,7 +817,8 @@ function renderCustomScoreText(text: string): ReactNode {
         return (
           <>
             A partitura <strong>{scoreName}</strong> saiu de{" "}
-            {formatStatusLabel(previousStatus)} e voltou para principal.
+            <strong>{formatStatusLabel(previousStatus)}</strong> e voltou para{" "}
+            <strong>{formatStatusLabel("main")}</strong>.
           </>
         );
       }
@@ -805,8 +826,8 @@ function renderCustomScoreText(text: string): ReactNode {
       return (
         <>
           A partitura <strong>{scoreName}</strong> saiu de{" "}
-          {formatStatusLabel(previousStatus)} e foi para{" "}
-          {formatStatusLabel(nextStatus)}.
+          <strong>{formatStatusLabel(previousStatus)}</strong> e foi para{" "}
+          <strong>{formatStatusLabel(nextStatus)}</strong>.
         </>
       );
     }
@@ -814,10 +835,18 @@ function renderCustomScoreText(text: string): ReactNode {
     return (
       <>
         A partitura <strong>{scoreName}</strong> saiu de{" "}
-        {formatStatusLabel(previousStatus)} e{" "}
+        <strong>{formatStatusLabel(previousStatus)}</strong> e{" "}
         {nextStatus === "main"
-          ? "voltou para principal"
-          : `foi para ${formatStatusLabel(nextStatus)}`}{" "}
+          ? (
+            <>
+              voltou para <strong>{formatStatusLabel("main")}</strong>
+            </>
+          )
+          : (
+            <>
+              foi para <strong>{formatStatusLabel(nextStatus)}</strong>
+            </>
+          )}{" "}
         na música <strong>{songName}</strong>.
       </>
     );

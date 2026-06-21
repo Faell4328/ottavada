@@ -32,20 +32,20 @@ export function stripFileExtension(value: string): string {
 }
 
 export function formatStatusLabel(value: string): string {
-  if (value === "ignored") {
+  if (value === "ignored" || value === "ignorada") {
     return "ignorada";
   }
 
-  if (value === "draft") {
-    return "rascunho";
+  if (value === "draft" || value === "rascunho") {
+    return "Envio não permitido";
   }
 
-  if (value === "not_found") {
+  if (value === "not_found" || value === "sem partitura") {
     return "sem partitura";
   }
 
-  if (value === "main") {
-    return "principal";
+  if (value === "main" || value === "principal") {
+    return "Envio permitido";
   }
 
   return value;
@@ -609,6 +609,64 @@ export function buildExtensionOnlyScoreChangeText(
   return `A partitura ${scoreName} teve a extensão alterada na música ${songName}.`;
 }
 
+export function coalesceScoreFileAndStatusChanges(items: ReviewItem[]): ReviewItem[] {
+  const statusChanges = new Map<string, ReviewItem>();
+
+  for (const item of items) {
+    if (
+      item.entity === "score" &&
+      item.action === "modified" &&
+      item.customText &&
+      parseCustomScoreStatusChange(item.customText)
+    ) {
+      const key = `${normalizeKey(item.songName ?? "")}|${normalizeKey(item.scoreName ?? "")}`;
+      statusChanges.set(key, item);
+    }
+  }
+
+  return items.filter((item) => {
+    if (
+      item.entity === "score" &&
+      item.action === "modified" &&
+      !item.customText &&
+      item.scoreName
+    ) {
+      const key = `${normalizeKey(item.songName ?? "")}|${normalizeKey(item.scoreName ?? "")}`;
+      const statusChange = statusChanges.get(key);
+
+      if (statusChange && statusChange.songName) {
+        statusChange.customText = buildCombinedScoreFileAndStatusText(
+          statusChange.customText!,
+          statusChange.scoreName!,
+          statusChange.songName,
+        );
+        return false;
+      }
+    }
+
+    return true;
+  });
+}
+
+function buildCombinedScoreFileAndStatusText(
+  statusText: string,
+  scoreName: string,
+  songName: string,
+): string {
+  const statusChange = parseCustomScoreStatusChange(statusText);
+  if (!statusChange) return statusText;
+
+  const { previousStatus, nextStatus } = statusChange;
+  const prevLabel = formatStatusLabel(previousStatus);
+
+  if (nextStatus === "main") {
+    return `A partitura ${scoreName} foi alterada e saiu de ${prevLabel} e voltou para ${formatStatusLabel("main")} na música ${songName}.`;
+  }
+
+  const nextLabel = formatStatusLabel(nextStatus);
+  return `A partitura ${scoreName} foi alterada e saiu de ${prevLabel} e foi para ${nextLabel} na música ${songName}.`;
+}
+
 export function parseCustomScoreStatusChange(text: string): {
   songName: string;
   scoreName: string;
@@ -616,7 +674,7 @@ export function parseCustomScoreStatusChange(text: string): {
   nextStatus: string;
 } | null {
   const statusChangeMatch = text.match(
-    /^A partitura\s+(.+?)\s+saiu de\s+(.+?)\s+e\s+(?:voltou para main|foi para\s+(.+?))\s+na música\s+(.+)\.$/,
+    /^A partitura\s+(.+?)\s+(?:foi alterada e )?saiu de\s+(.+?)\s+e\s+(?:voltou para main|foi para\s+(.+?))\s+na música\s+(.+)\.$/,
   );
   if (!statusChangeMatch) {
     return null;

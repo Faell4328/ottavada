@@ -108,8 +108,8 @@ describe("ScanReportModal", () => {
     expect(screen.queryAllByText((_, element) => element?.textContent?.includes("Sem Instrumento") ?? false).length).toBeGreaterThan(0);
     expect(screen.queryAllByText((_, element) => element?.textContent?.includes("03 VEZES SANTO.musx") ?? false).length).toBe(0);
     expect(screen.queryAllByText((_, element) => element?.textContent?.includes("VEZES SANTO.MUS foi adicionada") ?? false).length).toBe(0);
-    expect(screen.getAllByText((_, element) => element?.textContent?.includes("A partitura /music/Eis o Nosso Deus - Flauta.musx saiu de rascunho e voltou para principal na música Eis o Nosso Deus") ?? false).length).toBeGreaterThan(0);
-    expect(screen.getAllByText((_, element) => element?.textContent?.includes("A partitura /music/Eis o Nosso Deus - Flute2.musx saiu de ignorada e foi para rascunho na música Eis o Nosso Deus") ?? false).length).toBeGreaterThan(0);
+    expect(screen.getAllByText((_, element) => element?.textContent?.includes("A partitura /music/Eis o Nosso Deus - Flauta.musx saiu de Envio não permitido e voltou para Envio permitido na música Eis o Nosso Deus") ?? false).length).toBeGreaterThan(0);
+    expect(screen.getAllByText((_, element) => element?.textContent?.includes("A partitura /music/Eis o Nosso Deus - Flute2.musx saiu de ignorada e foi para Envio não permitido na música Eis o Nosso Deus") ?? false).length).toBeGreaterThan(0);
     expect(screen.queryByText("Arquivos recuperados")).not.toBeInTheDocument();
     expect(screen.queryByText("Arquivos com erro")).not.toBeInTheDocument();
   });
@@ -174,13 +174,13 @@ describe("ScanReportModal", () => {
     );
 
     const musicSection = screen.getByText("Músicas").closest("section");
-    expect(musicSection).toHaveTextContent("A música Eis o Nosso Deus saiu de rascunho e voltou para principal.");
+    expect(musicSection).toHaveTextContent("A música Eis o Nosso Deus saiu de Envio não permitido e voltou para Envio permitido.");
     expect(Array.from(musicSection?.querySelectorAll("strong") ?? []).some((element) => element.textContent === "Eis o Nosso Deus")).toBe(true);
-    expect(Array.from(musicSection?.querySelectorAll("strong") ?? []).some((element) => element.textContent === "rascunho")).toBe(true);
-    expect(Array.from(musicSection?.querySelectorAll("strong") ?? []).some((element) => element.textContent === "principal")).toBe(true);
+    expect(Array.from(musicSection?.querySelectorAll("strong") ?? []).some((element) => element.textContent === "Envio não permitido")).toBe(true);
+    expect(Array.from(musicSection?.querySelectorAll("strong") ?? []).some((element) => element.textContent === "Envio permitido")).toBe(true);
   });
 
-  it("renders not_found to main song status changes as sem partitura to principal", () => {
+  it("renders not_found to main song status changes as sem partitura to Envio permitido", () => {
     render(
       <ScanReportModal
         isOpen={true}
@@ -199,10 +199,10 @@ describe("ScanReportModal", () => {
     );
 
     const musicSection = screen.getByText("Músicas").closest("section");
-    expect(musicSection).toHaveTextContent("A música 00 - TESTE saiu de sem partitura e voltou para principal.");
+    expect(musicSection).toHaveTextContent("A música 00 - TESTE saiu de sem partitura e voltou para Envio permitido.");
     expect(Array.from(musicSection?.querySelectorAll("strong") ?? []).some((element) => element.textContent === "00 - TESTE")).toBe(true);
     expect(Array.from(musicSection?.querySelectorAll("strong") ?? []).some((element) => element.textContent === "sem partitura")).toBe(true);
-    expect(Array.from(musicSection?.querySelectorAll("strong") ?? []).some((element) => element.textContent === "principal")).toBe(true);
+    expect(Array.from(musicSection?.querySelectorAll("strong") ?? []).some((element) => element.textContent === "Envio permitido")).toBe(true);
   });
 
   it("groups score status changes from the same song into one line", () => {
@@ -229,17 +229,87 @@ describe("ScanReportModal", () => {
     expect(
       screen.getAllByText((_, element) =>
         element?.textContent ===
-        "As partituras Flauta.musx e Oboe.musx saíram de principal e foram para rascunho na música Eis o Nosso Deus."
+        "As partituras Flauta.musx e Oboe.musx saíram de Envio permitido e foram para Envio não permitido na música Eis o Nosso Deus."
       ).length
     ).toBeGreaterThan(0);
     expect(
       screen.queryAllByText((_, element) =>
-        element?.textContent === "A partitura Flauta.musx saiu de principal e foi para rascunho na música Eis o Nosso Deus."
+        element?.textContent === "A partitura Flauta.musx saiu de Envio permitido e foi para Envio não permitido na música Eis o Nosso Deus."
       ).length
     ).toBe(0);
     expect(
       screen.queryAllByText((_, element) =>
-        element?.textContent === "A partitura Oboe.musx saiu de principal e foi para rascunho na música Eis o Nosso Deus."
+        element?.textContent === "A partitura Oboe.musx saiu de Envio permitido e foi para Envio não permitido na música Eis o Nosso Deus."
+      ).length
+    ).toBe(0);
+  });
+
+  it("combines file change and status change into one line for the same score", () => {
+    render(
+      <ScanReportModal
+        isOpen={true}
+        report={{
+          changed_files: [],
+          added_files: [],
+          deleted_files: [],
+          recovered_files: [],
+          failed_files: [],
+          report_items: [
+            "Partitura alterada: /music/TICO-TICO NO FUBA/Flute I.musx",
+            "A partitura Flute I.musx saiu de principal e foi para draft na música TICO-TICO NO FUBA.",
+          ],
+        }}
+        isConfirming={false}
+        onClose={() => undefined}
+        onConfirm={() => undefined}
+      />
+    );
+
+    expect(
+      screen.getAllByText((_, element) =>
+        element?.textContent ===
+        "A partitura Flute I.musx foi alterada e saiu de Envio permitido e foi para Envio não permitido na música TICO-TICO NO FUBA."
+      ).length
+    ).toBeGreaterThan(0);
+    expect(
+      screen.queryAllByText((_, element) =>
+        element?.textContent === "A partitura Flute I.musx foi alterada na música TICO-TICO NO FUBA."
+      ).length
+    ).toBe(0);
+  });
+
+  it("combines file change and status change in grouped items", () => {
+    render(
+      <ScanReportModal
+        isOpen={true}
+        report={{
+          changed_files: [],
+          added_files: [],
+          deleted_files: [],
+          recovered_files: [],
+          failed_files: [],
+          report_items: [
+            "Partitura alterada: /music/Eis o Nosso Deus - Flauta.musx",
+            "Partitura alterada: /music/Eis o Nosso Deus - Oboe.musx",
+            "A partitura Flauta.musx saiu de principal e foi para draft na música Eis o Nosso Deus.",
+            "A partitura Oboe.musx saiu de principal e foi para draft na música Eis o Nosso Deus.",
+          ],
+        }}
+        isConfirming={false}
+        onClose={() => undefined}
+        onConfirm={() => undefined}
+      />
+    );
+
+    expect(
+      screen.getAllByText((_, element) =>
+        element?.textContent ===
+        "As partituras Flauta.musx e Oboe.musx foram alteradas e saíram de Envio permitido e foram para Envio não permitido na música Eis o Nosso Deus."
+      ).length
+    ).toBeGreaterThan(0);
+    expect(
+      screen.queryAllByText((_, element) =>
+        element?.textContent === "As partituras Flauta.musx e Oboe.musx foram alteradas na música Eis o Nosso Deus."
       ).length
     ).toBe(0);
   });
