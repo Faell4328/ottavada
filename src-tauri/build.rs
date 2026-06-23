@@ -21,7 +21,6 @@ fn main() {
                 if key == "TELEMETRY_ENDPOINT"
                     || key == "TELEMETRY_API_TOKEN"
                     || key == "APP_CONTACT_EMAIL"
-                    || key == "APP_CONTACT_PHONE"
                 {
                     println!("cargo:rustc-env={}={}", key, value);
                 }

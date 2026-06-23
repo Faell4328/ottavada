@@ -912,10 +912,7 @@ export default function SettingsPage() {
         </Section>
 
         <Section title="Contato">
-          <SupportContactsCard
-            email={supportContacts.email}
-            phone={supportContacts.phone}
-          />
+          <SupportContactsCard email={supportContacts.email} />
         </Section>
 
         {/* Save */}

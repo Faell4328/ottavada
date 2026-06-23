@@ -121,11 +121,10 @@ pub struct AppSettings {
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct AppContacts {
     pub email: Option<String>,
-    pub phone: Option<String>,
 }
 
 impl AppContacts {
-    pub fn from_env_values(email: Option<&str>, phone: Option<&str>) -> Self {
+    pub fn from_env_values(email: Option<&str>) -> Self {
         fn normalize(value: Option<&str>) -> Option<String> {
             value
                 .map(str::trim)
@@ -135,7 +134,6 @@ impl AppContacts {
 
         Self {
             email: normalize(email),
-            phone: normalize(phone),
         }
     }
 }

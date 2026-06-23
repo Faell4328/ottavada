@@ -42,7 +42,6 @@ pub async fn get_settings(
 pub fn get_app_contacts() -> AppContacts {
     AppContacts::from_env_values(
         option_env!("APP_CONTACT_EMAIL"),
-        option_env!("APP_CONTACT_PHONE"),
     )
 }
 
