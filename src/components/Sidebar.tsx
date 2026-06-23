@@ -71,12 +71,12 @@ export default function Sidebar() {
     },
     {
       view: "drafts",
-      label: "Rascunhos ativos",
+      label: "Não permitidas",
       icon: <FileEdit className="h-3.5 w-3.5" />,
     },
     {
       view: "not_found",
-      label: "Músicas sem partituras",
+      label: "Sem partituras",
       icon: <FileX className="h-3.5 w-3.5" />,
     },
   ];

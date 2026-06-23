@@ -475,10 +475,6 @@ pub fn resolve_score_display_name_with_extension(
 }
 
 pub fn build_score_change_report_item(song_name: &str, score_name: &Option<String>, full_path: &str) -> String {
-    let Some(score_name) = score_name.as_deref().map(str::trim).filter(|value| !value.is_empty()) else {
-        return full_path.to_string();
-    };
-
     let file_name = Path::new(full_path)
         .file_name()
         .and_then(|value| value.to_str())
@@ -489,7 +485,18 @@ pub fn build_score_change_report_item(song_name: &str, score_name: &Option<Strin
         .map(|value| format!(".{}", value))
         .unwrap_or_default();
 
-    format!("{}{} na música {}", score_name, extension, song_name)
+    let display_name = score_name
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .unwrap_or_else(|| {
+            Path::new(file_name)
+                .file_stem()
+                .and_then(|value| value.to_str())
+                .unwrap_or(file_name)
+        });
+
+    format!("{}{} na música {}", display_name, extension, song_name)
 }
 
 pub fn describe_score_status_change_summary(

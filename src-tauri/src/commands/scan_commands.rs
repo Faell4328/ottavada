@@ -136,7 +136,11 @@ fn scan_files_for_changes_impl(
                         match db.insert_score(&score) {
                             Ok(()) => {
                                 info!("Novo arquivo indexado: {}", current_path);
-                                added_files.push(current_path.clone());
+                                added_files.push(build_score_change_report_item(
+                                    &song.name,
+                                    &None,
+                                    current_path,
+                                ));
                             }
                             Err(e) => {
                                 warn!("Erro ao inserir novo arquivo {}: {:?}", current_path, e);
@@ -190,7 +194,11 @@ fn scan_files_for_changes_impl(
                         ));
                     }
                 }
-                deleted_files.push(full_path);
+                deleted_files.push(build_score_change_report_item(
+                    &song.name,
+                    &score.score_name,
+                    &full_path,
+                ));
                 continue;
             }
 
@@ -259,7 +267,11 @@ fn scan_files_for_changes_impl(
                     match db.insert_score(&score) {
                         Ok(()) => {
                             info!("Novo arquivo indexado: {}", current_path);
-                            added_files.push(current_path.clone());
+                            added_files.push(build_score_change_report_item(
+                                &song.name,
+                                &None,
+                                current_path,
+                            ));
                         }
                         Err(e) => {
                             warn!("Erro ao inserir novo arquivo {}: {:?}", current_path, e);
@@ -368,7 +380,11 @@ fn preview_scan_files_for_changes_impl(
 
             for current_file in current_files {
                 let current_path = &current_file.path;
-                added_files.push(current_path.clone());
+                added_files.push(build_score_change_report_item(
+                    &song.name,
+                    &None,
+                    current_path,
+                ));
             }
 
             continue;
@@ -394,7 +410,11 @@ fn preview_scan_files_for_changes_impl(
             let path = Path::new(&full_path);
 
             if !path.exists() || !path.is_file() {
-                deleted_files.push(full_path);
+                deleted_files.push(build_score_change_report_item(
+                    &song.name,
+                    &score.score_name,
+                    &full_path,
+                ));
                 continue;
             }
 
@@ -444,7 +464,11 @@ fn preview_scan_files_for_changes_impl(
                 continue;
             }
 
-            added_files.push(current_path.clone());
+            added_files.push(build_score_change_report_item(
+                &song.name,
+                &None,
+                current_path,
+            ));
         }
     }
 
@@ -785,7 +809,8 @@ mod tests {
         let updated_song = db.get_song_list_item_by_id("song-1").expect("song");
 
         assert_eq!(result.added_files.len(), 1);
-        assert!(result.added_files[0].ends_with("Canon.pdf"));
+        assert!(result.added_files[0].contains("Canon.pdf"));
+        assert!(result.added_files[0].contains("CANON"));
         assert_eq!(scores.len(), 1);
         assert_eq!(updated_song.status, ScoreStatus::Main);
     }
@@ -940,8 +965,10 @@ mod tests {
 
         assert_eq!(result.deleted_files.len(), 1);
         assert_eq!(result.added_files.len(), 1);
-        assert!(result.deleted_files[0].ends_with("Canon - Trompete.musx"));
-        assert!(result.added_files[0].ends_with("Canon - Clarinete.musx"));
+        assert!(result.deleted_files[0].contains("Trompete.musx"));
+        assert!(result.deleted_files[0].contains("CANON"));
+        assert!(result.added_files[0].contains("Clarinete.musx"));
+        assert!(result.added_files[0].contains("CANON"));
         assert!(scores
             .iter()
             .any(|score| score.file_path.ends_with("Canon - Clarinete.musx")));
@@ -1014,7 +1041,8 @@ mod tests {
         let result = super::preview_scan_files_for_changes_impl(&db, &store).expect("preview scan");
 
         assert_eq!(result.deleted_files.len(), 1);
-        assert!(result.deleted_files[0].ends_with("Canon - Flute.musx"));
+        assert!(result.deleted_files[0].contains("Flute.musx"));
+        assert!(result.deleted_files[0].contains("CANON"));
     }
 
     #[test]
