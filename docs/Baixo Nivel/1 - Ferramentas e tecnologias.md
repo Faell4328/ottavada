@@ -7,7 +7,7 @@ O sistema utiliza `Tauri` por baixo de tudo. A interface fica no frontend e as r
 - `React` e `TypeScript` - constroem a interface e deixam os componentes tipados.
 - `Vite` - faz o servidor de desenvolvimento e o build rápido da aplicação web.
 
-## 1.1. Dependências de frontend
+## 1.1. Dependências de front
 
 - `@tauri-apps/api` - ponte do frontend com as APIs nativas do Tauri.
 - `@tauri-apps/plugin-dialog` - abre caixas nativas de seleção de arquivo e pasta.
@@ -27,7 +27,7 @@ O sistema utiliza `Tauri` por baixo de tudo. A interface fica no frontend e as r
 - `vite` - também participa do pipeline de build e preview.
 - `vitest` - executa os testes automatizados do frontend.
 
-# 2. Back-end
+# 2. Back
 
 - `Rust` - implementa a lógica local, acesso ao banco e integração com o sistema operacional.
 - `tauri` - fornece a base do app desktop e o runtime do backend.

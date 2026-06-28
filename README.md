@@ -1,54 +1,35 @@
-Um gerenciador de partituras para Windows que organiza, acompanha o progresso e mantém backups seguros da sua biblioteca musical. Desenvolvido para dar liberdade ao músico: seus arquivos continuam sendo seus, sem dependência do aplicativo. Ele foi projetado para ter um computador Servidor e um ou vários computadores Clientes.
+O **Score Maestro** é um software gratuito para Windows 10 e 11 (x32 e x64), desenvolvido com Tauri e React (aplicativo desktop) para facilitar o dia a dia de músicos e regentes no gerenciamento de músicas e partituras. Seu principal objetivo é resolver desafios comuns relacionados à localização, organização, sincronização e distribuição de repertórios.
 
-# Estrutura da Documentação
+É importante destacar que o **Score Maestro** não é uma ferramenta de criação, edição ou leitura de partituras. Ele atua como um intermediário e facilitador, integrando e organizando o fluxo de trabalho já existente.
 
-A documentação do projeto está organizada para manter clareza, simplicidade e facilidade de manutenção. Ela está no diretório: `/docs`, separada igual a descrição abaixo.
+O sistema oferece suporte aos formatos `.pdf`, `.mus`, `.musx`, `.mscx`, `.mscz`, `.xml`, `.musicxml`, `.sib`, `.enc`, `.dorico`, `.mid` e `.midi`. Arquivos com extensões diferentes dessas são automaticamente ignorados durante o processo de indexação.
 
-## 1. Requisitos (o que)
-Define o que o sistema deve fazer.
+O **Score Maestro** foi projetado para funcionar em conjunto com ferramentas amplamente utilizadas na criação e edição de partituras, como **Finale**, **MuseScore**, **Sibelius**, **Dorico** e **Encore**, além de outros programas compatíveis com formatos como **MusicXML**, **MIDI** e **PDF**.
 
-Inclui:
-- Requisitos funcionais
-- Requisitos não funcionais
+Dessa forma, o sistema se adapta ao fluxo de trabalho já estabelecido, permitindo que músicos e regentes continuem utilizando as ferramentas que já conhecem e preferem, sem necessidade de mudanças na rotina de trabalho.
 
-> Este é o núcleo do projeto. Todas as decisões devem respeitar este documento.
+---
 
-## 2. Arquitetura (como)
-Define como o sistema é estruturado.
+# Filosofia do sistema
 
-Inclui:
-- Arquitetura geral (Cliente/Servidor)
-- Componentes (Frontend, Backend, Cloud)
-- Decisões técnicas
+O **Score Maestro** adiciona músicas e partituras exclusivamente por meio de **indexação de diretórios**. O processo é simples: basta selecionar um diretório que contenha arquivos de partituras. A ferramenta lê esse conteúdo e o incorpora internamente. A partir daí, qualquer alteração feita nos arquivos dentro desse diretório — adições, modificações ou exclusões — é automaticamente refletida no Score Maestro.
 
-## 3. Modelagem de Dados (como os dados existem)
-Define como os dados são organizados e persistidos.
+Isso significa que a organização das músicas e partituras segue a estrutura de pastas definida por você. A ferramenta se adapta à sua forma de organização, e não o contrário.
 
-Inclui:
-- Estrutura do banco de dados (SQLite)
-- Estrutura do MessagePack
-- Arquivos de configuração (`tauri-plugin-store`)
+O Score Maestro **não modifica a estrutura de diretórios nem renomeia arquivos existentes**. Os nomes de músicas e partituras definidos no sistema são utilizados apenas internamente para organização e identificação, não afetando os nomes reais dos arquivos ou diretórios. A única operação que pode resultar em alteração direta no sistema de arquivos é a exclusão de músicas ou partituras, quando explicitamente solicitada pelo usuário.
 
-## 4. Fluxos (como acontece na prática)
-Define o comportamento do sistema em execução.
+Se um dia você decidir deixar de usar o Score Maestro, toda a sua estrutura de arquivos permanecerá exatamente como sempre esteve: organizada, acessível e familiar. O sistema trabalha sobre a organização já existente, sem impor formatos proprietários ou gerar dependências desnecessárias.
 
-Inclui:
-- Passo a passo das funcionalidades
-- Exemplos: verificar alterações, backup, inicialização
+> Recomendo a leitura da documentação com o **MarkText**, já que ela foi escrita com ele e é um excelente editor de markdown.
 
-## 5. Versões (evolução)
-Define a evolução do sistema ao longo do tempo.
+---
 
-Inclui:
-- Funcionalidades por versão
-- Roadmap do projeto
+# Sobre a documentação
 
-## 6. Decisões (histórico técnico)
-Registra decisões técnicas e seus motivos.
+A documentação do projeto está em `docs/` e foi dividida em três seções:
 
-Inclui:
-- Escolhas de tecnologia (ex: pCloud vs Google Drive)
-- Trade-offs
-- Problemas encontrados e soluções adotadas
+- **Alto Nível** — visão geral do sistema: requisitos, funcionalidades, arquitetura.
+- **Anotações** — diário de desenvolvimento e ideias.
+- **Baixo Nível** — aspectos técnicos: ferramentas, modelagem, fluxos, decisões de implementação.
 
-> Este documento serve como histórico técnico do projeto.
+> Se esta é sua primeira vez lendo a documentação, comece pelo **Alto Nível** antes de ir para o **Baixo Nível**. Entenda o *porquê* antes do *como*. Também recomendo ler os arquivos segundo a ordem no nome das pastas e dos arquivos.

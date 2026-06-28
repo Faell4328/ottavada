@@ -4,19 +4,19 @@ O projeto foi desenvolvido com foco em Windows, por isso a explicação será ap
 
 1° Baixe o Git: https://git-scm.com/install/windows
 
-1° Baixe o Rust: https://rust-lang.org/tools/install/
+2° Baixe o Rust: https://rust-lang.org/tools/install/
 
-2° Baixe o Node: https://nodejs.org/pt-br/download
+3° Baixe o Node: https://nodejs.org/pt-br/download
 
-3° Baixe o Rclone: https://rclone.org/downloads/
+4° Baixe o Rclone: https://rclone.org/downloads/
 
 - Você deve baixar de acordo com sua arquitetura de CPU.
 
-4° Depois de baixar e extrair o rclone: renomei para `rclone.exe` e coloque no diretório: `src-tauri/rclone/rclone.exe`.
+4° Depois de baixar e extrair o rclone: renomeie para `rclone.exe` e coloque no diretório: `src-tauri/rclone/rclone.exe`.
 
 5° No diretório raiz do projeto, rode: `npm install` ou `npm i`.
 
-6° Se você pretende buildar o projeto, é recomendando baixar:
+6° Se você pretende compilar o projeto, é recomendando baixar:
 
 - `rustup target add i686-pc-windows-msvc` - se seu computador for `x32`.
 

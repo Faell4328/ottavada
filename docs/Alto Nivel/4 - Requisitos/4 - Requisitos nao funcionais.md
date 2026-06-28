@@ -23,7 +23,7 @@ O sistema deve aceitar os seguintes formatos:
 - `.pdf`
 - `.mus`
 - `.musx`
-- `.mscx`
+- `.mscz`
 - `.xml`
 - `.musicxml`
 - `.sib`
@@ -46,9 +46,16 @@ O sistema deve suportar:
 
 # 4. Unicidade
 
-Não deve existir duplicidade entre músicas e partituras.
+Não deve existir duplicidade entre músicas, partituras, categorias, compositores e arranjadores. Todos os nomes devem ser únicos, caso o usuário tente adicionar, ele deve ser barrado pelo sistema.
 
-Todos os nomes devem ser únicos.
+**Exemplo**:
+
+| **Errado**                                                                                                                    | **Correto**                                                                                                                              |
+| ----------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| **Música 1**: `Eis o Nosso Deus`<br/>**Música 2**: `Eis o Nosso Deus`                                                         | **Música 1**: `Eis o Nosso Deus`<br/>**Música 2**: `Eis o Nosso Deus (Com Coral)`                                                        |
+| **Partitura 1**: `Violino I`<br/>**Partitura 2**: `Violino I`<br/>**Partitura 3**: `Trompete`<br/>**Partitura 4**: `Trompete` | **Partitura 1**: `Violino I`<br/>**Partitura 2**: `Violino I (Solo)`<br/>**Partitura 3**: `Trompete 1`<br/>**Partitura 4**: `Trompete 2` |
+
+>  Isso evita redundância e dúvidas no repertório.
 
 ---
 

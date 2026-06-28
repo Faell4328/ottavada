@@ -39,3 +39,15 @@ O usuário deve poder:
 - alterar o nome do computador;
 - alterar o nome da organização;
 - alterar o provedor de nuvem.
+
+---
+
+# 5. Inicialização
+
+Durante a iniciação do aplicativo, o sistema deve:
+
+1. Verificar se existe atualização.
+
+2. Enviar telemetria.
+
+3. Consultar alterações.

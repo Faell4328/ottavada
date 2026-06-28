@@ -47,7 +47,7 @@
       }
     },
     "active": true,
-    "resources": ["rclone/rclone.exe"],
+    "resources": ["rclone/rclone"],
     "targets": ["nsis"],
     "icon": [
       "icons/32x32.png",

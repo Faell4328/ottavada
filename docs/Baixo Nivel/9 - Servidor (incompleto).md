@@ -6,15 +6,15 @@ Ele irá rodar em meu servidor local ZimaOS no contêiner `phpfpm-nginx` com o t
 
 - Como o servidor já fica ligado por causa dos meus outros contêineres, a escolha que tinha era assinar uma VPS ou usar meu servidor. Para não gastar atoa e como não é algo que vai ser usado sempre, a melhor escolha foi meu próprio servidor local.
 
-Para proteger contra bots, irei implementar uma proteção "fezes", mas melhor que nada. Uma chave API no cliente, para qualquer requisição é necessário enviar essa chave. Óbvio que sei, que ela pode ser copiada, mas é só para proteger contra bots da internet (só para não deixar a portar aberta).
+Para proteger contra bots, irei implementar uma proteção simples, mas melhor que nada. Uma chave API no cliente, para qualquer requisição é necessário enviar essa chave. Óbvio que sei, que ela pode ser copiada, mas é só para proteger contra bots da internet (só para não deixar a portar aberta).
 
 Para consultar, irei criar uma automação no `n8n`, que irá acessar diretamente o `database.db` e extrair as informações e enviar via bot telegram, que vai enviar um relatório diário.
 
-O site atual é `shttps://scoremaestro.rhafaell.com.br`.
+O site atual é `https://scoremaestro.rhafaell.com.br`.
 
 ## Anotações sobre a telemetria
 
-! Caso o envido tenha um "uuid" já existente, deve retorna como tivesse salvo, mas o valor deve ser descartado internamento.
+! Caso o envido tenha um "uuid" já existente, deve retorna como tivesse salvo, mas o valor deve ser descartado internamente.
 
 ! O servidor não precisa retornar mensagem, apenas o status deve informar o usuário se deu certo ou não.
 

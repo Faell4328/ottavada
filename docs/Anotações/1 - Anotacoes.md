@@ -4,7 +4,7 @@
 Solução:
 
 - Será criado outra tabela chamado "diretório", ao invés de salvar o caminho completo do arquivo, será salvo apenas o nome e a extensão do arquivo, e o caminho será salvo nessa tabela.
-- Esse problema não vai trazer otimizações significativas, mas vai trazer mais clareza e organização. Usando uma paginação por diretórios e ficando mais claro até para o usuário, ex: `analizando diretório: /musica/joel amarim`, também é bom para logs e debug.
+- Esse problema não vai trazer otimizações significativas, mas vai trazer mais clareza e organização. Usando uma paginação por diretórios e ficando mais claro até para o usuário, ex: `analisando diretório: /musica/joel amarim`, também é bom para logs e debug.
 - Com isso a verificação será feita "manualmente", comparando o "size + timestamp" dos arquivos no diretório para ver se teve alteração ou não.
 - Caso seja encontrado um arquivo no diretório que não está no banco de dados, ele deve ser ignorado (pula).
 
@@ -62,7 +62,7 @@ Solução:
   - Devido ao melhor equilibro, a melhor escolha é o `Zstandard`.
 - 3° Adição de fluxos detalhados.
 
-**24-03-20226** 
+**24-03-2026** 
 
 Mudando estrategia de upload para Nuvem
 
@@ -134,7 +134,7 @@ Hoje também, fiz um monte de teste e encontrei muitos problemas e muitas melhor
 MicroScore
 
 - Irei implementar **telemetria** e **licença** ao software, como é um software bem completinho e acredito eu, que vai ajudar bastante, nada justo que cobrar um valor.
-- **Telemetria**: minha ideia é coletar informações simples: tempo de uso (por dia), quantidade de música e partitura adicionada (por dia), quantas vezes foram aberto partitura por ele, e quantidade de uplaod/download feitas. A ideia é saber se o aplicativo está sendo bem usado, tanto pelo servidor, quanto o cliente. Tendo uma noção, o que é mais utilizado, cliente ou servidor?
+- **Telemetria**: minha ideia é coletar informações simples: tempo de uso (por dia), quantidade de música e partitura adicionada (por dia), quantas vezes foram aberto partitura por ele, e quantidade de upload/download feitas. A ideia é saber se o aplicativo está sendo bem usado, tanto pelo servidor, quanto o cliente. Tendo uma noção, o que é mais utilizado, cliente ou servidor?
 - **Licença**: minha é criar licença por organização, ex: orquestra xxx, licença de 1 ano para 8 computadores por 300 reais. Com isso a pessoa terá total suporte meu.
   - A licença deve ficar tanto no servidor, quanto localmente. Exigindo na instalação acesso a internet.
   - Com isso evita a pessoa enviar o instalador para outra pessoa e pronto.
@@ -251,3 +251,9 @@ Minha ideia de evitar falso positivo é evitar dor de cabeça para o usuário, u
 Eu cheguei a adicionar essa função no **Score Maestro**, sempre que uma partitura for alterada (data e hora de última alteração), verificar o hash do arquivo para realmente ver se foi alterado. Mas simplesmente isso não resolve, preciso encontrar outra forma simples para evitar isso, não pretendo manter hash e ter que tratar cada arquivo música, ex: `.musx` converter para `.zip` para depois verificar o hash do `score.dat`, para ter chance de mesmo assim dar problema e o mesmo processo ou similar para as outras extensões. Então, prefiro manter a simplicidade do aplicativo, verificando apenas alteração de data/hora de última alteração e tamanho do arquivo.
 
 A solução será deixar o modal de revisão de alteração mais organizado e inteligente: podendo marcar e desmarcar, efetivando apenas quando o usuário clicar em "confirmar".
+
+**27/06/2026** - Foco na gringa
+
+Ficar focado apenas no povo brasileira irá limitar muito minhas chances do Score Maestro dar certo. Isso ocorre porque o Brasil é país subdesenvolvido, com isso a maioria das pessoas usam Windows 7 (pessoal mais velho) e também o pessoal na gringa é mais para frente, sempre buscando modernizar e melhorar, diferente do Brasil, onde a maioria prefere manter o padrão. E sem contar a quantidade MUITO maior de orquestras e bandas.
+
+Não estou falando mal do Brasil, essa é a realidade e funciona (não tão bem, mas funciona). Estou apenas tomando a melhor decisão para o futuro da minha ferramenta. E sem contar que posso promovela falando que é um aplicativo internacional, ganhando mais confiança.

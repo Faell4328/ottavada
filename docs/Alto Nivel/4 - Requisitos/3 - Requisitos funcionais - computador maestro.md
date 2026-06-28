@@ -2,7 +2,7 @@
 
 O sistema deve permitir a indexação de diretórios que contenham arquivos de partituras em formatos compatíveis.
 
-Após a indexação, o sistema deve monitorar os diretórios indexados por meio da funcionalidade **Consultar Alterações**, identificando automaticamente a adição, modificação ou remoção de arquivos de partitura.
+Após a indexação, o sistema deve monitorar os diretórios indexados por meio da funcionalidade **Consultar Alterações**, identificando automaticamente a adição, modificação ou remoção de arquivos de partitura no diretório.
 
 As alterações detectadas devem ser refletidas automaticamente no repertório gerenciado pelo sistema.
 
@@ -10,7 +10,7 @@ As alterações detectadas devem ser refletidas automaticamente no repertório g
 
 Durante o processo de indexação, o sistema deve utilizar o nome do diretório como sugestão para o nome da música.
 
-**Exemplo:** `Hino Nacional/` - sugestão: **Hino Nacional**
+**Exemplo:** `Hino Nacional/` - sugestão: **HINO NACIONAL**.
 
 ## 1.2. Sugestão de Instrumento
 
@@ -23,11 +23,23 @@ Durante o processo de indexação, o sistema deve utilizar o nome do arquivo par
 
 Caso não seja possível identificar o instrumento a partir do nome do arquivo, o campo de sugestão deverá permanecer vazio para preenchimento manual pelo usuário.
 
+## 1.3. Ordem das partituras
+
+1° Deve vir as partituras sem nome;
+
+2° Deve vir as partituras que tiveram o instrumento identificado;
+
+3° Deve vir os instrumentos que foram identificados, mas não está na lista. Eles devem ficar em ordem alfabética.
+
 ---
 
 # 2. Músicas
 
-## 2.1. Operações disponíveis
+## 2.1. Nome da música
+
+O nome da música deve ser todo em maiúsculo, por questão de padronização.
+
+## 2.2. Operações disponíveis
 
 O usuário deve poder:
 
@@ -44,7 +56,7 @@ O usuário deve poder:
   - parar de indexar diretório
   - deletar diretório e arquivos (também parando de indexar)
 
-## 2.2. Visualização expandida
+## 2.3. Visualização expandida
 
 Quando uma música estiver expandida e exibindo suas partituras, o sistema deve monitorar continuamente o diretório indexado e atualizar a interface sempre que alterações forem identificadas.
 
@@ -131,7 +143,7 @@ Após a verificação de alteração, deve abrir um modal informando tudo que fo
 
 O usuário deve poder escolher continuar ou cancelar.
 
-- Caso o usuário cancele, deve alterar nada internamente (como se não tivesse feito).
+- Caso o usuário cancele, não deve alterar nada internamente (como se não tivesse feito).
 
 ## 6.2. Empacotamento com tar e compactar
 
@@ -207,3 +219,33 @@ O relatório deve ser direto e resumido, sendo claro para o usuário.
 ### 9.2. Música adicionada
 
 Quando uma música for adicionada via indexação, deve mostrar: "A músicas `xxx` foi adicionada com `xxx` partituras".
+
+---
+
+# 10. Inicialização
+
+Durante a iniciação do aplicativo, o sistema deve:
+
+1. Verificar se existe atualização.
+
+2. Enviar telemetria.
+
+---
+
+# 11. Identificação de duplicação (<mark>Não implementado</mark>)
+
+## 11.1. Possíveis músicas duplicadas
+
+O sistema deve identificar nomes de músicas parecidos, ex: `"Hino Nacional"` e `"O Hino Nacional"`, o sistema deve identificar e reportar para o usuário.
+
+Deve ser usado o **Trigram / N-gram Similarity** para identificar as possíveis músicas duplicadas, sendo executado no **indexar diretório**.
+
+## 11.2. Varredura de alterações (etapa do "aplicar alterações")
+
+Como o sistema indexa diretório, o usuário pode por fora duplicar uma partitura já indexada, por exemplo: 
+
+- `Hino Nacional - Oboé.mus` e `Hino Nacional - Oboé.musx`;
+
+- `Hino Nacional - Oboé.mscz` e `Hino Nacional - Oboe.mscz`.
+
+o sistema deve identificar e reportar para o usuário.

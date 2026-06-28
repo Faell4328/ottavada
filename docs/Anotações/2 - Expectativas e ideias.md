@@ -1,6 +1,7 @@
 **Score Maestro** - boas
 
 - backup utilizando pendrive ou outro meio local.
+- implementar sugesão de nomes com IA. A ideia é padronizar o nome das músicas (usuário pode colocar aceitar ou não, individualmente).
 - atualização automática do rclone.
   - Caso um dia eu precise abandonar o projeto, não quero que ele pare de funcionar por causa do rclone desatualizado, então preciso encontrar um meio de manter o rclone atualizando.
 - implementar hash de verificação de arquivos.
@@ -18,6 +19,7 @@
 **Score Maestro** - viajadas
 
 - tirar o cliente de `read-only`.
+
 - baixar backup da nuvem.
 - adicionar uma camada de cibersegurança.
 - possível adição de um novo `type` de computador `semi-server`.

@@ -4,7 +4,7 @@ O Score Maestro utiliza um provedor por vez, você pode escolher entre **Koofr**
 
 No **Koofr** é criado um `remote` chamado "koofr" e no **Google Drive** é "gdrive".
 
-A instância do rclone é sempre morta (`taskkill`) quando o upload ou download é finalizado 
+A instância do rclone é sempre encerrada (`taskkill`) quando o upload ou download é finalizado 
 
 ---
 

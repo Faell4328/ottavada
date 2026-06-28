@@ -363,7 +363,7 @@
 - adicionando mais instrumentos;
 - melhorando a ordem dos instrumentos;
 - melhorias na interface para usuário leigos;
-- usando caminho relatório para dar suporte a vários usuários.
+- usando caminho relativo para dar suporte a vários usuários.
 
 ## Correções
 

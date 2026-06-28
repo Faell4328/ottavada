@@ -1,8 +1,8 @@
 # Músicas
 
-- **Principal (`main`)**: a música possui pelo menos uma partitura com status **main**.
+- **Envio permitido (`main`)**: a música possui pelo menos uma partitura com status **Envio permitido** (`main`).
 
-- **Rascunho (`draft`)**: todas as partituras da música estão com status **draft**.
+- **Envio não permitido (`draft`)**: todas as partituras da música estão com status **Envio não permitido** (`draft`).
 
 - **Sem partitura (`not_found`)**: a música não possui nenhuma partitura disponível.
   
@@ -12,8 +12,8 @@
 
 # Partituras
 
-- **Principal (`main`)**: são enviadas ao provedor de nuvem e ficam disponíveis para os clientes.
-- **Rascunho (`draft`)**: não são enviadas ao provedor de nuvem.
+- **Envio permitido (`main`)**: são enviadas ao provedor de nuvem e ficam disponíveis para os clientes.
+- **Envio não permitido (`draft`)**: não são enviadas ao provedor de nuvem.
 - **Ignoradas (`ignored`)**: permanecem na interface, mas não participam da verificação de alterações nem são enviadas ao provedor de nuvem.
 
 ---
@@ -24,4 +24,4 @@
 
 - Partituras com status **`draft`** ou **`ignored`** não são enviadas ao cliente. Se já estiverem presentes, também são removidas.
 
-- Quando uma partitura é alterada de **`main`** para **`draft`**, sua versão anterior em `main` não é preservada, sendo removida do provedor de nuvem e, consequentemente, do cliente.
+- Quando uma partitura é alterada de **`main`** para **`draft`**, sua versão anterior em **`main`** não é preservada, sendo removida do provedor de nuvem e, consequentemente, do cliente.

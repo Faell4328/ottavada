@@ -1,4 +1,4 @@
-! Em caso de problema, deve ser feito o rallback das alterações. Ou é feito tudo ou nada.
+! Em caso de problema, deve ser feito o rollback das alterações. Ou é feito tudo ou nada.
 
 # Verificar alteração dos arquivos
 
@@ -295,20 +295,20 @@
 **Apenas Servidor**
 
 ```markdown
-1. É listados todas as alterações na tebela "changedField"
+1. É listados todas as alterações na tabela "changedField"
     - Em caso de problema:
         - Aborta do fluxo
         - Avisa o usuário que ocorreu um erro (toast)
 
-2. Verifica se o arquivo `events.msgpack.zst` tem 2MB
+2. Verifica se o arquivo `events.msgpack.zst` tem 1 MB
     - Se for igual ou maior:
         - Executa o fluxo de "Gerar Snapshot"
         - StatusBar deve adicionar uma etapa extra: "Gerando snapshot" antes do upload final
         - Encerra esse fluxo
-    - Se não tiver 2MB:
+    - Se não tiver 1 MB:
         - Descompacta o arquivo no diretório: "/temp/events/"
         - Incrementa com as alterações no "changedField" (ordenada pelo timestamp - crescente)
-    - Se o arquivo não exister:
+    - Se o arquivo não existir:
         - Criar um novo arquivo `events.msgpack` no diretório: "/temp/events/"
         - Adiciona as alteração do "changedField" no arquivo (ordenada pelo timestamp - crescente)
 
@@ -371,7 +371,7 @@
 
 # Gerar Snapshot
 
-## Gerar snapshot automaticamente (quando `events.msgpack.zst` tiver igual o maior que 2MB)
+## Gerar snapshot automaticamente (quando `events.msgpack.zst` tiver igual o maior que 1 MB)
 
 **Apenas Servidor**
 
@@ -547,7 +547,7 @@
 
 7. Verifica se existe apenas um arquivo
     // Deve existir apenas um (servidor)
-    - Caso não exita:
+    - Caso não exista:
         - Deve ser emitido um toast avisando o usuário que existe algo errado e deve chamar o desenvolvedor responsável para investigar
         - O fluxo deve ser encerrado (caso esse fluxo esteja em outro, o fluxo pai deve ser encerrado também)
     - Caso exista:
@@ -565,7 +565,7 @@
 10. Verifica em seu "tauri-plugin-store" o "lastChangeTimestamp" e verifica se possui algum evento novo, com base no "timestamp" de cada evento
     - Caso exista:
         - Lista eles em uma variável
-    - Cao não exista
+    - Caso não exista
         - O fluxo deve ser encerrado (caso esse fluxo esteja em outro, o fluxo pai deve ser encerrado também)
 
 11. Caso exista algum valor na variável
@@ -615,10 +615,10 @@
         - Se ocorrer erro novamente, deve ser emitido um toast avisando o usuário que não é possível compactar o arquivo de alteração.
         - O fluxo deve ser encerrado (caso esse fluxo esteja em outro, o fluxo pai deve ser encerrado também)
 
-7. Deleta todas as alterações (changedField) utilizando como referência o timestamp mais recente das alterações feitas. Apagando a apartir dele e todos os menores
+7. Deleta todas as alterações (changedField) utilizando como referência o timestamp mais recente das alterações feitas. Apagando a a partir dele e todos os menores
 ```
 
-! Em caso de problema, deve ser feito o rallback das alterações. Ou é feito tudo ou nada.
+! Em caso de problema, deve ser feito o rollback das alterações. Ou é feito tudo ou nada.
 
 # Alterar partitura de `draft` para `main` (pelo botão na interface) - Precisa arrumar no código
 
@@ -879,20 +879,20 @@
 **Apenas Servidor**
 
 ```markdown
-1. É listados todas as alterações na tebela "changedField"
+1. É listados todas as alterações na tabela "changedField"
     - Em caso de problema:
         - Aborta do fluxo
         - Avisa o usuário que ocorreu um erro (toast)
 
-2. Verifica se o arquivo `events.msgpack.zst` tem 2MB
+2. Verifica se o arquivo `events.msgpack.zst` tem 1 MB
     - Se for igual ou maior:
         - Executa o fluxo de "Gerar Snapshot"
         - StatusBar deve adicionar uma etapa extra: "Gerando snapshot" antes do upload final
         - Encerra esse fluxo
-    - Se não tiver 2MB:
+    - Se não tiver 1 MB:
         - Descompacta o arquivo no diretório: "/temp/events/"
         - Incrementa com as alterações no "changedField" (ordenada pelo timestamp - crescente)
-    - Se o arquivo não exister:
+    - Se o arquivo não existir:
         - Criar um novo arquivo `events.msgpack` no diretório: "/temp/events/"
         - Adiciona as alteração do "changedField" no arquivo (ordenada pelo timestamp - crescente)
 
@@ -1040,7 +1040,7 @@
 
 7. Verifica se existe apenas um arquivo
     // Deve existir apenas um (servidor)
-    - Caso não exita:
+    - Caso não exista:
         - Deve ser emitido um toast avisando o usuário que existe algo errado e deve chamar o desenvolvedor responsável para investigar
         - O fluxo deve ser encerrado (caso esse fluxo esteja em outro, o fluxo pai deve ser encerrado também)
     - Caso exista:
@@ -1059,7 +1059,7 @@
 10. Verifica em seu "tauri-plugin-store" o "lastChangeTimestamp" e verifica se possui algum evento novo, com base no "timestamp" de cada evento
     - Caso exista:
         - Lista eles em uma variável
-    - Cao não exista
+    - Caso não exista
         - O fluxo deve ser encerrado (caso esse fluxo esteja em outro, o fluxo pai deve ser encerrado também)
 
 11. Caso exista algum valor na variável
@@ -1067,7 +1067,7 @@
         - feitas no banco de dados (em transação)
         - Atualiza o "lastChangeTimestamp" com o maior valor do "timestamp" (último evento adicionado).
 
-12. Após finalizar a etapa anterior, deve deletar a parta temporária: "/temp/events/"
+12. Após finalizar a etapa anterior, deve deletar a pasta temporária: "/temp/events/"
 ```
 
 # Ao clicar na botão de "verificar alteração"
@@ -1106,7 +1106,7 @@
         - Se ocorrer erro novamente, deve ser emitido um toast avisando o usuário que não é possível compactar o arquivo de alteração.
         - O fluxo deve ser encerrado (caso esse fluxo esteja em outro, o fluxo pai deve ser encerrado também)
 
-7. Deleta todas as alterações (changedField) utilizando como referência o timestamp mais recente das alterações feitas. Apagando a apartir dele e todos os menores
+7. Deleta todas as alterações (changedField) utilizando como referência o timestamp mais recente das alterações feitas. Apagando a a partir dele e todos os menores
 ```
 
 **Apenas Cliente**
