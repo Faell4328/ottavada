@@ -52,7 +52,7 @@ vi.mock("@tauri-apps/api/core", () => ({
           google_service_account: null,
         };
       case "scan_files_for_changes":
-          return { changed_files: [], added_files: [], failed_files: [] };
+        return { changed_files: [], added_files: [], failed_files: [] };
       default:
         return null;
     }
@@ -71,19 +71,54 @@ vi.mock("react-hot-toast", () => ({
 }));
 
 const sampleFiles: IndexedFile[] = [
-  { path: "/music/Canon - Flauta.musx", name: "Canon", instrument: "Flauta", extension: "musx" },
-  { path: "/music/Canon - Violino.musx", name: "Canon", instrument: "Violino", extension: "musx" },
+  {
+    path: "/music/Canon - Flauta.musx",
+    name: "Canon",
+    instrument: "Flauta",
+    extension: "musx",
+  },
+  {
+    path: "/music/Canon - Violino.musx",
+    name: "Canon",
+    instrument: "Violino",
+    extension: "musx",
+  },
 ];
 
 const duplicateBatchFiles: IndexedFile[] = [
-  { path: "/music/Canon - Flauta 1.musx", name: "Canon", instrument: "Flauta", extension: "musx" },
-  { path: "/music/Canon - Flauta 2.musx", name: "Canon", instrument: "Flauta", extension: "musx" },
+  {
+    path: "/music/Canon - Flauta 1.musx",
+    name: "Canon",
+    instrument: "Flauta",
+    extension: "musx",
+  },
+  {
+    path: "/music/Canon - Flauta 2.musx",
+    name: "Canon",
+    instrument: "Flauta",
+    extension: "musx",
+  },
 ];
 
 const reorderFiles: IndexedFile[] = [
-  { path: "/music/Canon - Violino.musx", name: "Canon", instrument: "Violino", extension: "musx" },
-  { path: "/music/Canon - Oboe.musx", name: "Canon", instrument: "Oboe", extension: "musx" },
-  { path: "/music/Canon - Flauta.musx", name: "Canon", instrument: "Flauta", extension: "musx" },
+  {
+    path: "/music/Canon - Violino.musx",
+    name: "Canon",
+    instrument: "Violino",
+    extension: "musx",
+  },
+  {
+    path: "/music/Canon - Oboe.musx",
+    name: "Canon",
+    instrument: "Oboe",
+    extension: "musx",
+  },
+  {
+    path: "/music/Canon - Flauta.musx",
+    name: "Canon",
+    instrument: "Flauta",
+    extension: "musx",
+  },
 ];
 
 const duplicateSongs: SongListItem[] = [
@@ -130,33 +165,59 @@ describe("AddFilesModal", () => {
 
   it("should not render when isOpen is false", () => {
     renderWithAppProvider(
-      <AddFilesModal isOpen={false} files={sampleFiles} onClose={mockOnClose} onSuccess={mockOnSuccess} />
+      <AddFilesModal
+        isOpen={false}
+        files={sampleFiles}
+        onClose={mockOnClose}
+        onSuccess={mockOnSuccess}
+      />,
     );
-    expect(screen.queryByText("Adicionar Partitura(s)")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Adicionar Partitura(s)"),
+    ).not.toBeInTheDocument();
   });
 
   it("should not render when files are empty", () => {
     renderWithAppProvider(
-      <AddFilesModal isOpen={true} files={[]} onClose={mockOnClose} onSuccess={mockOnSuccess} />
+      <AddFilesModal
+        isOpen={true}
+        files={[]}
+        onClose={mockOnClose}
+        onSuccess={mockOnSuccess}
+      />,
     );
-    expect(screen.queryByText("Adicionar Partitura(s)")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Adicionar Partitura(s)"),
+    ).not.toBeInTheDocument();
   });
 
   it("should render with file data pre-filled", () => {
     renderWithAppProvider(
-      <AddFilesModal isOpen={true} files={sampleFiles} onClose={mockOnClose} onSuccess={mockOnSuccess} />
+      <AddFilesModal
+        isOpen={true}
+        files={sampleFiles}
+        onClose={mockOnClose}
+        onSuccess={mockOnSuccess}
+      />,
     );
 
     expect(screen.getByText("Adicionar Partitura(s)")).toBeInTheDocument();
     // Title should be pre-filled from first file
     expect(screen.getByDisplayValue("CANON")).toBeInTheDocument();
     // Should show instrument count
-    expect(screen.getByText("Instrumentos a adicionar (2)")).toBeInTheDocument();
+    expect(
+      screen.getByText("Instrumentos a adicionar (2)"),
+    ).toBeInTheDocument();
   });
 
   it("should show error when title is empty", async () => {
     renderWithAppProvider(
-      <AddFilesModal isOpen={true} files={sampleFiles} onClose={mockOnClose} onSuccess={mockOnSuccess} />
+      <AddFilesModal
+        isOpen={true}
+        files={sampleFiles}
+        onClose={mockOnClose}
+        onSuccess={mockOnSuccess}
+      />,
     );
 
     // Clear the pre-filled title
@@ -166,13 +227,20 @@ describe("AddFilesModal", () => {
     fireEvent.click(screen.getByText("Salvar"));
 
     await waitFor(() => {
-      expect(screen.getByText("O título da música é obrigatório")).toBeInTheDocument();
+      expect(
+        screen.getByText("O título da música é obrigatório"),
+      ).toBeInTheDocument();
     });
   });
 
   it("should call onClose when cancel is clicked", () => {
     renderWithAppProvider(
-      <AddFilesModal isOpen={true} files={sampleFiles} onClose={mockOnClose} onSuccess={mockOnSuccess} />
+      <AddFilesModal
+        isOpen={true}
+        files={sampleFiles}
+        onClose={mockOnClose}
+        onSuccess={mockOnSuccess}
+      />,
     );
 
     fireEvent.click(screen.getByText("Cancelar"));
@@ -180,65 +248,106 @@ describe("AddFilesModal", () => {
   });
 
   it("should allow removing files", async () => {
-    const deleteFilePathSpy = vi.spyOn(api, "deleteFilePath").mockResolvedValue(undefined);
+    const deleteFilePathSpy = vi
+      .spyOn(api, "deleteFilePath")
+      .mockResolvedValue(undefined);
 
     renderWithAppProvider(
-      <AddFilesModal isOpen={true} files={sampleFiles} onClose={mockOnClose} onSuccess={mockOnSuccess} />
+      <AddFilesModal
+        isOpen={true}
+        files={sampleFiles}
+        onClose={mockOnClose}
+        onSuccess={mockOnSuccess}
+      />,
     );
 
-    expect(screen.getByText("Instrumentos a adicionar (2)")).toBeInTheDocument();
+    expect(
+      screen.getByText("Instrumentos a adicionar (2)"),
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getAllByTitle("Mover para lixeira")[0]);
 
-    expect(screen.getByRole("heading", { name: "Mover para lixeira" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Mover para lixeira" }),
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Confirmar" }));
 
     await waitFor(() => {
       expect(deleteFilePathSpy).toHaveBeenCalledWith(sampleFiles[0].path);
-      expect(screen.getByText("Instrumentos a adicionar (1)")).toBeInTheDocument();
+      expect(
+        screen.getByText("Instrumentos a adicionar (1)"),
+      ).toBeInTheDocument();
     });
   });
 
   it("should allow ignoring and restoring files", () => {
     renderWithAppProvider(
-      <AddFilesModal isOpen={true} files={sampleFiles} onClose={mockOnClose} onSuccess={mockOnSuccess} />
+      <AddFilesModal
+        isOpen={true}
+        files={sampleFiles}
+        onClose={mockOnClose}
+        onSuccess={mockOnSuccess}
+      />,
     );
 
-    expect(screen.getByText("Instrumentos a adicionar (2)")).toBeInTheDocument();
+    expect(
+      screen.getByText("Instrumentos a adicionar (2)"),
+    ).toBeInTheDocument();
 
-    const firstInstrumentInput = screen.getAllByPlaceholderText("Nome do instrumento")[0] as HTMLInputElement;
+    const firstInstrumentInput = screen.getAllByPlaceholderText(
+      "Nome do instrumento",
+    )[0] as HTMLInputElement;
     expect(firstInstrumentInput).toHaveValue("Flauta");
 
     fireEvent.click(screen.getAllByTitle("Ignorar arquivo")[0]);
 
-    expect(screen.getByText("Instrumentos a adicionar (2)")).toBeInTheDocument();
+    expect(
+      screen.getByText("Instrumentos a adicionar (2)"),
+    ).toBeInTheDocument();
     expect(screen.getByText("Ignorada")).toBeInTheDocument();
     expect(screen.getByTitle("Designorar arquivo")).toBeInTheDocument();
-    expect(screen.getAllByPlaceholderText("Nome do instrumento")[0]).toBeDisabled();
-    expect(screen.getAllByPlaceholderText("Nome do instrumento")[0]).toHaveValue("");
+    expect(
+      screen.getAllByPlaceholderText("Nome do instrumento")[0],
+    ).toBeDisabled();
+    expect(
+      screen.getAllByPlaceholderText("Nome do instrumento")[0],
+    ).toHaveValue("");
 
     fireEvent.change(screen.getAllByPlaceholderText("Nome do instrumento")[0], {
       target: { value: "Outra coisa" },
     });
 
-    expect(screen.getAllByPlaceholderText("Nome do instrumento")[0]).toHaveValue("");
+    expect(
+      screen.getAllByPlaceholderText("Nome do instrumento")[0],
+    ).toHaveValue("");
 
     fireEvent.click(screen.getByTitle("Designorar arquivo"));
 
-    expect(screen.getByText("Instrumentos a adicionar (2)")).toBeInTheDocument();
+    expect(
+      screen.getByText("Instrumentos a adicionar (2)"),
+    ).toBeInTheDocument();
     expect(screen.queryByText("Ignorada")).not.toBeInTheDocument();
-    expect(screen.getAllByPlaceholderText("Nome do instrumento")[0]).not.toBeDisabled();
+    expect(
+      screen.getAllByPlaceholderText("Nome do instrumento")[0],
+    ).not.toBeDisabled();
   });
 
   it("should save ignored files with ignored status", async () => {
-    const importSpy = vi.spyOn(api, "importIndexedFilesWithMetadata").mockResolvedValue({
-      songs: [],
-      added_count: 1,
-    });
+    const importSpy = vi
+      .spyOn(api, "importIndexedFilesWithMetadata")
+      .mockResolvedValue({
+        songs: [],
+        added_count: 1,
+      });
 
     renderWithAppProvider(
-      <AddFilesModal isOpen={true} files={sampleFiles} onClose={mockOnClose} onSuccess={mockOnSuccess} />
+      <AddFilesModal
+        isOpen={true}
+        files={sampleFiles}
+        onClose={mockOnClose}
+        onSuccess={mockOnSuccess}
+      />,
     );
 
     fireEvent.click(screen.getAllByTitle("Ignorar arquivo")[0]);
@@ -262,19 +371,33 @@ describe("AddFilesModal", () => {
 
   it("should allow editing instrument names", () => {
     renderWithAppProvider(
-      <AddFilesModal isOpen={true} files={sampleFiles} onClose={mockOnClose} onSuccess={mockOnSuccess} />
+      <AddFilesModal
+        isOpen={true}
+        files={sampleFiles}
+        onClose={mockOnClose}
+        onSuccess={mockOnSuccess}
+      />,
     );
 
-    const instrumentInputs = screen.getAllByPlaceholderText("Nome do instrumento");
+    const instrumentInputs = screen.getAllByPlaceholderText(
+      "Nome do instrumento",
+    );
     expect(instrumentInputs).toHaveLength(2);
 
-    fireEvent.change(instrumentInputs[0], { target: { value: "Flauta 2 Transversal" } });
+    fireEvent.change(instrumentInputs[0], {
+      target: { value: "Flauta 2 Transversal" },
+    });
     expect(instrumentInputs[0]).toHaveValue("Flauta 2 Transversal");
   });
 
   it("should suggest composer and arranger names when typing", async () => {
     renderWithAppProvider(
-      <AddFilesModal isOpen={true} files={sampleFiles} onClose={mockOnClose} onSuccess={mockOnSuccess} />
+      <AddFilesModal
+        isOpen={true}
+        files={sampleFiles}
+        onClose={mockOnClose}
+        onSuccess={mockOnSuccess}
+      />,
     );
 
     const composerInput = screen.getByPlaceholderText("Nome do compositor");
@@ -282,24 +405,33 @@ describe("AddFilesModal", () => {
     fireEvent.change(composerInput, { target: { value: "Pac" } });
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Pachelbel" })).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Pachelbel" }),
+      ).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByRole("button", { name: "Pachelbel" }));
     expect(composerInput).toHaveValue("Pachelbel");
 
     const arrangerInput = screen.getByPlaceholderText("Nome do arranjador");
-  fireEvent.focus(arrangerInput);
+    fireEvent.focus(arrangerInput);
     fireEvent.change(arrangerInput, { target: { value: "Glo" } });
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Global Arranger" })).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Global Arranger" }),
+      ).toBeInTheDocument();
     });
   });
 
   it("should only reorder review items after the instrument input is blurred", async () => {
     renderWithAppProvider(
-      <AddFilesModal isOpen={true} files={reorderFiles} onClose={mockOnClose} onSuccess={mockOnSuccess} />
+      <AddFilesModal
+        isOpen={true}
+        files={reorderFiles}
+        onClose={mockOnClose}
+        onSuccess={mockOnSuccess}
+      />,
     );
 
     const initialOrder = screen
@@ -312,16 +444,26 @@ describe("AddFilesModal", () => {
       "Canon - Violino.musx",
     ]);
 
-    const instrumentInput = screen.getAllByPlaceholderText("Nome do instrumento")[0] as HTMLInputElement;
+    const instrumentInput = screen.getAllByPlaceholderText(
+      "Nome do instrumento",
+    )[0] as HTMLInputElement;
     fireEvent.focus(instrumentInput);
     fireEvent.change(instrumentInput, { target: { value: "Zarpe" } });
 
-    expect(screen.getAllByText(/Canon - .*\.musx/).map((element) => element.textContent)).toEqual(initialOrder);
+    expect(
+      screen
+        .getAllByText(/Canon - .*\.musx/)
+        .map((element) => element.textContent),
+    ).toEqual(initialOrder);
 
     fireEvent.blur(instrumentInput);
 
     await waitFor(() => {
-      expect(screen.getAllByText(/Canon - .*\.musx/).map((element) => element.textContent)).toEqual([
+      expect(
+        screen
+          .getAllByText(/Canon - .*\.musx/)
+          .map((element) => element.textContent),
+      ).toEqual([
         "Canon - Oboe.musx",
         "Canon - Violino.musx",
         "Canon - Flauta.musx",
@@ -337,14 +479,26 @@ describe("AddFilesModal", () => {
         existingSongs={duplicateSongs}
         onClose={mockOnClose}
         onSuccess={mockOnSuccess}
-      />
+      />,
     );
 
-    const instrumentInput = screen.getAllByPlaceholderText("Nome do instrumento")[0];
+    const instrumentInput = screen.getAllByPlaceholderText(
+      "Nome do instrumento",
+    )[0];
 
-    expect(screen.getByText("A música CANON já existe. Altere o nome da música para continuar.")).toBeInTheDocument();
-    expect(screen.getByText("1 partitura está sendo usada na música CANON.")).toBeInTheDocument();
-    expect(screen.getByText("Essa partitura já está sendo usada na música CANON e por isso não será salva.")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "A música CANON já existe. Altere o nome da música para continuar.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("1 partitura está sendo usada na música CANON."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Essa partitura já está sendo usada na música CANON e por isso não será salva.",
+      ),
+    ).toBeInTheDocument();
     expect(screen.getByText("Canon - Flauta.musx")).toBeInTheDocument();
     expect(instrumentInput).toHaveAttribute("readonly");
   });
@@ -356,14 +510,20 @@ describe("AddFilesModal", () => {
         files={duplicateBatchFiles}
         onClose={mockOnClose}
         onSuccess={mockOnSuccess}
-      />
+      />,
     );
 
-    const messages = screen.getAllByRole("listitem").map((element) => element.textContent?.replace(/\s+/g, " ").trim());
-    expect(messages).toContain("2 partituras usam o mesmo instrumento (Flauta). Renomeie ou delete uma delas para continuar.");
+    const messages = screen
+      .getAllByRole("listitem")
+      .map((element) => element.textContent?.replace(/\s+/g, " ").trim());
+    expect(messages).toContain(
+      "2 partituras usam o mesmo instrumento (Flauta). Renomeie ou delete uma delas para continuar.",
+    );
     expect(screen.getByRole("button", { name: "Salvar" })).toBeDisabled();
 
-    const instrumentInputs = screen.getAllByPlaceholderText("Nome do instrumento");
+    const instrumentInputs = screen.getAllByPlaceholderText(
+      "Nome do instrumento",
+    );
     expect(instrumentInputs[0]).not.toHaveAttribute("readonly");
     expect(instrumentInputs[1]).not.toHaveAttribute("readonly");
   });
@@ -375,10 +535,12 @@ describe("AddFilesModal", () => {
         files={duplicateBatchFiles}
         onClose={mockOnClose}
         onSuccess={mockOnSuccess}
-      />
+      />,
     );
 
-    const instrumentInput = screen.getAllByPlaceholderText("Nome do instrumento")[0] as HTMLInputElement;
+    const instrumentInput = screen.getAllByPlaceholderText(
+      "Nome do instrumento",
+    )[0] as HTMLInputElement;
     instrumentInput.focus();
 
     fireEvent.change(instrumentInput, { target: { value: "Clarinete" } });
@@ -386,8 +548,8 @@ describe("AddFilesModal", () => {
     expect(document.activeElement).toBe(instrumentInput);
     expect(
       screen.getByText(
-        "2 partituras usam o mesmo instrumento (Flauta). Renomeie ou delete uma delas para continuar."
-      )
+        "2 partituras usam o mesmo instrumento (Flauta). Renomeie ou delete uma delas para continuar.",
+      ),
     ).toBeInTheDocument();
 
     fireEvent.blur(instrumentInput);
@@ -395,8 +557,8 @@ describe("AddFilesModal", () => {
     await waitFor(() => {
       expect(
         screen.queryByText(
-          "2 partituras usam o mesmo instrumento (Flauta). Renomeie ou delete uma delas para continuar."
-        )
+          "2 partituras usam o mesmo instrumento (Flauta). Renomeie ou delete uma delas para continuar.",
+        ),
       ).not.toBeInTheDocument();
     });
   });
@@ -409,19 +571,32 @@ describe("AddFilesModal", () => {
         existingSongs={duplicateSongs}
         onClose={mockOnClose}
         onSuccess={mockOnSuccess}
-      />
+      />,
     );
 
-    expect(screen.getByText("1 partitura está sendo usada na música CANON.")).toBeInTheDocument();
-    expect(screen.getByText("Essa partitura já está sendo utilizada na música CANON e por isso não será salva.")).toBeInTheDocument();
+    expect(
+      screen.getByText("1 partitura está sendo usada na música CANON."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Essa partitura já está sendo utilizada na música CANON e por isso não será salva.",
+      ),
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Salvar" })).toBeDisabled();
   });
 
   it("should open selected file with default app", async () => {
-    const openFilePathSpy = vi.spyOn(api, "openFilePath").mockResolvedValue(undefined);
+    const openFilePathSpy = vi
+      .spyOn(api, "openFilePath")
+      .mockResolvedValue(undefined);
 
     renderWithAppProvider(
-      <AddFilesModal isOpen={true} files={sampleFiles} onClose={mockOnClose} onSuccess={mockOnSuccess} />
+      <AddFilesModal
+        isOpen={true}
+        files={sampleFiles}
+        onClose={mockOnClose}
+        onSuccess={mockOnSuccess}
+      />,
     );
 
     const openButtons = screen.getAllByTitle("Abrir partitura");
@@ -438,7 +613,12 @@ describe("AddFilesModal", () => {
       .mockResolvedValue(undefined);
 
     renderWithAppProvider(
-      <AddFilesModal isOpen={true} files={sampleFiles} onClose={mockOnClose} onSuccess={mockOnSuccess} />
+      <AddFilesModal
+        isOpen={true}
+        files={sampleFiles}
+        onClose={mockOnClose}
+        onSuccess={mockOnSuccess}
+      />,
     );
 
     const openLocalButtons = screen.getAllByTitle("Abrir local");
@@ -450,10 +630,12 @@ describe("AddFilesModal", () => {
   });
 
   it("should not save when selection mixes duplicates and new files", async () => {
-    const importSpy = vi.spyOn(api, "importIndexedFilesWithMetadata").mockResolvedValue({
-      songs: [],
-      added_count: 1,
-    });
+    const importSpy = vi
+      .spyOn(api, "importIndexedFilesWithMetadata")
+      .mockResolvedValue({
+        songs: [],
+        added_count: 1,
+      });
 
     renderWithAppProvider(
       <AddFilesModal
@@ -462,7 +644,7 @@ describe("AddFilesModal", () => {
         existingSongs={duplicateSongs}
         onClose={mockOnClose}
         onSuccess={mockOnSuccess}
-      />
+      />,
     );
 
     expect(screen.getByRole("button", { name: "Salvar" })).toBeDisabled();

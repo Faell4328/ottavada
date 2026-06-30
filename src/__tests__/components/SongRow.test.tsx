@@ -42,7 +42,9 @@ describe("SongRow menu", () => {
   });
 
   it("opens the song location from the overflow menu", async () => {
-    const openFileLocationSpy = vi.spyOn(api, "openFileLocation").mockResolvedValue(undefined);
+    const openFileLocationSpy = vi
+      .spyOn(api, "openFileLocation")
+      .mockResolvedValue(undefined);
 
     render(
       <table>
@@ -64,7 +66,7 @@ describe("SongRow menu", () => {
             isLocked={false}
           />
         </tbody>
-      </table>
+      </table>,
     );
 
     fireEvent.click(screen.getByText("Abrir local"));
@@ -75,7 +77,9 @@ describe("SongRow menu", () => {
   });
 
   it("shows both delete options and deletes the directory when requested", async () => {
-    const deleteSongWithFilesSpy = vi.spyOn(api, "deleteSongWithFiles").mockResolvedValue(undefined);
+    const deleteSongWithFilesSpy = vi
+      .spyOn(api, "deleteSongWithFiles")
+      .mockResolvedValue(undefined);
 
     render(
       <table>
@@ -97,15 +101,14 @@ describe("SongRow menu", () => {
             isLocked={false}
           />
         </tbody>
-      </table>
+      </table>,
     );
 
-    fireEvent.click(screen.getByText("Mover para Lixeira"));
+    fireEvent.click(screen.getByText("Remover"));
 
-    expect(screen.getByText("Parar de indexar diretório")).toBeInTheDocument();
-    expect(screen.getByText("Mover diretório e arquivos para lixeira")).toBeInTheDocument();
+    expect(screen.getByText("Remoção")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByText("Mover diretório e arquivos para lixeira"));
+    fireEvent.click(screen.getByText("Mover pasta e arquivos para lixeira"));
 
     await waitFor(() => {
       expect(deleteSongWithFilesSpy).toHaveBeenCalledWith(song.id);
@@ -113,7 +116,9 @@ describe("SongRow menu", () => {
   });
 
   it("opens a folder picker and reindexes the selected directory from the overflow menu", async () => {
-    const reindexSongDirectorySpy = vi.spyOn(api, "reindexSongDirectory").mockResolvedValue(song);
+    const reindexSongDirectorySpy = vi
+      .spyOn(api, "reindexSongDirectory")
+      .mockResolvedValue(song);
     const { open } = await import("@tauri-apps/plugin-dialog");
     vi.mocked(open).mockResolvedValue("C:/music/new-canon");
 
@@ -137,13 +142,16 @@ describe("SongRow menu", () => {
             isLocked={false}
           />
         </tbody>
-      </table>
+      </table>,
     );
 
-    fireEvent.click(screen.getByText("Reindexar música"));
+    fireEvent.click(screen.getByText("Reindexar pasta"));
 
     await waitFor(() => {
-      expect(reindexSongDirectorySpy).toHaveBeenCalledWith(song.id, "C:/music/new-canon");
+      expect(reindexSongDirectorySpy).toHaveBeenCalledWith(
+        song.id,
+        "C:/music/new-canon",
+      );
       expect(onReindex).toHaveBeenCalled();
     });
   });
@@ -169,7 +177,7 @@ describe("SongRow menu", () => {
             isLocked={false}
           />
         </tbody>
-      </table>
+      </table>,
     );
 
     fireEvent.click(screen.getByText("Não permitir envio"));
@@ -202,11 +210,13 @@ describe("SongRow menu", () => {
             isLocked={false}
           />
         </tbody>
-      </table>
+      </table>,
     );
 
     expect(screen.getByText("Envio permitido")).toBeInTheDocument();
-    expect(screen.getByText("Envio permitido").closest("tr")).toHaveClass("bg-white");
+    expect(screen.getByText("Envio permitido").closest("tr")).toHaveClass(
+      "bg-white",
+    );
 
     rerender(
       <table>
@@ -219,7 +229,7 @@ describe("SongRow menu", () => {
             onEdit={onEdit}
             onDelete={onDelete}
             onStatusChange={onStatusChange}
-              onReindex={onReindex}
+            onReindex={onReindex}
             menuId="song-1"
             isMenuOpen={true}
             onMenuOpen={onMenuOpen}
@@ -228,11 +238,13 @@ describe("SongRow menu", () => {
             isLocked={false}
           />
         </tbody>
-      </table>
+      </table>,
     );
 
     expect(screen.getByText("Envio não permitido")).toBeInTheDocument();
-    expect(screen.getByText("Envio não permitido").closest("tr")).toHaveClass("bg-[#fff7ed]");
+    expect(screen.getByText("Envio não permitido").closest("tr")).toHaveClass(
+      "bg-[#fff7ed]",
+    );
   });
 
   it("renders not_found songs with dedicated styling and actions", () => {
@@ -258,12 +270,14 @@ describe("SongRow menu", () => {
             isLocked={false}
           />
         </tbody>
-      </table>
+      </table>,
     );
 
     expect(screen.getByText("Sem partitura")).toBeInTheDocument();
-    expect(screen.getByText("Sem partitura").closest("tr")).toHaveClass("bg-[#fff1f2]");
-    expect(screen.getByText("Reindexar música")).toBeInTheDocument();
-    expect(screen.getByText("Parar de indexar")).toBeInTheDocument();
+    expect(screen.getByText("Sem partitura").closest("tr")).toHaveClass(
+      "bg-[#fff1f2]",
+    );
+    expect(screen.getByText("Reindexar pasta")).toBeInTheDocument();
+    expect(screen.getByText("Parar de indexar pasta")).toBeInTheDocument();
   });
 });

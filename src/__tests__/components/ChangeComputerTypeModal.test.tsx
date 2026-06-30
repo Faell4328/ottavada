@@ -13,12 +13,12 @@ describe("ChangeComputerTypeModal", () => {
         currentType="Server"
         onClose={mockOnClose}
         onConfirm={mockOnConfirm}
-      />
+      />,
     );
 
     expect(screen.getByText("Alteração Importante")).toBeInTheDocument();
     expect(
-      screen.getByText(/Você está alterando o tipo de computador/)
+      screen.getByText(/Você está alterando o tipo de computador/),
     ).toBeInTheDocument();
   });
 
@@ -32,7 +32,7 @@ describe("ChangeComputerTypeModal", () => {
         currentType="Server"
         onClose={mockOnClose}
         onConfirm={mockOnConfirm}
-      />
+      />,
     );
 
     expect(container.firstChild).toBeNull();
@@ -48,7 +48,7 @@ describe("ChangeComputerTypeModal", () => {
         currentType="Server"
         onClose={mockOnClose}
         onConfirm={mockOnConfirm}
-      />
+      />,
     );
 
     const cancelButton = screen.getByText("Cancelar");
@@ -65,7 +65,7 @@ describe("ChangeComputerTypeModal", () => {
         currentType="Server"
         onClose={mockOnClose}
         onConfirm={mockOnConfirm}
-      />
+      />,
     );
 
     fireEvent.click(screen.getByText("Cancelar"));
@@ -82,7 +82,7 @@ describe("ChangeComputerTypeModal", () => {
         currentType="Server"
         onClose={mockOnClose}
         onConfirm={mockOnConfirm}
-      />
+      />,
     );
 
     expect(screen.getByText(/\(5s\)/)).toBeInTheDocument();
@@ -98,12 +98,14 @@ describe("ChangeComputerTypeModal", () => {
         currentType="Server"
         onClose={mockOnClose}
         onConfirm={mockOnConfirm}
-      />
+      />,
     );
 
-    const confirmButton = screen.getAllByText(/Confirmar/).find(
-      (el) => (el as HTMLButtonElement).type === "button"
-    ) as HTMLButtonElement;
+    const confirmButton = screen
+      .getAllByText(/Confirmar/)
+      .find(
+        (el) => (el as HTMLButtonElement).type === "button",
+      ) as HTMLButtonElement;
 
     expect(confirmButton).toBeDisabled();
   });
@@ -118,12 +120,20 @@ describe("ChangeComputerTypeModal", () => {
         currentType="Server"
         onClose={mockOnClose}
         onConfirm={mockOnConfirm}
-      />
+      />,
     );
 
-    expect(screen.getByText(/Deixará de indexar diretórios locais/)).toBeInTheDocument();
-    expect(screen.getByText(/Passará a consultar partituras no computador do maestro/)).toBeInTheDocument();
-    expect(screen.getByText(/Poderá apenas propor alterações/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Deixará de indexar pastas locais/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /Passará a consultar partituras no computador do maestro/,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Poderá apenas propor alterações/),
+    ).toBeInTheDocument();
   });
 
   it("should show correct impact for Client to Server change", () => {
@@ -136,10 +146,12 @@ describe("ChangeComputerTypeModal", () => {
         currentType="Client"
         onClose={mockOnClose}
         onConfirm={mockOnConfirm}
-      />
+      />,
     );
 
-    expect(screen.getByText(/Passará a indexar diretórios locais/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Passará a indexar pastas locais/),
+    ).toBeInTheDocument();
     expect(screen.getByText("Computador do Maestro")).toBeInTheDocument();
   });
 });

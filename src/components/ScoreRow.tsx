@@ -199,7 +199,7 @@ function ScoreRow({
 
   const handleDelete = () => {
     confirmation.requestConfirmation(
-      "Mover para Lixeira",
+      "Mover para lixeira",
       "Você realmente deseja mover esta partitura para a lixeira? O arquivo poderá ser recuperado pela lixeira do Windows.",
       async () => {
         try {
@@ -309,7 +309,7 @@ function ScoreRow({
                     />
                     {renderStatusAction()}
                     <ContextMenuItem
-                      label="Mover para Lixeira"
+                      label="Mover para lixeira"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleDelete();

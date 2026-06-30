@@ -9,8 +9,15 @@ import type { ScoreListItem, SongListItem } from "../../types";
 
 let resolveScores: ((scores: ScoreListItem[]) => void) | null = null;
 let nextSongSummaries: SongListItem[][] = [];
-let triggerUpdateScore: ((scoreId: string, instrumentName: string | null, filePath: string) => Promise<void>) | null = null;
-let triggerUpdateSongStatus: ((songId: string, status: "main" | "draft") => Promise<void>) | null = null;
+let triggerUpdateScore:
+  | ((
+      scoreId: string,
+      instrumentName: string | null,
+      filePath: string,
+    ) => Promise<void>)
+  | null = null;
+let triggerUpdateSongStatus:
+  ((songId: string, status: "main" | "draft") => Promise<void>) | null = null;
 let nextSelectedSong: SongListItem | null = null;
 
 vi.mock("@tauri-apps/api/core", () => ({
@@ -129,7 +136,10 @@ describe("SongsList", () => {
 
   beforeEach(() => {
     resolveScores = null;
-    nextSongSummaries = [[sampleSong, sampleSong2], [updatedSampleSong, sampleSong2]];
+    nextSongSummaries = [
+      [sampleSong, sampleSong2],
+      [updatedSampleSong, sampleSong2],
+    ];
     nextSelectedSong = updatedSampleSong;
     triggerUpdateScore = null;
     requestAnimationFrameCallbacks.length = 0;
@@ -138,11 +148,15 @@ describe("SongsList", () => {
       configurable: true,
       value: scrollIntoViewSpy,
     });
-    requestAnimationFrameSpy = vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
-      requestAnimationFrameCallbacks.push(callback);
-      return requestAnimationFrameCallbacks.length;
-    });
-    vi.spyOn(window, "cancelAnimationFrame").mockImplementation(() => undefined);
+    requestAnimationFrameSpy = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation((callback) => {
+        requestAnimationFrameCallbacks.push(callback);
+        return requestAnimationFrameCallbacks.length;
+      });
+    vi.spyOn(window, "cancelAnimationFrame").mockImplementation(
+      () => undefined,
+    );
   });
 
   afterEach(() => {
@@ -194,7 +208,10 @@ describe("SongsList", () => {
 
     expect(await screen.findByText("Flauta")).toBeInTheDocument();
 
-    nextSongSummaries = [[sampleSong, sampleSong2], [summaryWithoutScores, sampleSong2]];
+    nextSongSummaries = [
+      [sampleSong, sampleSong2],
+      [summaryWithoutScores, sampleSong2],
+    ];
     nextSelectedSong = {
       ...updatedSampleSong,
       scores: [
@@ -206,7 +223,11 @@ describe("SongsList", () => {
     };
 
     await act(async () => {
-      await triggerUpdateScore?.("score-1", "Violino", "/music/Canon - Violino.musx");
+      await triggerUpdateScore?.(
+        "score-1",
+        "Violino",
+        "/music/Canon - Violino.musx",
+      );
     });
 
     expect(await screen.findByText("Violino")).toBeInTheDocument();

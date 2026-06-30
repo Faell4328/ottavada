@@ -18,7 +18,8 @@ export function ChangeComputerTypeModal({
   const [countdown, setCountdown] = useState(5);
   const [isConfirming, setIsConfirming] = useState(false);
 
-  const newType = currentType === "Server" ? "Computador de Ensaio" : "Computador do Maestro";
+  const newType =
+    currentType === "Server" ? "Computador de Ensaio" : "Computador do Maestro";
 
   useScrollLock(isOpen);
 
@@ -68,8 +69,12 @@ export function ChangeComputerTypeModal({
         <div className="px-6 pb-6 space-y-4">
           <p className="text-sm text-[#4d6075] text-center">
             Você está alterando o tipo de computador de{" "}
-            <strong>{currentType === "Server" ? "Computador do Maestro" : "Computador de Ensaio"}</strong> para{" "}
-            <strong>{newType}</strong>.
+            <strong>
+              {currentType === "Server"
+                ? "Computador do Maestro"
+                : "Computador de Ensaio"}
+            </strong>{" "}
+            para <strong>{newType}</strong>.
           </p>
 
           <div className="bg-[#ffeaa7] border border-[#fdcb6e] rounded-lg p-4">
@@ -78,14 +83,14 @@ export function ChangeComputerTypeModal({
             </p>
             {currentType === "Server" ? (
               <ul className="text-xs text-[#7d6608] space-y-1 list-disc list-inside">
-                <li>Deixará de indexar diretórios locais</li>
+                <li>Deixará de indexar pastas locais</li>
                 <li>Passará a consultar partituras no computador do maestro</li>
                 <li>Poderá apenas propor alterações</li>
                 <li>Não poderá adicionar novas músicas ou partituras</li>
               </ul>
             ) : (
               <ul className="text-xs text-[#7d6608] space-y-1 list-disc list-inside">
-                <li>Passará a indexar diretórios locais</li>
+                <li>Passará a indexar pastas locais</li>
                 <li>Se tornará a referência para detectar alterações</li>
                 <li>Poderá adicionar e gerenciar músicas e partituras</li>
                 <li>Será responsável pelas sincronizações</li>
@@ -114,7 +119,11 @@ export function ChangeComputerTypeModal({
             disabled={countdown > 0 || isConfirming}
             className="flex-1 h-9 rounded bg-[#e67e22] hover:bg-[#d35400] text-sm font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
           >
-            {isConfirming ? "Alterando..." : countdown > 0 ? `Confirmar (${countdown}s)` : "Confirmar"}
+            {isConfirming
+              ? "Alterando..."
+              : countdown > 0
+                ? `Confirmar (${countdown}s)`
+                : "Confirmar"}
           </button>
         </div>
       </div>

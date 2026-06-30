@@ -211,10 +211,8 @@ pub fn search_songs(db: State<'_, Database>, query: String) -> Result<Vec<SongLi
 #[tauri::command]
 pub fn toggle_favorite(
     db: State<'_, Database>,
-    store: State<'_, SystemStore>,
     song_id: String,
 ) -> Result<bool, AppError> {
-    require_server_settings(&store)?;
     info!("Alternando favorito para música: {}", song_id);
     match db.toggle_favorite(&song_id) {
         Ok(is_now_favorite) => {

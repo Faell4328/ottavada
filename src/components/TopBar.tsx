@@ -140,7 +140,7 @@ export default function TopBar({
                 ? clientBlockedTitle
                 : isSyncLocked
                   ? syncBlockedTitle
-                  : "Indexar diretório"
+                  : "Indexar pasta"
             }
             onClick={handleScanDirectory}
             disabled={isClient || isSyncLocked}

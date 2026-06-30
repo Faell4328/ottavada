@@ -66,7 +66,7 @@ describe("ScoreRow menu", () => {
       "Usar como base",
       "Não permitir envio",
       "Ignorar partitura",
-      "Mover para Lixeira",
+      "Mover para lixeira",
     ]);
   });
 
