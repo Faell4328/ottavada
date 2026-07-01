@@ -1,4 +1,6 @@
-# Músicas
+Todos os arquivos são enviados para o Provedor de Nuvem, mas nem todos são para o **Computador de Ensaio**. Para isso que serve o status nas músicas e partituras.
+
+**Músicas**
 
 - **Envio permitido (`main`)**: a música possui pelo menos uma partitura com status **Envio permitido** (`main`).
 
@@ -10,7 +12,7 @@
 
 ---
 
-# Partituras
+**Partituras**
 
 - **Envio permitido (`main`)**: são enviadas ao provedor de nuvem e ficam disponíveis para os clientes.
 - **Envio não permitido (`draft`)**: não são enviadas ao provedor de nuvem.
@@ -18,7 +20,7 @@
 
 ---
 
-# Observações
+Observações
 
 - Músicas com status **`draft`** ou **`not_found`** não são disponibilizadas para o cliente e são removidas caso já existam nele.
 

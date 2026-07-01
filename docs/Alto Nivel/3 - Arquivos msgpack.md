@@ -1,3 +1,7 @@
+**Porque diabos msgpack?** Porque ele é mais leve e mais rápido, se fosse um arquivo de configuração onde alguém precisa ler e alterar faria sentido ser algo tipo JSON, mas é algo gerado por computador para computador, então é melhor ser um msgpack.
+
+---
+
 **Event Log** (`events.msgpack`)
 
 Contém as alterações incrementais do sistema (inserções, atualizações e remoções).

@@ -1,4 +1,4 @@
-# 1. Indexação de Diretórios
+# 1. Indexação de diretório (pasta)
 
 O sistema deve permitir a indexação de diretórios que contenham arquivos de partituras em formatos compatíveis.
 
@@ -23,13 +23,9 @@ Durante o processo de indexação, o sistema deve utilizar o nome do arquivo par
 
 Caso não seja possível identificar o instrumento a partir do nome do arquivo, o campo de sugestão deverá permanecer vazio para preenchimento manual pelo usuário.
 
-## 1.3. Ordem das partituras
+## 1.3. Ordem da partituras
 
-1° Deve vir as partituras sem nome;
-
-2° Deve vir as partituras que tiveram o instrumento identificado;
-
-3° Deve vir os instrumentos que foram identificados, mas não está na lista. Eles devem ficar em ordem alfabética.
+Deve ser a mesma ordem que no **Requisitos funcional - ambos** em **Ordem de listagem na música**.
 
 ---
 
@@ -37,26 +33,59 @@ Caso não seja possível identificar o instrumento a partir do nome do arquivo, 
 
 ## 2.1. Nome da música
 
-O nome da música deve ser todo em maiúsculo, por questão de padronização.
+O nome da música deve ser sempre em maiúsculo.
 
 ## 2.2. Operações disponíveis
 
+### 2.2.1. Músicas com status "envio permitido"
+
 O usuário deve poder:
 
-- adicionar músicas aos favoritos, tornando-as visíveis na seção **Favoritos**;
-- abrir o diretório da música no Explorador de Arquivos do Windows;
-- editar as informações da música, incluindo:
+- **abrir**, expande a música e mostrar todas as partituras;
+- **abrir local**, abre no explorador de arquivos a pasta indexada daquela música;
+- **adicionar/remover nos favoritos**;
+- **editar** as informações da música, incluindo:
   - nome;
   - compositor;
   - arranjador;
   - categorias;
-- definir música como **não permitir envio** (apenas se a música estiver como **permitir envio**);
-- definir música como **permitir envio** (apenas se a música estiver como **não permitir envio**);
-- deletar música (aqui tem duas escolhas)
-  - parar de indexar diretório
-  - deletar diretório e arquivos (também parando de indexar)
+- **não permitir envio**, alterando o status da música e das partituras para `draft`;
+- **remover música**, deve abrir um modal de dar duas opções para o usuário:
+  - **parar de indexar pasta**, remove a música e partitura(s) do Score Maestro;
+  - **mover pasta e arquivos para lixeira** e arquivos (também parando de indexar).
 
-## 2.3. Visualização expandida
+### 2.2.2. Músicas com status "envio não permitido"
+
+O usuário deve poder:
+
+- **abrir**, expande a música e mostrar todas as partituras;
+
+- **abrir local**, abre no explorador de arquivos a pasta indexada daquela música;
+
+- **adicionar/remover nos favoritos**;
+
+- **editar** as informações da música, incluindo:
+  
+  - nome;
+  - compositor;
+  - arranjador;
+  - categorias;
+
+- **permitir envio**, alterando o status da música e das partituras `main`;
+
+- **remover música**, deve abrir um modal de dar duas opções para o usuário:
+  
+  - **parar de indexar pasta**, remove a música e partitura(s) do Score Maestro;
+  - **mover pasta e arquivos para lixeira** e arquivos (também parando de indexar).
+
+### 2.2.3. Músicas com status "sem partitura"
+
+O usuário deve poder:
+
+- **reindexar música**, alterando caminho e nome da pasta referente aquela música;
+- **parar de indexar pasta**, remove música do Score Maestro.
+
+## 2.3. Monitoramento de alterações <mark>(Não implementado)</mark>
 
 Quando uma música estiver expandida e exibindo suas partituras, o sistema deve monitorar continuamente o diretório indexado e atualizar a interface sempre que alterações forem identificadas.
 
@@ -66,24 +95,43 @@ Quando uma música estiver expandida e exibindo suas partituras, o sistema deve 
 
 ## 3.1. Operações disponíveis
 
+### 3.2.1. Partituras com status "envio permitido"
+
 O usuário deve poder:
 
-- abrir a partitura utilizando o aplicativo padrão do sistema operacional associado ao tipo do arquivo;
-- abrir o diretório da partitura no Explorador de Arquivos do Windows;
-- editar o nome do instrumento;
-- utilizar uma partitura como base para criar uma nova;
-- excluir definitivamente o arquivo da partitura;
-- definir uma partitura como **permitir envio**.
+- **abrir**, será aberto a partitura utilizando o aplicativo padrão associado a extensão do arquivo;
+- **abrir local**, abre no explorador de arquivos na pasta indexada, com o arquivo da partitura selecionada;
+- **editar**, permitindo alterar o nome do instrumento;
+- **usar como base**, usa essa partitura como base para criar outra;
+- **não permitir envio**, alterando o status da partitura para `draft`;
+- **ignorar partitura**, atualiza o status da partitura para `ignored`;
+- **mover para lixeira**, move o arquivo para lixeira.
 
-## 3.2. Partitura indisponível
+### 3.2.2. Partituras com status "envio não permitido"
 
-Caso o diretório seja movido, renomeado ou removido, o sistema deve:
+O usuário deve poder:
 
-- notificar o usuário;
-- disponibilizar opções para reindexação;
-- permitir a exclusão da música.
+- **abrir**, será aberto a partitura utilizando o aplicativo padrão associado a extensão do arquivo;
+- **abrir local**, abre no explorador de arquivos na pasta indexada, com o arquivo da partitura selecionada;
+- **editar**, permitindo alterar o nome do instrumento;
+- **usar como base**, usa essa partitura como base para criar outra;
+- **permitir envio**, alterando o status da partitura para `main`;
+- **ignorar partitura**, atualiza o status da partitura para `ignored`;
+- **mover para lixeira**, move o arquivo para lixeira.
 
-## 3.3. Detecção de alterações nas partituras
+### 3.2.3. Partituras com status "ignorada"
+
+O usuário deve poder:
+
+- **abrir**, será aberto a partitura utilizando o aplicativo padrão associado a extensão do arquivo;
+- **abrir local**, abre no explorador de arquivos na pasta indexada, com o arquivo da partitura selecionada;
+- **editar**, permitindo alterar o nome do instrumento;
+- **usar como base**, usa essa partitura como base para criar outra;
+- **permitir envio**, alterando o status da partitura para `main`;
+- **não permitir envio**, alterando o status da partitura para `draft`;
+- **mover para lixeira**, move o arquivo para lixeira.
+
+## 3.3. Detecção de alterações nas partituras <mark>(Possível duplicada: "verificar alterações")</mark>
 
 O sistema deve monitorar continuamente os arquivos das partituras pertencentes aos diretórios indexados e identificar alterações.
 
@@ -106,10 +154,6 @@ O usuário deve poder:
 - editar categorias;
 - excluir categorias.
 
-## 4.2. Categoria padrão
-
-O sistema deve manter permanentemente a categoria **Sem categoria**.
-
 ---
 
 # 5. Compositores e Arranjadores
@@ -129,7 +173,7 @@ O usuário deve poder:
 
 ## 5.3. Sugestões durante digitação
 
-Ao informar compositores ou arranjadores durante a criação ou edição de músicas, o sistema deve sugerir registros já existentes.
+Ao começar a digitar o nome do compositor ou arranjador na criação ou edição de uma música, o sistema deve sugerir com base no que for sendo digitado.
 
 ---
 
@@ -141,21 +185,9 @@ O sistema deve exibir o progresso de todas as etapas executadas.
 
 Após a verificação de alteração, deve abrir um modal informando tudo que foi alterado.
 
-O usuário deve poder escolher continuar ou cancelar.
+O usuário deve poder escolher: continuar ou cancelar.
 
-- Caso o usuário cancele, não deve alterar nada internamente (como se não tivesse feito).
-
-## 6.2. Empacotamento com tar e compactar
-
-Ao agrupar partituras:
-
-- o tar deve ser nomeador com o id da música;
-- os arquivos devem permanecer na raiz do tar;
-  - não devem existir subdiretórios;
-- os arquivos devem ser renomeados utilizando o ID da partitura;
-- após agrupar e renomear com tar, é preciso comprimir com `zst`.
-
-## 6.3. Etapas upload para nuvem
+## 6.2. Etapas upload para nuvem
 
 Etapas:
 
@@ -164,9 +196,25 @@ Etapas:
 3. Agrupar e compactar arquivos alterados;
 4. Enviar arquivos novos ou modificados.
 
-## 6.4. Snapshot
+---
+
+# 7. Processamento de arquivos
+
+## 7.1. Empacotamento com tar e compactar com zst
+
+### Música e partituras com status envio permitido
+
+As partituras devem ser agrupadas em um `tar` e ser renomeada para o `id` da partitura;
+
+Os arquivos devem permanecer na raiz do `tar` (não existir subdiretórios);
+
+Depois de juntar tudo com `tar`, deve ser compactado com `zst`.
+
+## 7.2. Snapshot
 
 Um snapshot deve ser gerado quando o arquivo de eventos ultrapassar **1 MB**.
+
+Quando um snapshot é gerado, deve deletar o arquivo de eventos.
 
 Após a geração do snapshot:
 
@@ -177,7 +225,7 @@ Após a geração do snapshot:
 
 ---
 
-# 7. Configurações
+# 8. Configurações
 
 O usuário deve poder:
 
@@ -192,23 +240,25 @@ O usuário deve poder:
 
 ---
 
-# 8. Backup
+# 9. Backup
 
-O backup deve ser **gerado automaticamente todos os dias**.
+O backup deve ser **gerado automaticamente** a cada 1 hora.
 
 Um backup **não deve substituir** o outro.
 
-Backups **mais velhos que 7 dias** devem ser **deletados**.
+O sistema deve manter os 10 últimos arquivos de bakcup, o restante deve ser deletado.
+
+Deve ter um time em loop de 1 hora para geração de backup em seções longas <mark>(Não implementado)</mark>.
 
 ---
 
-# 9. Relatório de alterações
+# 10. Relatório de alterações
 
-O relatório é executado quando o usuário clica em "aplicar alterações", depois da etapa de "consultar alterações". O objetivo é mostrar o que foi adicionado, alterado e deletado, permitindo o usuário cancelar adições, alterações e remoções.
+O relatório é executado quando o usuário clica em "aplicar alterações", depois da etapa de "verificar alterações". O objetivo é mostrar o que foi adicionado, alterado e deletado.
 
 O relatório deve ser direto e resumido, sendo claro para o usuário.
 
-## 9.1. Seções
+## 10.1. Seções
 
 - **adicionado** - mostra tudo que foi adicionado.
 
@@ -216,13 +266,13 @@ O relatório deve ser direto e resumido, sendo claro para o usuário.
 
 - **removido** - mostra tudo que foi removido.
 
-### 9.2. Música adicionada
+### 10.2. Resumo
 
-Quando uma música for adicionada via indexação, deve mostrar: "A músicas `xxx` foi adicionada com `xxx` partituras".
+Quando tiver uma mesma ação de várias partituras, envolvendo a mesma música, deve agrupar tudo em uma linha. Evitando ter várias linhas para uma mesma coisa, ex: "Foi adicionado a música `xx` as partitura `aaa`, `bbb` e `ccc`".
 
 ---
 
-# 10. Inicialização
+# 11. Inicialização
 
 Durante a iniciação do aplicativo, o sistema deve:
 
@@ -230,17 +280,19 @@ Durante a iniciação do aplicativo, o sistema deve:
 
 2. Enviar telemetria.
 
+3. Gerar backup (se tiver na hora) e iniciar timer de backup <mark>(Não implementado)</mark>.
+
 ---
 
-# 11. Identificação de duplicação (<mark>Não implementado</mark>)
+# 12. Identificação de duplicação <mark>(Não implementado)</mark>
 
-## 11.1. Possíveis músicas duplicadas
+## 12.1. Possíveis músicas duplicadas
 
 O sistema deve identificar nomes de músicas parecidos, ex: `"Hino Nacional"` e `"O Hino Nacional"`, o sistema deve identificar e reportar para o usuário.
 
 Deve ser usado o **Trigram / N-gram Similarity** para identificar as possíveis músicas duplicadas, sendo executado no **indexar diretório**.
 
-## 11.2. Varredura de alterações (etapa do "aplicar alterações")
+## 12.2. Varredura de alterações (etapa do "aplicar alterações")
 
 Como o sistema indexa diretório, o usuário pode por fora duplicar uma partitura já indexada, por exemplo: 
 

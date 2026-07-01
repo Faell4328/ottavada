@@ -7,13 +7,13 @@ Tabela responsável por armazenar todos os compositores.
 | id    | text (`uuid`) | Sim | Não | Não        | Sim          | Cliente / Servidor |
 | name  | text          | Não | Não | Não        | Sim          | Cliente / Servidor |
 
-# composerSongs
+# composersSongs
 
-| Campo      | Tipo          | PK  | FK  | Referência  | Obrigatório? | Onde?              |
-| ---------- | ------------- | --- | --- | ----------- | ------------ | ------------------ |
-| id         | text (`uuid`) | Sim | Não | Não         | Sim          | Cliente / Servidor |
-| composerId | text (`uuid`) | Não | Sim | composer.id | Sim          | Cliente / Servidor |
-| songId     | text (`uuid`) | Não | Sim | songs.id    | Sim          | Cliente / Servidor |
+| Campo       | Tipo          | PK  | FK  | Referência  | Obrigatório? | Onde?              |
+| ----------- | ------------- | --- | --- | ----------- | ------------ | ------------------ |
+| id          | text (`uuid`) | Sim | Não | Não         | Sim          | Cliente / Servidor |
+| composer_id | text (`uuid`) | Não | Sim | composer.id | Sim          | Cliente / Servidor |
+| song_id     | text (`uuid`) | Não | Sim | songs.id    | Sim          | Cliente / Servidor |
 
 # arrangers
 
@@ -24,13 +24,13 @@ Tabela responsável por armazenar todos os arranjadores.
 | id    | text (`uuid`) | Sim | Não | Não        | Sim          | Cliente / Servidor |
 | name  | text          | Não | Não | Não        | Sim          | Cliente / Servidor |
 
-# arrangerSongs
+# arrangersSongs
 
-| Campo      | Tipo          | PK  | FK  | Referência  | Obrigatório? | Onde?              |
-| ---------- | ------------- | --- | --- | ----------- | ------------ | ------------------ |
-| id         | text (`uuid`) | Sim | Não | Não         | Sim          | Cliente / Servidor |
-| arrangerId | text (`uuid`) | Não | Sim | arranger.id | Sim          | Cliente / Servidor |
-| songId     | text (`uuid`) | Não | Sim | songs.id    | Sim          | Cliente / Servidor |
+| Campo       | Tipo          | PK  | FK  | Referência  | Obrigatório? | Onde?              |
+| ----------- | ------------- | --- | --- | ----------- | ------------ | ------------------ |
+| id          | text (`uuid`) | Sim | Não | Não         | Sim          | Cliente / Servidor |
+| arranger_id | text (`uuid`) | Não | Sim | arranger.id | Sim          | Cliente / Servidor |
+| song_id     | text (`uuid`) | Não | Sim | songs.id    | Sim          | Cliente / Servidor |
 
 # categories
 
@@ -45,53 +45,47 @@ Tabela responsável por armazenar todas as categorias.
 
 Tabela responsável por armazenar todas as relações entre categorias e música (N:N).
 
-| Campo      | Tipo          | PK  | FK  | Referência    | Obrigatório? | Onde?              |
-| ---------- | ------------- | --- | --- | ------------- | ------------ | ------------------ |
-| id         | text (`uuid`) | Sim | Não | Não           | Sim          | Cliente / Servidor |
-| categoryId | text (`uuid`) | Não | Sim | categories.id | Sim          | Cliente / Servidor |
-| songId     | text (`uuid`) | Não | Sim | songs.id      | Sim          | Cliente / Servidor |
+| Campo       | Tipo          | PK  | FK  | Referência    | Obrigatório? | Onde?              |
+| ----------- | ------------- | --- | --- | ------------- | ------------ | ------------------ |
+| id          | text (`uuid`) | Sim | Não | Não           | Sim          | Cliente / Servidor |
+| category_id | text (`uuid`) | Não | Sim | categories.id | Sim          | Cliente / Servidor |
+| song_id     | text (`uuid`) | Não | Sim | songs.id      | Sim          | Cliente / Servidor |
 
 # songs
 
 Tabela responsável por armazenar as informações das músicas.
 
-| Campo                   | Tipo              | PK  | FK  | Referência | Obrigatório? | Onde?              |
-| ----------------------- | ----------------- | --- | --- | ---------- | ------------ | ------------------ |
-| id                      | text (`uuid`)     | Sim | Não | Não        | Sim          | Cliente / Servidor |
-| name                    | text              | Não | Não | Não        | Sim          | Cliente / Servidor |
-| isFavorite              | bool              | Não | Não | Não        | Não          | Cliente / Servidor |
-| path                    | text              | Não | Não | Não        | Sim          | Servidor           |
-| lastScoreFileModifiedAt | integer           | Não | Não | Não        | Sim          | Servidor           |
-| status                  | (`main`  `draft`) | Não | Não | Não        | Sim          | Servidor           |
+| Campo                       | Tipo              | PK  | FK  | Referência | Obrigatório? | Onde?              |
+| --------------------------- | ----------------- | --- | --- | ---------- | ------------ | ------------------ |
+| id                          | text (`uuid`)     | Sim | Não | Não        | Sim          | Cliente / Servidor |
+| name                        | text              | Não | Não | Não        | Sim          | Cliente / Servidor |
+| is_favorite                 | bool              | Não | Não | Não        | Não          | Cliente / Servidor |
+| path                        | text              | Não | Não | Não        | Sim          | Servidor           |
+| last_score_file_modified_at | integer           | Não | Não | Não        | Sim          | Servidor           |
+| status                      | (`main`  `draft`) | Não | Não | Não        | Sim          | Servidor           |
 
-- `path` - diretório onde as partituras estão sendo indexadas.    
-
-- `lastScoreFileModifiedAt` - timestamp da última alteração de algum arquivo de partitura.
+- `path` - diretório onde as partituras estão sendo indexadas.
 
 # scores
 
 Tabela responsável por armazenar as informações das partituras.
 
-| Campo          | Tipo                           | PK  | FK  | Referência  | Obrigatório? | Onde?              |
-| -------------- | ------------------------------ | --- | --- | ----------- | ------------ | ------------------ |
-| id             | text (`uuid`)                  | Sim | Não | Não         | Sim          | Cliente / Servidor |
-| songId         | text (`uuid`)                  | Não | Sim | songs.id    | Sim          | Cliente / Servidor |
-| name           | text                           | Não | Não | Não         | Sim          | Cliente / Servidor |
-| hostId         | text                           | Não | Sim | computer.id | Sim          | Servidor           |
-| fileName       | text                           | Não | Não | Não         | Sim          | Servidor           |
-| fileExtension  | text                           | Não | Não | Não         | Sim          | Cliente / Servidor |
-| fileModifiedAt | integer                        | Não | Não | Não         | Sim          | Servidor           |
-| fileSize       | integer                        | Não | Não | Não         | Sim          | Servidor           |
-| hash           | text                           | Não | Não | Não         | Sim          | Servidor           |
-| status         | (`main`, `draft` ou `ignored`) | Não | Não | Não         | Sim          | Servidor           |
+| Campo            | Tipo                           | PK  | FK  | Referência | Obrigatório? | Onde?              |
+| ---------------- | ------------------------------ | --- | --- | ---------- | ------------ | ------------------ |
+| id               | text (`uuid`)                  | Sim | Não | Não        | Sim          | Cliente / Servidor |
+| song_id          | text (`uuid`)                  | Não | Sim | songs.id   | Sim          | Cliente / Servidor |
+| name             | text                           | Não | Não | Não        | Sim          | Cliente / Servidor |
+| file_name        | text                           | Não | Não | Não        | Sim          | Servidor           |
+| file_extension   | text                           | Não | Não | Não        | Sim          | Cliente / Servidor |
+| file_modified_at | integer                        | Não | Não | Não        | Sim          | Servidor           |
+| file_size        | integer                        | Não | Não | Não        | Sim          | Servidor           |
+| status           | (`main`, `draft` ou `ignored`) | Não | Não | Não        | Sim          | Servidor           |
 
-- `hostId` - Id do computador que contém o arquivo original localmente (indexado).
+- `file_name` - nome do arquivo e a extensão, ex: `flauta.mus`.
 
-- `fileName` - nome do arquivo e a extensão, ex: `flauta.mus`.
+- `file_modified_at` - timestamp da última modificação do arquivo.
 
-- `fileModifiedAt` - timestamp da última modificação do arquivo.
-
-- `fileSize` - tamanho do arquivo.
+- `file_size` - tamanho do arquivo.
 
 # changes
 
@@ -102,7 +96,7 @@ Tabela responsável por armazenar todas as alterações até gerar o arquivo `ev
 | id        | text (`uuid`)                                                                                                      | Sim | Não | Não        | Sim          | Servidor |
 | type      | (`insert`, `update` ou `delete`)                                                                                   | Não | Não | Não        | Sim          | Servidor |
 | entity    | (`categories`, `categoriesSongs`, `composers`, `composerSongs`, `arrangers`, `arrangerSongs`, `songs` ou `scores`) | Não | Não | Não        | Sim          | Servidor |
-| entityId  | text (`uuid`)                                                                                                      | Não | Sim | entity.id  | Sim          | Servidor |
+| entity_id | text (`uuid`)                                                                                                      | Não | Sim | entity.id  | Sim          | Servidor |
 | field     | text                                                                                                               | Não | Não | Não        | Não          | Servidor |
 | value     | text                                                                                                               | Não | Não | Não        | Não          | Servidor |
 | timestamp | integer                                                                                                            | Não | Não | Não        | Sim          | Servidor |
@@ -111,20 +105,20 @@ Tabela responsável por armazenar todas as alterações até gerar o arquivo `ev
 
 - `entity` - é o nome da tabela que foi alterada.
 
-- `entityId` - é o id do elemento da tabela que foi alterado.
+- `entity_id` - é o id do elemento da tabela que foi alterado.
 
 - `field` - é o nome do campo que foi alterado na tabela.
 
 - `value` - é o valor que foi inserido ou atualizado.
 
-# songsBackup
+# backupQueue
 
 Essa tabela responsável por controlar a geração dos `{songId}.tar.zst` e que todos tenha sido feito o upload para a nuvem.
 
-| Campo  | Tipo                             | PK  | FK  | Referência | Obrigatório? | Onde?    |
-| ------ | -------------------------------- | --- | --- | ---------- | ------------ | -------- |
-| songId | text (`uuid`)                    | Sim | Não | Não        | Sim          | Servidor |
-| status | (`pending`, `processing` e `ok`) | Não | Não | Não        | Sim          | Servidor |
+| Campo   | Tipo                             | PK  | FK  | Referência | Obrigatório? | Onde?    |
+| ------- | -------------------------------- | --- | --- | ---------- | ------------ | -------- |
+| song_id | text (`uuid`)                    | Sim | Não | Não        | Sim          | Servidor |
+| status  | (`pending`, `processing` e `ok`) | Não | Não | Não        | Sim          | Servidor |
 
 - `status`:
   

@@ -16,7 +16,7 @@ Solução:
   - Com base nisso, vai ter um modal ou página, que vai listar todas as alterações pendentes (para servidor) que foi feita pelo cliente, ele vai aprovar ou recusar.
   - Os que foram aprovados são aplicados na tabela definitiva, os que são recusados vão ser descartados.
   - Caso seja um arquivo, deve ter a opção para o usuário clicar para ver o original e o alterado.
-- ! Atenção: Quando a alteração (`field`) for  `file`, preciso tomar cuidado e elaborar um bom plano para que não dê conflito ou fique desorganizado. 
+- ! Atenção: Quando a alteração (`field`) for  `file`, preciso tomar cuidado e elaborar um bom plano para que não dê conflito ou fique desorganizado.
 
 **20-03-2026** - Problemas futuros que preciso ter resolvido ou pensando em uma solução para resolver.
 
@@ -31,23 +31,18 @@ Solução:
 - Então cheguei a três possibilidades:
   
   1. Utilizar python de fundo com SKD.
-  
   - Tem os seguintes problemas:
     
     1. Teria que ter python instalado no computador.
     
     2. Teria que dar manutenção (atualização e ajuste no código).
-  
   1. Utilizar outro provedor de nuvem, pCloud.
-  
   - Tem os seguinte problemas:
     
     1. Não é tão robusto e confiável como o Google Drive (padrão do mercado).
     
     2. Nunca utilize e não faço ideia como funciona. Aparenta ser mais simples.
-  
   1. Utilizar rclone para tomar conta.
-  
   - Tem o seguinte problema:
     
     1. Precisa ter o rclone instalado e manter atualizado.
@@ -198,7 +193,7 @@ Simplificando a telemetria
 
 - Está sendo bem chato implementar a telemetria, devido a muitos eventos e possibilidades, então para `v1` o que importa mesmo é: o software está sendo usado, quais problemas os usuários estão tendo e algumas informações a mais.
 
-**11/05/2026**
+**11-05-2026**
 
 O maestro da minha orquestra não está usando a ferramenta e o feedback não veio, apesar das tentativas. Para evitar atrito e insistência improdutiva, vou mudar o foco para validar o produto em outra organização.
 
@@ -228,7 +223,7 @@ Próximos passos e melhorias:
 - Preciso criar um laucher e arrumar um jeito de tirar a maldida mensagem do windows de software suspeito (Microsoft defender SmartScreen).
   - Nem que eu tenha que subir 1000 máquinas virtuais e baixar o Score Maestro nas 1000.
 
-**23/05/2026**
+**23-05-2026**
 
 Mudança radical do software e documentação. Recentemente foi na casa do maestro da orquestra que faço parte e vi o quanto meu software ainda está mal desenhado e implementando. Então, irei ajusta-ló, começando pela documentação, realmente não gosto da forma que a documentação está feita. Se eu ficar com dúvida ou precisar atualizar algo, quero ir direto e não ter que ficar procurando.
 
@@ -242,7 +237,7 @@ Mudanças:
 
 - Maior personalização do software.
 
-**14/06/2026** - Dificuldade para identificar falsa alteração em arquivos músicas
+**14-06-2026** - Dificuldade para identificar falsa alteração em arquivos músicas
 
 Estou estudando forma de identificar falsas alterações, principalmente em Finale, já que ele tem o problema crônico de sugerir salvar, mesmo que não tenha alterado nada no arquivo. Mas está sendo um verdadeiro desafio, já que cada versão do Finale tem uma forma de salvar os dados, então um arquivo do `.mus` salvo em um Finale 11, for aberto e salvo (mesmo sem alteração na partitura) o hash do arquivo será alterado. Também tem esse problema com `.musx`, mesmo convertendo para `.zip`, descompactado e verificando o `score.dat`. Esse problema não é exclusivo do Finale.
 
@@ -252,8 +247,16 @@ Eu cheguei a adicionar essa função no **Score Maestro**, sempre que uma partit
 
 A solução será deixar o modal de revisão de alteração mais organizado e inteligente: podendo marcar e desmarcar, efetivando apenas quando o usuário clicar em "confirmar".
 
-**27/06/2026** - Foco na gringa
+**27-06-2026** - Foco na gringa
 
 Ficar focado apenas no povo brasileira irá limitar muito minhas chances do Score Maestro dar certo. Isso ocorre porque o Brasil é país subdesenvolvido, com isso a maioria das pessoas usam Windows 7 (pessoal mais velho) e também o pessoal na gringa é mais para frente, sempre buscando modernizar e melhorar, diferente do Brasil, onde a maioria prefere manter o padrão. E sem contar a quantidade MUITO maior de orquestras e bandas.
 
 Não estou falando mal do Brasil, essa é a realidade e funciona (não tão bem, mas funciona). Estou apenas tomando a melhor decisão para o futuro da minha ferramenta. E sem contar que posso promovela falando que é um aplicativo internacional, ganhando mais confiança.
+
+**29-06-2026** - Mermaid vs Draw.io
+
+Não gosto do Mermaid: acho mais chato de fazer o diagrama e o resultado final é menos bonito. Mas como o objetivo da documentação é ser fácil para pessoas e LLMs, vou usar Mermaid de um jeito que fique bom para ambos. O Mermaid é texto puro e simples, já o Draw.io é XML, sendo mais difícil para LLMs.
+
+**01-07-2026** - Alteração de nome do projeto
+
+O nome do projeto foi alterado de **Score Maestro** para **Ottavada**. Score Maestro é um excelente nome, mas tinhas grandes problemas: 1° O domínio **.com** já estava sendo usado; 2° LLMs se embolava para explicar, já que é a junção de **Score** + **Maestro**; 3° **Score** pode significar VÁRIAS coisas além de partitura; 4° É um nome genérico extremamente fácil de copiar. **Ottavada** vem de *oitarvar* ou *ottava*, e o *da* veio da ideia de "oitavada", a partitura está "oitavada", trocando o "i" pelo "t" fica **ottavada**. Eu precisava de um nome que fosse bom para o Brasil e para Fora, cheguei nesse nome.

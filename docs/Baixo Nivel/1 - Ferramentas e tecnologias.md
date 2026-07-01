@@ -56,11 +56,11 @@ O sistema utiliza `Tauri` por baixo de tudo. A interface fica no frontend e as r
 - `tracing-appender` - grava logs em arquivo.
 - `windows-sys` - expõe APIs específicas do Windows quando necessário.
 
-# 3. Banco de Dados e Armazenamento
+# 3. Banco de Dados e Arquivos
 
 - `SQLite` - guarda os dados locais da biblioteca, backups e estados do app.
+  - `FTS5` - extensão do SQLite usada para busca textual mais rápida e flexível.
 - `MessagePack` (`.msgpack`) - formato compacto usado nos dados exportados e sincronizados.
-- `FTS5` - extensão do SQLite usada para busca textual mais rápida e flexível.
 
 # 4. Outros
 

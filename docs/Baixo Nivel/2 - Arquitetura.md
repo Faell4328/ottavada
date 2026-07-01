@@ -1,60 +1,178 @@
-# Arquitetura do Front
+# Comunicação entre o Front e Back
 
-## Estrutura de diretórios
+A comunicação ocorre por meio de `invoke()` do **@tauri-apps/api/core**, com wrappers tipados em `api/commands.ts`.
 
-```
-src/
-├── api/
-│   └── commands.ts         # Wrappers tipados para invoke() do Tauri
-├── components/
-│   ├── ui/                 # Componentes de UI reutilizáveis (ConfirmationModal, etc.)
-│   ├── FirstRunPage.tsx    # Página de configuração inicial
-│   ├── SettingsPage.tsx    # Página de configurações
-│   ├── SongsList.tsx       # Lista principal de músicas
-│   ├── Sidebar.tsx         # Barra lateral (categorias, compositores, arranjadores)
-│   ├── TopBar.tsx          # Barra superior (busca, ações)
-│   ├── StatusBar.tsx       # Barra de progresso inferior
-│   ├── SongRow.tsx         # Linha de música na listagem
-│   ├── ScoreRow.tsx        # Linha de partitura expandida
-│   └── Edit*Modal.tsx      # Modais de edição (música, partitura, categoria, autor, instrumento)
-├── context/
-│   ├── AppContext.tsx       # Contexto global (Provider + hooks)
-│   ├── reducer.ts           # Reducer com estado global da aplicação
-│   ├── types.ts             # Tipos do contexto
-│   ├── useAppBootstrap.ts   # Inicialização (carregar dados do backend)
-│   ├── useAppCrudActions.ts # Operações CRUD (adicionar, editar, excluir)
-│   └── useAppScanFlow.ts    # Fluxo de verificação/aplicação de alterações
-├── hooks/
-│   ├── useConfirmation.ts   # Hook para modal de confirmação
-│   ├── useRcloneTest.ts     # Hook para testar conexão rclone
-│   └── useScrollLock.ts     # Hook para travar scroll durante modais
-├── types/
-│   └── index.ts             # Tipos TypeScript (SongListItem, Category, AppSettings, etc.)
-├── utils/
-│   ├── addFilesReview.ts    # Lógica de revisão de arquivos adicionados
-│   ├── categorySelection.ts # Filtro por categoria
-│   ├── computer.ts          # Detecção de tipo de computador
-│   ├── formatters.ts        # Formatação de data, tamanho, etc.
-│   ├── indexedFileReviewOrder.ts # Ordenação de arquivos na revisão
-│   ├── instrumentOrder.ts   # Ordem de instrumentos (padrão orquestra)
-│   ├── libraryDuplicates.ts  # Detecção de duplicatas
-│   ├── nameFormat.ts        # Padronização de nomes (maiúsculo)
-│   ├── paths.ts             # Manipulação de caminhos
-│   ├── rcloneErrors.ts       # Interpretação de erros do rclone
-│   ├── rcloneProgress.ts    # Parsing do progresso do rclone
-│   ├── scanReport.ts        # Geração do relatório de scan
-│   ├── scoreStatus.ts       # Lógica de status de partituras
-│   ├── sidebarView.ts       # Navegação da barra lateral
-│   ├── songOrder.ts         # Ordenação de músicas
-│   ├── songSearch.ts        # Busca por substrings
-│   ├── startupUpdate.ts     # Verificação de update na inicialização
-│   ├── updateLock.ts        # Bloqueio de ações durante update
-│   └── window.ts            # Restauração de janela
-├── App.tsx                  # Componente raiz (rotas, update gate, loading screen)
-├── App.css                  # Estilos globais
-├── index.css                # Reset e utilitários
-└── main.tsx                 # Entry point React
-```
+# Front
+
+## Diretórios e arquivos
+
+### Pasta api/
+
+Wrappers tipados para chamadas `invoke()` do Tauri, organizados por domínio.
+
+**commands.ts** - Expõe funções assíncronas para Songs, Scores, Categories, Settings, Updates, Scan, Rclone e Backup.
+
+---
+
+### Pasta components/
+
+Componentes React da interface gráfica.
+
+**FirstRunPage.tsx** - Página de configuração inicial exibida no primeiro acesso.
+
+**SettingsPage.tsx** - Página de configurações do aplicativo.
+
+**SongsList.tsx** - Lista principal de músicas.
+
+**Sidebar.tsx** - Barra lateral com categorias, compositores e arranjadores.
+
+**TopBar.tsx** - Barra superior com busca e ações.
+
+**StatusBar.tsx** - Barra de progresso inferior.
+
+**SongRow.tsx** - Linha de música na listagem.
+
+**ScoreRow.tsx** - Linha de partitura expandida.
+
+**AddFilesModal.tsx** - Modal de adição e revisão de arquivos de partituras.
+
+**ChangeComputerTypeModal.tsx** - Modal para alternar entre tipo servidor e cliente.
+
+**DeleteFileConfirmationModal.tsx** - Modal de confirmação para exclusão de arquivos.
+
+**EditAuthorModal.tsx** - Modal de criação e edição de compositores e arranjadores.
+
+**EditCategoryModal.tsx** - Modal de criação e edição de categorias.
+
+**EditInstrumentModal.tsx** - Modal de edição de instrumento de partitura.
+
+**EditMusicModal.tsx** - Modal de criação e edição de músicas.
+
+**EditScoreModal.tsx** - Modal de criação e edição de partituras.
+
+**RcloneLicenseModal.tsx** - Modal de aceite de licença do rclone.
+
+**RcloneProviderModal.tsx** - Modal de configuração do provedor rclone.
+
+**ScanReportModal.tsx** - Modal com relatório detalhado do scan de arquivos.
+
+**UseAsBaseScoreModal.tsx** - Modal para usar partitura existente como base.
+
+**UpdateModal.tsx** - Modal de progresso e status de atualização do app.
+
+#### Subpasta ui/
+
+**ui/index.ts** - Barrel file que reexporta todos os componentes da pasta ui/.
+
+**ui/CategoryCheckboxList.tsx** - Lista de checkboxes para seleção de categorias.
+
+**ui/ConfirmationModal.tsx** - Modal genérico de confirmação com título, mensagem e ações.
+
+**ui/ContextMenu.tsx** - Menu de contexto (clique direito) para ações em músicas e partituras.
+
+**ui/FormField.tsx** - Campo de formulário padronizado com label, input e erro.
+
+**ui/Metronome.tsx** - Metrônomo visual e sonoro para referência de andamento.
+
+**ui/metronome.css** - Estilos do componente Metronome.
+
+**ui/Modal.tsx** - Componente base de modal com overlay, fechamento e animação.
+
+---
+
+### Pasta context/
+
+Estado global via React Context + useReducer.
+
+**AppContext.tsx** - Provider e hooks do contexto global.
+
+**reducer.ts** - Reducer com estado e ações da aplicação.
+
+**types.ts** - Tipos do contexto (State, Action).
+
+**useAppBootstrap.ts** - Inicialização e carregamento de dados do backend.
+
+**useAppCrudActions.ts** - Operações CRUD (adicionar, editar, excluir).
+
+**useAppScanFlow.ts** - Fluxo de verificação e aplicação de alterações de arquivos.
+
+---
+
+### Pasta hooks/
+
+Hooks customizados reutilizáveis.
+
+**useConfirmation.ts** - Hook para modal de confirmação de ações.
+
+**useRcloneTest.ts** - Hook para testar conexão com provedor rclone.
+
+**useScrollLock.ts** - Hook para travar scroll durante modais abertos.
+
+---
+
+### Pasta types/
+
+Definições de tipos TypeScript da aplicação.
+
+**index.ts** - Tipos principais (SongListItem, Category, AppSettings, etc.).
+
+---
+
+### Pasta utils/
+
+Funções utilitárias e lógicas auxiliares.
+
+**addFilesReview.ts** - Lógica de revisão de arquivos adicionados.
+
+**categorySelection.ts** - Filtro e seleção por categoria.
+
+**computer.ts** - Detecção do tipo de computador (servidor/cliente).
+
+**formatters.ts** - Formatação de data, tamanho de arquivo, etc.
+
+**indexedFileReviewOrder.ts** - Ordenação de arquivos na tela de revisão.
+
+**instrumentOrder.ts** - Ordem de instrumentos conforme padrão de orquestra.
+
+**libraryDuplicates.ts** - Detecção de partituras duplicadas.
+
+**nameFormat.ts** - Padronização de nomes (maiúsculo inicial).
+
+**paths.ts** - Manipulação e normalização de caminhos de arquivo.
+
+**rcloneErrors.ts** - Interpretação de mensagens de erro do rclone.
+
+**rcloneProgress.ts** - Parsing do progresso de operações rclone.
+
+**scanReport.ts** - Geração e formatação do relatório de scan.
+
+**scoreStatus.ts** - Lógica de status de partituras.
+
+**sidebarView.ts** - Navegação e views da barra lateral.
+
+**songOrder.ts** - Ordenação de músicas na listagem.
+
+**songSearch.ts** - Busca de músicas por substrings.
+
+**startupUpdate.ts** - Verificação de atualização na inicialização.
+
+**updateLock.ts** - Bloqueio de ações durante instalação de update.
+
+**window.ts** - Restauração e gerenciamento da janela.
+
+---
+
+### Raiz do src/
+
+**App.tsx** - Componente raiz com rotas, update gate e loading screen.
+
+**App.css** - Estilos globais da aplicação.
+
+**index.css** - Reset CSS e classes utilitárias.
+
+**main.tsx** - Entry point React (ReactDOM.createRoot).
+
+---
 
 ## Rotas
 
@@ -79,74 +197,113 @@ O `State` do reducer (`reducer.ts`) centraliza:
 
 As ações do reducer cobrem operações CRUD, scan, rclone e navegação.
 
-## Comunicação com o backend
+---
 
-Toda comunicação usa `invoke()` do **@tauri-apps/api/core**, com wrappers tipados em `api/commands.ts:1-565`.
+# Back
 
-O arquivo expõe funções assíncronas organizadas por domínio:
+## Diretórios e arquivos
 
-- **Songs**: listar, buscar, favoritar, indexar, importar, criar, editar, excluir
-- **Scores**: listar, abrir, editar instrumento, alterar status, excluir, usar como base
-- **Categories**: CRUD
-- **Settings**: ler, salvar, first-run, toggle computer type, sair
-- **Updates**: verificar e instalar
-- **Scan**: preview de alterações, aplicar alterações, conexão com internet
-- **Rclone**: configurar, testar, upload, download, sync, progresso
-- **Backup**: gerar archives, events, snapshot, backup, importar/exportar
+### Pasta commands/
+
+Handlers dos comandos Tauri. Boundary da API entre frontend e backend.
+
+**mod.rs** - Módulo raiz, reexporta todos os submódulos de comandos.
+
+**common.rs** - Funções auxiliares compartilhadas entre comandos.
+
+**song_commands.rs** - Comandos de CRUD e operações de música.
+
+**score_commands.rs** - Comandos de CRUD e operações de partitura.
+
+**category_commands.rs** - Comandos de CRUD de categorias.
+
+**settings_commands.rs** - Comandos de leitura e escrita de configurações.
+
+**update_commands.rs** - Comandos de verificação e instalação de atualizações.
+
+**scan_commands.rs** - Comandos de verificação e aplicação de alterações de arquivos.
+
+**backup_commands.rs** - Comandos de geração de backup (archives, events, snapshot).
+
+**rclone_commands.rs** - Comandos de sincronização via rclone (config, test, upload, download).
+
+**scan_report.rs** - Geração e estruturação do relatório de scan de arquivos.
 
 ---
 
-# Arquitetura do Back
+### Pasta domain/
 
-## Estrutura de diretórios
+Modelos de domínio e erros. Camada pura, sem dependência de infraestrutura.
 
-```
-src-tauri/src/
-├── main.rs              # Entry point (chama lib::run)
-├── lib.rs                # Configuração do Tauri, setup, registro de comandos
-├── logger.rs             # Inicialização de logs (arquivo rotativo, 30 dias)
-├── commands/             # Handlers dos comandos Tauri (API boundary)
-│   ├── mod.rs
-│   ├── common.rs         # Funções auxiliares compartilhadas
-│   ├── song_commands.rs   # Comandos de música
-│   ├── score_commands.rs  # Comandos de partitura
-│   ├── category_commands.rs # Comandos de categoria
-│   ├── settings_commands.rs # Comandos de configuração
-│   ├── update_commands.rs # Comandos de atualização
-│   ├── scan_commands.rs   # Comandos de verificação de arquivos
-│   ├── backup_commands.rs # Comandos de backup
-│   ├── rclone_commands.rs # Comandos de sincronização
-│   └── scan_report.rs     # Geração de relatório de scan
-├── domain/               # Modelos de domínio e erros (NÃO depende de infra)
-│   ├── mod.rs
-│   ├── models.rs          # Song, Score, Category, AppSettings, enums, DTOs
-│   └── errors.rs          # AppError (enum de erros da aplicação)
-├── infrastructure/       # Acesso a dados e sistema
-│   ├── mod.rs
-│   ├── database.rs        # Conexão e migrações SQLite
-│   ├── database_songs.rs  # Queries de música
-│   ├── database_scores.rs # Queries de partitura
-│   └── store.rs           # Leitura/escrita do tauri-plugin-store
-└── services/             # Lógica de negócio
-    ├── mod.rs
-    ├── background_scanner.rs       # Scan inicial e monitoramento de arquivos
-    ├── backup_draft_ignored_service.rs # Upload de drafts/ignored para nuvem
-    ├── backup_msgpack_service.rs   # Geração de backup.msgpack
-    ├── backup_songs_service.rs     # Geração de {songId}.tar.zst
-    ├── client_sync_service.rs      # Sincronização cliente (download e apply)
-    ├── cloud_paths.rs              # Gerenciamento de paths na nuvem
-    ├── events_service.rs           # Geração de events.msgpack
-    ├── indexer.rs                  # Indexação de diretórios
-    ├── msgpack_zstd.rs             # Compressão/descompressão msgpack+zst
-    ├── name_formatter.rs           # Formatação e validação de nomes
-    ├── path_normalizer.rs          # Normalização de caminhos
-    ├── snapshot_service.rs         # Geração de snapshot.msgpack
-    └── telemetry_service.rs        # Envio periódico de telemetria
-```
+**mod.rs** - Módulo raiz do domínio.
+
+**models.rs** - Structs e enums: Song, Score, Category, AppSettings, ScoreStatus, ComputerType, RcloneProvider, DTOs.
+
+**errors.rs** - Enum AppError com todos os erros da aplicação.
+
+---
+
+### Pasta infrastructure/
+
+Acesso concreto a dados e sistema operacional.
+
+**mod.rs** - Módulo raiz da infraestrutura.
+
+**database.rs** - Conexão com SQLite, criação de tabelas e migrações.
+
+**database_songs.rs** - Queries e operações SQL da tabela de músicas.
+
+**database_scores.rs** - Queries e operações SQL da tabela de partituras.
+
+**store.rs** - Leitura e escrita do tauri-plugin-store (configurações persistentes).
+
+---
+
+### Pasta services/
+
+Lógica de negócio e orquestração. Depende de domain e infrastructure.
+
+**mod.rs** - Módulo raiz dos serviços.
+
+**background_scanner.rs** - Scan inicial de diretórios e monitoramento contínuo de arquivos.
+
+**backup_draft_ignored_service.rs** - Upload de arquivos rascunho/ignorados para nuvem.
+
+**backup_msgpack_service.rs** - Geração do arquivo backup.msgpack (exportação do banco).
+
+**backup_songs_service.rs** - Geração de arquivos {songId}.tar.zst por música.
+
+**client_sync_service.rs** - Sincronização do lado cliente (download e aplicação de mudanças).
+
+**cloud_paths.rs** - Gerenciamento e construção de paths no provedor de nuvem.
+
+**events_service.rs** - Geração do arquivo events.msgpack (alterações incrementais).
+
+**indexer.rs** - Indexação de diretórios de partituras em arquivos.
+
+**msgpack_zstd.rs** - Compressão e descompressão no formato msgpack+zstd.
+
+**name_formatter.rs** - Formatação e validação de nomes de músicas e compositores.
+
+**path_normalizer.rs** - Normalização de caminhos de arquivos do sistema.
+
+**snapshot_service.rs** - Geração do arquivo snapshot.msgpack (estado consolidado).
+
+**telemetry_service.rs** - Envio periódico de dados de telemetria anonimizados.
+
+---
+
+### Raiz do src-tauri/src/
+
+**main.rs** - Entry point do binário Tauri (chama lib::run).
+
+**lib.rs** - Configuração do Tauri, setup inicial, registro de comandos.
+
+**logger.rs** - Inicialização de logs em arquivo rotativo com retenção de 30 dias.
+
+---
 
 ## Camadas e dependências
-
-
 
 ```mermaid
 flowchart TD
@@ -161,40 +318,3 @@ Domain NÃO depende de Infrastructure
 - **services/**: Orquestram a lógica de negócio usando `infrastructure/` e `domain/`.
 - **infrastructure/**: Acesso concreto a SQLite e tauri-plugin-store.
 - **domain/**: Modelos puros (`Song`, `Score`, `Category`, `AppSettings`, enums como `ScoreStatus`, `ComputerType`, `RcloneProvider`) e erros (`AppError`).
-
-## Comunicação com o front
-
-O front chama funções Rust via `invoke("nome_do_comando", { args })`.
-
-O Tauri faz a serialização JSON automática dos argumentos e retorno usando `serde`.
-
-## Comunicação entre servidor e cliente
-
-A comunicação entre computadores **não é direta**. O fluxo usa um provedor de nuvem como intermediário:
-
-1. **Servidor** gera arquivos `.msgpack.zst` (events, snapshot) e `.tar.zst` (partituras) e envia para nuvem via rclone
-2. **Cliente** baixa os arquivos da nuvem e aplica localmente
-
-Formatos de arquivo na nuvem:
-
-- `events.msgpack.zst` — Alterações incrementais
-- `snapshot.msgpack.zst` — Estado consolidado do banco
-- `{songId}.tar.zst` — Arquivos de partituras agrupados por música
-
-## Banco de dados
-
-SQLite embutido (via `rusqlite` com feature `bundled`).
-
-Tabelas principais: `songs`, `scores`, `categories`, `song_categories`, `composers`, `arrangers`.
-
-## Setup na inicialização
-
-Ao abrir (`lib.rs:104-344`):
-
-1. Inicializa logger (arquivos rotativos, 30 dias)
-2. Cria diretórios de dados e rclone
-3. Abre/conecta banco SQLite
-4. Inicia telemetria (worker em thread separada)
-5. Executa scan inicial em thread separada (apenas no servidor)
-6. Registra ~70 comandos Tauri no `invoke_handler`
-7. Restaura janela (se minimizada) e eleva prioridade do processo (Windows)

@@ -368,3 +368,51 @@
 ## Correções
 
 - mudando de "mover para lixeira" para "parar de indexar" em músicas `not_found`.
+
+# Desenvolvimento
+
+## Correção de inconsistências
+
+**Adicionar todas as tags que faltam**
+
+**Adicionar o .exe para todas as versões**
+
+**Atualizar nome das linhas nas tabelas**
+
+**Atualizar o nome das tabelas e colunas**
+
+- [ ] Nome tabela: `changedField` -> `changes`
+
+- [ ] Nome tabela: `songsBackup` -> `backupQueue`
+
+- [ ] Remover tabela: `computerInformation` (é usado)
+
+- [ ] Remover a linha `hash`em `scores` (não é usado)
+
+- [ ] Remover a linha `last_score_file_modified_at` em `songs`(é usado)
+
+- [ ] Remover a linha `host_id` de `scores` (é usado)
+
+**Adicionar migração para não quebrar quem já tem o aplicativo instalado**
+
+**Corrigir código que usa nome antigo**
+
+**Remover código que usar ou criar tabelas antigas**
+
+**Usar o lock no tauri-plugin-store**, para evitar sobreescrita no arquivo.
+
+**Remove o `google_drive_mode` do tauri-plugin-store**
+
+**Corrigir nome dos campos e a ordem no tauri-plugin-store**
+
+**Adicionar a opção no menu overflow: "adicionar aos favoritos" no cliente**
+
+**Alterar a opção do botão ao abrir a música, no overflow menu da música**
+
+**Fechar o menu overflow da música/partitura, quando for clicado fora**
+
+## Planejamento
+
+**Montar um plano para fazer migração com mais facilidade**
+
+**Melhorar sistema de backup**

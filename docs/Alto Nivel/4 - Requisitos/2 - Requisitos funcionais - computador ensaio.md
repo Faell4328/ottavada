@@ -4,7 +4,9 @@
 
 O usuário deve poder:
 
-- adicionar músicas aos favoritos, tornando-as visíveis na seção **Favoritos**.
+- **abrir**, expande a música e mostrar todas as partituras;
+- **abrir local**, abre no explorador de arquivos em uma pasta temporária com as partituras daquela música descompactadas;
+- **adicionar/remover nos favoritos**.
 
 ---
 
@@ -14,7 +16,7 @@ O usuário deve poder:
 
 O usuário deve poder:
 
-- abrir a partitura utilizando o aplicativo padrão do sistema operacional associado ao tipo do arquivo;
+- **abrir**, será aberto a partitura utilizando o aplicativo padrão associado a extensão do arquivo.
 
 ---
 
@@ -38,7 +40,8 @@ O usuário deve poder:
 
 - alterar o nome do computador;
 - alterar o nome da organização;
-- alterar o provedor de nuvem.
+- alterar o provedor de nuvem;
+- consultar atualização.
 
 ---
 
