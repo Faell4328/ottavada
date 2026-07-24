@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use tempfile::{Builder, TempDir};
 
 pub fn create_test_app_data_dir(test_name: &str) -> TempDir {
-    let root = std::env::temp_dir().join("score-maestro-tests");
+    let root = std::env::temp_dir().join("ottavada-tests");
     std::fs::create_dir_all(&root).expect("failed to create test root");
 
     Builder::new()
@@ -26,6 +26,6 @@ mod tests {
         let dir = create_test_app_data_dir("support");
         let path = dir.path().to_string_lossy();
 
-        assert!(path.contains("score-maestro-tests"));
+        assert!(path.contains("ottavada-tests"));
     }
 }

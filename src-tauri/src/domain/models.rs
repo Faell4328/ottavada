@@ -327,7 +327,7 @@ impl RcloneProvider {
     }
 
     pub fn default_cloud_path() -> &'static str {
-        "ScoreMaestro"
+        "ottavada"
     }
 }
 

@@ -146,7 +146,7 @@ MicroScore
 
 **06-04-2026**
 
-`score-maestro-x64` e `score-maestro-x32`
+`ottavada-x64` e `ottavada-x32`
 
 - Estava insatisfeito com o usuário tendo que escolher entre "rclone do aplicativo" ou "rclone do sistema", tudo isso para "diplar" sistemas x32.
 - Estava muito bagunçado e difícil, agora o aplicativo terá a versão `x32` e `x64`, cada uma com o rclone correto.
@@ -221,7 +221,7 @@ Próximos passos e melhorias:
 
 - Preciso ter bem documentando EXATAMENTE os problemas que o software resolve e conseguir explicar/dizer de forma clara para pessoa esse problemas.
 - Preciso criar um laucher e arrumar um jeito de tirar a maldida mensagem do windows de software suspeito (Microsoft defender SmartScreen).
-  - Nem que eu tenha que subir 1000 máquinas virtuais e baixar o Score Maestro nas 1000.
+  - Nem que eu tenha que subir 1000 máquinas virtuais e baixar o Ottavada nas 1000.
 
 **23-05-2026**
 
@@ -231,7 +231,7 @@ Mudanças:
 
 - Indexar diretório vai realmente indexar diretórios.
 
-- O Score Maestro irá inteferir mais diretamente nos arquivos.
+- O Ottavada irá inteferir mais diretamente nos arquivos.
 
 - Utilizar metadados do sistema.
 
@@ -243,13 +243,13 @@ Estou estudando forma de identificar falsas alterações, principalmente em Fina
 
 Minha ideia de evitar falso positivo é evitar dor de cabeça para o usuário, uma partitura válida, por ficar `draft` e não ser enviada para o cliente, deixando o usuário na mão (já que partituras que são alterada é alterado para `draft` e não são enviadas para o cliente). 
 
-Eu cheguei a adicionar essa função no **Score Maestro**, sempre que uma partitura for alterada (data e hora de última alteração), verificar o hash do arquivo para realmente ver se foi alterado. Mas simplesmente isso não resolve, preciso encontrar outra forma simples para evitar isso, não pretendo manter hash e ter que tratar cada arquivo música, ex: `.musx` converter para `.zip` para depois verificar o hash do `score.dat`, para ter chance de mesmo assim dar problema e o mesmo processo ou similar para as outras extensões. Então, prefiro manter a simplicidade do aplicativo, verificando apenas alteração de data/hora de última alteração e tamanho do arquivo.
+Eu cheguei a adicionar essa função no **Ottavada**, sempre que uma partitura for alterada (data e hora de última alteração), verificar o hash do arquivo para realmente ver se foi alterado. Mas simplesmente isso não resolve, preciso encontrar outra forma simples para evitar isso, não pretendo manter hash e ter que tratar cada arquivo música, ex: `.musx` converter para `.zip` para depois verificar o hash do `score.dat`, para ter chance de mesmo assim dar problema e o mesmo processo ou similar para as outras extensões. Então, prefiro manter a simplicidade do aplicativo, verificando apenas alteração de data/hora de última alteração e tamanho do arquivo.
 
 A solução será deixar o modal de revisão de alteração mais organizado e inteligente: podendo marcar e desmarcar, efetivando apenas quando o usuário clicar em "confirmar".
 
 **27-06-2026** - Foco na gringa
 
-Ficar focado apenas no povo brasileira irá limitar muito minhas chances do Score Maestro dar certo. Isso ocorre porque o Brasil é país subdesenvolvido, com isso a maioria das pessoas usam Windows 7 (pessoal mais velho) e também o pessoal na gringa é mais para frente, sempre buscando modernizar e melhorar, diferente do Brasil, onde a maioria prefere manter o padrão. E sem contar a quantidade MUITO maior de orquestras e bandas.
+Ficar focado apenas no povo brasileira irá limitar muito minhas chances do Ottavada dar certo. Isso ocorre porque o Brasil é país subdesenvolvido, com isso a maioria das pessoas usam Windows 7 (pessoal mais velho) e também o pessoal na gringa é mais para frente, sempre buscando modernizar e melhorar, diferente do Brasil, onde a maioria prefere manter o padrão. E sem contar a quantidade MUITO maior de orquestras e bandas.
 
 Não estou falando mal do Brasil, essa é a realidade e funciona (não tão bem, mas funciona). Estou apenas tomando a melhor decisão para o futuro da minha ferramenta. E sem contar que posso promovela falando que é um aplicativo internacional, ganhando mais confiança.
 
@@ -259,4 +259,4 @@ Não gosto do Mermaid: acho mais chato de fazer o diagrama e o resultado final �
 
 **01-07-2026** - Alteração de nome do projeto
 
-O nome do projeto foi alterado de **Score Maestro** para **Ottavada**. Score Maestro é um excelente nome, mas tinhas grandes problemas: 1° O domínio **.com** já estava sendo usado; 2° LLMs se embolava para explicar, já que é a junção de **Score** + **Maestro**; 3° **Score** pode significar VÁRIAS coisas além de partitura; 4° É um nome genérico extremamente fácil de copiar. **Ottavada** vem de *oitarvar* ou *ottava*, e o *da* veio da ideia de "oitavada", a partitura está "oitavada", trocando o "i" pelo "t" fica **ottavada**. Eu precisava de um nome que fosse bom para o Brasil e para Fora, cheguei nesse nome.
+O nome do projeto foi alterado de **Ottavada** para **Ottavada**. Ottavada é um excelente nome, mas tinhas grandes problemas: 1° O domínio **.com** já estava sendo usado; 2° LLMs se embolava para explicar, já que é a junção de **Score** + **Maestro**; 3° **Score** pode significar VÁRIAS coisas além de partitura; 4° É um nome genérico extremamente fácil de copiar. **Ottavada** vem de *oitarvar* ou *ottava*, e o *da* veio da ideia de "oitavada", a partitura está "oitavada", trocando o "i" pelo "t" fica **ottavada**. Eu precisava de um nome que fosse bom para o Brasil e para Fora, cheguei nesse nome.

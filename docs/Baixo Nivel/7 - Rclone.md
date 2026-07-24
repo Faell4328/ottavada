@@ -1,6 +1,6 @@
 # Configuração
 
-O Score Maestro utiliza um provedor por vez, você pode escolher entre **Koofr** ou **Google Drive**.
+O Ottavada utiliza um provedor por vez, você pode escolher entre **Koofr** ou **Google Drive**.
 
 No **Koofr** é criado um `remote` chamado "koofr" e no **Google Drive** é "gdrive".
 
@@ -23,4 +23,4 @@ Para acompanhar o progresso é usado o parâmetro: `--rc-addr=127.0.0.1:5572`. A
 
 
 
-# 
+#

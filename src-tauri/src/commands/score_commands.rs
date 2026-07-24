@@ -262,7 +262,7 @@ fn open_file_location_on_system(file_path: &str) -> Result<(), AppError> {
 
 #[tauri::command]
 pub fn open_tutorial_url() -> Result<(), AppError> {
-    open_url_on_system("https://scoremaestro.rhafaell.com.br/#tutorial")
+    open_url_on_system("https://ottavada.com/#tutorial")
 }
 
 fn extract_score_file_from_archive(

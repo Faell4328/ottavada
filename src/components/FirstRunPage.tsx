@@ -178,10 +178,10 @@ export default function FirstRunPage() {
           <div className="mb-4 flex flex-col items-center">
             <img
               src="/icon.png"
-              alt="Score Maestro"
+              alt="Ottavada"
               loading="eager"
               fetchPriority="high"
-              className="mb-3 h-20 w-20 rounded-2xl object-cover"
+              className="mb-3 h-30 w-30 rounded-2xl object-cover"
             />
           </div>
         )}
@@ -195,7 +195,7 @@ export default function FirstRunPage() {
               <p className="text-sm leading-6 text-[#6b849e]">
                 Para conseguir utilizar a ferramenta corretamente, assista ao
                 vídeo de introdução no site oficial:
-                scoremaestro.rhafaell.com.br/#tutorial. Ele mostra o fluxo
+                ottavada.com/#tutorial. Ele mostra o fluxo
                 básico e o que você precisa fazer no primeiro acesso.
               </p>
               <button
@@ -510,7 +510,7 @@ export default function FirstRunPage() {
                     </p>
                     <p className="text-xs text-green-700">
                       Caminho padrão:{" "}
-                      <code className="bg-green-100 px-1">ScoreMaestro</code>
+                      <code className="bg-green-100 px-1">Ottavada</code>
                     </p>
                   </div>
                 </div>
@@ -587,7 +587,7 @@ export default function FirstRunPage() {
                   <span className="text-xs text-[#6b849e]">
                     {" "}
                     ({rcloneProvider === "koofr" ? "koofr" : "gdrive"}
-                    :ScoreMaestro)
+                    :ottavada)
                   </span>
                 </p>
               </div>

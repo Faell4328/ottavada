@@ -12,7 +12,7 @@ pub fn init_logger(log_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
     std::fs::create_dir_all(log_dir)?;
 
     // Cria um appender para escrever logs em arquivo
-    let file_appender = tracing_appender::rolling::daily(log_dir, "score-maestro.log");
+    let file_appender = tracing_appender::rolling::daily(log_dir, "ottavada.log");
     let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
 
     // Configurar subscriber com layer de arquivo e console (em debug)

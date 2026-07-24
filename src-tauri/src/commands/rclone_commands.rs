@@ -831,7 +831,7 @@ pub fn get_rclone_rc_stats() -> Result<Option<RcloneRcStats>, AppError> {
 ///
 /// # Parâmetros
 /// - `remote`: Nome do remote configurado no rclone (ex: "gdrive", "pcloud")
-/// - `path`: Caminho no remote a testar (ex: "ScoreMaestro")
+/// - `path`: Caminho no remote a testar (ex: "ottavada")
 ///
 /// # Retorna
 /// - `Ok(true)`: Conexão testada com sucesso

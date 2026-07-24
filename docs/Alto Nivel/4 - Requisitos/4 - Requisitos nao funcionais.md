@@ -95,7 +95,7 @@ O sistema deve solicitar confirmação antes da remoção definitiva de qualquer
 
 ---
 
-# 8. Servidor Score Maestro
+# 8. Servidor Ottavada
 
 ## 8.1. Telemetria
 
@@ -124,4 +124,4 @@ A compactação `zst` deve utilizar:
 
 ## 9.2. Upload e Download para a nuvem
 
-Todos os arquivos devem ser compactados com `zst` antes de ser enviado para a nuvem.   
+Todos os arquivos devem ser compactados com `zst` antes de ser enviado para a nuvem.

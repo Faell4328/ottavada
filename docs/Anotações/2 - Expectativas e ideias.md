@@ -1,4 +1,4 @@
-**Score Maestro** - boas
+**Ottavada** - boas
 
 - backup utilizando pendrive ou outro meio local.
 - implementar sugesão de nomes com IA. A ideia é padronizar o nome das músicas (usuário pode colocar aceitar ou não, individualmente).
@@ -16,7 +16,7 @@
 
 ---
 
-**Score Maestro** - viajadas
+**Ottavada** - viajadas
 
 - tirar o cliente de `read-only`.
 
@@ -28,7 +28,7 @@
 
 ---
 
-**Score Maestro Server** -  viajadas
+**Ottavada Server** -  viajadas
 
-- no site do Score Maestro, os músicos poderem ler as partituras de seus instrumentos e poderem ouvir.
+- no site do Ottavada, os músicos poderem ler as partituras de seus instrumentos e poderem ouvir.
   - isso é melhor, porque nem todo músico tem computador, pelo site trás mais acessibilidade.

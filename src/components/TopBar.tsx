@@ -19,7 +19,7 @@ interface TopBarProps {
 }
 
 export default function TopBar({
-  title = "Score Maestro",
+  title = "Ottavada",
   onUpdateClick,
   isUpdateBusy,
   hasAvailableUpdate,
@@ -109,13 +109,6 @@ export default function TopBar({
         data-tauri-drag-region
       >
         <div className="flex items-center gap-3">
-          <img
-            src="/logo.png"
-            alt="Logo"
-            loading="eager"
-            fetchPriority="high"
-            className="h-auto w-17.5 rounded-full"
-          />
           <span className="text-xl font-bold tracking-tight">{title}</span>
         </div>
 

@@ -701,7 +701,7 @@ export default function SettingsPage() {
             </p>
             <p className="mt-1 text-xs text-[#6b849e]">
               Caminho padrão:{" "}
-              <span className="font-semibold text-[#34485d]">ScoreMaestro</span>
+              <span className="font-semibold text-[#34485d]">Ottavada</span>
             </p>
 
             {rcloneConfigGenerated ? (

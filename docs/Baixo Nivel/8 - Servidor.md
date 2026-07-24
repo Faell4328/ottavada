@@ -2,7 +2,7 @@ O servidor será um simples PHP e SQLite.
 
 Para proteger contra bots. Será necessário enviar uma chave API que fica dentro do aplicativo e é enviada na requisição.
 
-O site atual é `https://ottavada.com.br`, anterioremente: `https://scoremaestro.rhafaell.com.br`.
+O site atual é `https://ottavada.com`, anterioremente: `https://scoremaestro.rhafaell.com.br`.
 
 ## Rotas
 
@@ -69,4 +69,4 @@ O site atual é `https://ottavada.com.br`, anterioremente: `https://scoremaestro
 }
 ```
 
-# 
+#

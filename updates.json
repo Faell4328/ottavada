@@ -5,11 +5,11 @@
   "platforms": {
     "windows-x86_64": {
       "signature": "ASSINATURA_X64",
-      "url": "https://github.com/Faell4328/Score-Maestro/releases/download/v0.11/Score.Maestro_0.11.0_x64-setup.exe"
+      "url": "https://github.com/Faell4328/ottavada/releases/download/v0.11/Ottavada_0.11.0_x64-setup.exe"
     },
     "windows-i686": {
       "signature": "ASSINATURA_X86",
-      "url": "https://github.com/Faell4328/Score-Maestro/releases/download/v0.11/Score.Maestro_0.11.0_x86-setup.exe"
+      "url": "https://github.com/Faell4328/ottavada/releases/download/v0.11/Ottavada_0.11.0_x86-setup.exe"
     }
   }
 }
