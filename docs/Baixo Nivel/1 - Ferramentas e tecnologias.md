@@ -15,6 +15,7 @@ O sistema utiliza `Tauri` por baixo de tudo. A interface fica no frontend e as r
 - `lucide-react` - fornece ícones prontos para a interface.
 - `react-hot-toast` - mostra notificações rápidas de sucesso, erro e aviso.
 - `react-router` - controla a navegação entre telas e rotas.
+- `react-i18next ` - suporte a multi-idiomas.
 
 ## 1.2. Dependências de desenvolvimento e testes
 

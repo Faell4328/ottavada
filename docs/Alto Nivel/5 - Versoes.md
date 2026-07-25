@@ -369,6 +369,20 @@
 
 - mudando de "mover para lixeira" para "parar de indexar" em músicas `not_found`.
 
+# Versão 1.4
+
+## Funcionalidades
+
+- adição de idioma: inglês;
+
+## Melhorias
+
+- nova versão do rclone;
+
+## Ajuste
+
+- migração de Score Maestro para Ottavada;
+
 # Desenvolvimento
 
 ## Correção de inconsistências

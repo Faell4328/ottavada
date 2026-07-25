@@ -1,3 +1,15 @@
+# 1. Idiomas
+
+O aplicativo deve dar suporte aos idiomas:
+
+- Português;
+
+- Inglês <mark>(Não implementado)</mark>;
+
+- Espanhol <mark> (Não implementado)</mark>;
+
+- Italiano <mark> (Não implementado)</mark>.
+
 # 1. Categorias
 
 ## 1.1. Associação
