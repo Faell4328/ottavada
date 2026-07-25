@@ -51,7 +51,7 @@ O usuário deve poder:
   - categorias;
 - **não permitir envio**, alterando o status da música e das partituras para `draft`;
 - **remover música**, deve abrir um modal de dar duas opções para o usuário:
-  - **parar de indexar pasta**, remove a música e partitura(s) do Score Maestro;
+  - **parar de indexar pasta**, remove a música e partitura(s) do Ottavada;
   - **mover pasta e arquivos para lixeira** e arquivos (também parando de indexar).
 
 ### 2.2.2. Músicas com status "envio não permitido"
@@ -75,7 +75,7 @@ O usuário deve poder:
 
 - **remover música**, deve abrir um modal de dar duas opções para o usuário:
   
-  - **parar de indexar pasta**, remove a música e partitura(s) do Score Maestro;
+  - **parar de indexar pasta**, remove a música e partitura(s) do Ottavada;
   - **mover pasta e arquivos para lixeira** e arquivos (também parando de indexar).
 
 ### 2.2.3. Músicas com status "sem partitura"
@@ -83,7 +83,7 @@ O usuário deve poder:
 O usuário deve poder:
 
 - **reindexar música**, alterando caminho e nome da pasta referente aquela música;
-- **parar de indexar pasta**, remove música do Score Maestro.
+- **parar de indexar pasta**, remove música do Ottavada.
 
 ## 2.3. Monitoramento de alterações <mark>(Não implementado)</mark>
 

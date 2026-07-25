@@ -39,7 +39,7 @@ export function LoadingScreen() {
           <div className="h-8 w-8 animate-spin rounded-full border-3 border-[#dbe7f4] border-t-[#4f84d7]" />
         </div>
         <div>
-          <p className="text-lg font-semibold text-[#29445f]">Carregando Score Maestro</p>
+          <p className="text-lg font-semibold text-[#29445f]">Carregando Ottavada</p>
           <p className="mt-1 text-sm text-[#6e8399]">Preparando a interface inicial</p>
         </div>
         <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#ecf2f8]">

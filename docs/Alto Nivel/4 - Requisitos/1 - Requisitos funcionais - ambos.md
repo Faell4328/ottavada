@@ -14,7 +14,7 @@ O sistema deve suportar os idiomas:
 
 ---
 
-# 2. Servidor Score Maestro
+# 2. Servidor Ottavada
 
 ## 2.1. Telemetria
 
@@ -41,7 +41,7 @@ Os dados enviados devem ser:
 - Quantidade de partituras em status `ignored`;
 - Erros que aconteceram.
 
->  Não é feito coleta de dados sensíveis, o único objetivo da telemetria é saber se o aplicativo está sendo realmente usado, por quem e quais problemas está ocorrendo no Score Maestro.
+>  Não é feito coleta de dados sensíveis, o único objetivo da telemetria é saber se o aplicativo está sendo realmente usado, por quem e quais problemas está ocorrendo no Ottavada.
 
 ## 2.2. Atualizações
 
@@ -102,7 +102,7 @@ Os filtros devem iniciar com os seguintes valores:
 
 ## 4.1. Provedores suportados
 
-O Score Maestro deve suportar:
+O Ottavada deve suportar:
 
 - Koofr (**Provedor recomendado**);
 - Google Drive.
@@ -114,11 +114,11 @@ Opções avançadas: <mark>(Não implementado)</mark>
 
 ## 4.2. Engine para envio e recebimento com a nuvem
 
-O Score Maestro deve utilizar internamente o `rclone`.
+O Ottavada deve utilizar internamente o `rclone`.
 
 O executável do `rclone` deve ser distribuído e incorporado ao sistema, não sendo necessária instalação, configuração ou interação manual por parte do usuário.
 
-Toda configuração relacionada ao `rclone`, incluindo criação de remotes, autenticação, parâmetros de sincronização, diretórios, credenciais e gerenciamento de conexões, deve ser realizada exclusivamente pelo Score Maestro através de sua interface e fluxos internos. Abstraindo completamente a utilização do `rclone`.
+Toda configuração relacionada ao `rclone`, incluindo criação de remotes, autenticação, parâmetros de sincronização, diretórios, credenciais e gerenciamento de conexões, deve ser realizada exclusivamente pelo Ottavada através de sua interface e fluxos internos. Abstraindo completamente a utilização do `rclone`.
 
 ---
 

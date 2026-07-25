@@ -38,7 +38,7 @@ describe("startup loading screen", () => {
       "overflow-hidden"
     );
     expect(shell).toHaveClass("bg-linear-to-br");
-    expect(container).toHaveTextContent("Carregando Score Maestro");
+    expect(container).toHaveTextContent("Carregando Ottavada");
     expect(container).toHaveTextContent("Preparando a interface inicial");
     expect(container.querySelectorAll('img[src="/metronome1.avif"]').length).toBe(1);
     expect(container.querySelectorAll('img[src="/metronome2.avif"]').length).toBe(1);

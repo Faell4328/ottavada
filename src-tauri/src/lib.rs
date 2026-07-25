@@ -177,7 +177,7 @@ pub fn run() {
             commands::rclone_commands::terminate_stale_rclone_rc_processes();
 
             // Inicializar banco de dados
-            let db_path = app_data_dir.join("score_maestro.db");
+            let db_path = app_data_dir.join("ottavada.db");
             let db =
                 Database::new(&db_path).expect("Não foi possível inicializar o banco de dados");
 
@@ -187,8 +187,10 @@ pub fn run() {
             app.manage(db.clone());
             app.manage(initial_scan_completed.clone());
 
-            let telemetry_shutdown =
-                services::telemetry_service::spawn_telemetry_worker(db.clone(), app_data_dir.clone());
+            let telemetry_shutdown = services::telemetry_service::spawn_telemetry_worker(
+                db.clone(),
+                app_data_dir.clone(),
+            );
             app.manage(telemetry_shutdown);
 
             // Inicializar store de configurações

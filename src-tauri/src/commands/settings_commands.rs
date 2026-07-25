@@ -125,7 +125,7 @@ fn open_url_on_system(url: &str) -> Result<(), AppError> {
 #[tauri::command]
 pub fn open_tutorial_site() -> Result<(), AppError> {
     info!("Abrindo site oficial do tutorial");
-    open_url_on_system("https://scoremaestro.rhafaell.com.br/#tutorial")
+    open_url_on_system("https://ottavada.com/#tutorial")
 }
 
 #[tauri::command]
