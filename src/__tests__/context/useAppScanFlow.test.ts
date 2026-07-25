@@ -124,8 +124,12 @@ describe("shouldRunStartupClientScan", () => {
 describe("getScanFailureToastMessage", () => {
   it("uses the client-specific fallback message", () => {
     const getErrorMessage = vi.fn((_error: unknown, fallback: string) => fallback);
+    const t = vi.fn((key: string) => {
+      if (key === "scanFlow.scanFailedClient") return "Não foi possível consultar as alterações.";
+      return key;
+    });
 
-    expect(getScanFailureToastMessage({}, getErrorMessage, "Client")).toBe(
+    expect(getScanFailureToastMessage({}, getErrorMessage, "Client", t)).toBe(
       "Não foi possível consultar as alterações."
     );
     expect(getErrorMessage).toHaveBeenCalledWith(
@@ -136,8 +140,12 @@ describe("getScanFailureToastMessage", () => {
 
   it("keeps the server fallback for server scans", () => {
     const getErrorMessage = vi.fn((_error: unknown, fallback: string) => fallback);
+    const t = vi.fn((key: string) => {
+      if (key === "scanFlow.scanFailedServer") return "Não foi possível concluir a verificação.";
+      return key;
+    });
 
-    expect(getScanFailureToastMessage({}, getErrorMessage, "Server")).toBe(
+    expect(getScanFailureToastMessage({}, getErrorMessage, "Server", t)).toBe(
       "Não foi possível concluir a verificação."
     );
     expect(getErrorMessage).toHaveBeenCalledWith(

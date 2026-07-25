@@ -1,8 +1,11 @@
 import type { Dispatch } from "react";
 import toast from "react-hot-toast";
+import i18next from "i18next";
 
 import * as api from "../api/commands";
 import type { Action } from "./reducer";
+
+const t = i18next.t.bind(i18next);
 
 export interface ClientSyncDeps {
   dispatch: Dispatch<Action>;
@@ -41,8 +44,8 @@ export async function runClientSyncFlow(params: { isAutomatic: boolean; deps: Cl
   dispatch({
     type: "SET_OPERATION_STATUS",
     payload: {
-      title: "Etapa 1 - Consultando alterações",
-      detail: "Verificando snapshot e events da nuvem",
+      title: t("clientSyncFlow.step1CheckingChanges"),
+      detail: t("clientSyncFlow.verifyingSnapshot"),
       stepCurrent: 1,
       stepTotal: 1,
     },
@@ -68,8 +71,8 @@ export async function runClientSyncFlow(params: { isAutomatic: boolean; deps: Cl
   dispatch({
     type: "SET_OPERATION_STATUS",
     payload: {
-      title: "Etapa 2 - Baixando músicas",
-      detail: "Atualizando arquivos locais do computador de ensaio",
+      title: t("clientSyncFlow.step2DownloadingSongs"),
+      detail: t("clientSyncFlow.updatingLocalFiles"),
       stepCurrent: 1,
       stepTotal: 1,
     },
@@ -84,8 +87,8 @@ export async function runClientSyncFlow(params: { isAutomatic: boolean; deps: Cl
   dispatch({
     type: "SET_OPERATION_STATUS",
     payload: {
-      title: "Etapa 2 - Aplicando alterações",
-      detail: "Atualizando banco local do computador de ensaio",
+      title: t("clientSyncFlow.step2ApplyingChanges"),
+      detail: t("clientSyncFlow.updatingLocalDb"),
       stepCurrent: 1,
       stepTotal: 1,
     },
@@ -96,8 +99,8 @@ export async function runClientSyncFlow(params: { isAutomatic: boolean; deps: Cl
   dispatch({
     type: "SET_OPERATION_STATUS",
     payload: {
-      title: "Etapa 2 - Atualizando interface",
-      detail: "Recarregando músicas e partituras",
+      title: t("clientSyncFlow.step2UpdatingInterface"),
+      detail: t("backupImportFlow.reloadingSongs"),
       stepCurrent: 1,
       stepTotal: 1,
     },
@@ -110,7 +113,7 @@ export async function runClientSyncFlow(params: { isAutomatic: boolean; deps: Cl
     !isAutomatic &&
     (syncSummary.snapshot_applied || syncSummary.events_applied > 0)
   ) {
-    toast.success("Alterações da nuvem aplicadas com sucesso.");
+    toast.success(t("clientSyncFlow.cloudChangesApplied"));
   }
 
   scheduleScanReset(1500);

@@ -1,9 +1,12 @@
 import type { Dispatch } from "react";
 import toast from "react-hot-toast";
+import i18next from "i18next";
 
 import * as api from "../api/commands";
 import type { Action } from "./reducer";
 import type { RunSyncWithProgress } from "./types";
+
+const t = i18next.t.bind(i18next);
 
 export interface BackupImportDeps {
   dispatch: Dispatch<Action>;
@@ -22,8 +25,8 @@ export async function runBackupImportFlow(deps: BackupImportDeps) {
     dispatch({
       type: "SET_OPERATION_STATUS",
       payload: {
-        title: "Etapa 1 - Baixando backup",
-        detail: "Baixando arquivos de backup da nuvem",
+        title: t("backupImportFlow.step1DownloadingBackup"),
+        detail: t("backupImportFlow.downloadingBackupFiles"),
         stepCurrent: 1,
         stepTotal: 5,
       },
@@ -38,15 +41,15 @@ export async function runBackupImportFlow(deps: BackupImportDeps) {
     const validation = await api.validateCloudBackup();
 
     if (!validation.found) {
-      toast.error("Nenhum backup válido encontrado na nuvem.");
+      toast.error(t("backupImportFlow.noValidBackup"));
       return;
     }
 
     dispatch({
       type: "SET_OPERATION_STATUS",
       payload: {
-        title: "Etapa 2 - Restaurando banco",
-        detail: `Restaurando ${validation.songs_count} músicas e ${validation.scores_count} partituras`,
+        title: t("backupImportFlow.step2RestoringDb"),
+        detail: t("backupImportFlow.restoringDbDetail", { songs: validation.songs_count, scores: validation.scores_count }),
         stepCurrent: 2,
         stepTotal: 5,
       },
@@ -57,8 +60,8 @@ export async function runBackupImportFlow(deps: BackupImportDeps) {
     dispatch({
       type: "SET_OPERATION_STATUS",
       payload: {
-        title: "Etapa 3 - Baixando músicas",
-        detail: "Baixando arquivos de partituras da nuvem",
+        title: t("backupImportFlow.step3DownloadingSongs"),
+        detail: t("backupImportFlow.downloadingScoresFiles"),
         stepCurrent: 3,
         stepTotal: 5,
       },
@@ -73,8 +76,8 @@ export async function runBackupImportFlow(deps: BackupImportDeps) {
     dispatch({
       type: "SET_OPERATION_STATUS",
       payload: {
-        title: "Etapa 4 - Restaurando partituras",
-        detail: "Extraindo partituras para os diretórios",
+        title: t("backupImportFlow.step4RestoringScores"),
+        detail: t("backupImportFlow.extractingScores"),
         stepCurrent: 4,
         stepTotal: 5,
       },
@@ -85,8 +88,8 @@ export async function runBackupImportFlow(deps: BackupImportDeps) {
     dispatch({
       type: "SET_OPERATION_STATUS",
       payload: {
-        title: "Etapa 5 - Restaurando rascunhos",
-        detail: "Restaurando partituras draft e ignored",
+        title: t("backupImportFlow.step5RestoringDrafts"),
+        detail: t("backupImportFlow.restoringDrafts"),
         stepCurrent: 5,
         stepTotal: 5,
       },
@@ -103,8 +106,8 @@ export async function runBackupImportFlow(deps: BackupImportDeps) {
     dispatch({
       type: "SET_OPERATION_STATUS",
       payload: {
-        title: "Atualizando interface",
-        detail: "Recarregando músicas e partituras",
+        title: t("backupImportFlow.updatingInterface"),
+        detail: t("backupImportFlow.reloadingSongs"),
         stepCurrent: null,
         stepTotal: null,
       },
@@ -114,16 +117,16 @@ export async function runBackupImportFlow(deps: BackupImportDeps) {
 
     const restoredInfo =
       restoreResult.songs_restored > 0 || restoreResult.scores_restored > 0
-        ? ` ${restoreResult.songs_restored} música(s) e ${restoreResult.scores_restored} partitura(s) foram restauradas da nuvem.`
+        ? t("backupImportFlow.songsRestored", { songs: restoreResult.songs_restored, scores: restoreResult.scores_restored })
         : "";
 
     const draftIgnoredInfo =
       draftIgnoredRestored > 0
-        ? ` ${draftIgnoredRestored} partitura(s) draft/ignored restauradas.`
+        ? t("backupImportFlow.draftsRestored", { count: draftIgnoredRestored })
         : "";
 
     toast.success(
-      `Backup da nuvem importado com sucesso. Ele é de ${formatTimestamp(dbSummary.generated_at)}; mudanças feitas depois disso não entram nesse backup.${restoredInfo}${draftIgnoredInfo}`,
+      t("backupImportFlow.cloudBackupImported", { timestamp: formatTimestamp(dbSummary.generated_at), restored: restoredInfo, drafts: draftIgnoredInfo }),
       { duration: 8000 },
     );
   } finally {

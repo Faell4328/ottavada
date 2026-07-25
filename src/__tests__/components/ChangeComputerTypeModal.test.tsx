@@ -152,6 +152,8 @@ describe("ChangeComputerTypeModal", () => {
     expect(
       screen.getByText(/Passará a indexar pastas locais/),
     ).toBeInTheDocument();
-    expect(screen.getByText("Computador do Maestro")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Você está alterando o tipo de computador de Computador de Ensaio para Computador do Maestro/),
+    ).toBeInTheDocument();
   });
 });

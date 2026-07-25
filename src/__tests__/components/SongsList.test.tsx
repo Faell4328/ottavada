@@ -253,7 +253,7 @@ describe("SongsList", () => {
 
     expect(await screen.findByText("CANON")).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText("Filtrar músicas"), {
+    fireEvent.change(screen.getByLabelText("Filtrar músicas..."), {
       target: { value: "amazing" },
     });
 

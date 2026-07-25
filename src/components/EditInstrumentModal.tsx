@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { open } from "@tauri-apps/plugin-dialog";
 import { ExternalLink, FolderOpen, Loader2 } from "lucide-react";
 import type { ScoreListItem } from "../types";
@@ -36,6 +37,7 @@ export function EditInstrumentModal({
   onClose,
   onSave,
 }: EditInstrumentModalProps) {
+  const { t } = useTranslation();
   const [instrumentName, setInstrumentName] = useState("");
   const [filePath, setFilePath] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -220,7 +222,7 @@ export function EditInstrumentModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Editar Partitura"
+      title={t("editInstrumentModal.title")}
       footer={
         <ModalFooterButtons
           onCancel={onClose}
@@ -232,31 +234,31 @@ export function EditInstrumentModal({
     >
       {hasNameConflict && (
         <div className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-          <p className="font-semibold">Há uma pendência nesta partitura.</p>
+          <p className="font-semibold">{t("editInstrumentModal.nameConflictTitle")}</p>
           <p>
-            Já existe outra partitura com esse nome. Renomeie antes de salvar.
+            {t("editInstrumentModal.nameConflictMessage")}
           </p>
         </div>
       )}
 
-      <FormField label="Nome do Instrumento">
+      <FormField label={t("editInstrumentModal.nameLabel")}>
         <TextInput
           value={instrumentName}
           onChange={(value) =>
             setInstrumentName(normalizeScoreNameInput(value))
           }
-          placeholder="Ex: Soprano, Alto Sax, Flauta..."
+          placeholder={t("editInstrumentModal.namePlaceholder")}
           disabled={isSaving}
         />
       </FormField>
 
-      <FormField label="Caminho do Arquivo" required>
+      <FormField label={t("editInstrumentModal.filePathLabel")} required>
         <div className="space-y-2">
           <div className="rounded border border-[#c5cfdb] bg-[#f5f7fa] p-3 min-h-[2.5rem] overflow-auto max-h-24">
             <p className="text-xs text-[#344b61] whitespace-pre-wrap break-all">
               {filePath || (
                 <span className="text-sm text-[#a3b5c7]">
-                  Nenhum arquivo selecionado
+                  {t("editInstrumentModal.noFileSelected")}
                 </span>
               )}
             </p>
@@ -267,7 +269,7 @@ export function EditInstrumentModal({
             disabled={isSaving || isOpeningScore || isOpeningLocation}
             className="w-full px-4 py-2 rounded bg-[#eef2f6] border border-[#c5cfdb] text-sm font-medium text-[#344b61] hover:bg-[#e8ecf0] transition-colors disabled:opacity-50"
           >
-            Procurar Arquivo
+            {t("editInstrumentModal.btnBrowseFile")}
           </button>
           <div className="flex items-center gap-2">
             <button
@@ -275,14 +277,14 @@ export function EditInstrumentModal({
               onClick={handleOpenScore}
               disabled={isSaving || isOpeningScore || isOpeningLocation}
               className="inline-flex flex-1 items-center justify-center gap-1 rounded border border-[#d8e0ea] px-2 py-2 text-xs text-[#5d738b] hover:bg-[#eef3f8] disabled:cursor-not-allowed disabled:opacity-60"
-              title="Abrir partitura"
+              title={t("addFilesModal.titleOpenScore")}
             >
               {isOpeningScore ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : (
                 <ExternalLink className="h-3.5 w-3.5" />
               )}
-              Abrir partitura
+              {t("scoreRow.open")}
             </button>
 
             <button
@@ -290,14 +292,14 @@ export function EditInstrumentModal({
               onClick={handleOpenLocal}
               disabled={isSaving || isOpeningScore || isOpeningLocation}
               className="inline-flex flex-1 items-center justify-center gap-1 rounded border border-[#d8e0ea] px-2 py-2 text-xs text-[#5d738b] hover:bg-[#eef3f8] disabled:cursor-not-allowed disabled:opacity-60"
-              title="Abrir local"
+              title={t("addFilesModal.titleOpenLocal")}
             >
               {isOpeningLocation ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : (
                 <FolderOpen className="h-3.5 w-3.5" />
               )}
-              Abrir local
+              {t("addFilesModal.btnOpenLocal")}
             </button>
           </div>
         </div>

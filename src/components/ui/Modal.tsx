@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useScrollLock } from "../../hooks/useScrollLock";
 
 interface ModalProps {
@@ -20,6 +21,7 @@ export function Modal({
   maxWidth = "max-w-md",
 }: ModalProps) {
   useScrollLock(isOpen);
+  const { t } = useTranslation();
 
   if (!isOpen) return null;
 
@@ -33,7 +35,7 @@ export function Modal({
           <button
             onClick={onClose}
             className="p-1 rounded hover:bg-[#f2f5fa] transition-colors"
-            title="Fechar"
+            title={t("modal.close")}
           >
             <X className="h-5 w-5 text-[#8b9db2]" />
           </button>
@@ -66,10 +68,12 @@ export function ModalFooterButtons({
   onConfirm,
   isSaving,
   confirmDisabled,
-  cancelLabel = "Cancelar",
-  confirmLabel = "Salvar",
-  savingLabel = "Salvando...",
+  cancelLabel,
+  confirmLabel,
+  savingLabel,
 }: ModalFooterButtonsProps) {
+  const { t } = useTranslation();
+
   return (
     <>
       <button
@@ -77,14 +81,14 @@ export function ModalFooterButtons({
         className="flex-1 rounded border border-[#c5cfdb] px-3 py-2 text-sm font-medium text-[#344b61] hover:bg-[#f2f5fa] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         disabled={isSaving}
       >
-        {cancelLabel}
+        {cancelLabel ?? t("modal.cancel")}
       </button>
       <button
         onClick={onConfirm}
         className="flex-1 rounded bg-[#4f84d7] px-3 py-2 text-sm font-medium text-white hover:bg-[#3d6fb8] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         disabled={isSaving || confirmDisabled}
       >
-        {isSaving ? savingLabel : confirmLabel}
+        {isSaving ? (savingLabel ?? t("modal.saving")) : (confirmLabel ?? t("modal.save"))}
       </button>
     </>
   );

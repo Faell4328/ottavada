@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Modal, ModalFooterButtons, FormField, TextInput, ErrorMessage } from "./ui";
 
 interface EditCategoryModalProps {
@@ -9,6 +10,7 @@ interface EditCategoryModalProps {
 }
 
 export function EditCategoryModal({ isOpen, category, onClose, onSave }: EditCategoryModalProps) {
+  const { t } = useTranslation();
   const [name, setName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
@@ -50,7 +52,7 @@ export function EditCategoryModal({ isOpen, category, onClose, onSave }: EditCat
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Editar Categoria"
+      title={t("editCategoryModal.title")}
       footer={
         <ModalFooterButtons
           onCancel={onClose}
@@ -60,11 +62,11 @@ export function EditCategoryModal({ isOpen, category, onClose, onSave }: EditCat
         />
       }
     >
-      <FormField label="Nome da Categoria" required>
+      <FormField label={t("editCategoryModal.nameLabel")} required>
         <TextInput
           value={name}
           onChange={setName}
-          placeholder="Digite o novo nome"
+          placeholder={t("editCategoryModal.namePlaceholder")}
           disabled={isSaving}
           autoFocus
         />

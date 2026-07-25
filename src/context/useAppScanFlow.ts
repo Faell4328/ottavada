@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, type Dispatch } from "react";
 import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next";
 
 import * as api from "../api/commands";
 import type { Action } from "./reducer";
@@ -62,11 +63,12 @@ export function getScanFailureToastMessage(
   err: unknown,
   getErrorMessage: (err: unknown, fallback: string) => string,
   computerType: "Server" | "Client" | undefined,
+  t: (key: string) => string,
 ) {
   const fallbackMessage =
     computerType === "Client"
-      ? "Não foi possível consultar as alterações."
-      : "Não foi possível concluir a verificação.";
+      ? t("scanFlow.scanFailedClient")
+      : t("scanFlow.scanFailedServer");
 
   return getErrorMessage(err, fallbackMessage);
 }
@@ -80,6 +82,7 @@ export function useAppScanFlow({
   refreshSelectedSong,
   getErrorMessage,
 }: UseAppScanFlowParams) {
+  const { t } = useTranslation();
   const scanResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scanInProgressRef = useRef(false);
   const lastRcloneProgressRef = useRef<RcloneProgressSnapshot | null>(null);
@@ -258,7 +261,7 @@ export function useAppScanFlow({
 
   const previewScanFilesForChanges = useCallback(async () => {
     if (scanInProgressRef.current) {
-      toast.error("Já existe uma operação em andamento. Aguarde ela terminar.");
+      toast.error(t("scanFlow.operationInProgress"));
       return;
     }
 
@@ -271,8 +274,8 @@ export function useAppScanFlow({
       dispatch({
         type: "SET_OPERATION_STATUS",
         payload: {
-          title: "Etapa 1 - Verificando alterações",
-          detail: "Gerando relatório antes de aplicar",
+          title: t("scanFlow.step1Verifying"),
+          detail: t("scanFlow.generatingReport"),
           stepCurrent: 1,
           stepTotal: 1,
         },
@@ -288,7 +291,7 @@ export function useAppScanFlow({
     } catch (err) {
       console.error("Failed to preview files for changes:", err);
       toast.error(
-        getScanFailureToastMessage(err, getErrorMessage, computerType),
+        getScanFailureToastMessage(err, getErrorMessage, computerType, t),
       );
       resetScanState();
     } finally {
@@ -313,9 +316,7 @@ export function useAppScanFlow({
 
       if (scanInProgressRef.current) {
         if (!isAutomatic) {
-          toast.error(
-            "Já existe uma operação em andamento. Aguarde ela terminar.",
-          );
+          toast.error(t("scanFlow.operationInProgress"));
         }
         return;
       }
@@ -328,9 +329,7 @@ export function useAppScanFlow({
         const hasInternet = await api.hasInternetConnection();
         if (!hasInternet) {
           if (!isAutomatic) {
-            toast.error(
-              "Não foi possível acessar a internet. Verifique sua conexão e tente novamente.",
-            );
+            toast.error(t("scanFlow.noInternet"));
           }
           return;
         }
@@ -359,8 +358,8 @@ export function useAppScanFlow({
         dispatch({
           type: "SET_OPERATION_STATUS",
           payload: {
-            title: "Etapa 1 - Iniciando verificação",
-            detail: "Preparando fluxo de sincronização",
+            title: t("scanFlow.step1Starting"),
+            detail: t("scanFlow.preparingSync"),
             stepCurrent: 1,
             stepTotal: 1,
           },
@@ -387,8 +386,8 @@ export function useAppScanFlow({
         dispatch({
           type: "SET_OPERATION_STATUS",
           payload: {
-            title: "Etapa 1 - Verificando alterações",
-            detail: "Comparando arquivos locais (computador do maestro)",
+            title: t("scanFlow.step1Verifying"),
+            detail: t("scanFlow.comparingLocalFiles"),
             stepCurrent: 1,
             stepTotal: currentTotalSteps,
           },
@@ -423,8 +422,8 @@ export function useAppScanFlow({
         dispatch({
           type: "SET_OPERATION_STATUS",
           payload: {
-            title: "Salvando alterações",
-            detail: "Gerando .tar.zst das músicas",
+            title: t("scanFlow.savingChanges"),
+            detail: t("scanFlow.generatingArchives"),
             stepCurrent: 2,
             stepTotal: currentTotalSteps,
           },
@@ -435,8 +434,8 @@ export function useAppScanFlow({
         dispatch({
           type: "SET_OPERATION_STATUS",
           payload: {
-            title: "Etapa 3 - Gerando eventos",
-            detail: "Atualizando events.msgpack.zst",
+            title: t("scanFlow.step3GeneratingEvents"),
+            detail: t("scanFlow.updatingEvents"),
             stepCurrent: 3,
             stepTotal: currentTotalSteps,
           },
@@ -456,8 +455,8 @@ export function useAppScanFlow({
           dispatch({
             type: "SET_OPERATION_STATUS",
             payload: {
-              title: "Etapa 4 - Gerando snapshot",
-              detail: "Events atingiu 2MB",
+              title: t("scanFlow.step4GeneratingSnapshot"),
+              detail: t("scanFlow.eventsReached2MB"),
               stepCurrent: 4,
               stepTotal: currentTotalSteps,
             },
@@ -468,12 +467,9 @@ export function useAppScanFlow({
           updateStepProgress(changedCount);
 
           if (!isAutomatic) {
-            toast(
-              "Cópia de segurança gerada para manter o histórico organizado.",
-              {
-                icon: "📦",
-              },
-            );
+            toast(t("scanFlow.snapshotGenerated"), {
+              icon: "📦",
+            });
           }
         }
 
@@ -483,13 +479,13 @@ export function useAppScanFlow({
         dispatch({
           type: "SET_OPERATION_STATUS",
           payload: {
-            title: `Etapa ${uploadStep} - Upload para nuvem`,
+            title: t("scanFlow.stepUploadToCloud", { step: uploadStep }),
             detail:
               hasPendingChanges || hasDetectedFileChanges || forceCloudSync
                 ? hasDatabaseChanges && !hasDetectedFileChanges
-                  ? "Enviando alterações do banco para a nuvem"
-                  : "Enviando arquivos alterados para a nuvem"
-                : "Sem alterações locais, validando sincronização da nuvem",
+                  ? t("scanFlow.uploadingDatabaseChanges")
+                  : t("scanFlow.uploadingChangedFiles")
+                : t("scanFlow.validatingCloudSync"),
             stepCurrent: uploadStep,
             stepTotal: currentTotalSteps,
           },
@@ -523,12 +519,9 @@ export function useAppScanFlow({
               } catch (error) {
                 uploadError = error;
                 if (attempt === 1 && !isAutomatic) {
-                  toast(
-                    "Falha ao enviar a cópia de segurança. Nova tentativa em instantes.",
-                    {
-                      icon: "⚠️",
-                    },
-                  );
+                  toast(t("scanFlow.uploadFailedRetry"), {
+                    icon: "⚠️",
+                  });
                 }
               }
             }
@@ -592,42 +585,38 @@ export function useAppScanFlow({
         updateStepProgress(changedCount);
 
         if (failedCount > 0 && !isAutomatic) {
-          toast.error(`${failedCount} arquivo(s) não puderam ser verificados.`);
+          toast.error(t("scanFlow.filesNotVerified", { count: failedCount }));
         }
 
         if (!isAutomatic && failedArchives > 0) {
-          toast.error(
-            `${failedArchives} partitura(s) não puderam ser compactadas.`,
-          );
+          toast.error(t("scanFlow.scoresNotCompressed", { count: failedArchives }));
         }
 
         if (!isAutomatic) {
           const summaryParts: string[] = [];
           const reportItemsCount = result.report_items?.length ?? 0;
           if (recoveredCount > 0) {
-            summaryParts.push(`${recoveredCount} recuperado(s)`);
+            summaryParts.push(t("scanFlow.summaryRecovered", { count: recoveredCount }));
           }
           if (addedCount > 0) {
-            summaryParts.push(`${addedCount} adicionado(s)`);
+            summaryParts.push(t("scanFlow.summaryAdded", { count: addedCount }));
           }
           if (deletedCount > 0) {
-            summaryParts.push(`${deletedCount} deletado(s)`);
+            summaryParts.push(t("scanFlow.summaryDeleted", { count: deletedCount }));
           }
           if (reportItemsCount > 0) {
-            summaryParts.push(
-              `${reportItemsCount} alteração(ões) no relatório`,
-            );
+            summaryParts.push(t("scanFlow.summaryReportChanges", { count: reportItemsCount }));
           }
           if (generatedArchives > 0) {
-            summaryParts.push(`${generatedArchives} arquivo(s) compactado(s)`);
+            summaryParts.push(t("scanFlow.summaryArchivesCompressed", { count: generatedArchives }));
           }
 
           const hasFailures = failedCount > 0 || failedArchives > 0;
           if (summaryParts.length > 0) {
-            const summaryText = `Verificação concluída: ${summaryParts.join(", ")}`;
+            const summaryText = t("scanFlow.scanCompleted", { summary: summaryParts.join(", ") });
 
             if (hasFailures) {
-              toast.error(`${summaryText} Mas algumas partes falharam.`);
+              toast.error(t("scanFlow.scanCompletedWithErrors", { summary: summaryParts.join(", ") }));
             } else {
               toast.success(summaryText);
             }
@@ -651,7 +640,7 @@ export function useAppScanFlow({
         console.error("Failed to scan files for changes:", err);
         if (!isAutomatic) {
           toast.error(
-            getScanFailureToastMessage(err, getErrorMessage, computerType),
+        getScanFailureToastMessage(err, getErrorMessage, computerType, t),
           );
         }
         clearScanTimer();

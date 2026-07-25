@@ -9,6 +9,7 @@ import React, {
 } from "react";
 import { Search, FileMusic } from "lucide-react";
 import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next";
 
 import * as api from "../api/commands";
 import { useAppState } from "../context/AppContext";
@@ -41,6 +42,7 @@ export default function SongsList() {
   } = useAppState();
 
   const expandedSongIdRef = useRef<string | null>(null);
+  const { t } = useTranslation();
   const [editingSong, setEditingSong] = useState<SongListItem | null>(null);
   const [isEditMusicModalOpen, setIsEditMusicModalOpen] = useState(false);
   const [editingScore, setEditingScore] = useState<ScoreListItem | null>(null);
@@ -111,7 +113,7 @@ export default function SongsList() {
         return sortedScores;
       } catch (err) {
         console.error("Failed to load scores for song:", err);
-        toast.error("Erro ao carregar partituras da música");
+          toast.error(t("statusBar.statusChangeError"));
         throw err;
       } finally {
         setLoadingScoresBySongId((prev) => ({ ...prev, [songId]: false }));
@@ -257,7 +259,7 @@ export default function SongsList() {
       <div className="flex items-center justify-between mb-1">
         <h2 className="text-sm font-bold text-[#2f4259]">{getSidebarViewLabel(state.sidebarView)}</h2>
         <span className="text-xs text-[#6b849e]">
-          {displayedSongs.length} música{displayedSongs.length !== 1 ? "s" : ""}
+          {t("songsList.songsCount", { count: displayedSongs.length })}
         </span>
       </div>
 
@@ -273,13 +275,13 @@ export default function SongsList() {
               });
             }}
             className="h-9 w-full rounded border border-[#c5cfdb] bg-white pl-9 pr-3 text-sm text-[#4d6075] placeholder-[#8e9fb3] outline-none focus:border-[#7ba0d4] focus:ring-1 focus:ring-[#7ba0d4]/30"
-            placeholder="Filtrar músicas..."
-            aria-label="Filtrar músicas"
+            placeholder={t("songsList.filterPlaceholder")}
+            aria-label={t("songsList.filterPlaceholder")}
             autoComplete="off"
           />
           {isSearchPending && (
             <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-[#8e9fb3]">
-              filtrando
+              {t("songsList.filtering")}
             </span>
           )}
         </div>
@@ -290,8 +292,8 @@ export default function SongsList() {
           <table className="w-full border-collapse">
             <thead>
               <tr className="border-b border-[#ced7e3] bg-[#eef2f6] text-xs font-bold text-[#34485d] sticky top-0">
-                <th className="text-left px-3.5 py-2.5 font-bold w-1/2">Título</th>
-                <th className="text-left px-3.5 py-2.5 font-bold w-1/4">Compositor / Arranjador</th>
+                <th className="text-left px-3.5 py-2.5 font-bold w-1/2">{t("songsList.headerTitle")}</th>
+                <th className="text-left px-3.5 py-2.5 font-bold w-1/4">{t("songsList.headerAuthor")}</th>
                 <th className="text-left px-3.5 py-2.5 font-bold w-1/4"></th>
               </tr>
             </thead>
@@ -301,8 +303,8 @@ export default function SongsList() {
                   <td colSpan={3} className="text-center py-12">
                     <div className="flex flex-col items-center justify-center text-[#8b9db2]">
                       <FileMusic className="h-12 w-12 mb-3 opacity-40" />
-                      <p className="text-sm">Nenhuma música encontrada</p>
-                      <p className="text-xs mt-1">Indexe um diretório para começar</p>
+                      <p className="text-sm">{t("songsList.noSongs")}</p>
+                      <p className="text-xs mt-1">{t("songsList.noSongsHint")}</p>
                     </div>
                   </td>
                 </tr>
@@ -349,7 +351,7 @@ export default function SongsList() {
                         (shouldShowLoadingRow ? (
                           <tr>
                             <td colSpan={3} className="px-3.5 py-3 text-sm text-[#7b8da1] bg-[#f7f9fc]">
-                              Carregando partituras...
+                              {t("songsList.loadingScores")}
                             </td>
                           </tr>
                         ) : (
@@ -430,7 +432,7 @@ export default function SongsList() {
             setBaseScore(null);
           } catch (err) {
             console.error("Failed to use score as base:", err);
-            toast.error(err instanceof Error ? err.message : "Não foi possível salvar a nova partitura.");
+            toast.error(err instanceof Error ? err.message : t("useAsBaseScoreModal.saveError"));
             throw err;
           }
         }}
