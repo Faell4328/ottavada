@@ -570,6 +570,7 @@
     "generated": "Automatic backup generated on {{timestamp}}"
   },
   "addFilesModal": {
+    "title": "Add Score(s)",
     "labelSongName": "Song Name",
     "labelComposer": "Composer",
     "labelArranger": "Arranger",
@@ -592,8 +593,6 @@
     "namePlaceholder": "Ex: Soprano, Alto Sax, Flute...",
     "filePathLabel": "File Path",
     "noFileSelected": "No file selected",
-    "btnBrowseFile": "Browse File",
-    "btnChangeFile": "Change File",
     "nameConflictTitle": "There is a pending issue with this score.",
     "nameConflictMessage": "Another score with this name already exists. Rename before saving.",
     "cancel": "Cancel",
@@ -605,9 +604,6 @@
     "instrumentPlaceholder": "Ex: Flute, Violin, Piano",
     "pathLabel": "File Path",
     "noFileSelected": "No file selected",
-    "btnChangeFile": "Change File",
-    "instrumentRequired": "Instrument is required",
-    "pathRequired": "Path is required",
     "saveError": "Error saving",
     "nameConflictTitle": "There is a pending issue with this score.",
     "nameConflictMessage": "Another score with this name already exists. Rename before saving.",
@@ -618,10 +614,7 @@
     "openScoreError": "Could not open the selected score",
     "selectLocalError": "Select a file to open the location",
     "openLocalError": "Could not open the location of the selected score",
-    "fileRequired": "File is required",
-    "nameConflictSaveError": "A score with this name already exists in this song",
-    "fileSelectError": "Error selecting file",
-    "scoreFilter": "Scores"
+    "nameConflictSaveError": "A score with this name already exists in this song"
   },
   "editCategoryModal": {
     "title": "Edit Category",

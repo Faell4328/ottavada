@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { open } from "@tauri-apps/plugin-dialog";
 import { ExternalLink, FolderOpen, Loader2 } from "lucide-react";
 import type { ScoreListItem } from "../types";
 import * as api from "../api/commands";
@@ -26,7 +25,6 @@ interface EditInstrumentModalProps {
   onSave: (
     scoreFileId: string,
     instrumentName: string | null,
-    filePath: string,
   ) => Promise<void>;
 }
 
@@ -135,63 +133,8 @@ export function EditInstrumentModal({
     }
   };
 
-  const handleSelectFile = async () => {
-    try {
-      const selected = await open({
-        directory: false,
-        multiple: false,
-        filters: [
-          {
-            name: "Partituras",
-            extensions: [
-              "pdf",
-              "PDF",
-              "mus",
-              "MUS",
-              "musx",
-              "MUSX",
-              "mscx",
-              "MSCX",
-              "mscz",
-              "MSCZ",
-              "xml",
-              "XML",
-              "musicxml",
-              "MUSICXML",
-              "sib",
-              "SIB",
-              "enc",
-              "ENC",
-              "dorico",
-              "DORICO",
-              "mid",
-              "MID",
-              "midi",
-              "MIDI",
-            ],
-          },
-        ],
-      });
-
-      if (selected) {
-        const path = Array.isArray(selected) ? selected[0] : selected;
-        setFilePath(path);
-      }
-    } catch (err) {
-      console.error("Failed to select file:", err);
-      setError("Erro ao selecionar arquivo");
-    }
-  };
-
   const handleSave = async () => {
     if (!instrument) return;
-
-    const pathToSave = filePath || "";
-
-    if (!pathToSave) {
-      setError("O arquivo está vazio. Selecione um arquivo válido.");
-      return;
-    }
 
     if (hasNameConflict) {
       setError("Já existe uma partitura com esse nome");
@@ -205,7 +148,6 @@ export function EditInstrumentModal({
       await onSave(
         instrument.id,
         normalizeScoreNameForSave(instrumentName),
-        pathToSave,
       );
       onClose();
     } catch (err) {
@@ -252,7 +194,7 @@ export function EditInstrumentModal({
         />
       </FormField>
 
-      <FormField label={t("editInstrumentModal.filePathLabel")} required>
+      <FormField label={t("editInstrumentModal.filePathLabel")}>
         <div className="space-y-2">
           <div className="rounded border border-[#c5cfdb] bg-[#f5f7fa] p-3 min-h-[2.5rem] overflow-auto max-h-24">
             <p className="text-xs text-[#344b61] whitespace-pre-wrap break-all">
@@ -263,14 +205,6 @@ export function EditInstrumentModal({
               )}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={handleSelectFile}
-            disabled={isSaving || isOpeningScore || isOpeningLocation}
-            className="w-full px-4 py-2 rounded bg-[#eef2f6] border border-[#c5cfdb] text-sm font-medium text-[#344b61] hover:bg-[#e8ecf0] transition-colors disabled:opacity-50"
-          >
-            {t("editInstrumentModal.btnBrowseFile")}
-          </button>
           <div className="flex items-center gap-2">
             <button
               type="button"

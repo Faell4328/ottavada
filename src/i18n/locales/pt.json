@@ -592,6 +592,7 @@
     "generated": "Backup automático gerado em {{timestamp}}"
   },
   "addFilesModal": {
+    "title": "Adicionar Partitura(s)",
     "labelSongName": "Nome da Música",
     "labelComposer": "Compositor",
     "labelArranger": "Arranjador",
@@ -614,8 +615,6 @@
     "namePlaceholder": "Ex: Soprano, Alto Sax, Flauta...",
     "filePathLabel": "Caminho do Arquivo",
     "noFileSelected": "Nenhum arquivo selecionado",
-    "btnBrowseFile": "Procurar Arquivo",
-    "btnChangeFile": "Alterar Arquivo",
     "nameConflictTitle": "Há uma pendência nesta partitura.",
     "nameConflictMessage": "Já existe outra partitura com esse nome. Renomeie antes de salvar.",
     "cancel": "Cancelar",
@@ -627,9 +626,6 @@
     "instrumentPlaceholder": "Ex: Flauta, Violino, Piano",
     "pathLabel": "Caminho do Arquivo",
     "noFileSelected": "Nenhum arquivo selecionado",
-    "btnChangeFile": "Alterar Arquivo",
-    "instrumentRequired": "O instrumento é obrigatório",
-    "pathRequired": "O caminho é obrigatório",
     "saveError": "Erro ao salvar",
     "nameConflictTitle": "Há uma pendência nesta partitura.",
     "nameConflictMessage": "Já existe outra partitura com esse nome. Renomeie antes de salvar.",
@@ -640,10 +636,7 @@
     "openScoreError": "Não foi possível abrir a partitura selecionada",
     "selectLocalError": "Selecione um arquivo para abrir o local",
     "openLocalError": "Não foi possível abrir o local da partitura selecionada",
-    "fileRequired": "O arquivo é obrigatório",
-    "nameConflictSaveError": "Já existe uma partitura com esse nome nesta música",
-    "fileSelectError": "Erro ao selecionar arquivo",
-    "scoreFilter": "Partituras"
+    "nameConflictSaveError": "Já existe uma partitura com esse nome nesta música"
   },
   "editCategoryModal": {
     "title": "Editar Categoria",

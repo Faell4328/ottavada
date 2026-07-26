@@ -4,10 +4,6 @@ import { EditInstrumentModal } from "../../components/EditInstrumentModal";
 import type { ScoreListItem } from "../../types";
 import * as api from "../../api/commands";
 
-vi.mock("@tauri-apps/plugin-dialog", () => ({
-  open: vi.fn(),
-}));
-
 const sampleInstrument: ScoreListItem = {
   id: "sc1",
   name: "Flauta",
@@ -100,7 +96,6 @@ describe("EditInstrumentModal", () => {
       expect(mockOnSave).toHaveBeenCalledWith(
         "sc1",
         "Flauta Transversal",
-        "/music/Canon - Flauta.musx"
       );
     });
   });
@@ -123,7 +118,6 @@ describe("EditInstrumentModal", () => {
       expect(mockOnSave).toHaveBeenCalledWith(
         "sc1",
         null,
-        "/music/Canon - Flauta.musx"
       );
     });
   });
@@ -174,28 +168,6 @@ describe("EditInstrumentModal", () => {
     );
 
     expect(screen.getByText("Nenhum arquivo selecionado")).toBeInTheDocument();
-  });
-
-  it("should show error if saving with empty file path", async () => {
-    const noPathInstrument = { ...sampleInstrument, file_path: "" };
-
-    render(
-      <EditInstrumentModal
-        isOpen={true}
-        instrument={noPathInstrument}
-        onClose={mockOnClose}
-        onSave={mockOnSave}
-      />
-    );
-
-    fireEvent.click(screen.getByText("Salvar"));
-
-    await waitFor(() => {
-      expect(
-        screen.getByText("O arquivo está vazio. Selecione um arquivo válido.")
-      ).toBeInTheDocument();
-    });
-    expect(mockOnSave).not.toHaveBeenCalled();
   });
 
   it("should warn when renaming to an existing instrument name and disable save", () => {

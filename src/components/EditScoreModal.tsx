@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { open } from "@tauri-apps/plugin-dialog";
 import { ExternalLink, FolderOpen, Loader2 } from "lucide-react";
 import type { SongListItem, ScoreListItem } from "../types";
 import * as api from "../api/commands";
@@ -27,7 +26,6 @@ interface EditScoreModalProps {
     songId: string;
     scoreFileId: string;
     instrumentName: string | null;
-    filePath: string;
   }) => Promise<void>;
 }
 
@@ -113,61 +111,8 @@ export function EditScoreModal({
     }
   };
 
-  const handleSelectFile = async () => {
-    try {
-      const selected = await open({
-        directory: false,
-        multiple: false,
-        filters: [
-          {
-            name: t("editScoreModal.scoreFilter"),
-            extensions: [
-              "pdf",
-              "PDF",
-              "mus",
-              "MUS",
-              "musx",
-              "MUSX",
-              "mscx",
-              "MSCX",
-              "mscz",
-              "MSCZ",
-              "xml",
-              "XML",
-              "musicxml",
-              "MUSICXML",
-              "sib",
-              "SIB",
-              "enc",
-              "ENC",
-              "dorico",
-              "DORICO",
-              "mid",
-              "MID",
-              "midi",
-              "MIDI",
-            ],
-          },
-        ],
-      });
-
-      if (selected) {
-        const path = Array.isArray(selected) ? selected[0] : selected;
-        setFilePath(path);
-      }
-    } catch (err) {
-      console.error("Failed to select file:", err);
-      setError(t("editScoreModal.fileSelectError"));
-    }
-  };
-
   const handleSave = async () => {
     if (!score || !instrument) return;
-
-    if (!filePath.trim()) {
-      setError(t("editScoreModal.fileRequired"));
-      return;
-    }
 
     if (hasNameConflict) {
       setError(t("editScoreModal.nameConflictSaveError"));
@@ -182,7 +127,6 @@ export function EditScoreModal({
         songId: score.id,
         scoreFileId: instrument.id,
         instrumentName: normalizeScoreNameForSave(instrumentName),
-        filePath: filePath.trim(),
       });
       onClose();
     } catch (err) {
@@ -247,7 +191,7 @@ export function EditScoreModal({
         />
       </FormField>
 
-      <FormField label={t("editScoreModal.pathLabel")} required>
+      <FormField label={t("editScoreModal.pathLabel")}>
         <div className="space-y-2">
           <div className="rounded border border-[#c5cfdb] bg-[#f5f7fa] p-3 min-h-[2.5rem] overflow-auto max-h-24">
             <p className="text-xs text-[#344b61] whitespace-pre-wrap break-all">
@@ -258,14 +202,6 @@ export function EditScoreModal({
               )}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={handleSelectFile}
-            disabled={isSaving || isOpeningScore || isOpeningLocation}
-            className="w-full px-4 py-2 rounded bg-[#f2f5fa] border border-[#c5cfdb] text-sm font-medium text-[#344b61] hover:bg-[#eef2f6] transition-colors disabled:opacity-50"
-          >
-            {t("editScoreModal.btnChangeFile")}
-          </button>
           <div className="flex items-center gap-2">
             <button
               type="button"

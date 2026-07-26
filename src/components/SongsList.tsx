@@ -179,9 +179,8 @@ export default function SongsList() {
     songId: string;
     scoreFileId: string;
     instrumentName: string | null;
-    filePath: string;
   }) => {
-    await updateScore(data.scoreFileId, data.instrumentName, data.filePath);
+    await updateScore(data.scoreFileId, data.instrumentName);
     await refreshScoresForSong(data.songId);
   };
 

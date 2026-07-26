@@ -168,9 +168,8 @@ export async function updateSongStatus(songId: string, status: "main" | "draft")
 export async function updateScore(
   scoreId: string,
   instrumentName: string | null,
-  filePath: string
 ): Promise<void> {
-  return invoke("update_score", { scoreId, instrumentName, filePath });
+  return invoke("update_score", { scoreId, instrumentName });
 }
 
 export async function updateScoreStatus(

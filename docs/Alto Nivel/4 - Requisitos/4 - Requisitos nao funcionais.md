@@ -8,7 +8,11 @@ O aplicativo deve dar suporte aos idiomas:
 
 - Espanhol <mark> (Não implementado)</mark>;
 
-- Italiano <mark> (Não implementado)</mark>.
+- Frances <mark> (Não implementado)</mark>;
+
+- Italiano <mark> (Não implementado)</mark>;
+
+- Alemão <mark>(Não implementado)</mark>.
 
 # 1. Categorias
 

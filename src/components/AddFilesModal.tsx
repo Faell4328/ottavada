@@ -358,19 +358,19 @@ export function AddFilesModal({
   const reviewItems = useMemo(() => {
     const items: Array<
       | {
-          kind: "single";
-          file: IndexedFile;
-          idx: number;
-          conflict: ScoreConflict | null;
-          conflictMessage: string | null;
-          isLocked: boolean;
-          isIgnored: boolean;
-        }
+        kind: "single";
+        file: IndexedFile;
+        idx: number;
+        conflict: ScoreConflict | null;
+        conflictMessage: string | null;
+        isLocked: boolean;
+        isIgnored: boolean;
+      }
       | {
-          kind: "group";
-          normalizedInstrument: string;
-          entries: Array<{ file: IndexedFile; idx: number }>;
-        }
+        kind: "group";
+        normalizedInstrument: string;
+        entries: Array<{ file: IndexedFile; idx: number }>;
+      }
     > = [];
     const batchGroups = new Map<
       string,
@@ -445,8 +445,8 @@ export function AddFilesModal({
         const firstEntry = item.entries[0];
         const instrumentName = firstEntry
           ? reviewInstrumentNames[firstEntry.idx] ||
-            firstEntry.file.instrument ||
-            item.normalizedInstrument
+          firstEntry.file.instrument ||
+          item.normalizedInstrument
           : item.normalizedInstrument;
 
         messages.push(
@@ -473,7 +473,7 @@ export function AddFilesModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Adicionar Partitura(s)"
+      title={t("addFilesModal.title")}
       maxWidth="max-w-lg"
       footer={
         <ModalFooterButtons

@@ -92,76 +92,30 @@ impl Database {
         Ok(())
     }
 
-    pub fn update_score(
+    pub fn update_score_name(
         &self,
         score_id: &str,
         name: Option<String>,
-        file_path: &str,
-        file_name: &str,
-        file_size: u64,
-        file_modified_at: chrono::NaiveDateTime,
-        _now: chrono::NaiveDateTime,
     ) -> Result<(), AppError> {
         let conn = self.lock_conn();
-        let file_modified_at_ts = file_modified_at.and_utc().timestamp();
-        let file_extension = Self::extract_file_extension(file_name).unwrap_or_default();
-        let storage_file_path = to_storage_path(file_path);
 
-        let (original_name, original_file_path, original_file_name, original_status) = conn
+        let original_name: Option<String> = conn
             .query_row(
-                "SELECT name, file_path, file_name, status FROM scores WHERE id = ?1",
+                "SELECT name FROM scores WHERE id = ?1",
                 params![score_id],
-                |row| {
-                    Ok((
-                        row.get::<_, Option<String>>(0)?,
-                        row.get::<_, String>(1)?,
-                        row.get::<_, String>(2)?,
-                        row.get::<_, String>(3)?,
-                    ))
-                },
+                |row| row.get(0),
             )
-            .map_err(|e| crate::infrastructure::database::to_not_found(AppError::ScoreNotFound(score_id.to_string()))(e))?;
+            .map_err(|e| {
+                crate::infrastructure::database::to_not_found(AppError::ScoreNotFound(
+                    score_id.to_string(),
+                ))(e)
+            })?;
 
-        let file_changed = original_file_path != storage_file_path || original_file_name != file_name;
         let name_change_value = name.clone().or(original_name.clone());
 
         conn.execute(
-            "UPDATE scores
-             SET name = ?1,
-                 file_path = ?2,
-                 file_name = ?3,
-                 file_extension = ?4,
-                 file_size = ?5,
-                 file_modified_at = ?6,
-                 status = ?7
-             WHERE id = ?8",
-            params![
-                name,
-                storage_file_path,
-                file_name,
-                file_extension,
-                file_size,
-                datetime_utils::format_datetime(file_modified_at),
-                original_status.clone(),
-                score_id,
-            ],
-        )?;
-
-        let song_id: String = conn.query_row(
-            "SELECT song_id FROM scores WHERE id = ?1",
-            params![score_id],
-            |row| row.get(0),
-        )?;
-
-        conn.execute(
-            "UPDATE songs
-             SET path = ?1,
-                 last_score_file_modified_at = CASE
-                   WHEN last_score_file_modified_at > ?2 THEN last_score_file_modified_at
-                   ELSE ?2
-                 END
-                         WHERE id = ?3",
-            params![storage_file_path, file_modified_at_ts, song_id],
+            "UPDATE scores SET name = ?1 WHERE id = ?2",
+            params![name, score_id],
         )?;
 
         if original_name != name {
@@ -173,38 +127,6 @@ impl Database {
                 Some("name"),
                 name_change_value,
             )?;
-        }
-
-        if file_changed {
-            Self::insert_changed_field(&conn, "update", "scores", score_id, Some("file"), None)?;
-
-            let old_extension = Self::extract_file_extension(&original_file_name);
-            let new_extension = Self::extract_file_extension(file_name);
-            if old_extension != new_extension {
-                Self::insert_changed_field(
-                    &conn,
-                    "update",
-                    "scores",
-                    score_id,
-                    Some("extension"),
-                    new_extension.or(old_extension),
-                )?;
-            }
-
-            let affected = conn.execute(
-                "UPDATE songsBackup
-                 SET status = 'processing'
-                 WHERE songId = ?1",
-                params![song_id],
-            )?;
-
-            if affected == 0 {
-                conn.execute(
-                    "INSERT INTO songsBackup (songId, status)
-                     VALUES (?1, 'processing')",
-                    params![song_id],
-                )?;
-            }
         }
 
         Ok(())

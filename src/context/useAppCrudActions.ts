@@ -312,10 +312,9 @@ export function useAppCrudActions({
   const updateScore = useCallback(async (
     scoreId: string,
     instrumentName: string | null,
-    filePath: string
   ) => {
     try {
-      await api.updateScore(scoreId, instrumentName, filePath);
+      await api.updateScore(scoreId, instrumentName);
       if (state.selectedScore?.id === scoreId) {
         dispatch({ type: "SET_SELECTED_SCORE", payload: null });
       }

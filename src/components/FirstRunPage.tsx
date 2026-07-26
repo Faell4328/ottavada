@@ -198,7 +198,7 @@ export default function FirstRunPage() {
                 </h2>
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#8b9db2]">
-                    Idioma / Language
+                    Idioma
                   </span>
                   <button
                     type="button"

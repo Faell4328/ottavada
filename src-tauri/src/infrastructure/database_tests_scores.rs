@@ -223,49 +223,18 @@ mod tests {
     }
 
     #[test]
-    fn test_update_score() {
+    fn test_update_score_name() {
         let db = make_db();
         db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
         db.insert_score(&make_score(&db, "sc1", "s1", Some("Violino")))
             .unwrap();
 
-        {
-            let conn = db.lock_conn();
-            conn.execute(
-                "UPDATE songsBackup
-                 SET status = ?1
-                 WHERE songId = ?2",
-                rusqlite::params!["ok", "s1"],
-            )
+        db.update_score_name("sc1", Some("Violino 1".to_string()))
             .unwrap();
-        }
-
-        let new_dir_id = "/new/path".to_string();
-        db.update_score(
-            "sc1",
-            Some("Violino 1".to_string()),
-            &new_dir_id,
-            "score.musx",
-            2048,
-            now(),
-            now(),
-        )
-        .unwrap();
 
         let songs = db.get_all_songs().unwrap();
         assert_eq!(songs[0].scores[0].name, Some("Violino 1".to_string()));
-        assert!(songs[0].scores[0].file_path.contains("score.musx"));
         assert_eq!(songs[0].scores[0].status, ScoreStatus::Main);
-
-        let conn = db.lock_conn();
-        let backup = conn
-            .query_row(
-                "SELECT status FROM songsBackup WHERE songId = ?1",
-                ["s1"],
-                |row| Ok(row.get::<_, String>(0)?),
-            )
-            .unwrap();
-        assert_eq!(backup, "processing");
     }
 
     #[test]
