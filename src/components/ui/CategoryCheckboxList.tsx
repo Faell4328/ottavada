@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import type { Category } from "../../types";
 
 interface CategoryCheckboxListProps {
@@ -13,9 +14,11 @@ export function CategoryCheckboxList({
   onToggle,
   disabled,
 }: CategoryCheckboxListProps) {
+  const { t } = useTranslation();
+
   if (categories.length === 0) {
     return (
-      <p className="text-xs text-[#8b9db2]">Nenhuma categoria criada ainda</p>
+      <p className="text-xs text-[#8b9db2]">{t("sidebar.noCategories")}</p>
     );
   }
 

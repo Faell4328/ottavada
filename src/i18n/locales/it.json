@@ -326,7 +326,12 @@
     "scoresCombinedReturned_one": "è stato modificato ed è passato da <strong>{{from}}</strong> ed è tornato a <strong>{{to}}</strong> nel brano <strong>{{song}}</strong>.",
     "scoresCombinedReturned_other": "sono stati modificati e sono passati da <strong>{{from}}</strong> e sono tornati a <strong>{{to}}</strong> nel brano <strong>{{song}}</strong>.",
     "scoresCombinedChanged_one": "è stato modificato ed è passato da <strong>{{from}}</strong> ed è passato a <strong>{{to}}</strong> nel brano <strong>{{song}}</strong>.",
-    "scoresCombinedChanged_other": "sono stati modificati e sono passati da <strong>{{from}}</strong> e sono passati a <strong>{{to}}</strong> nel brano <strong>{{song}}</strong>."
+    "scoresCombinedChanged_other": "sono stati modificati e sono passati da <strong>{{from}}</strong> e sono passati a <strong>{{to}}</strong> nel brano <strong>{{song}}</strong>.",
+    "scoreAddedLegacy": "Spartito aggiunto: {{item}}",
+    "scoreChangedLegacy": "Spartito modificato: {{item}}",
+    "scoreDeletedLegacy": "Lo spartito {{item}} è stato eliminato.",
+    "scoreRecoveredLegacy": "Spartito recuperato: {{item}}",
+    "scoreFailedLegacy": "Elaborazione non riuscita di {{path}}: {{error}}"
   },
   "firstRun": {
     "chooseLanguage": "Scegli la lingua",
@@ -494,7 +499,9 @@
     "importBackupButton": "Importa backup locale",
     "importing": "Importazione...",
     "backupLocalHint": "Esporta e importa un backup locale completo del database e delle impostazioni.",
-    "licenseLinkTitle": "licenza aperta"
+    "licenseLinkTitle": "licenza aperta",
+    "footerCoffee": "Sono stati consumati 200 caffè in totale e continua ad aumentare ☕📈",
+    "footerCredit": "Fatto da Rhafaell (@Faell4328) con tanto caffè ☕"
   },
   "updateModal": {
     "title": "Aggiornamento disponibile",

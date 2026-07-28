@@ -326,7 +326,12 @@
     "scoresCombinedReturned_one": "a été modifiée et est passée de <strong>{{from}}</strong> et est revenue à <strong>{{to}}</strong> dans le chant <strong>{{song}}</strong>.",
     "scoresCombinedReturned_other": "ont été modifiées et sont passées de <strong>{{from}}</strong> et sont revenues à <strong>{{to}}</strong> dans le chant <strong>{{song}}</strong>.",
     "scoresCombinedChanged_one": "a été modifiée et est passée de <strong>{{from}}</strong> et est allée à <strong>{{to}}</strong> dans le chant <strong>{{song}}</strong>.",
-    "scoresCombinedChanged_other": "ont été modifiées et sont passées de <strong>{{from}}</strong> et sont allées à <strong>{{to}}</strong> dans le chant <strong>{{song}}</strong>."
+    "scoresCombinedChanged_other": "ont été modifiées et sont passées de <strong>{{from}}</strong> et sont allées à <strong>{{to}}</strong> dans le chant <strong>{{song}}</strong>.",
+    "scoreAddedLegacy": "Partition ajoutée : {{item}}",
+    "scoreChangedLegacy": "Partition modifiée : {{item}}",
+    "scoreDeletedLegacy": "La partition {{item}} a été supprimée.",
+    "scoreRecoveredLegacy": "Partition récupérée : {{item}}",
+    "scoreFailedLegacy": "Échec du traitement de {{path}} : {{error}}"
   },
   "firstRun": {
     "chooseLanguage": "Choisissez votre langue",
@@ -494,7 +499,9 @@
     "importBackupButton": "Importer la sauvegarde locale",
     "importing": "Importation en cours...",
     "backupLocalHint": "Exporte et importe une sauvegarde locale complète de la base de données et des paramètres.",
-    "licenseLinkTitle": "ouvrir la licence"
+    "licenseLinkTitle": "ouvrir la licence",
+    "footerCoffee": "200 tasses de café ont été consommées au total et ça continue d'augmenter ☕📈",
+    "footerCredit": "Fait par Rhafaell (@Faell4328) avec beaucoup de café ☕"
   },
   "updateModal": {
     "title": "Mise à jour disponible",

@@ -1,5 +1,5 @@
 import { useCallback, type Dispatch } from "react";
-import { useTranslation } from "react-i18next";
+import i18n from "../i18n";
 import toast from "react-hot-toast";
 
 import * as api from "../api/commands";
@@ -7,6 +7,8 @@ import type { AppSettings, ScoreListItem, SidebarView, SongListItem } from "../t
 import type { Action, State } from "./reducer";
 import type { AuthorFilterValue } from "./types";
 import { normalizeAuthorName } from "../utils/songSearch";
+
+const t = i18n.t.bind(i18n);
 
 function isActionLocked(state: State, t: (key: string) => string): boolean {
   if (
@@ -65,7 +67,6 @@ export function useAppCrudActions({
   refreshSelectedSong,
   getErrorMessage,
 }: UseAppCrudActionsParams) {
-  const { t } = useTranslation();
 
   const setSidebarView = useCallback((view: SidebarView) => {
     dispatch({ type: "SET_SIDEBAR_VIEW", payload: view });

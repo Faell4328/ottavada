@@ -326,7 +326,12 @@
     "scoresCombinedReturned_one": "was changed and went from <strong>{{from}}</strong> and returned to <strong>{{to}}</strong> in song <strong>{{song}}</strong>.",
     "scoresCombinedReturned_other": "were changed and went from <strong>{{from}}</strong> and returned to <strong>{{to}}</strong> in song <strong>{{song}}</strong>.",
     "scoresCombinedChanged_one": "was changed and went from <strong>{{from}}</strong> and went to <strong>{{to}}</strong> in song <strong>{{song}}</strong>.",
-    "scoresCombinedChanged_other": "were changed and went from <strong>{{from}}</strong> and went to <strong>{{to}}</strong> in song <strong>{{song}}</strong>."
+    "scoresCombinedChanged_other": "were changed and went from <strong>{{from}}</strong> and went to <strong>{{to}}</strong> in song <strong>{{song}}</strong>.",
+    "scoreAddedLegacy": "Score added: {{item}}",
+    "scoreChangedLegacy": "Score changed: {{item}}",
+    "scoreDeletedLegacy": "The score {{item}} was deleted.",
+    "scoreRecoveredLegacy": "Score recovered: {{item}}",
+    "scoreFailedLegacy": "Failed to process {{path}}: {{error}}"
   },
   "firstRun": {
     "chooseLanguage": "Choose your language",
@@ -494,7 +499,9 @@
     "importBackupButton": "Import local backup",
     "importing": "Importing...",
     "backupLocalHint": "Exports and imports a complete local backup of the database and settings.",
-    "licenseLinkTitle": "open license"
+    "licenseLinkTitle": "open license",
+    "footerCoffee": "In total, 200 cups of coffee were consumed and it is increasing ☕📈",
+    "footerCredit": "Made by Rhafaell (@Faell4328) with lots of coffee ☕"
   },
   "updateModal": {
     "title": "Update available",

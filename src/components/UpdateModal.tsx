@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import i18next from "i18next";
 import { Clock3, Download, Sparkles } from "lucide-react";
 import { Modal, ModalFooterButtons } from "./ui";
 import type { UpdateInfo } from "../types";
@@ -22,7 +23,17 @@ function formatUpdateDate(value: string | null) {
     return value;
   }
 
-  return new Intl.DateTimeFormat("pt-BR", {
+  const localeMap: Record<string, string> = {
+    pt: "pt-BR",
+    en: "en-US",
+    es: "es-ES",
+    fr: "fr-FR",
+    it: "it-IT",
+    de: "de-DE",
+  };
+  const locale = localeMap[i18next.language] || "en-US";
+
+  return new Intl.DateTimeFormat(locale, {
     dateStyle: "short",
     timeStyle: "short",
   }).format(parsedDate);

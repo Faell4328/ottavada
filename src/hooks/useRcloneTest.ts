@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import toast from "react-hot-toast";
-import { useTranslation } from "react-i18next";
+import i18n from "../i18n";
 
 import * as api from "../api/commands";
 import { getFriendlyRcloneErrorMessage } from "../utils/rcloneErrors";
@@ -16,12 +16,13 @@ interface TestRcloneOptions {
   silent?: boolean;
 }
 
+const t = i18n.t.bind(i18n);
+
 export function useRcloneTest({
   provider,
   onSuccess,
   onFailure,
 }: UseRcloneTestParams) {
-  const { t } = useTranslation();
   const [isTestingRclone, setIsTestingRclone] = useState(false);
 
   const testRclone = useCallback(async (options: TestRcloneOptions = {}) => {

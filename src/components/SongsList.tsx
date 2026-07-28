@@ -113,7 +113,7 @@ export default function SongsList() {
         return sortedScores;
       } catch (err) {
         console.error("Failed to load scores for song:", err);
-          toast.error(t("statusBar.statusChangeError"));
+          toast.error(t("scoreRow.statusChangeError"));
         throw err;
       } finally {
         setLoadingScoresBySongId((prev) => ({ ...prev, [songId]: false }));

@@ -585,8 +585,17 @@ export default function SettingsPage() {
     }
   }
 
+  const localeMap: Record<string, string> = {
+    pt: "pt-BR",
+    en: "en-US",
+    es: "es-ES",
+    fr: "fr-FR",
+    it: "it-IT",
+    de: "de-DE",
+  };
+
   const lastSnapshotLabel = settings.last_snapshot_timestamp
-    ? new Date(settings.last_snapshot_timestamp * 1000).toLocaleString(i18next.language === "en" ? "en-US" : "pt-BR")
+    ? new Date(settings.last_snapshot_timestamp * 1000).toLocaleString(localeMap[i18next.language] || "en-US")
     : t("settings.neverGenerated");
 
   const lastBackupLabel = settings.last_backup_timestamp
@@ -970,11 +979,11 @@ export default function SettingsPage() {
         {/* Footer */}
         {Math.round(Math.random() * 10) == 1 ? (
           <div className="mt-12 text-center text-xs text-[#8b9db2]">
-            In total, 200 cups of coffee were consumed and it is increasing ☕📈
+            {t("settings.footerCoffee")}
           </div>
         ) : (
           <div className="mt-12 text-center text-xs text-[#8b9db2]">
-            Made by Rhafaell (@Faell4328) with lots of coffee ☕
+            {t("settings.footerCredit")}
           </div>
         )}
       </div>

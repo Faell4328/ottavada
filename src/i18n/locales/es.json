@@ -326,7 +326,12 @@
     "scoresCombinedReturned_one": "fue modificada y pasó de <strong>{{from}}</strong> y volvió a <strong>{{to}}</strong> en la canción <strong>{{song}}</strong>.",
     "scoresCombinedReturned_other": "fueron modificadas y pasaron de <strong>{{from}}</strong> y volvieron a <strong>{{to}}</strong> en la canción <strong>{{song}}</strong>.",
     "scoresCombinedChanged_one": "fue modificada y pasó de <strong>{{from}}</strong> y fue a <strong>{{to}}</strong> en la canción <strong>{{song}}</strong>.",
-    "scoresCombinedChanged_other": "fueron modificadas y pasaron de <strong>{{from}}</strong> y fueron a <strong>{{to}}</strong> en la canción <strong>{{song}}</strong>."
+    "scoresCombinedChanged_other": "fueron modificadas y pasaron de <strong>{{from}}</strong> y fueron a <strong>{{to}}</strong> en la canción <strong>{{song}}</strong>.",
+    "scoreAddedLegacy": "Partitura añadida: {{item}}",
+    "scoreChangedLegacy": "Partitura modificada: {{item}}",
+    "scoreDeletedLegacy": "La partitura {{item}} ha sido eliminada.",
+    "scoreRecoveredLegacy": "Partitura recuperada: {{item}}",
+    "scoreFailedLegacy": "Error al procesar {{path}}: {{error}}"
   },
   "firstRun": {
     "chooseLanguage": "Elige tu idioma",
@@ -494,7 +499,9 @@
     "importBackupButton": "Importar copia de seguridad local",
     "importing": "Importando...",
     "backupLocalHint": "Exporta e importa una copia de seguridad local completa de la base de datos y configuraciones.",
-    "licenseLinkTitle": "abrir licencia"
+    "licenseLinkTitle": "abrir licencia",
+    "footerCoffee": "Se han consumido 200 tazas de café en total y sigue aumentando ☕📈",
+    "footerCredit": "Hecho por Rhafaell (@Faell4328) con mucho café ☕"
   },
   "updateModal": {
     "title": "Actualización disponible",

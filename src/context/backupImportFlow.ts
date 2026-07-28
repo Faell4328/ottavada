@@ -138,5 +138,13 @@ export async function runBackupImportFlow(deps: BackupImportDeps) {
 
 function formatTimestamp(timestamp: number): string {
   const date = new Date(timestamp * 1000);
-  return date.toLocaleString("pt-BR");
+  const localeMap: Record<string, string> = {
+    pt: "pt-BR",
+    en: "en-US",
+    es: "es-ES",
+    fr: "fr-FR",
+    it: "it-IT",
+    de: "de-DE",
+  };
+  return date.toLocaleString(localeMap[i18next.language] || "en-US");
 }

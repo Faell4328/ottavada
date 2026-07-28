@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, type Dispatch } from "react";
 import toast from "react-hot-toast";
-import { useTranslation } from "react-i18next";
+import i18n from "../i18n";
 
 import * as api from "../api/commands";
 import type { Action } from "./reducer";
@@ -8,6 +8,8 @@ import { runClientSyncFlow } from "./clientSyncFlow";
 import type { RunSyncWithProgressOptions } from "./clientSyncFlow";
 import type { RcloneProgressSnapshot } from "../utils/rcloneProgress";
 import { shouldDispatchRcloneProgressUpdate } from "../utils/rcloneProgress";
+
+const t = i18n.t.bind(i18n);
 
 interface UseAppScanFlowParams {
   dispatch: Dispatch<Action>;
@@ -82,7 +84,6 @@ export function useAppScanFlow({
   refreshSelectedSong,
   getErrorMessage,
 }: UseAppScanFlowParams) {
-  const { t } = useTranslation();
   const scanResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scanInProgressRef = useRef(false);
   const lastRcloneProgressRef = useRef<RcloneProgressSnapshot | null>(null);

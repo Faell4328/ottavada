@@ -43,12 +43,12 @@ export function ScanReportModal({
   }
 
   const reportItems = report.report_items ?? [
-    ...report.added_files.map((item) => `Partitura adicionada: ${item}`),
-    ...report.changed_files.map((item) => `Partitura alterada: ${item}`),
-    ...report.deleted_files.map((item) => `A partitura ${item} foi deletada.`),
-    ...report.recovered_files.map((item) => `Partitura recuperada: ${item}`),
+    ...report.added_files.map((item) => t("scanReportModal.scoreAddedLegacy", { item })),
+    ...report.changed_files.map((item) => t("scanReportModal.scoreChangedLegacy", { item })),
+    ...report.deleted_files.map((item) => t("scanReportModal.scoreDeletedLegacy", { item })),
+    ...report.recovered_files.map((item) => t("scanReportModal.scoreRecoveredLegacy", { item })),
     ...report.failed_files.map(
-      ([path, error]) => `Falha ao processar ${path}: ${error}`,
+      ([path, error]) => t("scanReportModal.scoreFailedLegacy", { path, error }),
     ),
   ];
   const sections = buildReviewSections(reportItems, t, i18n);

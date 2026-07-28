@@ -326,7 +326,12 @@
     "scoresCombinedReturned_one": "wurden geändert und wechselten von <strong>{{from}}</strong> und kehrten zurück zu <strong>{{to}}</strong> im Lied <strong>{{song}}</strong>.",
     "scoresCombinedReturned_other": "wurden geändert und wechselten von <strong>{{from}}</strong> und kehrten zurück zu <strong>{{to}}</strong> im Lied <strong>{{song}}</strong>.",
     "scoresCombinedChanged_one": "wurden geändert und wechselten von <strong>{{from}}</strong> und gingen zu <strong>{{to}}</strong> im Lied <strong>{{song}}</strong>.",
-    "scoresCombinedChanged_other": "wurden geändert und wechselten von <strong>{{from}}</strong> und gingen zu <strong>{{to}}</strong> im Lied <strong>{{song}}</strong>."
+    "scoresCombinedChanged_other": "wurden geändert und wechselten von <strong>{{from}}</strong> und gingen zu <strong>{{to}}</strong> im Lied <strong>{{song}}</strong>.",
+    "scoreAddedLegacy": "Noten hinzugefügt: {{item}}",
+    "scoreChangedLegacy": "Noten geändert: {{item}}",
+    "scoreDeletedLegacy": "Die Noten {{item}} wurden gelöscht.",
+    "scoreRecoveredLegacy": "Noten wiederhergestellt: {{item}}",
+    "scoreFailedLegacy": "Verarbeitung von {{path}} fehlgeschlagen: {{error}}"
   },
   "firstRun": {
     "chooseLanguage": "Wählen Sie Ihre Sprache",
@@ -494,7 +499,9 @@
     "importBackupButton": "Lokales Backup importieren",
     "importing": "Wird importiert...",
     "backupLocalHint": "Exportiert und importiert ein vollständiges lokales Backup der Datenbank und der Einstellungen.",
-    "licenseLinkTitle": "Lizenz öffnen"
+    "licenseLinkTitle": "Lizenz öffnen",
+    "footerCoffee": "Insgesamt wurden 200 Tassen Kaffee getrunken und es werden immer mehr ☕📈",
+    "footerCredit": "Gemacht von Rhafaell (@Faell4328) mit viel Kaffee ☕"
   },
   "updateModal": {
     "title": "Update verfügbar",
