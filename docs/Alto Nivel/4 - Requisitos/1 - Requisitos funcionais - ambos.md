@@ -1,4 +1,4 @@
-# 1. Suporte a multi idiomas
+# 1. Suporte a multi-idiomas
 
 O sistema deve suportar os idiomas:
 
@@ -8,11 +8,11 @@ O sistema deve suportar os idiomas:
 
 - Espanhol;
 
-- Francês <mark>(Não implementado)</mark>;
+- Francês;
 
-- Italiano <mark>(Não implementado)</mark>;
+- Italiano;
 
-- Alemão <mark>(Não implementado)</mark>.
+- Alemão.
 
 ---
 

@@ -8,7 +8,22 @@ import fr from "./locales/fr.json";
 import it from "./locales/it.json";
 import de from "./locales/de.json";
 
-const savedLanguage = localStorage.getItem("ottavada-lang") ?? "pt";
+const SUPPORTED_LANGS = ["pt", "en", "es", "fr", "it", "de"] as const;
+const FALLBACK_LANG = "pt";
+
+function detectLanguage(): string {
+  const saved = localStorage.getItem("ottavada-lang");
+  if (saved) return saved;
+
+  if (typeof navigator !== "undefined") {
+    const raw = navigator.language?.slice(0, 2).toLowerCase();
+    if (raw && SUPPORTED_LANGS.includes(raw as typeof SUPPORTED_LANGS[number])) {
+      return raw;
+    }
+  }
+
+  return FALLBACK_LANG;
+}
 
 i18n.use(initReactI18next).init({
   resources: {
@@ -19,8 +34,8 @@ i18n.use(initReactI18next).init({
     it: { translation: it },
     de: { translation: de },
   },
-  lng: savedLanguage,
-  fallbackLng: "pt",
+  lng: detectLanguage(),
+  fallbackLng: FALLBACK_LANG,
   interpolation: {
     escapeValue: false,
   },
