@@ -214,13 +214,20 @@ export default function FirstRunPage() {
                   >
                     EN
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => i18next.changeLanguage("es")}
-                    className={`h-8 w-10 rounded-lg border text-xs font-bold cursor-pointer transition-all ${i18next.language === "es" ? "border-[#4f84d7] bg-[#4f84d7] text-white shadow-sm" : "border-[#c5cfdb] bg-white text-[#4d6075] hover:border-[#7ba0d4] hover:text-[#4f84d7]"}`}
-                  >
-                    ES
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => i18next.changeLanguage("es")}
+                      className={`h-8 w-10 rounded-lg border text-xs font-bold cursor-pointer transition-all ${i18next.language === "es" ? "border-[#4f84d7] bg-[#4f84d7] text-white shadow-sm" : "border-[#c5cfdb] bg-white text-[#4d6075] hover:border-[#7ba0d4] hover:text-[#4f84d7]"}`}
+                    >
+                      ES
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => i18next.changeLanguage("fr")}
+                      className={`h-8 w-10 rounded-lg border text-xs font-bold cursor-pointer transition-all ${i18next.language === "fr" ? "border-[#4f84d7] bg-[#4f84d7] text-white shadow-sm" : "border-[#c5cfdb] bg-white text-[#4d6075] hover:border-[#7ba0d4] hover:text-[#4f84d7]"}`}
+                    >
+                      FR
+                    </button>
                 </div>
               </div>
               <p className="text-sm leading-6 text-[#6b849e]">
