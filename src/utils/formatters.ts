@@ -26,13 +26,21 @@ export function formatEta(seconds: number | null): string | null {
 
 export function formatBackupTimestamp(timestamp: number): string {
   const date = new Date(timestamp * 1000);
-  const locale = i18n.language === "en" ? "en-US" : "pt-BR";
+  const localeMap: Record<string, string> = {
+    en: "en-US",
+    de: "de-DE",
+  };
+  const locale = localeMap[i18n.language] || "pt-BR";
   const formattedDate = date.toLocaleDateString(locale);
   const formattedTime = date.toLocaleTimeString(locale, {
     hour: "2-digit",
     minute: "2-digit",
   });
 
-  const separator = i18n.language === "en" ? " at " : " às ";
+  const separatorMap: Record<string, string> = {
+    en: " at ",
+    de: " um ",
+  };
+  const separator = separatorMap[i18n.language] || " às ";
   return `${formattedDate}${separator}${formattedTime}`;
 }

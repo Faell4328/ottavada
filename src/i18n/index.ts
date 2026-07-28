@@ -6,6 +6,7 @@ import en from "./locales/en.json";
 import es from "./locales/es.json";
 import fr from "./locales/fr.json";
 import it from "./locales/it.json";
+import de from "./locales/de.json";
 
 const savedLanguage = localStorage.getItem("ottavada-lang") ?? "pt";
 
@@ -16,6 +17,7 @@ i18n.use(initReactI18next).init({
     es: { translation: es },
     fr: { translation: fr },
     it: { translation: it },
+    de: { translation: de },
   },
   lng: savedLanguage,
   fallbackLng: "pt",

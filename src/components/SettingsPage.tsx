@@ -945,6 +945,13 @@ export default function SettingsPage() {
             >
               Italiano
             </button>
+            <button
+              type="button"
+              onClick={() => i18next.changeLanguage("de")}
+              className={`h-9 px-4 rounded border cursor-pointer text-sm font-medium transition-colors ${i18next.language === "de" ? "border-[#4f84d7] bg-[#4f84d7] text-white" : "border-[#c5cfdb] bg-white text-[#344b61] hover:bg-[#f2f5fa]"}`}
+            >
+              Deutsch
+            </button>
           </div>
         </Section>
 

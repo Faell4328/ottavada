@@ -235,6 +235,13 @@ export default function FirstRunPage() {
                     >
                       IT
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => i18next.changeLanguage("de")}
+                      className={`h-8 w-10 rounded-lg border text-xs font-bold cursor-pointer transition-all ${i18next.language === "de" ? "border-[#4f84d7] bg-[#4f84d7] text-white shadow-sm" : "border-[#c5cfdb] bg-white text-[#4d6075] hover:border-[#7ba0d4] hover:text-[#4f84d7]"}`}
+                    >
+                      DE
+                    </button>
                 </div>
               </div>
               <p className="text-sm leading-6 text-[#6b849e]">
