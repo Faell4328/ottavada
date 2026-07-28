@@ -6,7 +6,7 @@ describe("RcloneLicenseModal", () => {
   it("shows the full license text when open", () => {
     render(<RcloneLicenseModal isOpen={true} onClose={vi.fn()} />);
 
-    expect(screen.getByText("Licença do rclone")).toBeInTheDocument();
+    expect(screen.getByText("Licença Rclone")).toBeInTheDocument();
     expect(screen.getByText(/Permission is hereby granted, free of charge/)).toBeInTheDocument();
     expect(screen.getByText(/THE SOFTWARE IS PROVIDED \"AS IS\"/)).toBeInTheDocument();
   });

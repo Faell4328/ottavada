@@ -1,16 +1,18 @@
-# 1. Suporte a multi idiomas <mark>(Não implementado)</mark>
+# 1. Suporte a multi idiomas
 
 O sistema deve suportar os idiomas:
 
 - Português Brasil;
 
-- Inglês <mark>(prioridade máxima)</mark>;
+- Inglês;
 
 - Espanhol;
 
-- Francês;
+- Francês <mark>(Não implementado)</mark>;
 
-- Alemão.
+- Italiano <mark>(Não implementado)</mark>;
+
+- Alemão <mark>(Não implementado)</mark>.
 
 ---
 
