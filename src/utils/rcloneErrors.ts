@@ -1,33 +1,29 @@
 import { getErrorMessage } from "./errors";
+import i18n from "../i18n";
 
-const FRIENDLY_MESSAGES: Array<{
+const FRIENDLY_MESSAGE_KEYS: Array<{
   patterns: string[];
-  message: string;
+  i18nKey: string;
 }> = [
   {
     patterns: ["invalid_grant", "authentication failed", "unauthorized", "401", "wrong password"],
-    message:
-      "Não foi possível acessar sua conta. Verifique o email e a senha de aplicativo.",
+    i18nKey: "rcloneErrors.authFailed",
   },
   {
     patterns: ["not found", "remote not found", "couldn't find remote", "didn't find section in config file"],
-    message:
-      "Não foi possível localizar a pasta da nuvem configurada. Gere a configuração novamente.",
+    i18nKey: "rcloneErrors.remoteNotFound",
   },
   {
     patterns: ["permission denied", "forbidden", "403"],
-    message:
-      "Não foi possível acessar esse local da nuvem. Verifique as permissões.",
+    i18nKey: "rcloneErrors.permissionDenied",
   },
   {
     patterns: ["timeout", "no such host", "network is unreachable", "connection refused", "dial tcp"],
-    message:
-      "Não foi possível falar com a nuvem. Verifique sua internet.",
+    i18nKey: "rcloneErrors.networkError",
   },
   {
     patterns: ["quota", "rate limit", "insufficient storage", "storage full"],
-    message:
-      "Não foi possível concluir a operação. Libere espaço na conta da nuvem e tente novamente.",
+    i18nKey: "rcloneErrors.quotaExceeded",
   },
 ];
 
@@ -39,9 +35,9 @@ export function getFriendlyRcloneErrorMessage(error: unknown, fallback: string) 
   const message = getErrorMessage(error);
   const normalizedMessage = normalizeMessage(message);
 
-  for (const entry of FRIENDLY_MESSAGES) {
+  for (const entry of FRIENDLY_MESSAGE_KEYS) {
     if (entry.patterns.some((pattern) => normalizedMessage.includes(pattern))) {
-      return entry.message;
+      return i18n.t(entry.i18nKey);
     }
   }
 

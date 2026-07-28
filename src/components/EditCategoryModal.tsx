@@ -28,7 +28,7 @@ export function EditCategoryModal({ isOpen, category, onClose, onSave }: EditCat
 
     const nextName = name.trim();
     if (!nextName) {
-      setError("O nome da categoria não pode ficar vazio.");
+      setError(t("editCategoryModal.nameRequired"));
       return;
     }
 
@@ -39,7 +39,7 @@ export function EditCategoryModal({ isOpen, category, onClose, onSave }: EditCat
       await onSave(category.id, nextName);
       onClose();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Erro ao salvar";
+      const message = err instanceof Error ? err.message : t("editCategoryModal.saveError");
       setError(message);
     } finally {
       setIsSaving(false);

@@ -1,14 +1,16 @@
+import { useTranslation } from "react-i18next";
+
 interface SupportContactsCardProps {
   email: string | null;
 }
 
 export function SupportContactsCard({ email }: SupportContactsCardProps) {
+const { t } = useTranslation();
   return (
     <div className="mt-3 space-y-2">
-      <ContactLine label="Email" value={email ?? "Não configurado"} />
+      <ContactLine label={t("supportContactsCard.emailLabel")} value={email ?? t("supportContactsCard.notConfigured")} />
       <p className="text-xs text-[#8b9db2] mt-4">
-        Caso tenha alguma: sugestão, problema ou dúvida, entre em contato com o
-        desenvolvedor pelo email acima.
+        {t("supportContactsCard.message")}
       </p>
     </div>
   );

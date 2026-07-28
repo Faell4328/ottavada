@@ -154,37 +154,75 @@
   },
   "editScoreModal": {
     "title": "Edit Score",
-    "instrumentLabel": "Instrument",
-    "instrumentPlaceholder": "Instrument name",
-    "pathLabel": "File path",
+    "instrumentLabel": "Instrument Name",
+    "instrumentPlaceholder": "Ex: Flute, Violin, Piano",
+    "pathLabel": "File Path",
+    "noFileSelected": "No file selected",
+    "saveError": "Error saving",
+    "nameConflictTitle": "There is a pending issue with this score.",
+    "nameConflictMessage": "Another score with this name already exists. Rename before saving.",
+    "musicLabel": "Music",
+    "composerPrefix": "Composer:",
+    "arrangerPrefix": "Arranger:",
+    "selectFileError": "Select a file to open the score",
+    "openScoreError": "Could not open the selected score",
+    "selectLocalError": "Select a file to open the location",
+    "openLocalError": "Could not open the location of the selected score",
+    "nameConflictSaveError": "A score with this name already exists in this song",
     "instrumentRequired": "Instrument is required",
-    "pathRequired": "Path is required",
-    "saveError": "Error saving"
+    "pathRequired": "Path is required"
   },
   "editInstrumentModal": {
-    "title": "Edit Instrument",
-    "nameLabel": "Instrument name",
-    "namePlaceholder": "Ex: Violin, Trumpet, Keyboard...",
+    "title": "Edit Score",
+    "nameLabel": "Instrument Name",
+    "namePlaceholder": "Ex: Soprano, Alto Sax, Flute...",
+    "filePathLabel": "File Path",
+    "noFileSelected": "No file selected",
+    "nameConflictTitle": "There is a pending issue with this score.",
+    "nameConflictMessage": "Another score with this name already exists. Rename before saving.",
     "cancel": "Cancel",
     "save": "Save"
   },
   "editCategoryModal": {
     "title": "Edit Category",
-    "nameLabel": "Category name",
-    "namePlaceholder": "Category name",
+    "nameLabel": "Category Name",
+    "namePlaceholder": "Enter the new name",
     "cancel": "Cancel",
-    "save": "Save"
+    "save": "Save",
+    "nameRequired": "Category name cannot be empty.",
+    "saveError": "Error saving"
   },
   "editAuthorModal": {
     "editComposerTitle": "Edit Composer",
     "editArrangerTitle": "Edit Arranger",
+    "nameComposerLabel": "Composer name",
+    "nameArrangerLabel": "Arranger name",
+    "nameComposerPlaceholder": "New composer name",
+    "nameArrangerPlaceholder": "New arranger name",
     "nameLabel": "Name",
     "namePlaceholder": "New name",
     "cancel": "Cancel",
-    "save": "Save"
+    "save": "Save",
+    "nameRequired": "Name cannot be empty.",
+    "saveError": "Error saving"
   },
   "addFilesModal": {
-    "title": "Add files",
+    "title": "Add Score(s)",
+    "labelSongName": "Song Name",
+    "labelComposer": "Composer",
+    "labelArranger": "Arranger",
+    "labelCategories": "Categories",
+    "labelInstrumentsToAdd": "Instruments to add ({{count}})",
+    "titleIgnoreFile": "Ignore file",
+    "titleUnignoreFile": "Unignore file",
+    "titleMoveToTrash": "Move to trash",
+    "titleOpenScore": "Open score",
+    "titleOpenLocal": "Open location",
+    "btnOpenScore": "Open score",
+    "btnOpenLocal": "Open location",
+    "btnOpen": "Open",
+    "badgeIgnored": "Ignored",
+    "placeholderInstrumentName": "Instrument name",
     "filesFound": "{{count}} file(s) found",
     "noFiles": "No files to process.",
     "reviewFiles": "Review files",
@@ -195,7 +233,16 @@
     "uploadTitle": "Uploading to cloud",
     "uploadDetail": "Rclone is managing cloud upload",
     "successMessage": "All files have been processed and are organized in the song list.",
-    "errorMessage": "Not all files were processed. Please try again."
+    "errorMessage": "Not all files were processed. Please try again.",
+    "deleteFileError": "Error deleting file",
+    "titleRequired": "Song title is required",
+    "noFilesSelected": "Add at least one file",
+    "pendingIssues": "Fix pending issues before saving",
+    "saveError": "Error saving",
+    "duplicateSong": "The song {{name}} already exists. Change the song name to continue.",
+    "reviewPending": "Review the pending issues below before saving.",
+    "twoScoresSameInstrument_one": "{{count}} score uses the same instrument ({{instrument}}). Rename or delete one to continue.",
+    "twoScoresSameInstrument_other": "{{count}} scores use the same instrument ({{instrument}}). Rename or delete one to continue."
   },
   "scanReportModal": {
     "title": "Verification report",
@@ -244,7 +291,42 @@
     "scoreStatusChanged": "Score <strong>{{score}}</strong> went from <strong>{{from}}</strong> and {{to}}.",
     "scoreStatusChangedInSong": "Score <strong>{{score}}</strong> went from <strong>{{from}}</strong> and {{to}} in song <strong>{{song}}</strong>.",
     "scoreStatusReturned": "returned to <strong>{{status}}</strong>",
-    "scoreStatusWent": "went to <strong>{{status}}</strong>"
+    "scoreStatusWent": "went to <strong>{{status}}</strong>",
+    "songStatusReturnedToMain": "Song <strong>{{song}}</strong> went from <strong>{{from}}</strong> and returned to <strong>{{status}}</strong>.",
+    "songStatusWentToStatus": "Song <strong>{{song}}</strong> went from <strong>{{from}}</strong> and went to <strong>{{status}}</strong>.",
+    "scoreStatusReturnedToMain": "Score <strong>{{score}}</strong> went from <strong>{{from}}</strong> and returned to <strong>{{status}}</strong>.",
+    "scoreStatusReturnedToMainInSong": "Score <strong>{{score}}</strong> went from <strong>{{from}}</strong> and returned to <strong>{{status}}</strong> in song <strong>{{song}}</strong>.",
+    "scoreStatusWentToStatus": "Score <strong>{{score}}</strong> went from <strong>{{from}}</strong> and went to <strong>{{status}}</strong>.",
+    "scoreStatusWentToStatusInSong": "Score <strong>{{score}}</strong> went from <strong>{{from}}</strong> and went to <strong>{{status}}</strong> in song <strong>{{song}}</strong>.",
+    "scoresAddedPlural_one": "Score <scoreList/> was added",
+    "scoresAddedPlural_other": "Scores <scoreList/> were added",
+    "scoresAddedPluralSong_one": "Score <scoreList/> was added to song <strong>{{song}}</strong>.",
+    "scoresAddedPluralSong_other": "Scores <scoreList/> were added to song <strong>{{song}}</strong>.",
+    "scoresDeletedPlural_one": "Score <scoreList/> was deleted",
+    "scoresDeletedPlural_other": "Scores <scoreList/> were deleted",
+    "scoresDeletedPluralSong_one": "Score <scoreList/> was deleted from song <strong>{{song}}</strong>.",
+    "scoresDeletedPluralSong_other": "Scores <scoreList/> were deleted from song <strong>{{song}}</strong>.",
+    "scoresModifiedPlural_one": "Score <scoreList/> was changed",
+    "scoresModifiedPlural_other": "Scores <scoreList/> were changed",
+    "scoresModifiedPluralSong_one": "Score <scoreList/> was changed in song <strong>{{song}}</strong>.",
+    "scoresModifiedPluralSong_other": "Scores <scoreList/> were changed in song <strong>{{song}}</strong>.",
+    "scoresStatusPluralDeleted": "Score <scoreList/> was deleted from song <strong>{{song}}</strong>.",
+    "scoresStatusPluralDeleted_other": "Scores <scoreList/> were deleted from song <strong>{{song}}</strong>.",
+    "scoresStatusPluralReturned_one": "Score <scoreList/> went from <strong>{{from}}</strong> and returned to <strong>{{to}}</strong> in song <strong>{{song}}</strong>.",
+    "scoresStatusPluralReturned_other": "Scores <scoreList/> went from <strong>{{from}}</strong> and returned to <strong>{{to}}</strong> in song <strong>{{song}}</strong>.",
+    "scoresStatusPluralChanged_one": "Score <scoreList/> went from <strong>{{from}}</strong> and went to <strong>{{to}}</strong> in song <strong>{{song}}</strong>.",
+    "scoresStatusPluralChanged_other": "Scores <scoreList/> went from <strong>{{from}}</strong> and went to <strong>{{to}}</strong> in song <strong>{{song}}</strong>.",
+    "theScore": "Score",
+    "theScores": "Scores",
+    "wasChangedAnd_one": "was changed and ",
+    "wasChangedAnd_other": "were changed and ",
+    "wasDeleted_one": "was deleted",
+    "wasDeleted_other": "were deleted",
+    "noName": "no name",
+    "scoresCombinedReturned_one": "was changed and went from <strong>{{from}}</strong> and returned to <strong>{{to}}</strong> in song <strong>{{song}}</strong>.",
+    "scoresCombinedReturned_other": "were changed and went from <strong>{{from}}</strong> and returned to <strong>{{to}}</strong> in song <strong>{{song}}</strong>.",
+    "scoresCombinedChanged_one": "was changed and went from <strong>{{from}}</strong> and went to <strong>{{to}}</strong> in song <strong>{{song}}</strong>.",
+    "scoresCombinedChanged_other": "were changed and went from <strong>{{from}}</strong> and went to <strong>{{to}}</strong> in song <strong>{{song}}</strong>."
   },
   "firstRun": {
     "beforeStart": "Before you start",
@@ -451,28 +533,49 @@
     "clientType": "Rehearsal Computer"
   },
   "rcloneProviderModal": {
-    "title": "Configure cloud provider"
+    "title": "Configure cloud provider",
+    "browserAuth": "Browser authentication.",
+    "emailLabel": "Email",
+    "emailPlaceholder": "you@example.com",
+    "appPasswordLabel": "App password",
+    "appPasswordPlaceholder": "Password created on Koofr",
+    "googleDriveTitle": "Google Drive",
+    "googleDriveHint": "Clicking the button will open your browser to choose a Google account",
+    "current": "Current",
+    "alternative": "Alternative",
+    "close": "Close",
+    "testing": "Testing...",
+    "updateTestGoogleDrive": "Update and test Google Drive",
+    "switchTestGoogleDrive": "Switch to Google Drive and test",
+    "updateTestKoofr": "Update and test Koofr",
+    "switchTestKoofr": "Switch to Koofr and test"
   },
   "rcloneLicenseModal": {
     "title": "Rclone License"
   },
   "useAsBaseScoreModal": {
     "title": "Use as base",
-    "nameLabel": "New score name",
-    "namePlaceholder": "Ex: Violin - Copy",
+    "nameConflictTitle": "Duplicate name",
+    "nameConflictMessage": "Another score with this name already exists. Choose a different name.",
+    "nameLabel": "New Score Name",
+    "namePlaceholder": "Ex: Flute - Base",
+    "nameRequired": "Enter a name for the new score",
+    "nameConflictError": "A score with this name already exists",
+    "invalidName": "Enter a valid name for the new score",
     "saveError": "Could not save the new score.",
     "cancel": "Cancel",
     "save": "Save"
   },
   "supportContactsCard": {
-    "email": "Email",
-    "emailPlaceholder": "Enter support email",
-    "phone": "Phone",
-    "phonePlaceholder": "Enter support phone"
+    "message": "Should you have any suggestions, issues, or questions, please contact the developer at the email address above.",
+    "emailLabel": "Email",
+    "notConfigured": "Not configured"
   },
   "organizationNameField": {
     "label": "Organization or institution",
-    "placeholder": "Ex: Orchestra, church, ministry..."
+    "placeholder": "Ex: Orchestra, church, ministry...",
+    "serverHint": "Used to identify the organization on the conductor's computer.",
+    "clientHint": "Optional on the rehearsal computer, but useful to identify the organization."
   },
   "crudActions": {
     "clientBlocked": "This feature is only available on the main computer.",
@@ -569,111 +672,6 @@
   "autoBackup": {
     "generated": "Automatic backup generated on {{timestamp}}"
   },
-  "addFilesModal": {
-    "title": "Add Score(s)",
-    "labelSongName": "Song Name",
-    "labelComposer": "Composer",
-    "labelArranger": "Arranger",
-    "labelCategories": "Categories",
-    "labelInstrumentsToAdd": "Instruments to add ({{count}})",
-    "titleIgnoreFile": "Ignore file",
-    "titleUnignoreFile": "Unignore file",
-    "titleMoveToTrash": "Move to trash",
-    "titleOpenScore": "Open score",
-    "titleOpenLocal": "Open location",
-    "btnOpenScore": "Open score",
-    "btnOpenLocal": "Open location",
-    "btnOpen": "Open",
-    "badgeIgnored": "Ignored",
-    "placeholderInstrumentName": "Instrument name"
-  },
-  "editInstrumentModal": {
-    "title": "Edit Score",
-    "nameLabel": "Instrument Name",
-    "namePlaceholder": "Ex: Soprano, Alto Sax, Flute...",
-    "filePathLabel": "File Path",
-    "noFileSelected": "No file selected",
-    "nameConflictTitle": "There is a pending issue with this score.",
-    "nameConflictMessage": "Another score with this name already exists. Rename before saving.",
-    "cancel": "Cancel",
-    "save": "Save"
-  },
-  "editScoreModal": {
-    "title": "Edit Score",
-    "instrumentLabel": "Instrument Name",
-    "instrumentPlaceholder": "Ex: Flute, Violin, Piano",
-    "pathLabel": "File Path",
-    "noFileSelected": "No file selected",
-    "saveError": "Error saving",
-    "nameConflictTitle": "There is a pending issue with this score.",
-    "nameConflictMessage": "Another score with this name already exists. Rename before saving.",
-    "musicLabel": "Music",
-    "composerPrefix": "Composer:",
-    "arrangerPrefix": "Arranger:",
-    "selectFileError": "Select a file to open the score",
-    "openScoreError": "Could not open the selected score",
-    "selectLocalError": "Select a file to open the location",
-    "openLocalError": "Could not open the location of the selected score",
-    "nameConflictSaveError": "A score with this name already exists in this song"
-  },
-  "editCategoryModal": {
-    "title": "Edit Category",
-    "nameLabel": "Category Name",
-    "namePlaceholder": "Enter the new name",
-    "cancel": "Cancel",
-    "save": "Save"
-  },
-  "editMusicModal": {
-    "title": "Edit Song",
-    "titleLabel": "Title",
-    "titlePlaceholder": "Song name",
-    "composerLabel": "Composer",
-    "composerPlaceholder": "Composer name",
-    "arrangerLabel": "Arranger",
-    "arrangerPlaceholder": "Arranger name",
-    "categoriesLabel": "Categories (multiple selections)",
-    "titleRequired": "Title is required",
-    "saveError": "Error saving"
-  },
-  "organizationNameField": {
-    "label": "Organization or institution",
-    "placeholder": "Ex: Orchestra, church, ministry...",
-    "serverHint": "Used to identify the organization on the conductor's computer.",
-    "clientHint": "Optional on the rehearsal computer, but useful to identify the organization."
-  },
-  "rcloneProviderModal": {
-    "title": "Configure cloud provider",
-    "browserAuth": "Browser authentication.",
-    "koofrTitle": "Koofr",
-    "koofrHint": "Enter your Koofr email and app password.",
-    "emailLabel": "Email",
-    "emailPlaceholder": "you@example.com",
-    "appPasswordLabel": "App password",
-    "appPasswordPlaceholder": "Password created on Koofr",
-    "googleDriveTitle": "Google Drive",
-    "googleDriveHint": "Clicking the button will open your browser to choose a Google account",
-    "current": "Current",
-    "alternative": "Alternative",
-    "close": "Close",
-    "testing": "Testing...",
-    "updateTestGoogleDrive": "Update and test Google Drive",
-    "switchTestGoogleDrive": "Switch to Google Drive and test",
-    "updateTestKoofr": "Update and test Koofr",
-    "switchTestKoofr": "Switch to Koofr and test"
-  },
-  "useAsBaseScoreModal": {
-    "title": "Use as base",
-    "nameConflictTitle": "Duplicate name",
-    "nameConflictMessage": "Another score with this name already exists. Choose a different name.",
-    "nameLabel": "New Score Name",
-    "namePlaceholder": "Ex: Flute - Base",
-    "nameRequired": "Enter a name for the new score",
-    "nameConflictError": "A score with this name already exists",
-    "invalidName": "Enter a valid name for the new score",
-    "saveError": "Could not save the new score.",
-    "cancel": "Cancel",
-    "save": "Save"
-  },
   "toast": {
     "genericError": "An error occurred. Please try again."
   },
@@ -682,5 +680,36 @@
     "favorites": "Favorites",
     "drafts": "Drafts",
     "not_found": "Missing Scores"
+  },
+  "deleteFileConfirmation": {
+    "title": "Move to trash",
+    "message": "Do you really want to move the file <strong>{{fileName}}</strong> to the trash?",
+    "ignoreHint": "If you don't want to move to trash, click Ignore to keep the file and save it as ignored.",
+    "cancel": "Cancel",
+    "ignore": "Ignore",
+    "confirm": "Confirm"
+  },
+  "contextMenu": {
+    "title": "Actions menu"
+  },
+  "rcloneErrors": {
+    "authFailed": "Failed to access your account. Check your email and app password.",
+    "remoteNotFound": "Could not locate the configured cloud folder. Generate the configuration again.",
+    "permissionDenied": "Could not access this cloud location. Check the permissions.",
+    "networkError": "Could not connect to the cloud. Check your internet.",
+    "quotaExceeded": "Could not complete the operation. Free up space in the cloud account and try again."
+  },
+  "updateLock": {
+    "pendingUpdate": "There is a pending update. Postpone or update before continuing."
+  },
+  "errors": {
+    "unknown": "Unknown error"
+  },
+  "libraryDuplicates": {
+    "scoreInSameSong": "This score is already being used in the song {{name}} and will not be saved.",
+    "scoreInOtherSong": "This score is already being used in the song {{name}} and will not be saved.",
+    "oneScoreInSong": "1 score is being used in the song {{name}}.",
+    "multipleScoresInSong": "{{count}} scores are being used in the song {{name}}.",
+    "existingSongWarning": "This song already exists in your repertoire"
   }
 }

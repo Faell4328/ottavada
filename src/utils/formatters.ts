@@ -1,3 +1,5 @@
+import i18n from "../i18n";
+
 export function formatBytes(value: number): string {
   if (!Number.isFinite(value) || value <= 0) return "0 B";
 
@@ -24,11 +26,13 @@ export function formatEta(seconds: number | null): string | null {
 
 export function formatBackupTimestamp(timestamp: number): string {
   const date = new Date(timestamp * 1000);
-  const formattedDate = date.toLocaleDateString("pt-BR");
-  const formattedTime = date.toLocaleTimeString("pt-BR", {
+  const locale = i18n.language === "en" ? "en-US" : "pt-BR";
+  const formattedDate = date.toLocaleDateString(locale);
+  const formattedTime = date.toLocaleTimeString(locale, {
     hour: "2-digit",
     minute: "2-digit",
   });
 
-  return `${formattedDate} às ${formattedTime}`;
+  const separator = i18n.language === "en" ? " at " : " às ";
+  return `${formattedDate}${separator}${formattedTime}`;
 }

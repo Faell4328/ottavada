@@ -102,7 +102,7 @@ export function EditMusicModal({
     const normalizedTitle = normalizeSongNameForSave(title);
 
     if (!score || !normalizedTitle) {
-      setError("O título é obrigatório");
+      setError(t("editMusicModal.titleRequired"));
       return;
     }
 
@@ -119,7 +119,7 @@ export function EditMusicModal({
       });
       onClose();
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Erro ao salvar";
+      const errorMsg = err instanceof Error ? err.message : t("editMusicModal.saveError");
       setError(errorMsg);
     } finally {
       setIsSaving(false);

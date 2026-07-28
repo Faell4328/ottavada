@@ -1,4 +1,5 @@
 import { Modal } from "./ui/Modal";
+import { useTranslation } from "react-i18next";
 
 interface RcloneLicenseModalProps {
   isOpen: boolean;
@@ -27,11 +28,13 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.`;
 
 export function RcloneLicenseModal({ isOpen, onClose }: RcloneLicenseModalProps) {
+  const { t } = useTranslation();
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Licença do rclone"
+      title={t("rcloneLicenseModal.title")}
       maxWidth="max-w-3xl"
       footer={
         <button
@@ -39,7 +42,7 @@ export function RcloneLicenseModal({ isOpen, onClose }: RcloneLicenseModalProps)
           onClick={onClose}
           className="ml-auto rounded border border-[#c5cfdb] bg-white px-4 py-2 text-sm font-medium text-[#344b61] transition-colors hover:bg-[#f2f5fa]"
         >
-          Fechar
+          {t("modal.close")}
         </button>
       }
     >

@@ -1,3 +1,5 @@
+import i18n from "../i18n";
+
 export interface UpdateLockState {
   isCheckingUpdate: boolean;
   isInstallingUpdate: boolean;
@@ -9,5 +11,5 @@ export function isUpdateActionLocked(state: UpdateLockState) {
 }
 
 export function getUpdateActionBlockedMessage() {
-  return "Há uma atualização pendente. Adie ou atualize antes de continuar.";
+  return i18n.t("updateLock.pendingUpdate");
 }

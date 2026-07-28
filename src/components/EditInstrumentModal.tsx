@@ -89,7 +89,7 @@ export function EditInstrumentModal({
     const selectedPath = filePath.trim();
 
     if (!selectedPath && !instrument) {
-      setError("Selecione um arquivo para abrir a partitura");
+      setError(t("editScoreModal.selectFileError"));
       return;
     }
 
@@ -103,7 +103,7 @@ export function EditInstrumentModal({
         await api.openFile(instrument?.id ?? "");
       }
     } catch {
-      setError("Não foi possível abrir a partitura selecionada");
+      setError(t("editScoreModal.openScoreError"));
     } finally {
       setIsOpeningScore(false);
     }
@@ -113,7 +113,7 @@ export function EditInstrumentModal({
     const selectedPath = filePath.trim();
 
     if (!selectedPath && !instrument) {
-      setError("Selecione um arquivo para abrir o local");
+      setError(t("editScoreModal.selectLocalError"));
       return;
     }
 
@@ -127,7 +127,7 @@ export function EditInstrumentModal({
         await api.openFileLocation(instrument?.id ?? "");
       }
     } catch {
-      setError("Não foi possível abrir o local da partitura selecionada");
+      setError(t("editScoreModal.openLocalError"));
     } finally {
       setIsOpeningLocation(false);
     }
@@ -137,7 +137,7 @@ export function EditInstrumentModal({
     if (!instrument) return;
 
     if (hasNameConflict) {
-      setError("Já existe uma partitura com esse nome");
+      setError(t("editScoreModal.nameConflictSaveError"));
       return;
     }
 
@@ -151,7 +151,7 @@ export function EditInstrumentModal({
       );
       onClose();
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Erro ao salvar";
+      const errorMsg = err instanceof Error ? err.message : t("editScoreModal.saveError");
       setError(errorMsg);
     } finally {
       setIsSaving(false);

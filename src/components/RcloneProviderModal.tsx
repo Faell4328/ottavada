@@ -143,7 +143,7 @@ export function RcloneProviderModal({
             </div>
             <p className="text-sm font-semibold text-[#34485d]">Koofr</p>
             <p className="mt-1 text-xs text-[#6b849e]">
-              Use email + senha de aplicativo.
+              {t("rcloneProviderModal.koofrHint")}
             </p>
           </button>
 
@@ -177,11 +177,6 @@ export function RcloneProviderModal({
 
         {selectedProvider === "koofr" ? (
           <div className="space-y-3 rounded-xl border border-[#c5cfdb] bg-white p-4">
-            <p className="text-sm font-semibold text-[#34485d]">{t("rcloneProviderModal.koofrTitle")}</p>
-            <p className="text-xs text-[#6b849e]">
-              {t("rcloneProviderModal.koofrHint")}
-            </p>
-
             <div>
               <label className="mb-1.5 block text-xs font-semibold text-[#34485d]">
                 {t("rcloneProviderModal.emailLabel")}

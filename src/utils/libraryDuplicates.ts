@@ -1,6 +1,7 @@
 import type { IndexedFile, ScoreListItem, SongListItem } from "../types";
 import { isSamePath } from "./paths";
 import { normalizeScoreNameForSave, normalizeSongNameForSave } from "./nameFormat";
+import i18n from "../i18n";
 
 export interface ScoreConflict {
   song: SongListItem;
@@ -142,10 +143,10 @@ export function describeScoreConflict(
   const normalizedConflictSongName = normalizeSongNameForSave(conflict.song.name);
 
   if (currentSongName && normalizedConflictSongName === normalizeSongNameForSave(currentSongName)) {
-    return `Essa partitura já está sendo usada na música ${conflict.song.name} e por isso não será salva.`;
+    return i18n.t("libraryDuplicates.scoreInSameSong", { name: conflict.song.name });
   }
 
-  return `Essa partitura já está sendo utilizada na música ${conflict.song.name} e por isso não será salva.`;
+  return i18n.t("libraryDuplicates.scoreInOtherSong", { name: conflict.song.name });
 }
 
 export interface ScoreConflictSummary {
@@ -178,10 +179,10 @@ export function summarizeScoreConflictsBySong(
 
 export function formatScoreConflictSummary(summary: ScoreConflictSummary): string {
   return summary.count === 1
-    ? `1 partitura está sendo usada na música ${summary.songName}.`
-    : `${summary.count} partituras estão sendo usadas na música ${summary.songName}.`;
+    ? i18n.t("libraryDuplicates.oneScoreInSong", { name: summary.songName })
+    : i18n.t("libraryDuplicates.multipleScoresInSong", { count: summary.count, name: summary.songName });
 }
 
 export function describeExistingSongWarning(): string {
-  return "Essa música já existe em seu repertorio";
+  return i18n.t("libraryDuplicates.existingSongWarning");
 }

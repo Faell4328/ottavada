@@ -1,12 +1,12 @@
 import { ListChecks } from "lucide-react";
 import type { ReactNode } from "react";
+import { useTranslation, Trans } from "react-i18next";
 
 import type { ScanResult } from "../api/commands";
 import { compareInstrumentNames } from "../utils/instrumentOrder";
 import {
   normalizeKey,
   formatScoreDisplayName,
-  formatStatusLabel,
   parseScoreReference,
   parseCustomScoreStatusChange,
   resolveEntityAction,
@@ -36,6 +36,8 @@ export function ScanReportModal({
   onClose,
   onConfirm,
 }: ScanReportModalProps) {
+  const { t, i18n } = useTranslation();
+
   if (!isOpen || !report) {
     return null;
   }
@@ -49,14 +51,14 @@ export function ScanReportModal({
       ([path, error]) => `Falha ao processar ${path}: ${error}`,
     ),
   ];
-  const sections = buildReviewSections(reportItems);
+  const sections = buildReviewSections(reportItems, t, i18n);
   const hasAnyChanges = sections.some((section) => section.groups.length > 0);
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Relatório da verificação"
+      title={t("scanReportModal.title")}
       maxWidth="max-w-3xl"
       footer={
         <div className="flex w-full justify-end gap-3">
@@ -66,7 +68,7 @@ export function ScanReportModal({
             disabled={isConfirming}
             className="rounded-lg border border-[#c5cfdb] px-4 py-2 text-sm font-semibold text-[#344b61] transition-colors hover:bg-[#f2f5fa] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Cancelar
+            {t("scanReportModal.cancel")}
           </button>
           <button
             type="button"
@@ -74,7 +76,7 @@ export function ScanReportModal({
             disabled={isConfirming}
             className="rounded-lg bg-[#4f84d7] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#3d6fb8] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isConfirming ? "Aplicando..." : "Continuar"}
+            {isConfirming ? t("scanReportModal.applying") : t("scanReportModal.continue")}
           </button>
         </div>
       }
@@ -86,13 +88,14 @@ export function ScanReportModal({
               <span className="text-[#4f84d7]">
                 <ListChecks className="h-4 w-4" />
               </span>
-              Revisão das alterações
+              {t("scanReportModal.reviewChanges")}
             </div>
             <div className="mt-3 space-y-4">
               {sections.map((section) => (
                 <ActionSectionCard
-                  key={section.title}
+                  key={section.action}
                   title={section.title}
+                  action={section.action}
                   groups={section.groups}
                 />
               ))}
@@ -100,7 +103,7 @@ export function ScanReportModal({
           </section>
         ) : (
           <div className="rounded-xl border border-dashed border-[#d3deea] bg-white px-4 py-8 text-center text-sm text-[#60748d]">
-            Nenhuma alteração encontrada.
+            {t("scanReportModal.noChanges")}
           </div>
         )}
       </div>
@@ -115,10 +118,15 @@ type EntityGroup = {
 
 type ReviewSection = {
   title: string;
+  action: ReviewAction;
   groups: EntityGroup[];
 };
 
-function buildReviewSections(reportItems: string[]): ReviewSection[] {
+function buildReviewSections(
+  reportItems: string[],
+  t: (key: string, options?: Record<string, unknown>) => string,
+  i18n: { language: string },
+): ReviewSection[] {
   const parsedItems = coalesceScoreFileAndStatusChanges(
     coalesceExtensionOnlyScoreChanges(
       coalesceScoreRenameAdditions(
@@ -148,28 +156,31 @@ function buildReviewSections(reportItems: string[]): ReviewSection[] {
 
   const sections: ReviewSection[] = [
     {
-      title: "Adicionando",
+      title: t("scanReportModal.adding"),
+      action: "adding",
       groups: buildActionGroups(parsedItems, "adding", {
         createdSongNames,
         modifiedSongNames,
         deletedSongNames,
-      }),
+      }, t, i18n),
     },
     {
-      title: "Modificado",
+      title: t("scanReportModal.modified"),
+      action: "modified",
       groups: buildActionGroups(parsedItems, "modified", {
         createdSongNames,
         modifiedSongNames,
         deletedSongNames,
-      }),
+      }, t, i18n),
     },
     {
-      title: "Deletado",
+      title: t("scanReportModal.deleted"),
+      action: "deleted",
       groups: buildActionGroups(parsedItems, "deleted", {
         createdSongNames,
         modifiedSongNames,
         deletedSongNames,
-      }),
+      }, t, i18n),
     },
   ];
 
@@ -184,6 +195,8 @@ function buildActionGroups(
     modifiedSongNames: Set<string>;
     deletedSongNames: Set<string>;
   },
+  t: (key: string, options?: Record<string, unknown>) => string,
+  i18n: { language: string },
 ): EntityGroup[] {
   const categoryItems: ReactNode[] = [];
   const composerItems: ReactNode[] = [];
@@ -223,7 +236,7 @@ function buildActionGroups(
       const songName = item.songName ?? item.raw;
       const resolvedAction = resolveEntityAction(action, songName, songSets);
       composerItems.push(
-        renderPersonItem("compositor", resolvedAction, item.value, songName),
+        renderPersonItem("compositor", resolvedAction, item.value, songName, t),
       );
       continue;
     }
@@ -232,7 +245,7 @@ function buildActionGroups(
       const songName = item.songName ?? item.raw;
       const resolvedAction = resolveEntityAction(action, songName, songSets);
       arrangerItems.push(
-        renderPersonItem("arranjador", resolvedAction, item.value, songName),
+        renderPersonItem("arranjador", resolvedAction, item.value, songName, t),
       );
       continue;
     }
@@ -240,7 +253,7 @@ function buildActionGroups(
     if (item.entity === "song") {
       songItems.push(
         item.customText
-          ? renderCustomSongText(item.customText)
+          ? renderCustomSongText(item.customText, t)
           : formatSongItem(action, item.songName ?? item.value ?? item.raw),
       );
       continue;
@@ -329,7 +342,7 @@ function buildActionGroups(
           getScoreReviewSongNameFromText(
             entry.item.customText ?? entry.item.raw,
           ),
-        content: renderCustomScoreText(entry.item.customText ?? entry.item.raw),
+        content: renderCustomScoreText(entry.item.customText ?? entry.item.raw, t, i18n),
       });
       continue;
     }
@@ -348,7 +361,8 @@ function buildActionGroups(
           group.previousStatus,
           group.nextStatus,
           group.scoreNames,
-          group.hasCombinedScores,
+          group.          hasCombinedScores,
+          t,
         ),
       });
       continue;
@@ -376,19 +390,19 @@ function buildActionGroups(
   const groups: EntityGroup[] = [];
 
   if (categoryItems.length > 0) {
-    groups.push({ title: "Categorias", items: categoryItems });
+    groups.push({ title: t("scanReportModal.categories"), items: categoryItems });
   }
 
   if (composerItems.length > 0) {
-    groups.push({ title: "Compositores", items: composerItems });
+    groups.push({ title: t("scanReportModal.composers"), items: composerItems });
   }
 
   if (arrangerItems.length > 0) {
-    groups.push({ title: "Arranjadores", items: arrangerItems });
+    groups.push({ title: t("scanReportModal.arrangers"), items: arrangerItems });
   }
 
   if (songItems.length > 0) {
-    groups.push({ title: "Músicas", items: songItems });
+    groups.push({ title: t("scanReportModal.songs"), items: songItems });
   }
 
   if (scoreItems.length > 0) {
@@ -397,8 +411,8 @@ function buildActionGroups(
 
     for (const item of scoreItems) {
       const groupTitle = item.songName
-        ? `Partituras · ${item.songName}`
-        : "Partituras";
+        ? t("scanReportModal.scoresWithSong", { song: item.songName })
+        : t("scanReportModal.scores");
 
       if (!scoreGroupItemsBySong.has(groupTitle)) {
         scoreGroupOrder.push(groupTitle);
@@ -422,46 +436,49 @@ function buildActionGroups(
 function renderCategoryItem(
   action: ReviewAction,
   categoryName: string,
-  songName?: string,
+  songName: string | undefined,
 ): ReactNode {
   if (action === "adding") {
     if (songName) {
       return (
-        <>
-          A categoria <strong>{categoryName}</strong> foi adicionada à música{" "}
-          <strong>{songName}</strong>.
-        </>
+        <Trans
+          i18nKey="scanReportModal.categoryAddedToSong"
+          values={{ name: categoryName, song: songName }}
+        />
       );
     }
 
     return (
-      <>
-        A categoria <strong>{categoryName}</strong> foi adicionada.
-      </>
+      <Trans
+        i18nKey="scanReportModal.categoryAdded"
+        values={{ name: categoryName }}
+      />
     );
   }
 
   if (action === "deleted") {
     if (songName) {
       return (
-        <>
-          A categoria <strong>{categoryName}</strong> foi removida da música{" "}
-          <strong>{songName}</strong>.
-        </>
+        <Trans
+          i18nKey="scanReportModal.categoryRemoved"
+          values={{ name: categoryName, song: songName }}
+        />
       );
     }
 
     return (
-      <>
-        A categoria <strong>{categoryName}</strong> foi deletada.
-      </>
+      <Trans
+        i18nKey="scanReportModal.categoryDeleted"
+        values={{ name: categoryName }}
+      />
     );
   }
 
   return (
-    <>
-      A categoria <strong>{categoryName}</strong> foi modificada.
-    </>
+    <Trans
+      i18nKey="scanReportModal.categoryModified"
+      values={{ name: categoryName }}
+    />
   );
 }
 
@@ -470,60 +487,71 @@ function renderPersonItem(
   action: ReviewAction,
   value: string | undefined,
   songName: string,
+  t: (key: string, options?: Record<string, unknown>) => string,
 ): ReactNode {
-  const personName = value ?? "sem nome";
+  const keyPrefix = role === "compositor" ? "composer" : "arranger";
+  const personName = value ?? t("scanReportModal.noName");
 
   if (action === "adding") {
     return (
-      <>
-        O {role} <strong>{personName}</strong> foi adicionado à música{" "}
-        {songName}.
-      </>
+      <Trans
+        i18nKey={`scanReportModal.${keyPrefix}Added`}
+        values={{ name: personName, song: songName }}
+      />
     );
   }
 
   if (action === "deleted") {
     return (
-      <>
-        O {role} <strong>{personName}</strong> foi deletado da música {songName}
-        .
-      </>
+      <Trans
+        i18nKey={`scanReportModal.${keyPrefix}Deleted`}
+        values={{ name: personName, song: songName }}
+      />
     );
   }
 
   return (
-    <>
-      O {role} da música <strong>{songName}</strong> foi alterado para{" "}
-      <strong>{personName}</strong>.
-    </>
+    <Trans
+      i18nKey={`scanReportModal.${keyPrefix}Modified`}
+      values={{ song: songName, name: personName }}
+    />
   );
 }
 
-function formatSongItem(action: ReviewAction, songName: string): ReactNode {
+function formatSongItem(
+  action: ReviewAction,
+  songName: string,
+): ReactNode {
   if (action === "adding") {
     return (
-      <>
-        A música <strong>{songName}</strong> foi adicionada.
-      </>
+      <Trans
+        i18nKey="scanReportModal.songAdded"
+        values={{ name: songName }}
+      />
     );
   }
 
   if (action === "deleted") {
     return (
-      <>
-        A música <strong>{songName}</strong> foi deletada.
-      </>
+      <Trans
+        i18nKey="scanReportModal.songDeleted"
+        values={{ name: songName }}
+      />
     );
   }
 
   return (
-    <>
-      A música <strong>{songName}</strong> foi modificada.
-    </>
+    <Trans
+      i18nKey="scanReportModal.songModified"
+      values={{ name: songName }}
+    />
   );
 }
 
-function renderCustomSongText(text: string): ReactNode {
+function renderCustomSongText(
+  text: string,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): ReactNode {
   const match = text.match(/^A música\s+(.+?)\s+teve o nome alterado\.$/);
   if (!match) {
     const statusChangeMatch = text.match(
@@ -539,49 +567,45 @@ function renderCustomSongText(text: string): ReactNode {
     const nextStatus = statusChangeMatch[3];
     const returnsToMain = text.includes("voltou para principal");
 
-    const labelForStatus = (value: string) => {
-      if (value === "ignored" || value === "ignorada") {
-        return "ignorada";
-      }
-
-      if (value === "draft" || value === "rascunho") {
-        return "Envio não permitido";
-      }
-
-      if (value === "not_found" || value === "sem partitura") {
-        return "sem partitura";
-      }
-
-      if (value === "main" || value === "principal") {
-        return "Envio permitido";
-      }
-
+    const formatStatusLabelT = (value: string) => {
+      const v = value.toLowerCase();
+      if (v === "ignored" || v === "ignorada") return t("scoreStatus.ignored");
+      if (v === "draft" || v === "rascunho") return t("scoreStatus.draft");
+      if (v === "not_found" || v === "sem partitura") return t("scoreStatus.not_found");
+      if (v === "main" || v === "principal") return t("scoreStatus.main");
       return value;
     };
 
+    if (returnsToMain) {
+      return (
+        <Trans
+          i18nKey="scanReportModal.songStatusReturnedToMain"
+          values={{
+            song: songName,
+            from: formatStatusLabelT(previousStatus),
+            status: formatStatusLabelT("main"),
+          }}
+        />
+      );
+    }
+
     return (
-      <>
-        A música <strong>{songName}</strong> saiu de{" "}
-        <strong>{labelForStatus(previousStatus)}</strong> e{" "}
-        {returnsToMain ? (
-          <>
-            voltou para <strong>{labelForStatus("main")}</strong>
-          </>
-        ) : (
-          <>
-            foi para{" "}
-            <strong>{labelForStatus(nextStatus ?? "main")}</strong>
-          </>
-        )}
-        .
-      </>
+      <Trans
+        i18nKey="scanReportModal.songStatusWentToStatus"
+        values={{
+          song: songName,
+          from: formatStatusLabelT(previousStatus),
+          status: formatStatusLabelT(nextStatus ?? "main"),
+        }}
+      />
     );
   }
 
   return (
-    <>
-      A música <strong>{match[1]}</strong> teve o nome alterado.
-    </>
+    <Trans
+      i18nKey="scanReportModal.songNameChanged"
+      values={{ name: match[1] }}
+    />
   );
 }
 
@@ -597,50 +621,53 @@ function renderScoreItem(
   if (action === "adding") {
     if (isStandaloneScoreName) {
       return (
-        <>
-          A partitura <strong>{displayScoreName}</strong> foi adicionada.
-        </>
+        <Trans
+          i18nKey="scanReportModal.scoreAdded"
+          values={{ name: displayScoreName }}
+        />
       );
     }
 
     return (
-      <>
-        A partitura <strong>{displayScoreName}</strong> foi adicionada na música{" "}
-        <strong>{songName}</strong>.
-      </>
+      <Trans
+        i18nKey="scanReportModal.scoreAddedToSong"
+        values={{ name: displayScoreName, song: songName }}
+      />
     );
   }
 
   if (action === "deleted") {
     if (isStandaloneScoreName) {
       return (
-        <>
-          A partitura <strong>{displayScoreName}</strong> foi deletada.
-        </>
+        <Trans
+          i18nKey="scanReportModal.scoreDeleted"
+          values={{ name: displayScoreName }}
+        />
       );
     }
 
     return (
-      <>
-        A partitura <strong>{displayScoreName}</strong> foi deletada na música{" "}
-        <strong>{songName}</strong>.
-      </>
+      <Trans
+        i18nKey="scanReportModal.scoreDeletedFromSong"
+        values={{ name: displayScoreName, song: songName }}
+      />
     );
   }
 
   if (isStandaloneScoreName) {
     return (
-      <>
-        A partitura <strong>{displayScoreName}</strong> foi alterada.
-      </>
+      <Trans
+        i18nKey="scanReportModal.scoreModified"
+        values={{ name: displayScoreName }}
+      />
     );
   }
 
   return (
-    <>
-      A partitura <strong>{displayScoreName}</strong> foi alterada na música{" "}
-      <strong>{songName}</strong>.
-    </>
+    <Trans
+      i18nKey="scanReportModal.scoreModifiedInSong"
+      values={{ name: displayScoreName, song: songName }}
+    />
   );
 }
 
@@ -652,49 +679,21 @@ function renderGroupedScoreItem(
   const scoreList = joinStrongList(
     scoreNames.map((value) => formatScoreDisplayName(value, songName)),
   );
-  const noun = scoreNames.length === 1 ? "A partitura" : "As partituras";
+  const count = scoreNames.length;
 
-  if (action === "adding") {
-    return songName ? (
-      <>
-        {noun} {scoreList}{" "}
-        {scoreNames.length === 1 ? "foi adicionada" : "foram adicionadas"} na
-        música <strong>{songName}</strong>.
-      </>
-    ) : (
-      <>
-        {noun} {scoreList}{" "}
-        {scoreNames.length === 1 ? "foi adicionada" : "foram adicionadas"}.
-      </>
-    );
-  }
+  const key = action === "adding"
+    ? (songName ? "scanReportModal.scoresAddedPluralSong" : "scanReportModal.scoresAddedPlural")
+    : action === "deleted"
+      ? (songName ? "scanReportModal.scoresDeletedPluralSong" : "scanReportModal.scoresDeletedPlural")
+      : (songName ? "scanReportModal.scoresModifiedPluralSong" : "scanReportModal.scoresModifiedPlural");
 
-  if (action === "deleted") {
-    return songName ? (
-      <>
-        {noun} {scoreList}{" "}
-        {scoreNames.length === 1 ? "foi deletada" : "foram deletadas"} na música{" "}
-        <strong>{songName}</strong>.
-      </>
-    ) : (
-      <>
-        {noun} {scoreList}{" "}
-        {scoreNames.length === 1 ? "foi deletada" : "foram deletadas"}.
-      </>
-    );
-  }
-
-  return songName ? (
-    <>
-      {noun} {scoreList}{" "}
-      {scoreNames.length === 1 ? "foi alterada" : "foram alteradas"} na música{" "}
-      <strong>{songName}</strong>.
-    </>
-  ) : (
-    <>
-      {noun} {scoreList}{" "}
-      {scoreNames.length === 1 ? "foi alterada" : "foram alteradas"}.
-    </>
+  return (
+    <Trans
+      i18nKey={key}
+      count={count}
+      values={songName ? { song: songName } : undefined}
+      components={{ scoreList: <>{scoreList}</> }}
+    />
   );
 }
 
@@ -704,50 +703,67 @@ function renderGroupedCustomScoreStatusItem(
   previousStatus: string,
   nextStatus: string,
   scoreNames: string[],
-  hasCombinedScores?: boolean,
+  hasCombinedScores: boolean | undefined,
+  t: (key: string, options?: Record<string, unknown>) => string,
 ): ReactNode {
   const scoreList = joinStrongList(
     scoreNames.map((value) => formatScoreDisplayName(value, songName)),
   );
-  const noun = scoreNames.length === 1 ? "A partitura" : "As partituras";
-  const previousStatusLabel = formatStatusLabel(previousStatus);
-  const nextStatusLabel = formatStatusLabel(nextStatus);
-  const combinedPrefix = hasCombinedScores
-    ? scoreNames.length === 1
-      ? "foi alterada e "
-      : "foram alteradas e "
-    : "";
+  const count = scoreNames.length;
+  const previousStatusLabel = formatStatusLabelT(previousStatus, t);
+  const nextStatusLabel = formatStatusLabelT(nextStatus, t);
 
   if (action === "deleted") {
     return (
-      <>
-        {noun} {scoreList}{" "}
-        {scoreNames.length === 1 ? "foi deletada" : "foram deletadas"} na música{" "}
-        <strong>{songName}</strong>.
-      </>
+      <Trans
+        i18nKey="scanReportModal.scoresStatusPluralDeleted"
+        count={count}
+        values={{ song: songName }}
+        components={{ scoreList: <>{scoreList}</> }}
+      />
     );
   }
 
-  if (nextStatus === "main") {
+  if (hasCombinedScores) {
+    const combinedKey =
+      nextStatus === "main"
+        ? "scanReportModal.scoresCombinedReturned"
+        : "scanReportModal.scoresCombinedChanged";
+
+    const noun = t(count === 1 ? "scanReportModal.theScore" : "scanReportModal.theScores");
+
     return (
       <>
-        {noun} {scoreList} {combinedPrefix}
-        {scoreNames.length === 1 ? "saiu" : "saíram"} de{" "}
-        <strong>{previousStatusLabel}</strong> e{" "}
-        {scoreNames.length === 1 ? "voltou" : "voltaram"} para{" "}
-        <strong>{formatStatusLabel("main")}</strong> na
-        música <strong>{songName}</strong>.
+        {noun} {scoreList}{" "}
+        <Trans
+          i18nKey={combinedKey}
+          count={count}
+          values={{
+            from: previousStatusLabel,
+            to: nextStatusLabel,
+            song: songName,
+          }}
+        />
       </>
     );
   }
 
+  const statusKey =
+    nextStatus === "main"
+      ? "scanReportModal.scoresStatusPluralReturned"
+      : "scanReportModal.scoresStatusPluralChanged";
+
   return (
-    <>
-      {noun} {scoreList} {combinedPrefix}
-      {scoreNames.length === 1 ? "saiu" : "saíram"} de{" "}
-      <strong>{previousStatusLabel}</strong> e {scoreNames.length === 1 ? "foi" : "foram"} para{" "}
-      <strong>{nextStatusLabel}</strong> na música <strong>{songName}</strong>.
-    </>
+    <Trans
+      i18nKey={statusKey}
+      count={count}
+      values={{
+        from: previousStatusLabel,
+        to: nextStatusLabel,
+        song: songName,
+      }}
+      components={{ scoreList: <>{scoreList}</> }}
+    />
   );
 }
 
@@ -764,7 +780,23 @@ function joinStrongList(values: string[]): ReactNode[] {
   });
 }
 
-function renderCustomScoreText(text: string): ReactNode {
+function formatStatusLabelT(
+  value: string,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): string {
+  const v = value.toLowerCase();
+  if (v === "ignored" || v === "ignorada") return t("scoreStatus.ignored");
+  if (v === "draft" || v === "rascunho") return t("scoreStatus.draft");
+  if (v === "not_found" || v === "sem partitura") return t("scoreStatus.not_found");
+  if (v === "main" || v === "principal") return t("scoreStatus.main");
+  return value;
+}
+
+function renderCustomScoreText(
+  text: string,
+  t: (key: string, options?: Record<string, unknown>) => string,
+  _i18n: { language: string },
+): ReactNode {
   const extensionOnlyMatch = text.match(
     /^A partitura\s+(.+?)\s+teve a extensão alterada na música\s+(.+)\.$/,
   );
@@ -775,17 +807,18 @@ function renderCustomScoreText(text: string): ReactNode {
       normalizeKey(scoreName) === normalizeKey(songName);
     if (isStandaloneScoreName) {
       return (
-        <>
-          A partitura <strong>{scoreName}</strong> teve a extensão alterada.
-        </>
+        <Trans
+          i18nKey="scanReportModal.scoreExtensionChanged"
+          values={{ name: scoreName }}
+        />
       );
     }
 
     return (
-      <>
-        A partitura <strong>{scoreName}</strong> teve a extensão alterada na
-        música <strong>{songName}</strong>.
-      </>
+      <Trans
+        i18nKey="scanReportModal.scoreExtensionChangedInSong"
+        values={{ name: scoreName, song: songName }}
+      />
     );
   }
 
@@ -793,13 +826,10 @@ function renderCustomScoreText(text: string): ReactNode {
   if (deleteMatch) {
     const parsed = parseScoreReference(deleteMatch[1]);
     return (
-      <>
-        A partitura{" "}
-        <strong>
-          {formatScoreDisplayName(parsed.scoreName, parsed.songName)}
-        </strong>{" "}
-        foi deletada.
-      </>
+      <Trans
+        i18nKey="scanReportModal.scoreDeleted"
+        values={{ name: formatScoreDisplayName(parsed.scoreName, parsed.songName) }}
+      />
     );
   }
 
@@ -815,40 +845,53 @@ function renderCustomScoreText(text: string): ReactNode {
     if (isStandaloneScoreName) {
       if (nextStatus === "main") {
         return (
-          <>
-            A partitura <strong>{scoreName}</strong> saiu de{" "}
-            <strong>{formatStatusLabel(previousStatus)}</strong> e voltou para{" "}
-            <strong>{formatStatusLabel("main")}</strong>.
-          </>
+          <Trans
+            i18nKey="scanReportModal.scoreStatusReturnedToMain"
+            values={{
+              score: scoreName,
+              from: formatStatusLabelT(previousStatus, t),
+              status: formatStatusLabelT("main", t),
+            }}
+          />
         );
       }
 
       return (
-        <>
-          A partitura <strong>{scoreName}</strong> saiu de{" "}
-          <strong>{formatStatusLabel(previousStatus)}</strong> e foi para{" "}
-          <strong>{formatStatusLabel(nextStatus)}</strong>.
-        </>
+        <Trans
+          i18nKey="scanReportModal.scoreStatusWentToStatus"
+          values={{
+            score: scoreName,
+            from: formatStatusLabelT(previousStatus, t),
+            status: formatStatusLabelT(nextStatus, t),
+          }}
+        />
+      );
+    }
+
+    if (nextStatus === "main") {
+      return (
+        <Trans
+          i18nKey="scanReportModal.scoreStatusReturnedToMainInSong"
+          values={{
+            score: scoreName,
+            from: formatStatusLabelT(previousStatus, t),
+            status: formatStatusLabelT("main", t),
+            song: songName,
+          }}
+        />
       );
     }
 
     return (
-      <>
-        A partitura <strong>{scoreName}</strong> saiu de{" "}
-        <strong>{formatStatusLabel(previousStatus)}</strong> e{" "}
-        {nextStatus === "main"
-          ? (
-            <>
-              voltou para <strong>{formatStatusLabel("main")}</strong>
-            </>
-          )
-          : (
-            <>
-              foi para <strong>{formatStatusLabel(nextStatus)}</strong>
-            </>
-          )}{" "}
-        na música <strong>{songName}</strong>.
-      </>
+      <Trans
+        i18nKey="scanReportModal.scoreStatusWentToStatusInSong"
+        values={{
+          score: scoreName,
+          from: formatStatusLabelT(previousStatus, t),
+          status: formatStatusLabelT(nextStatus, t),
+          song: songName,
+        }}
+      />
     );
   }
 
@@ -857,10 +900,10 @@ function renderCustomScoreText(text: string): ReactNode {
   );
   if (renameMatch) {
     return (
-      <>
-        A partitura <strong>{formatScoreDisplayName(renameMatch[1])}</strong>{" "}
-        teve o nome alterado.
-      </>
+      <Trans
+        i18nKey="scanReportModal.scoreNameChanged"
+        values={{ name: formatScoreDisplayName(renameMatch[1]) }}
+      />
     );
   }
 
@@ -869,11 +912,13 @@ function renderCustomScoreText(text: string): ReactNode {
   );
   if (renameWithSongMatch) {
     return (
-      <>
-        A partitura{" "}
-        <strong>{formatScoreDisplayName(renameWithSongMatch[1])}</strong> teve o
-        nome alterado na música <strong>{renameWithSongMatch[2]}</strong>.
-      </>
+      <Trans
+        i18nKey="scanReportModal.scoreNameChangedInSong"
+        values={{
+          name: formatScoreDisplayName(renameWithSongMatch[1]),
+          song: renameWithSongMatch[2],
+        }}
+      />
     );
   }
 
@@ -882,12 +927,14 @@ function renderCustomScoreText(text: string): ReactNode {
 
 function ActionSectionCard({
   title,
+  action,
   groups,
 }: {
   title: string;
+  action: ReviewAction;
   groups: EntityGroup[];
 }) {
-  const sectionStyles = getActionSectionStyles(title);
+  const sectionStyles = getActionSectionStyles(action);
 
   return (
     <section className={`rounded-xl border p-4 ${sectionStyles.container}`}>
@@ -897,7 +944,7 @@ function ActionSectionCard({
       <div className="mt-3 space-y-3">
         {groups.map((group) => (
           <EntityGroupCard
-            key={`${title}-${group.title}`}
+            key={`${action}-${group.title}`}
             title={group.title}
             items={group.items}
           />
@@ -907,18 +954,18 @@ function ActionSectionCard({
   );
 }
 
-function getActionSectionStyles(title: string): {
+function getActionSectionStyles(action: ReviewAction): {
   container: string;
   title: string;
 } {
-  if (title === "Adicionando") {
+  if (action === "adding") {
     return {
       container: "border-emerald-200 bg-emerald-50",
       title: "text-emerald-800",
     };
   }
 
-  if (title === "Modificado") {
+  if (action === "modified") {
     return {
       container: "border-amber-200 bg-amber-50",
       title: "text-amber-800",

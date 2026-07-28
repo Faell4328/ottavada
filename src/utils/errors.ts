@@ -1,3 +1,5 @@
+import i18n from "../i18n";
+
 export function getErrorMessage(error: unknown): string {
   if (error instanceof Error) {
     return error.message;
@@ -22,11 +24,12 @@ export function getErrorMessage(error: unknown): string {
     const nestedCause = candidate.cause;
     if (nestedCause !== undefined) {
       const nestedMessage = getErrorMessage(nestedCause);
-      if (nestedMessage !== "Erro desconhecido") {
+      const fallback = i18n.t("errors.unknown");
+      if (nestedMessage !== fallback) {
         return nestedMessage;
       }
     }
   }
 
-  return "Erro desconhecido";
+  return i18n.t("errors.unknown");
 }

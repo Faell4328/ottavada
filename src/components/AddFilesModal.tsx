@@ -265,7 +265,7 @@ export function AddFilesModal({
       setPendingDeleteFile(null);
     } catch (err) {
       const errorMsg =
-        err instanceof Error ? err.message : "Erro ao excluir arquivo";
+        err instanceof Error ? err.message : t("addFilesModal.deleteFileError");
       setError(errorMsg);
     }
   };
@@ -277,7 +277,7 @@ export function AddFilesModal({
     try {
       await api.openFilePath(path);
     } catch {
-      setError("Não foi possível abrir a partitura selecionada");
+      setError(t("editScoreModal.openScoreError"));
     } finally {
       setOpeningScorePath(null);
     }
@@ -290,7 +290,7 @@ export function AddFilesModal({
     try {
       await api.openFileLocation(path);
     } catch {
-      setError("Não foi possível abrir o local da partitura selecionada");
+      setError(t("editScoreModal.openLocalError"));
     } finally {
       setOpeningLocationPath(null);
     }
@@ -298,17 +298,17 @@ export function AddFilesModal({
 
   const handleSave = async () => {
     if (!normalizedTitle) {
-      setError("O título da música é obrigatório");
+      setError(t("addFilesModal.titleRequired"));
       return;
     }
 
     if (fileEntries.length === 0) {
-      setError("Adicione pelo menos um arquivo");
+      setError(t("addFilesModal.noFilesSelected"));
       return;
     }
 
     if (hasPendingIssues) {
-      setError("Corrija as pendências antes de salvar");
+      setError(t("addFilesModal.pendingIssues"));
       return;
     }
 
@@ -342,7 +342,7 @@ export function AddFilesModal({
       await onSuccess(importResult.added_count);
       onClose();
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Erro ao salvar";
+      const errorMsg = err instanceof Error ? err.message : t("addFilesModal.saveError");
       setError(errorMsg);
     } finally {
       setIsSaving(false);
@@ -436,7 +436,7 @@ export function AddFilesModal({
 
     if (isDuplicateSong) {
       messages.push(
-        `A música ${existingSong?.name ?? normalizedTitle} já existe. Altere o nome da música para continuar.`,
+        t("addFilesModal.duplicateSong", { name: existingSong?.name ?? normalizedTitle }),
       );
     }
 
@@ -450,7 +450,7 @@ export function AddFilesModal({
           : item.normalizedInstrument;
 
         messages.push(
-          `${item.entries.length} partituras usam o mesmo instrumento (${instrumentName}). Renomeie ou delete uma delas para continuar.`,
+          t("addFilesModal.twoScoresSameInstrument", { count: item.entries.length, instrument: instrumentName }),
         );
         return;
       }
@@ -487,7 +487,7 @@ export function AddFilesModal({
       {hasPendingIssues && pendingIssueMessages.length > 0 && (
         <div className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
           <p className="font-semibold">
-            Revise as pendências abaixo antes de salvar.
+              {t("addFilesModal.reviewPending")}
           </p>
           <ul className="mt-1 list-disc space-y-1 pl-4">
             {pendingIssueMessages.map((message) => (
