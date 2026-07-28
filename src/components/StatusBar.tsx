@@ -1,5 +1,6 @@
 import { Cloud } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import i18n from "../i18n";
 import { useAppState } from "../context/AppContext";
 import { formatBytes, formatEta } from "../utils/formatters";
 import Metronome from "./ui/Metronome";
@@ -144,10 +145,10 @@ export default function StatusBar() {
 }
 
 function extractStageLabelFromTitle(title: string): string | null {
-  const match = title.match(/^Etapa\s+(\d+)\s*-/i);
+  const match = title.match(/^(?:Etapa|Step)\s+(\d+)\s*-/i);
   if (!match) {
     return null;
   }
 
-  return `Etapa ${match[1]}`;
+  return `${i18n.t("statusBar.stepPrefix")} ${match[1]}`;
 }
