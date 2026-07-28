@@ -10,7 +10,16 @@ import { useRcloneTest } from "../hooks/useRcloneTest";
 import { getFriendlyRcloneErrorMessage } from "../utils/rcloneErrors";
 import type { RcloneProvider } from "../types";
 
-type Step = "intro" | "name" | "type" | "rclone-setup" | "confirm";
+type Step = "language" | "type" | "name" | "rclone-setup" | "confirm";
+
+const LANGUAGES = [
+  { code: "pt", label: "Português" },
+  { code: "en", label: "English" },
+  { code: "es", label: "Español" },
+  { code: "fr", label: "Français" },
+  { code: "it", label: "Italiano" },
+  { code: "de", label: "Deutsch" },
+] as const;
 
 function getRcloneProviderLabel(provider: RcloneProvider) {
   return provider === "koofr" ? "Koofr" : "Google Drive";
@@ -25,7 +34,7 @@ export default function FirstRunPage() {
   const [computerType, setComputerType] = useState<"Server" | "Client" | "">(
     "",
   );
-  const [step, setStep] = useState<Step>("intro");
+  const [step, setStep] = useState<Step>("language");
   const [rcloneProvider, setRcloneProvider] = useState<RcloneProvider>("koofr");
   const [rcloneEmail, setRcloneEmail] = useState("");
   const [rcloneAppPassword, setRcloneAppPassword] = useState("");
@@ -177,7 +186,7 @@ export default function FirstRunPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-[#33465d] to-[#5d6d82]">
       <div className="my-10 w-full max-w-2xl rounded-xl bg-white p-8 shadow-2xl">
-        {step !== "intro" && (
+        {step !== "language" && (
           <div className="mb-4 flex flex-col items-center">
             <img
               src="/icon.png"
@@ -189,85 +198,50 @@ export default function FirstRunPage() {
           </div>
         )}
 
-        {step === "intro" && (
+        {step === "language" && (
           <>
-            <div className="mb-6 rounded-xl border border-[#c5cfdb] bg-[#f8fafd] p-5">
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-[#34485d]">
-                  {t("firstRun.beforeStart")}
-                </h2>
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#8b9db2]">
-                    Idioma
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => i18next.changeLanguage("pt")}
-                    className={`h-8 w-10 rounded-lg border text-xs font-bold cursor-pointer transition-all ${i18next.language === "pt" ? "border-[#4f84d7] bg-[#4f84d7] text-white shadow-sm" : "border-[#c5cfdb] bg-white text-[#4d6075] hover:border-[#7ba0d4] hover:text-[#4f84d7]"}`}
-                  >
-                    PT
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => i18next.changeLanguage("en")}
-                    className={`h-8 w-10 rounded-lg border text-xs font-bold cursor-pointer transition-all ${i18next.language === "en" ? "border-[#4f84d7] bg-[#4f84d7] text-white shadow-sm" : "border-[#c5cfdb] bg-white text-[#4d6075] hover:border-[#7ba0d4] hover:text-[#4f84d7]"}`}
-                  >
-                    EN
-                  </button>
-                    <button
-                      type="button"
-                      onClick={() => i18next.changeLanguage("es")}
-                      className={`h-8 w-10 rounded-lg border text-xs font-bold cursor-pointer transition-all ${i18next.language === "es" ? "border-[#4f84d7] bg-[#4f84d7] text-white shadow-sm" : "border-[#c5cfdb] bg-white text-[#4d6075] hover:border-[#7ba0d4] hover:text-[#4f84d7]"}`}
-                    >
-                      ES
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => i18next.changeLanguage("fr")}
-                      className={`h-8 w-10 rounded-lg border text-xs font-bold cursor-pointer transition-all ${i18next.language === "fr" ? "border-[#4f84d7] bg-[#4f84d7] text-white shadow-sm" : "border-[#c5cfdb] bg-white text-[#4d6075] hover:border-[#7ba0d4] hover:text-[#4f84d7]"}`}
-                    >
-                      FR
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => i18next.changeLanguage("it")}
-                      className={`h-8 w-10 rounded-lg border text-xs font-bold cursor-pointer transition-all ${i18next.language === "it" ? "border-[#4f84d7] bg-[#4f84d7] text-white shadow-sm" : "border-[#c5cfdb] bg-white text-[#4d6075] hover:border-[#7ba0d4] hover:text-[#4f84d7]"}`}
-                    >
-                      IT
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => i18next.changeLanguage("de")}
-                      className={`h-8 w-10 rounded-lg border text-xs font-bold cursor-pointer transition-all ${i18next.language === "de" ? "border-[#4f84d7] bg-[#4f84d7] text-white shadow-sm" : "border-[#c5cfdb] bg-white text-[#4d6075] hover:border-[#7ba0d4] hover:text-[#4f84d7]"}`}
-                    >
-                      DE
-                    </button>
-                </div>
-              </div>
-              <p className="text-sm leading-6 text-[#6b849e]">
+            <div className="mb-8 flex flex-col items-center">
+              <img
+                src="/icon.png"
+                alt="Ottavada"
+                className="mb-6 h-24 w-24 rounded-2xl object-cover"
+              />
+              <h2 className="mb-2 text-xl font-semibold text-[#34485d]">
+                {t("firstRun.chooseLanguage")}
+              </h2>
+              <p className="text-sm text-[#6b849e]">
+                {t("firstRun.chooseLanguageHint")}
+              </p>
+            </div>
+
+            <div className="mb-8 grid grid-cols-3 gap-3">
+              {LANGUAGES.map(({ code, label }) => (
+                <button
+                  key={code}
+                  type="button"
+                  onClick={() => i18next.changeLanguage(code)}
+                  className={`h-14 rounded-lg border-2 text-sm font-semibold transition-all cursor-pointer ${
+                    i18next.language === code
+                      ? "border-[#4f84d7] bg-[#f0f3f8] text-[#4f84d7]"
+                      : "border-[#c5cfdb] bg-white text-[#4d6075] hover:border-[#7ba0d4] hover:text-[#4f84d7]"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <div className="mb-6 rounded-xl border border-[#c5cfdb] bg-[#f8fafd] p-4">
+              <p className="text-xs leading-5 text-[#6b849e]">
                 {t("firstRun.beforeStartText")}
               </p>
               <button
                 type="button"
                 onClick={handleOpenTutorial}
-                className="mt-4 h-11 w-full rounded-lg border border-[#7ba0d4] bg-white text-sm font-bold text-[#4f84d7] transition-colors hover:bg-[#f8fafd] cursor-pointer"
+                className="mt-3 h-10 w-full rounded-lg border border-[#7ba0d4] bg-white text-sm font-bold text-[#4f84d7] transition-colors hover:bg-[#f8fafd] cursor-pointer"
               >
                 {t("firstRun.openTutorial")}
               </button>
-            </div>
-
-            <div className="mb-6 overflow-hidden rounded-xl">
-              <video
-                autoPlay
-                muted
-                playsInline
-                preload="auto"
-                className="h-auto mx-auto w-4/5 2xl:w-full bg-black"
-              >
-                <source src="/intro.webm" type="video/webm" />
-                <source src="/intro.mp4" type="video/mp4" />
-                {t("firstRun.videoNotSupported")}
-              </video>
             </div>
 
             <button
@@ -275,7 +249,7 @@ export default function FirstRunPage() {
               onClick={() => setStep("type")}
               className="h-11 w-full rounded-lg border-0 bg-[#4f84d7] text-sm font-bold text-white transition-colors hover:bg-[#3d6fb8] cursor-pointer"
             >
-              {t("firstRun.advance")}
+              {t("firstRun.next")}
             </button>
           </>
         )}

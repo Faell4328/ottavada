@@ -329,6 +329,8 @@
     "scoresCombinedChanged_other": "sono stati modificati e sono passati da <strong>{{from}}</strong> e sono passati a <strong>{{to}}</strong> nel brano <strong>{{song}}</strong>."
   },
   "firstRun": {
+    "chooseLanguage": "Scegli la lingua",
+    "chooseLanguageHint": "Seleziona la tua lingua preferita. Puoi cambiarla in seguito nelle impostazioni.",
     "beforeStart": "Prima di iniziare",
     "beforeStartText": "Per utilizzare correttamente lo strumento, guarda il video introduttivo sul sito ufficiale: ottavada.com/#tutorial. Mostra il flusso di base e cosa fare al primo accesso.",
     "openTutorial": "Apri tutorial nel browser",

@@ -329,6 +329,8 @@
     "scoresCombinedChanged_other": "were changed and went from <strong>{{from}}</strong> and went to <strong>{{to}}</strong> in song <strong>{{song}}</strong>."
   },
   "firstRun": {
+    "chooseLanguage": "Choose your language",
+    "chooseLanguageHint": "Select your preferred language. You can change it later in settings.",
     "beforeStart": "Before you start",
     "beforeStartText": "To use the tool correctly, watch the introduction video on the official website: ottavada.com/#tutorial. It shows the basic flow and what you need to do on first access.",
     "openTutorial": "Open tutorial in browser",
