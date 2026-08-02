@@ -29,14 +29,14 @@ vi.mock("react-hot-toast", () => ({
 }));
 
 describe("FirstRunPage", () => {
-  it("starts with the language selection screen, opens tutorial and advances to computer type", async () => {
+  it("starts with the language selection screen, opens documentation and advances to computer type", async () => {
     const { openTutorialSite } = await import("../../api/commands");
     renderWithAppProvider(<FirstRunPage />);
 
     expect(screen.getByText("Choose your language")).toBeInTheDocument();
-    expect(screen.getByText("Open tutorial in browser")).toBeInTheDocument();
+    expect(screen.getByText("Open documentation in browser")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByText("Open tutorial in browser"));
+    fireEvent.click(screen.getByText("Open documentation in browser"));
     expect(openTutorialSite).toHaveBeenCalledTimes(1);
 
     fireEvent.click(screen.getByText("Next"));
