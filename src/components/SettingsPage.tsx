@@ -1058,11 +1058,11 @@ function SummaryColumn({
       </p>
       <div className="mt-2 space-y-1 text-sm text-[#34485d]">
         <div className="flex items-center justify-between">
-          <span>{t("settings.mainLabel")}</span>
+          <span>{t("scoreStatus.main")}</span>
           <strong>{main}</strong>
         </div>
         <div className="flex items-center justify-between">
-          <span>{t("settings.draftLabel")}</span>
+          <span>{t("scoreStatus.draft")}</span>
           <strong>{draft}</strong>
         </div>
       </div>
