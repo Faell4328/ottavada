@@ -33,46 +33,46 @@ describe("FirstRunPage", () => {
     const { openTutorialSite } = await import("../../api/commands");
     renderWithAppProvider(<FirstRunPage />);
 
-    expect(screen.getByText("Choose your language")).toBeInTheDocument();
-    expect(screen.getByText("Open documentation in browser")).toBeInTheDocument();
+    expect(screen.getByText("Escolha seu idioma")).toBeInTheDocument();
+    expect(screen.getByText("Abrir documentação no navegador")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByText("Open documentation in browser"));
+    fireEvent.click(screen.getByText("Abrir documentação no navegador"));
     expect(openTutorialSite).toHaveBeenCalledTimes(1);
 
-    fireEvent.click(screen.getByText("Next"));
+    fireEvent.click(screen.getByText("Próximo"));
 
     await waitFor(() => {
-      expect(screen.getByText("What type of computer are you setting up?")).toBeInTheDocument();
+      expect(screen.getByText("Qual tipo de computador você está configurando?")).toBeInTheDocument();
     });
   });
 
   it("shows the name and organization fields for server without exposing the computer id", async () => {
     renderWithAppProvider(<FirstRunPage />);
 
-    fireEvent.click(screen.getByText("Next"));
-    fireEvent.click(screen.getByText("Conductor's Computer"));
-    fireEvent.click(screen.getByText("Next"));
+    fireEvent.click(screen.getByText("Próximo"));
+    fireEvent.click(screen.getByText("Computador do Maestro"));
+    fireEvent.click(screen.getByText("Próximo"));
 
     await waitFor(() => {
-      expect(screen.getByText("Set up this computer")).toBeInTheDocument();
+      expect(screen.getByText("Configure este computador")).toBeInTheDocument();
     });
 
-    expect(screen.getByPlaceholderText("Ex: Conductor's desk, rehearsal room, church...")).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("Ex: Orchestra, church, ministry...")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Ex: Mesa do maestro, sala de ensaio, igreja...")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Ex: Orquestra, igreja, ministério...")).toBeInTheDocument();
     expect(screen.queryByText("Computer ID")).not.toBeInTheDocument();
   });
 
   it("shows the client copy and organization field", async () => {
     renderWithAppProvider(<FirstRunPage />);
 
-    fireEvent.click(screen.getByText("Next"));
-    fireEvent.click(screen.getByText("Rehearsal Computer"));
-    fireEvent.click(screen.getByText("Next"));
+    fireEvent.click(screen.getByText("Próximo"));
+    fireEvent.click(screen.getByText("Computador de Ensaio"));
+    fireEvent.click(screen.getByText("Próximo"));
 
     await waitFor(() => {
-      expect(screen.getByPlaceholderText("Ex: Conductor's desk, rehearsal room, church...")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("Ex: Mesa do maestro, sala de ensaio, igreja...")).toBeInTheDocument();
     });
 
-    expect(screen.getByPlaceholderText("Ex: Orchestra, church, ministry...")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Ex: Orquestra, igreja, ministério...")).toBeInTheDocument();
   });
 });

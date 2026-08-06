@@ -1,24 +1,6 @@
-# 1. Suporte a multi-idiomas
+# 1. Servidor Ottavada
 
-O sistema deve suportar os idiomas:
-
-- Português Brasil;
-
-- Inglês;
-
-- Espanhol;
-
-- Francês;
-
-- Italiano;
-
-- Alemão.
-
----
-
-# 2. Servidor Ottavada
-
-## 2.1. Telemetria
+## 1.1. Telemetria
 
 O sistema deve enviar dados de telemetria:
 
@@ -45,7 +27,7 @@ Os dados enviados devem ser:
 
 >  Não é feito coleta de dados sensíveis, o único objetivo da telemetria é saber se o aplicativo está sendo realmente usado, por quem e quais problemas está ocorrendo no Ottavada.
 
-## 2.2. Atualizações
+## 1.2. Atualizações
 
 O sistema deve suportar atualização de versão, utilizando o próprio mecanismo do Tauri.
 
@@ -53,11 +35,11 @@ O usuário deve poder recusar atualizar o aplicativo, ficando um botão, que ao 
 
 ---
 
-# 3. Filtros
+# 2. Filtros
 
 Os filtros devem operar de forma acumulativa.
 
-## 3.1. Seções
+## 2.1. Seções
 
 Deve ter as seções:
 
@@ -69,13 +51,13 @@ Deve ter as seções:
 
 - **Sem partituras** - Lista todas as músicas que não têm partitura.
 
-## 3.2. Categoria
+## 2.2. Categoria
 
 Quando o usuário selecionar uma categoria, deve mostrar as músicas, compositores e arranjadores que tenham naquela categoria.
 
 A categoria deve ter por padrão a opção: **Sem categoria**.
 
-## 3.3. Compositor e arranjador
+## 2.3. Compositor e arranjador
 
 Quando o usuário selecionar um compositor, só deve mostrar as músicas e os arranjadores que tenham relação com o compositor. O mesmo vale caso seja selecionado o arranjador.
 
@@ -83,13 +65,13 @@ O compositor deve ter por padrão as opções: **Todos** e **Sem compositor**.
 
 O arranjador deve ter por padrão as opções: **Todos** e **Sem arranjador**.
 
-## 3.4. Barra de pesquisa
+## 2.4. Barra de pesquisa
 
 A pesquisa por música deve se feita com base no(s) filtro(s) que o usuário aplicou.
 
 A busca deve ser simples, utilizando o método de procurar por substrings no nome da música.
 
-## 3.5. Valores selecionados por padrão
+## 2.5. Valores selecionados por padrão
 
 Os filtros devem iniciar com os seguintes valores:
 
@@ -100,9 +82,9 @@ Os filtros devem iniciar com os seguintes valores:
 
 ---
 
-# 4. Nuvem
+# 3. Nuvem
 
-## 4.1. Provedores suportados
+## 3.1. Provedores suportados
 
 O Ottavada deve suportar:
 
@@ -114,7 +96,7 @@ Opções avançadas: <mark>(Não implementado)</mark>
 - WebDAV;
 - SFTP.
 
-## 4.2. Engine para envio e recebimento com a nuvem
+## 3.2. Engine para envio e recebimento com a nuvem
 
 O Ottavada deve utilizar internamente o `rclone`.
 
@@ -124,13 +106,13 @@ Toda configuração relacionada ao `rclone`, incluindo criação de remotes, aut
 
 ---
 
-# 5. Transparência operacional
+# 4. Transparência operacional
 
-## 5.1. Barra de progresso
+## 4.1. Barra de progresso
 
 O sistema deve mostrar o progresso das ações: "aplicar alterações" e "consultar alterações".
 
-## 5.2. Restrições durante sincronização
+## 4.2. Restrições durante sincronização
 
 Durante sincronizações, o usuário poderá apenas:
 
@@ -143,9 +125,9 @@ Demais operações devem permanecer bloqueadas, por questão de segurança e int
 
 ---
 
-# 6. Instrumentos e ordenação
+# 5. Instrumentos e ordenação
 
-## 6.1. Ordem de listagem na música
+## 5.1. Ordem de listagem na música
 
 Os instrumentos suportados e ordem deles é baseado na ordem interna do Finale e Sibelius, que utiliza o padrão da convenção da *New German School* (Wagner, Strauss, Mahler) que é o padrão internacional.
 
@@ -155,7 +137,7 @@ Os instrumentos suportados e ordem deles é baseado na ordem interna do Finale e
 
 3° Deve ser os instrumentos que foram identificados, mas está fora da lista (em ordem alfabética).
 
-## 6.2. Instrumentos suportados e a ordem
+## 5.2. Instrumentos suportados e a ordem
 
 **Madeira**
 
