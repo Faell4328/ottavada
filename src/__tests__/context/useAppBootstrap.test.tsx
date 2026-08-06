@@ -17,6 +17,7 @@ const clientSettings: AppSettings = {
   computer_id: "client-1",
   computer_name: "Computador de Ensaio",
   organization_name: null,
+  language: null,
   computer_type: "Client",
   google_drive_mode: "Local",
   first_run_completed: true,

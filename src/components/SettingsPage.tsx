@@ -55,6 +55,7 @@ export default function SettingsPage() {
       computer_id: "",
       computer_name: null,
       organization_name: null,
+      language: null,
       computer_type: "Server",
       google_drive_mode: "Local",
       first_run_completed: true,

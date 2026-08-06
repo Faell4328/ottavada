@@ -174,6 +174,7 @@ export default function FirstRunPage() {
         computerId,
         computerName.trim(),
         organizationName.trim() || null,
+        i18next.language || null,
         computerType,
         JSON.stringify({ provider: rcloneProvider }),
       );

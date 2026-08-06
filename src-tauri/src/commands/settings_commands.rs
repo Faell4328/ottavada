@@ -134,18 +134,20 @@ pub fn complete_first_run(
     computer_id: String,
     computer_name: String,
     organization_name: Option<String>,
+    language: Option<String>,
     computer_type: String,
     rclone_config_json: String,
 ) -> Result<(), AppError> {
     info!(
-        "Completando primeira execução para: {} ({}) - Tipo: {}",
-        computer_name, computer_id, computer_type
+        "Completando primeira execução para: {} ({}) - Tipo: {} - Idioma: {:?}",
+        computer_name, computer_id, computer_type, language
     );
     let mut settings = store.get_app_settings()?;
 
     settings.computer_id = computer_id;
     settings.computer_name = Some(computer_name);
     settings.organization_name = organization_name;
+    settings.language = language;
     settings.computer_type = ComputerType::from_str(&computer_type);
 
     info!("Configurando Rclone");

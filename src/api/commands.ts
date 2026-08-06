@@ -269,6 +269,7 @@ export async function completeFirstRun(
   computerId: string,
   computerName: string,
   organizationName: string | null,
+  language: string | null,
   computerType: string,
   rcloneConfigJson: string
 ): Promise<void> {
@@ -276,6 +277,7 @@ export async function completeFirstRun(
     computerId,
     computerName,
     organizationName,
+    language,
     computerType,
     rcloneConfigJson,
   });
