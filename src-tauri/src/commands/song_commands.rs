@@ -47,19 +47,33 @@ fn normalized_required_song_path(path: &str) -> Result<String, AppError> {
     Ok(normalized)
 }
 
+fn authors_match(existing: &Option<String>, incoming: Option<&str>) -> bool {
+    let a = existing.as_deref().unwrap_or("").trim();
+    let b = incoming.unwrap_or("").trim();
+    a.eq_ignore_ascii_case(b)
+}
+
 fn ensure_unique_song_name(
     songs: &[SongListItem],
     song_name: &str,
+    composer: Option<&str>,
+    arranger: Option<&str>,
     except_song_id: Option<&str>,
 ) -> Result<(), AppError> {
+    let composer_norm = composer.unwrap_or("").trim();
+    let arranger_norm = arranger.unwrap_or("").trim();
+
     let has_conflict = songs.iter().any(|song| {
-        let different_song = except_song_id.map(|id| song.id != id).unwrap_or(true);
-        different_song && song.name.eq_ignore_ascii_case(song_name)
+        let different_song = except_song_id.map(|id| song.id != id).unwrap_or(false);
+        different_song
+            && song.name.eq_ignore_ascii_case(song_name)
+            && authors_match(&song.composer, Some(composer_norm))
+            && authors_match(&song.arranger, Some(arranger_norm))
     });
 
     if has_conflict {
         return Err(AppError::Generic(
-            "Uma música com esse nome já existe".into(),
+            "Uma música com esse nome, compositor e arranjador já existe".into(),
         ));
     }
 
@@ -397,16 +411,16 @@ fn import_files_core(
     }
 
     let all_songs = db.get_all_songs()?;
-    let all_score_paths: Vec<String> = all_songs
-        .iter()
-        .flat_map(|song| song.scores.iter().map(|score| score.file_path.clone()))
-        .collect();
     let mut added_count = 0;
 
     for (song_name, group_files) in &groups {
         let existing_song = all_songs
             .iter()
-            .find(|s| s.name.eq_ignore_ascii_case(song_name));
+            .find(|s| {
+                s.name.eq_ignore_ascii_case(song_name)
+                    && authors_match(&s.composer, composer)
+                    && authors_match(&s.arranger, arranger)
+            });
 
         let existing_scores = existing_song.map(|s| s.scores.clone()).unwrap_or_default();
 
@@ -424,10 +438,6 @@ fn import_files_core(
             let normalized_instrument =
                 normalize_optional_score_name(indexed_file.instrument.as_deref());
 
-            let score_exists_in_library = all_score_paths
-                .iter()
-                .any(|existing_path| paths_match(existing_path, &indexed_file.path));
-
             let score_exists_in_group = known_paths
                 .iter()
                 .any(|existing_path| paths_match(existing_path, &indexed_file.path))
@@ -438,7 +448,7 @@ fn import_files_core(
                     None => false,
                 };
 
-            if score_exists_in_library || score_exists_in_group {
+            if score_exists_in_group {
                 continue;
             }
 
@@ -628,13 +638,15 @@ fn validate_server_create_song(
     db: &Database,
     store: &SystemStore,
     name: &str,
+    composer: Option<&str>,
+    arranger: Option<&str>,
 ) -> Result<String, AppError> {
     let settings = require_server_settings(store)?;
 
     let normalized_name = normalized_required_song_name(name)?;
 
     let all_songs = db.get_all_songs()?;
-    ensure_unique_song_name(&all_songs, &normalized_name, None)?;
+    ensure_unique_song_name(&all_songs, &normalized_name, composer, arranger, None)?;
 
     Ok(settings.computer_id)
 }
@@ -681,7 +693,7 @@ pub fn create_song_with_metadata(
 ) -> Result<SongListItem, AppError> {
     let normalized_name = normalized_required_song_name(&name)?;
     let normalized_path = normalized_required_song_path(&path)?;
-    let updated_by = validate_server_create_song(&db, &store, &normalized_name)?;
+    let updated_by = validate_server_create_song(&db, &store, &normalized_name, composer.as_deref(), arranger.as_deref())?;
     let now = Local::now().naive_local();
     let song_id = uuid::Uuid::new_v4().to_string();
 
@@ -733,7 +745,7 @@ pub fn update_song(
     let updated_by = settings.computer_id.clone();
 
     let all_songs = db.get_all_songs()?;
-    ensure_unique_song_name(&all_songs, &normalized_name, Some(&song_id))?;
+    ensure_unique_song_name(&all_songs, &normalized_name, composer.as_deref(), arranger.as_deref(), Some(&song_id))?;
 
     info!("Atualizando música: {} -> {}", song_id, normalized_name);
     let original_song = db.get_song_by_id(&song_id)?;
@@ -819,6 +831,28 @@ pub fn delete_song_with_files(
 
     info!("Diretório da música deletado com sucesso: {}", song_id);
     Ok(())
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct SongDirectoryInfo {
+    pub name: String,
+}
+
+#[tauri::command]
+pub fn find_song_by_directory(
+    db: State<'_, Database>,
+    directory_path: String,
+) -> Result<Option<SongDirectoryInfo>, AppError> {
+    let all_songs = db.get_all_songs()?;
+    for song in &all_songs {
+        let expanded = from_storage_path(&song.path);
+        if indexer::paths_match(&expanded, &directory_path) {
+            return Ok(Some(SongDirectoryInfo {
+                name: song.name.clone(),
+            }));
+        }
+    }
+    Ok(None)
 }
 
 #[cfg(test)]
