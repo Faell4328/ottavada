@@ -277,6 +277,7 @@ pub fn run() {
             commands::song_commands::delete_file_path,
             commands::song_commands::delete_song,
             commands::song_commands::delete_song_with_files,
+            commands::song_commands::find_song_by_directory,
             // Scores
             commands::score_commands::update_score,
             commands::score_commands::get_scores_for_song,

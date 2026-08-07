@@ -26,7 +26,7 @@ const baseSong: SongListItem = {
 };
 
 describe("addFilesReview", () => {
-  it("marks path duplicates and keeps non-duplicates addable", () => {
+  it("marks instrument duplicates and keeps non-duplicates addable", () => {
     const activeFileEntries: IndexedFileEntry[] = [
       {
         idx: 0,
@@ -48,11 +48,11 @@ describe("addFilesReview", () => {
       },
     ];
 
-    const analysis = analyzeAddFilesReview(activeFileEntries, {}, [baseSong], "CANON");
+    const analysis = analyzeAddFilesReview(activeFileEntries, {}, [baseSong], "CANON", "", "");
 
     expect(analysis.duplicateEntries.map(({ idx }) => idx)).toEqual([0]);
     expect(analysis.addableEntries.map(({ idx }) => idx)).toEqual([1]);
-    expect(analysis.duplicateMap.get(0)?.kind).toBe("path");
+    expect(analysis.duplicateMap.get(0)?.kind).toBe("instrument");
     expect(analysis.duplicateMap.get(1)).toBeNull();
   });
 
@@ -78,7 +78,7 @@ describe("addFilesReview", () => {
       },
     ];
 
-    const analysis = analyzeAddFilesReview(activeFileEntries, {}, [], "CANON");
+    const analysis = analyzeAddFilesReview(activeFileEntries, {}, [], "CANON", "", "");
 
     expect(analysis.batchDuplicateMap.get(0)).toBe(true);
     expect(analysis.batchDuplicateMap.get(1)).toBe(true);
@@ -115,7 +115,9 @@ describe("addFilesReview", () => {
         1: "Flauta",
       },
       [],
-      "CANON"
+      "CANON",
+      "",
+      ""
     );
 
     expect(analysis.batchDuplicateMap.get(0)).toBe(true);

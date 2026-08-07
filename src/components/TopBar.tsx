@@ -74,7 +74,14 @@ export default function TopBar({
     try {
       const selected = await open({ directory: true, multiple: false });
       if (selected) {
-        let files = await api.scanDirectory(selected as string);
+        const directoryPath = selected as string;
+        const existingSongInfo = await api.findSongByDirectory(directoryPath);
+        if (existingSongInfo) {
+          toast.error(t("topBar.directoryAlreadyIndexed", { name: existingSongInfo.name }));
+          return;
+        }
+
+        let files = await api.scanDirectory(directoryPath);
         if (files.length === 0) {
           toast.error(t("topBar.noSongsFound"));
           return;

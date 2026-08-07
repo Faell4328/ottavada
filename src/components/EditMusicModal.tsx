@@ -8,6 +8,16 @@ import { normalizeSongNameForSave, normalizeSongNameInput } from "../utils/nameF
 import { getUniqueSongAuthors } from "../utils/songSearch";
 import * as api from "../api/commands";
 
+function extractErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof Error) {
+    return err.message;
+  }
+  if (typeof err === "string") {
+    return err;
+  }
+  return fallback;
+}
+
 interface EditMusicModalProps {
   isOpen: boolean;
   score: SongListItem | null;
@@ -119,8 +129,7 @@ export function EditMusicModal({
       });
       onClose();
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : t("editMusicModal.saveError");
-      setError(errorMsg);
+      setError(extractErrorMessage(err, t("editMusicModal.saveError")));
     } finally {
       setIsSaving(false);
     }

@@ -286,8 +286,6 @@ export function useAppCrudActions({
       await loadSettings();
       toast.success(t("crudActions.songUpdated"));
     } catch (err) {
-      console.error("Failed to update song:", err);
-      toast.error(t("crudActions.songSaveError"));
       throw err;
     }
   }, [dispatch, getErrorMessage, loadCategories, loadSettings, loadSongs, refreshSelectedSong]);

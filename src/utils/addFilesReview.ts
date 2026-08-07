@@ -48,12 +48,14 @@ function buildNormalizedInstrumentCounts(
 function buildDuplicateMap(
   activeFileEntries: IndexedFileEntry[],
   songsForDuplicateCheck: SongListItem[],
-  normalizedTitle: string
+  normalizedTitle: string,
+  composer: string,
+  arranger: string
 ): Map<number, ScoreConflict | null> {
   const duplicateMap = new Map<number, ScoreConflict | null>();
 
   activeFileEntries.forEach(({ file, idx }) => {
-    duplicateMap.set(idx, findExistingScoreConflict(songsForDuplicateCheck, file, normalizedTitle));
+    duplicateMap.set(idx, findExistingScoreConflict(songsForDuplicateCheck, file, normalizedTitle, composer, arranger));
   });
 
   return duplicateMap;
@@ -83,11 +85,13 @@ export function analyzeAddFilesReview(
   activeFileEntries: IndexedFileEntry[],
   instrumentNames: Record<number, string>,
   songsForDuplicateCheck: SongListItem[],
-  normalizedTitle: string
+  normalizedTitle: string,
+  composer: string,
+  arranger: string
 ): AddFilesReviewAnalysis {
   const normalizedInstrumentNames = buildNormalizedInstrumentNames(activeFileEntries, instrumentNames);
   const normalizedInstrumentCounts = buildNormalizedInstrumentCounts(normalizedInstrumentNames);
-  const duplicateMap = buildDuplicateMap(activeFileEntries, songsForDuplicateCheck, normalizedTitle);
+  const duplicateMap = buildDuplicateMap(activeFileEntries, songsForDuplicateCheck, normalizedTitle, composer, arranger);
   const batchDuplicateMap = buildBatchDuplicateMap(
     activeFileEntries,
     normalizedInstrumentNames,

@@ -115,10 +115,13 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(
       }
     };
 
-    const runDeleteAction = async (action: () => Promise<void>) => {
+    const runDeleteAction = async (action: () => Promise<void>, successMessage?: string) => {
       setIsDeleteLoading(true);
       try {
         await action();
+        if (successMessage) {
+          toast.success(successMessage);
+        }
         setIsDeleteModalOpen(false);
         onMenuClose();
       } catch (err) {
@@ -325,8 +328,9 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(
                   </button>
                   <button
                     onClick={() => {
-                      void runDeleteAction(() =>
-                        api.deleteSongWithFiles(song.id),
+                      void runDeleteAction(
+                        () => api.deleteSongWithFiles(song.id),
+                        t("crudActions.songDeletedWithFiles"),
                       );
                     }}
                     disabled={isDeleteLoading}

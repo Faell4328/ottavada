@@ -471,7 +471,7 @@ describe("AddFilesModal", () => {
     });
   });
 
-  it("should show duplicate score feedback above the score file name and keep the input readonly", () => {
+  it("should show song duplicate message and not show score conflicts", () => {
     renderWithAppProvider(
       <AddFilesModal
         isOpen={true}
@@ -482,25 +482,16 @@ describe("AddFilesModal", () => {
       />,
     );
 
-    const instrumentInput = screen.getAllByPlaceholderText(
-      "Nome do instrumento",
-    )[0];
-
     expect(
       screen.getByText(
-        "A música CANON já existe. Altere o nome da música para continuar.",
+        "Uma música CANON com mesmo compositor e arranjador já existe. Altere o nome, compositor ou arranjador para continuar.",
       ),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("1 partitura está sendo usada na música CANON."),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        "Essa partitura já está sendo usada na música CANON e por isso não será salva.",
-      ),
-    ).toBeInTheDocument();
+      screen.queryByText(/partitura já está sendo/),
+    ).toBeNull();
     expect(screen.getByText("Canon - Flauta.musx")).toBeInTheDocument();
-    expect(instrumentInput).toHaveAttribute("readonly");
+    expect(screen.getByRole("button", { name: "Salvar" })).toBeDisabled();
   });
 
   it("should warn when two files have the same instrument name and keep them editable", () => {
@@ -563,7 +554,7 @@ describe("AddFilesModal", () => {
     });
   });
 
-  it("should show when a score is already used in another song and disable save", () => {
+  it("should not flag a file as conflict when its path exists in another song", () => {
     renderWithAppProvider(
       <AddFilesModal
         isOpen={true}
@@ -574,15 +565,8 @@ describe("AddFilesModal", () => {
       />,
     );
 
-    expect(
-      screen.getByText("1 partitura está sendo usada na música CANON."),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        "Essa partitura já está sendo utilizada na música CANON e por isso não será salva.",
-      ),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Salvar" })).toBeDisabled();
+    expect(screen.queryByText(/partitura já está sendo/)).toBeNull();
+    expect(screen.getByRole("button", { name: "Salvar" })).toBeEnabled();
   });
 
   it("should open selected file with default app", async () => {

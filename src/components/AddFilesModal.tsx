@@ -32,7 +32,7 @@ import { sortIndexedFileEntriesForReview } from "../utils/indexedFileReviewOrder
 import { getUniqueSongAuthors } from "../utils/songSearch";
 import {
   describeScoreConflict,
-  findSongByName,
+  findSongByNameComposerArranger,
   type ScoreConflict,
   formatScoreConflictSummary,
   summarizeScoreConflictsBySong,
@@ -124,8 +124,8 @@ export function AddFilesModal({
     [title],
   );
   const existingSong = useMemo(
-    () => findSongByName(songsForDuplicateCheck, normalizedTitle),
-    [normalizedTitle, songsForDuplicateCheck],
+    () => findSongByNameComposerArranger(songsForDuplicateCheck, normalizedTitle, composer, arranger),
+    [normalizedTitle, composer, arranger, songsForDuplicateCheck],
   );
   const fileEntries = useMemo(
     () =>
@@ -150,9 +150,13 @@ export function AddFilesModal({
         reviewInstrumentNames,
         songsForDuplicateCheck,
         normalizedTitle,
+        composer,
+        arranger,
       ),
     [
       normalizedTitle,
+      composer,
+      arranger,
       reviewInstrumentNames,
       reviewableFileEntries,
       songsForDuplicateCheck,
@@ -160,7 +164,7 @@ export function AddFilesModal({
   );
   const hasFilesToImport = fileEntries.length > 0;
   const isDuplicateSong = existingSong !== null;
-  const hasPendingIssues = isDuplicateSong || duplicateEntries.length > 0;
+  const hasPendingIssues = isDuplicateSong || (!isDuplicateSong && duplicateEntries.length > 0);
 
   useEffect(() => {
     if (isOpen && files.length > 0) {
@@ -382,7 +386,7 @@ export function AddFilesModal({
 
     visibleFiles.forEach(({ file, idx }) => {
       const isIgnored = ignoredFileIndices.has(idx);
-      const conflict = isIgnored ? null : (duplicateMap.get(idx) ?? null);
+      const conflict = isIgnored || isDuplicateSong ? null : (duplicateMap.get(idx) ?? null);
       const normalizedInstrument = isIgnored
         ? null
         : normalizedInstrumentNames.get(idx);
@@ -424,6 +428,7 @@ export function AddFilesModal({
   }, [
     duplicateMap,
     ignoredFileIndices,
+    isDuplicateSong,
     normalizedInstrumentCounts,
     normalizedInstrumentNames,
     normalizedTitle,
@@ -432,13 +437,15 @@ export function AddFilesModal({
 
   const pendingIssueMessages = useMemo(() => {
     const messages: string[] = [];
-    const scoreConflicts: ScoreConflict[] = [];
 
     if (isDuplicateSong) {
       messages.push(
         t("addFilesModal.duplicateSong", { name: existingSong?.name ?? normalizedTitle }),
       );
+      return messages;
     }
+
+    const scoreConflicts: ScoreConflict[] = [];
 
     reviewItems.forEach((item) => {
       if (item.kind === "group") {
@@ -503,40 +510,35 @@ export function AddFilesModal({
           onChange={(value) => setTitle(normalizeSongNameInput(value))}
           placeholder={t("editMusicModal.titlePlaceholder")}
           autoFocus
-          readOnly={isDuplicateSong}
         />
       </FormField>
 
-      {!isDuplicateSong && (
-        <>
-          <FormField label={t("addFilesModal.labelComposer")}>
-            <AutocompleteInput
-              value={composer}
-              onChange={setComposer}
-              placeholder={t("editMusicModal.composerPlaceholder")}
-              suggestions={composerSuggestions}
-            />
-          </FormField>
+      <FormField label={t("addFilesModal.labelComposer")}>
+        <AutocompleteInput
+          value={composer}
+          onChange={setComposer}
+          placeholder={t("editMusicModal.composerPlaceholder")}
+          suggestions={composerSuggestions}
+        />
+      </FormField>
 
-          <FormField label={t("addFilesModal.labelArranger")}>
-            <AutocompleteInput
-              value={arranger}
-              onChange={setArranger}
-              placeholder={t("editMusicModal.arrangerPlaceholder")}
-              suggestions={arrangerSuggestions}
-            />
-          </FormField>
+      <FormField label={t("addFilesModal.labelArranger")}>
+        <AutocompleteInput
+          value={arranger}
+          onChange={setArranger}
+          placeholder={t("editMusicModal.arrangerPlaceholder")}
+          suggestions={arrangerSuggestions}
+        />
+      </FormField>
 
-          {visibleCategories.length > 0 && (
-            <FormField label={t("addFilesModal.labelCategories")}>
-              <CategoryCheckboxList
-                categories={visibleCategories}
-                selectedIds={selectedCategories}
-                onToggle={toggleCategory}
-              />
-            </FormField>
-          )}
-        </>
+      {visibleCategories.length > 0 && (
+        <FormField label={t("addFilesModal.labelCategories")}>
+          <CategoryCheckboxList
+            categories={visibleCategories}
+            selectedIds={selectedCategories}
+            onToggle={toggleCategory}
+          />
+        </FormField>
       )}
 
       {instrumentCount > 0 && (

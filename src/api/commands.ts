@@ -213,6 +213,10 @@ export async function getSearchSuggestions(query: string, limit?: number): Promi
   return invoke("get_search_suggestions", { query, limit });
 }
 
+export async function findSongByDirectory(directoryPath: string): Promise<{ name: string } | null> {
+  return invoke("find_song_by_directory", { directoryPath });
+}
+
 export async function openFile(scoreId: string): Promise<void> {
   return invoke("open_file", { scoreId });
 }

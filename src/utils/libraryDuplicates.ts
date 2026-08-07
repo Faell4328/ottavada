@@ -27,28 +27,56 @@ export function findSongByName(
   );
 }
 
+export function findSongByNameComposerArranger(
+  songs: SongListItem[] | null | undefined,
+  songName: string,
+  composer: string,
+  arranger: string
+): SongListItem | null {
+  if (!songs) {
+    return null;
+  }
+
+  const normalizedSongName = normalizeSongNameForSave(songName);
+  if (!normalizedSongName) {
+    return null;
+  }
+
+  const normalizedComposer = normalizeSongNameForSave(composer);
+  const normalizedArranger = normalizeSongNameForSave(arranger);
+
+  return (
+    songs.find((song) => {
+      const nameMatch =
+        normalizeSongNameForSave(song.name) === normalizedSongName;
+      if (!nameMatch) {
+        return false;
+      }
+
+      const composerMatch =
+        normalizeSongNameForSave(song.composer ?? "") === normalizedComposer;
+      const arrangerMatch =
+        normalizeSongNameForSave(song.arranger ?? "") === normalizedArranger;
+
+      return composerMatch && arrangerMatch;
+    }) ?? null
+  );
+}
+
 export function findExistingScoreConflict(
   songs: SongListItem[] | null | undefined,
   file: IndexedFile,
-  targetSongName?: string | null
+  targetSongName?: string | null,
+  composer?: string,
+  arranger?: string
 ): ScoreConflict | null {
   if (!songs) {
     return null;
   }
 
-  for (const song of songs) {
-    const matchedScore = song.scores.find((score) => isSamePath(score.file_path, file.path));
-
-    if (matchedScore) {
-      return {
-        song,
-        score: matchedScore,
-        kind: "path",
-      };
-    }
-  }
-
-  const targetSong = targetSongName ? findSongByName(songs, targetSongName) : null;
+  const targetSong = targetSongName
+    ? findSongByNameComposerArranger(songs, targetSongName, composer ?? "", arranger ?? "")
+    : null;
 
   const normalizedInstrument = normalizeScoreNameForSave(file.instrument ?? "");
   if (!normalizedInstrument) {
