@@ -8,6 +8,7 @@ import toast from "react-hot-toast";
 import { useAppState } from "../context/AppContext";
 import * as api from "../api/commands";
 import { ChangeComputerTypeModal } from "./ChangeComputerTypeModal";
+import { ImportBackupModal } from "./ImportBackupModal";
 import { RcloneProviderModal } from "./RcloneProviderModal.tsx";
 import { RcloneLicenseModal } from "./RcloneLicenseModal";
 import { UpdateModal } from "./UpdateModal";
@@ -67,6 +68,7 @@ export default function SettingsPage() {
   const [isTogglingType, setIsTogglingType] = useState(false);
   const [isChangeComputerTypeModalOpen, setIsChangeComputerTypeModalOpen] =
     useState(false);
+  const [isImportBackupModalOpen, setIsImportBackupModalOpen] = useState(false);
   const [isGeneratingSnapshot, setIsGeneratingSnapshot] = useState(false);
   const [isExportingBackup, setIsExportingBackup] = useState(false);
   const [isImportingBackup, setIsImportingBackup] = useState(false);
@@ -456,6 +458,20 @@ export default function SettingsPage() {
       return;
     }
 
+    if (isSyncLocked) {
+      toast.error(t("settings.syncLocked"));
+      return;
+    }
+
+    if (!settings.rclone_config) {
+      toast.error(t("settings.importCloudRequired"));
+      return;
+    }
+
+    setIsImportBackupModalOpen(true);
+  }
+
+  async function performImportBackupCloud() {
     if (isSyncLocked) {
       toast.error(t("settings.syncLocked"));
       return;
@@ -995,6 +1011,12 @@ export default function SettingsPage() {
         currentType={settings.computer_type as "Server" | "Client"}
         onClose={() => setIsChangeComputerTypeModalOpen(false)}
         onConfirm={handleConfirmComputerTypeChange}
+      />
+
+      <ImportBackupModal
+        isOpen={isImportBackupModalOpen}
+        onClose={() => setIsImportBackupModalOpen(false)}
+        onConfirm={performImportBackupCloud}
       />
 
       <RcloneLicenseModal

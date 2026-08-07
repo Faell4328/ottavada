@@ -541,6 +541,18 @@
     "serverType": "Computer del Direttore",
     "clientType": "Computer per le Prove"
   },
+  "importBackupModal": {
+    "title": "Importa backup",
+    "description": "Stai per importare un backup dal cloud. Questa azione sostituirà i dati attuali di questo computer.",
+    "impactTitle": "⚠️ Impatto:",
+    "overwriteData": "Sovrascriverà il database e le impostazioni attuali",
+    "replacesLocal": "Sostituisce i dati locali con il contenuto del backup",
+    "cannotUndo": "Non può essere annullato dopo la fine del conto alla rovescia",
+    "confirmCountdown": "Conferma entro {{countdown}} secondi per procedere.",
+    "confirmButton": "Importa",
+    "confirming": "Importazione...",
+    "cancel": "Annulla"
+  },
   "rcloneProviderModal": {
     "title": "Configura provider cloud",
     "browserAuth": "Autenticazione tramite browser.",

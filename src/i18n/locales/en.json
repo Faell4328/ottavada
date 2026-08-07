@@ -541,6 +541,18 @@
     "serverType": "Conductor's Computer",
     "clientType": "Rehearsal Computer"
   },
+  "importBackupModal": {
+    "title": "Import backup",
+    "description": "You are about to import a cloud backup. This action will replace the current data on this computer.",
+    "impactTitle": "⚠️ Impact:",
+    "overwriteData": "Will overwrite the current database and settings",
+    "replacesLocal": "Replaces the local data with the backup contents",
+    "cannotUndo": "Cannot be undone after the countdown ends",
+    "confirmCountdown": "Confirm within {{countdown}} seconds to proceed.",
+    "confirmButton": "Import",
+    "confirming": "Importing...",
+    "cancel": "Cancel"
+  },
   "rcloneProviderModal": {
     "title": "Configure cloud provider",
     "browserAuth": "Browser authentication.",

@@ -541,6 +541,18 @@
     "serverType": "Computadora del Director",
     "clientType": "Computadora de Ensayo"
   },
+  "importBackupModal": {
+    "title": "Importar copia de seguridad",
+    "description": "Está a punto de importar una copia de seguridad de la nube. Esta acción reemplazará los datos actuales de esta computadora.",
+    "impactTitle": "⚠️ Impacto:",
+    "overwriteData": "Sobrescribirá la base de datos y la configuración actuales",
+    "replacesLocal": "Reemplaza los datos locales con el contenido de la copia de seguridad",
+    "cannotUndo": "No se puede deshacer después de que termine la cuenta atrás",
+    "confirmCountdown": "Confirme dentro de {{countdown}} segundos para continuar.",
+    "confirmButton": "Importar",
+    "confirming": "Importando...",
+    "cancel": "Cancelar"
+  },
   "rcloneProviderModal": {
     "title": "Configurar proveedor de nube",
     "browserAuth": "Autenticación vía navegador.",

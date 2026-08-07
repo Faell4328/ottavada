@@ -541,6 +541,18 @@
     "serverType": "Computer des Dirigenten",
     "clientType": "Proben-Computer"
   },
+  "importBackupModal": {
+    "title": "Backup importieren",
+    "description": "Sie sind dabei, ein Cloud-Backup zu importieren. Diese Aktion ersetzt die aktuellen Daten auf diesem Computer.",
+    "impactTitle": "⚠️ Auswirkung:",
+    "overwriteData": "Überschreibt die aktuelle Datenbank und Einstellungen",
+    "replacesLocal": "Ersetzt die lokalen Daten durch den Inhalt des Backups",
+    "cannotUndo": "Kann nach Ablauf des Countdowns nicht rückgängig gemacht werden",
+    "confirmCountdown": "Bestätigen Sie innerhalb von {{countdown}} Sekunden, um fortzufahren.",
+    "confirmButton": "Importieren",
+    "confirming": "Wird importiert...",
+    "cancel": "Abbrechen"
+  },
   "rcloneProviderModal": {
     "title": "Cloud-Anbieter konfigurieren",
     "browserAuth": "Browser-Authentifizierung.",

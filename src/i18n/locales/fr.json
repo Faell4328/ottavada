@@ -541,6 +541,18 @@
     "serverType": "Ordinateur du Chef",
     "clientType": "Ordinateur de Répétition"
   },
+  "importBackupModal": {
+    "title": "Importer la sauvegarde",
+    "description": "Vous allez importer une sauvegarde cloud. Cette action remplacera les données actuelles de cet ordinateur.",
+    "impactTitle": "⚠️ Impact :",
+    "overwriteData": "Écrasera la base de données et les paramètres actuels",
+    "replacesLocal": "Remplace les données locales par le contenu de la sauvegarde",
+    "cannotUndo": "Ne peut pas être annulé après la fin du compte à rebours",
+    "confirmCountdown": "Confirmez dans les {{countdown}} secondes pour continuer.",
+    "confirmButton": "Importer",
+    "confirming": "Importation...",
+    "cancel": "Annuler"
+  },
   "rcloneProviderModal": {
     "title": "Configurer le fournisseur cloud",
     "browserAuth": "Authentification via navigateur.",

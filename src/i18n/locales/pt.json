@@ -541,6 +541,18 @@
     "serverType": "Computador do Maestro",
     "clientType": "Computador de Ensaio"
   },
+  "importBackupModal": {
+    "title": "Importar backup",
+    "description": "Você está prestes a importar um backup da nuvem. Esta ação substituirá os dados atuais deste computador.",
+    "impactTitle": "⚠️ Impacto:",
+    "overwriteData": "Irá sobrescrever o banco de dados e as configurações atuais",
+    "replacesLocal": "Substitui os dados locais pelo conteúdo do backup",
+    "cannotUndo": "Não pode ser desfeito após o fim da contagem",
+    "confirmCountdown": "Confirme dentro de {{countdown}} segundos para prosseguir.",
+    "confirmButton": "Importar",
+    "confirming": "Importando...",
+    "cancel": "Cancelar"
+  },
   "rcloneProviderModal": {
     "title": "Configurar provedor de nuvem",
     "browserAuth": "Autenticação via navegador.",
