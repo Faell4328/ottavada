@@ -152,10 +152,9 @@ fn read_score_file_metadata(path: &Path) -> Result<(u64, chrono::NaiveDateTime),
 }
 
 fn open_path_on_system(file_path: &str) -> Result<(), AppError> {
-    let normalized_path = file_path.replace('/', "\\");
-
     #[cfg(target_os = "windows")]
     {
+        let normalized_path = file_path.replace('/', "\\");
         let mut cmd = configure_no_window_command(std::process::Command::new("cmd"));
         cmd.args(["/C", "start", "", &normalized_path])
             .spawn()
@@ -173,7 +172,7 @@ fn open_path_on_system(file_path: &str) -> Result<(), AppError> {
     #[cfg(target_os = "linux")]
     {
         std::process::Command::new("xdg-open")
-            .arg(&normalized_path)
+            .arg(file_path)
             .spawn()
             .map_err(|e| AppError::Generic(format!("Erro ao abrir arquivo: {}", e)))?;
     }
@@ -210,15 +209,15 @@ fn open_url_on_system(url: &str) -> Result<(), AppError> {
 }
 
 fn open_file_location_on_system(file_path: &str) -> Result<(), AppError> {
-    let normalized_path = file_path.replace('/', "\\");
-    let path = Path::new(&normalized_path);
-
-    if !path.exists() {
-        return Err(AppError::Generic("Arquivo não encontrado".into()));
-    }
-
     #[cfg(target_os = "windows")]
     {
+        let normalized_path = file_path.replace('/', "\\");
+        let path = Path::new(&normalized_path);
+
+        if !path.exists() {
+            return Err(AppError::Generic("Arquivo não encontrado".into()));
+        }
+
         let mut cmd = configure_no_window_command(std::process::Command::new("explorer"));
         if path.is_dir() {
             cmd.arg(&normalized_path).spawn().map_err(|e| {
@@ -233,6 +232,12 @@ fn open_file_location_on_system(file_path: &str) -> Result<(), AppError> {
 
     #[cfg(target_os = "macos")]
     {
+        let path = Path::new(file_path);
+
+        if !path.exists() {
+            return Err(AppError::Generic("Arquivo não encontrado".into()));
+        }
+
         let mut command = std::process::Command::new("open");
         if path.is_dir() {
             command.arg(path);
@@ -247,6 +252,12 @@ fn open_file_location_on_system(file_path: &str) -> Result<(), AppError> {
 
     #[cfg(target_os = "linux")]
     {
+        let path = Path::new(file_path);
+
+        if !path.exists() {
+            return Err(AppError::Generic("Arquivo não encontrado".into()));
+        }
+
         let parent = path.parent().ok_or_else(|| {
             AppError::Generic("Não foi possível identificar o diretório do arquivo".into())
         })?;

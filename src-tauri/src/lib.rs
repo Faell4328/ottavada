@@ -8,7 +8,8 @@ pub mod test_support;
 
 use infrastructure::database::Database;
 use infrastructure::store::SystemStore;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tauri::path::BaseDirectory;
@@ -100,6 +101,71 @@ fn boost_current_process_priority() {
 #[cfg(not(target_os = "windows"))]
 fn boost_current_process_priority() {}
 
+fn resolve_rclone_executable(app: &tauri::App) -> Option<PathBuf> {
+    match app.path().resolve("rclone/rclone", BaseDirectory::Resource) {
+        Ok(path) if path.exists() => return Some(path),
+        Ok(path) => warn!("Binário do rclone empacotado não encontrado em {}", path.display()),
+        Err(err) => warn!("Falha ao resolver o binário do rclone empacotado: {}", err),
+    }
+
+    if let Some(path) = find_rclone_in_path() {
+        info!("Usando rclone do sistema: {}", path.display());
+        return Some(path);
+    }
+
+    warn!("Binário do rclone não encontrado no bundle nem no PATH");
+    None
+}
+
+fn find_rclone_in_path() -> Option<PathBuf> {
+    let command = rclone_path_command();
+    let output = Command::new(command).arg("rclone").output().ok()?;
+
+    if !output.status.success() {
+        return None;
+    }
+
+    let output = String::from_utf8_lossy(&output.stdout);
+    let path = first_path_line(&output)?;
+
+    Some(PathBuf::from(path))
+}
+
+fn rclone_path_command() -> &'static str {
+    if cfg!(target_os = "windows") {
+        "where"
+    } else {
+        "which"
+    }
+}
+
+fn first_path_line(output: &str) -> Option<&str> {
+    output.lines().map(str::trim).find(|line| !line.is_empty())
+}
+
+#[cfg(test)]
+mod rclone_resolution_tests {
+    use super::{first_path_line, rclone_path_command};
+
+    #[test]
+    fn selects_platform_path_command() {
+        assert_eq!(
+            rclone_path_command(),
+            if cfg!(target_os = "windows") {
+                "where"
+            } else {
+                "which"
+            }
+        );
+    }
+
+    #[test]
+    fn parses_first_non_empty_path_line() {
+        assert_eq!(first_path_line("\n  /usr/bin/rclone\n/usr/local/bin/rclone"), Some("/usr/bin/rclone"));
+        assert_eq!(first_path_line("\n  \n"), None);
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -151,27 +217,7 @@ pub fn run() {
 
             let rclone_config_path = rclone_config_dir.join("rclone.conf");
 
-            let rclone_executable_path = if cfg!(target_os = "windows") {
-                match app
-                    .path()
-                    .resolve("rclone/rclone.exe", BaseDirectory::Resource)
-                {
-                    Ok(path) if path.exists() => Some(path),
-                    Ok(path) => {
-                        warn!(
-                            "Binário do rclone empacotado não encontrado em {}",
-                            path.display()
-                        );
-                        None
-                    }
-                    Err(err) => {
-                        warn!("Falha ao resolver o binário do rclone empacotado: {}", err);
-                        None
-                    }
-                }
-            } else {
-                None
-            };
+            let rclone_executable_path = resolve_rclone_executable(app);
 
             commands::rclone_commands::set_rclone_paths(rclone_executable_path, rclone_config_path);
             commands::rclone_commands::terminate_stale_rclone_rc_processes();

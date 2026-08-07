@@ -36,6 +36,16 @@
   "bundle": {
     "publisher": "Faell Software",
     "createUpdaterArtifacts": true,
+    "active": true,
+    "resources": ["rclone/rclone.exe"],
+    "targets": ["nsis", "dmg", "appimage"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
     "windows": {
       "certificateThumbprint": "04f52bc09d3206c1938b96532d251cacc78adcce",
       "digestAlgorithm": "sha256",
@@ -46,15 +56,9 @@
         "installMode": "currentUser"
       }
     },
-    "active": true,
-    "resources": ["rclone/rclone.exe"],
-    "targets": ["nsis"],
-    "icon": [
-      "icons/32x32.png",
-      "icons/128x128.png",
-      "icons/128x128@2x.png",
-      "icons/icon.icns",
-      "icons/icon.ico"
-    ]
+    "macOS": {
+      "minimumSystemVersion": "10.15"
+    },
+    "linux": {}
   }
 }

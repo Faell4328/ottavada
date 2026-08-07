@@ -35,12 +35,13 @@ pub fn to_storage_path(path: &str) -> String {
     }
 
     let remainder = &trimmed[home.len()..];
-    let remainder = remainder.trim_start_matches('\\').trim_start_matches('/');
+    let remainder = remainder.trim_start_matches(['\\', '/']);
 
     if remainder.is_empty() {
         "%USERPROFILE%".to_string()
     } else {
-        format!("%USERPROFILE%\\{}", remainder)
+        let normalized = remainder.replace('\\', "/");
+        format!("%USERPROFILE%/{}", normalized)
     }
 }
 
@@ -63,12 +64,18 @@ pub fn from_storage_path(path: &str) -> String {
     };
 
     let remainder = &trimmed["%USERPROFILE%".len()..];
-    let remainder = remainder.trim_start_matches('\\').trim_start_matches('/');
+    let remainder = remainder.trim_start_matches(['\\', '/']);
 
     if remainder.is_empty() {
         home
     } else {
-        format!("{}\\{}", home.trim_end_matches('\\'), remainder)
+        let mut path = std::path::PathBuf::from(home.trim_end_matches(['\\', '/']));
+        for component in remainder.split(['\\', '/']) {
+            if !component.is_empty() {
+                path.push(component);
+            }
+        }
+        path.to_string_lossy().to_string()
     }
 }
 
@@ -119,7 +126,7 @@ mod tests {
         with_userprofile(r"C:\Users\john", || {
             assert_eq!(
                 to_storage_path(r"C:\Users\john\Documents\Song"),
-                r"%USERPROFILE%\Documents\Song"
+                r"%USERPROFILE%/Documents/Song"
             );
         });
     }
@@ -136,13 +143,23 @@ mod tests {
         with_userprofile(r"C:\Users\John", || {
             assert_eq!(
                 to_storage_path(r"c:\users\john\Documents\Song"),
-                r"%USERPROFILE%\Documents\Song"
+                r"%USERPROFILE%/Documents/Song"
             );
         });
     }
 
     #[test]
     fn from_storage_path_expands_correctly() {
+        with_userprofile(r"C:\Users\john", || {
+            assert_eq!(
+                from_storage_path(r"%USERPROFILE%/Documents/Song"),
+                r"C:\Users\john\Documents\Song"
+            );
+        });
+    }
+
+    #[test]
+    fn from_storage_path_legacy_backslash_format() {
         with_userprofile(r"C:\Users\john", || {
             assert_eq!(
                 from_storage_path(r"%USERPROFILE%\Documents\Song"),
@@ -169,12 +186,60 @@ mod tests {
     }
 
     #[test]
+    fn from_storage_path_unix_format_expands() {
+        with_userprofile("/home/user", || {
+            assert_eq!(
+                from_storage_path(r"%USERPROFILE%/Documents/Song"),
+                if cfg!(target_os = "windows") {
+                    r"/home/user\Documents\Song"
+                } else {
+                    "/home/user/Documents/Song"
+                }
+            );
+        });
+    }
+
+    #[test]
+    fn from_storage_path_unix_legacy_backslash_expands() {
+        with_userprofile("/home/user", || {
+            assert_eq!(
+                from_storage_path(r"%USERPROFILE%\Documents\Song"),
+                if cfg!(target_os = "windows") {
+                    r"/home/user\Documents\Song"
+                } else {
+                    "/home/user/Documents/Song"
+                }
+            );
+        });
+    }
+
+    #[test]
+    fn storage_path_unix_home_converts() {
+        with_userprofile("/home/user", || {
+            assert_eq!(
+                to_storage_path("/home/user/Documents/Song"),
+                r"%USERPROFILE%/Documents/Song"
+            );
+        });
+    }
+
+    #[test]
     fn roundtrip_preserves_semantics() {
         with_userprofile(r"C:\Users\john", || {
             let original = r"C:\Users\john\Documents\Song";
             let stored = to_storage_path(original);
             let restored = from_storage_path(&stored);
             assert_eq!(restored.to_lowercase(), original.to_lowercase());
+        });
+    }
+
+    #[test]
+    fn roundtrip_preserves_semantics_unix() {
+        with_userprofile("/home/user", || {
+            let original = "/home/user/Documents/Song";
+            let stored = to_storage_path(original);
+            let restored = from_storage_path(&stored);
+            assert_eq!(restored.replace('\\', "/"), original);
         });
     }
 }

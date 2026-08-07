@@ -7,13 +7,17 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "tauri:linux": "sh -lc 'set -a; . src-tauri/.env; set +a; APPIMAGE_EXTRACT_AND_RUN=1 tauri dev'",
     "tauri:win": "dotenv -e src-tauri/.env -- tauri dev",
+    "tauri:mac": "dotenv -e src-tauri/.env -- tauri dev",
+    "tauri:linux": "sh -lc 'set -a; . src-tauri/.env; set +a; APPIMAGE_EXTRACT_AND_RUN=1 tauri dev'",
     "test:front": "vitest run",
     "test:back": "cargo test --manifest-path ./src-tauri/Cargo.toml",
     "test:full": "npm run test:front && npm run test:back",
     "tauri:build:win:x32": "dotenv -e src-tauri/.env -- tauri build --target i686-pc-windows-msvc && script.bat",
-    "tauri:build:win:x64": "dotenv -e src-tauri/.env -- tauri build --target x86_64-pc-windows-msvc && script.bat"
+    "tauri:build:win:x64": "dotenv -e src-tauri/.env -- tauri build --target x86_64-pc-windows-msvc && script.bat",
+    "tauri:build:mac:x64": "dotenv -e src-tauri/.env -- tauri build --target x86_64-apple-darwin && sh script.sh",
+    "tauri:build:mac:arm64": "dotenv -e src-tauri/.env -- tauri build --target aarch64-apple-darwin && sh script.sh",
+    "tauri:build:linux:x64": "sh -lc 'set -a; . src-tauri/.env; set +a; APPIMAGE_EXTRACT_AND_RUN=1 tauri build --target x86_64-unknown-linux-gnu --bundles appimage' && sh script.sh"
   },
   "dependencies": {
     "@tauri-apps/api": "2.10.1",
