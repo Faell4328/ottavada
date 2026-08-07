@@ -1,5 +1,6 @@
 import React from "react";
 import { MoreVertical } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface ContextMenuProps {
   isOpen: boolean;
@@ -9,6 +10,8 @@ interface ContextMenuProps {
 }
 
 export function ContextMenu({ isOpen, onToggle, children, disabled = false }: ContextMenuProps) {
+  const { t } = useTranslation();
+
   return (
     <div className="relative">
       <button
@@ -16,7 +19,7 @@ export function ContextMenu({ isOpen, onToggle, children, disabled = false }: Co
         onClick={onToggle}
         disabled={disabled}
         className="p-1 rounded transition-colors hover:bg-white/20"
-        title="Menu de ações"
+        title={t("contextMenu.title")}
       >
         <MoreVertical className="h-4 w-4 text-[#8b9db2]" />
       </button>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import { useTranslation } from "react-i18next";
 import type { RcloneProvider, RcloneSetupInput } from "../types";
 import { Modal } from "./ui/Modal";
 
@@ -15,16 +16,17 @@ interface RcloneProviderModalProps {
 function getPrimaryActionLabel(
   provider: RcloneProvider,
   currentProvider: RcloneProvider,
+  t: (key: string) => string,
 ) {
   if (provider === "google_drive") {
     return provider === currentProvider
-      ? "Atualizar e testar Google Drive"
-      : "Trocar para Google Drive e testar";
+      ? t("rcloneProviderModal.updateTestGoogleDrive")
+      : t("rcloneProviderModal.switchTestGoogleDrive");
   }
 
   return provider === currentProvider
-    ? "Atualizar e testar Koofr"
-    : "Trocar para Koofr e testar";
+    ? t("rcloneProviderModal.updateTestKoofr")
+    : t("rcloneProviderModal.switchTestKoofr");
 }
 
 export function RcloneProviderModal({
@@ -40,6 +42,7 @@ export function RcloneProviderModal({
   const [email, setEmail] = useState("");
   const [appPassword, setAppPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (!isOpen) {
@@ -84,7 +87,7 @@ export function RcloneProviderModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Mudar provedor de nuvem"
+      title={t("rcloneProviderModal.title")}
       maxWidth="max-w-2xl"
       footer={
         <div className="flex w-full gap-2">
@@ -94,7 +97,7 @@ export function RcloneProviderModal({
             className="flex-1 rounded border border-[#c5cfdb] bg-white px-4 py-2 text-sm font-medium text-[#344b61] transition-colors hover:bg-[#f2f5fa]"
             disabled={isSubmitting}
           >
-            Fechar
+            {t("rcloneProviderModal.close")}
           </button>
           <button
             type="button"
@@ -109,8 +112,8 @@ export function RcloneProviderModal({
             }
           >
             {isSubmitting
-              ? "Testando..."
-              : getPrimaryActionLabel(selectedProvider, currentProvider)}
+              ? t("rcloneProviderModal.testing")
+              : getPrimaryActionLabel(selectedProvider, currentProvider, t)}
           </button>
         </div>
       }
@@ -129,18 +132,18 @@ export function RcloneProviderModal({
             <div className="mb-2 flex items-center gap-2">
               {currentProvider === "koofr" && (
                 <span className="rounded-full bg-[#e8eef7] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.2em] text-[#4f84d7]">
-                  Atual
+                  {t("rcloneProviderModal.current")}
                 </span>
               )}
               {currentProvider !== "koofr" && (
                 <span className="rounded-full bg-[#eef3f8] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.2em] text-[#6b849e]">
-                  Alternativa
+                  {t("rcloneProviderModal.alternative")}
                 </span>
               )}
             </div>
             <p className="text-sm font-semibold text-[#34485d]">Koofr</p>
             <p className="mt-1 text-xs text-[#6b849e]">
-              Use email + senha de aplicativo.
+              {t("rcloneProviderModal.koofrHint")}
             </p>
           </button>
 
@@ -156,60 +159,54 @@ export function RcloneProviderModal({
             <div className="mb-2 flex items-center gap-2">
               {currentProvider === "google_drive" && (
                 <span className="rounded-full bg-[#e8eef7] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.2em] text-[#4f84d7]">
-                  Atual
+                  {t("rcloneProviderModal.current")}
                 </span>
               )}
               {currentProvider !== "google_drive" && (
                 <span className="rounded-full bg-[#eef3f8] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.2em] text-[#6b849e]">
-                  Alternativa
+                  {t("rcloneProviderModal.alternative")}
                 </span>
               )}
             </div>
-            <p className="text-sm font-semibold text-[#34485d]">Google Drive</p>
+            <p className="text-sm font-semibold text-[#34485d]">{t("rcloneProviderModal.googleDriveTitle")}</p>
             <p className="mt-1 text-xs text-[#6b849e]">
-              Autenticação via navegador.
+              {t("rcloneProviderModal.browserAuth")}
             </p>
           </button>
         </div>
 
         {selectedProvider === "koofr" ? (
           <div className="space-y-3 rounded-xl border border-[#c5cfdb] bg-white p-4">
-            <p className="text-sm font-semibold text-[#34485d]">Koofr</p>
-            <p className="text-xs text-[#6b849e]">
-              Informe o email e a senha de aplicativo do Koofr.
-            </p>
-
             <div>
               <label className="mb-1.5 block text-xs font-semibold text-[#34485d]">
-                Email
+                {t("rcloneProviderModal.emailLabel")}
               </label>
               <input
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="h-10 w-full rounded-lg border border-[#c5cfdb] bg-[#f8fafd] px-3 text-sm text-[#4d6075] outline-none focus:border-[#7ba0d4] focus:ring-2 focus:ring-[#7ba0d4]/20"
-                placeholder="voce@exemplo.com"
+                placeholder={t("rcloneProviderModal.emailPlaceholder")}
               />
             </div>
 
             <div>
               <label className="mb-1.5 block text-xs font-semibold text-[#34485d]">
-                Senha do aplicativo
+                {t("rcloneProviderModal.appPasswordLabel")}
               </label>
               <input
                 type="password"
                 value={appPassword}
                 onChange={(e) => setAppPassword(e.target.value)}
                 className="h-10 w-full rounded-lg border border-[#c5cfdb] bg-[#f8fafd] px-3 text-sm text-[#4d6075] outline-none focus:border-[#7ba0d4] focus:ring-2 focus:ring-[#7ba0d4]/20"
-                placeholder="Senha criada no Koofr"
+                placeholder={t("rcloneProviderModal.appPasswordPlaceholder")}
               />
             </div>
           </div>
         ) : (
           <div className="rounded-xl border border-[#c5cfdb] bg-white p-4">
-            <p className="text-sm font-semibold text-[#34485d]">Google Drive</p>
+            <p className="text-sm font-semibold text-[#34485d]">{t("rcloneProviderModal.googleDriveTitle")}</p>
             <p className="mt-1 text-xs text-[#6b849e]">
-              Ao clicar no botão será aberto seu navegador para escolher a conta
-              Google
+              {t("rcloneProviderModal.googleDriveHint")}
             </p>
           </div>
         )}

@@ -1,4 +1,5 @@
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 import { useScrollLock } from "../../hooks/useScrollLock";
 
 interface ConfirmationModalProps {
@@ -19,6 +20,7 @@ export function ConfirmationModal({
   onCancel,
 }: ConfirmationModalProps) {
   useScrollLock(isOpen);
+  const { t } = useTranslation();
 
   if (!isOpen || typeof document === "undefined") return null;
 
@@ -33,14 +35,14 @@ export function ConfirmationModal({
             disabled={isLoading}
             className="px-4 py-2 text-sm font-medium text-[#344b61] border border-[#c5cfdb] rounded-lg hover:bg-[#eef2f6] disabled:opacity-50 transition-colors"
           >
-            Cancelar
+            {t("confirmation.cancel")}
           </button>
           <button
             onClick={onConfirm}
             disabled={isLoading}
             className="px-4 py-2 text-sm font-medium bg-[#4f84d7] text-white rounded-lg hover:bg-[#3d6fb8] disabled:opacity-50 transition-colors"
           >
-            {isLoading ? "Processando..." : "Confirmar"}
+            {isLoading ? t("confirmation.processing") : t("confirmation.confirm")}
           </button>
         </div>
       </div>

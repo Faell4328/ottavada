@@ -4,6 +4,7 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { useScrollLock } from "../hooks/useScrollLock";
 import { open } from "@tauri-apps/plugin-dialog";
 import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next";
 import type { SongListItem } from "../types";
 import { ContextMenu, ContextMenuItem } from "./ui/ContextMenu";
 import { isClientComputer } from "../utils/computer";
@@ -52,6 +53,7 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(
   ) {
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isDeleteLoading, setIsDeleteLoading] = useState(false);
+    const { t } = useTranslation();
     useScrollLock(isDeleteModalOpen);
     const author = [song.composer, song.arranger].filter(Boolean).join(" / ");
     const isClient = isClientComputer(computerType);
@@ -75,7 +77,7 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(
         await api.openFileLocation(openLocalTarget);
       } catch (err) {
         console.error("Failed to open song location:", err);
-        toast.error("Erro ao abrir local da música");
+        toast.error(t("songRow.openSongError"));
       }
     };
 
@@ -84,7 +86,7 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(
         await api.openSongTempDir(song.id);
       } catch (err) {
         console.error("Failed to open song temp dir:", err);
-        toast.error("Erro ao abrir local da partitura");
+        toast.error(t("songRow.openScoreError"));
       }
     };
 
@@ -99,7 +101,7 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(
         await onReindex();
       } catch (err) {
         console.error("Failed to reindex song:", err);
-        toast.error("Erro ao reindexar pasta");
+        toast.error(t("songRow.reindexError"));
       }
     };
 
@@ -121,7 +123,7 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(
         onMenuClose();
       } catch (err) {
         console.error("Failed to delete song:", err);
-        toast.error("Erro ao mover música para lixeira");
+        toast.error(t("songRow.deleteError"));
       } finally {
         setIsDeleteLoading(false);
       }
@@ -188,11 +190,11 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(
                   (isClient ? (
                     <>
                       <ContextMenuItem
-                        label="Abrir"
+                        label={t("songRow.open")}
                         onClick={(e) => handleMenuAction(e, onToggle)}
                       />
                       <ContextMenuItem
-                        label="Abrir local"
+                        label={t("songRow.openLocal")}
                         onClick={(e) => {
                           e.stopPropagation();
                           void handleOpenClientTempDir();
@@ -202,8 +204,8 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(
                       <ContextMenuItem
                         label={
                           song.is_favorite
-                            ? "Remover de favoritos"
-                            : "Adicionar aos favoritos"
+                            ? t("songRow.removeFromFavorites")
+                            : t("songRow.addToFavorites")
                         }
                         onClick={(e) => handleMenuAction(e, onToggleFavorite)}
                         isLast
@@ -211,14 +213,14 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(
                     </>
                   ) : (
                     <ContextMenuItem
-                      label="Abrir"
+                      label={t("songRow.open")}
                       onClick={(e) => handleMenuAction(e, onToggle)}
                       disabled={isActionLocked}
                     />
                   ))}
                 {!isClient && !isNotFound && (
                   <ContextMenuItem
-                    label="Abrir local"
+                    label={t("songRow.openLocal")}
                     onClick={(e) => {
                       e.stopPropagation();
                       void handleOpenLocal();
@@ -229,8 +231,8 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(
                 )}
                 {!isClient && isNotFound && (
                   <>
-                    <ContextMenuItem
-                      label="Reindexar pasta"
+                  <ContextMenuItem
+                    label={t("songRow.reindexDirectory")}
                       onClick={(e) => {
                         e.stopPropagation();
                         onMenuClose();
@@ -238,8 +240,8 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(
                       }}
                       disabled={isActionLocked}
                     />
-                    <ContextMenuItem
-                      label="Parar de indexar pasta"
+                  <ContextMenuItem
+                    label={t("songRow.stopIndexing")}
                       onClick={(e) => {
                         e.stopPropagation();
                         onMenuClose();
@@ -254,7 +256,7 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(
                   <>
                     <ContextMenuItem
                       label={
-                        isDraft ? "Permitir para envio" : "Não permitir envio"
+                        isDraft ? t("songRow.allowSend") : t("songRow.disallowSend")
                       }
                       onClick={(e) =>
                         handleMenuAction(e, () => {
@@ -270,19 +272,19 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(
                     <ContextMenuItem
                       label={
                         song.is_favorite
-                          ? "Remover de favoritos"
-                          : "Adicionar aos favoritos"
+                          ? t("songRow.removeFromFavorites")
+                          : t("songRow.addToFavorites")
                       }
                       onClick={(e) => handleMenuAction(e, onToggleFavorite)}
                       disabled={isActionLocked}
                     />
                     <ContextMenuItem
-                      label="Editar"
+                      label={t("songRow.edit")}
                       onClick={(e) => handleMenuAction(e, onEdit)}
                       disabled={isActionLocked}
                     />
                     <ContextMenuItem
-                      label="Remover"
+                      label={t("songRow.remove")}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleDelete();
@@ -301,38 +303,38 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(
           ? createPortal(
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
                 <div className="w-full max-w-lg rounded-lg border border-[#c5cfdb] bg-[#f8fafd] p-6 shadow-xl">
-                  <h2 className="mb-3 text-lg font-semibold text-[#2f4259]">
-                    Remoção
-                  </h2>
-                  <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-                    <button
-                      onClick={closeDeleteModal}
-                      disabled={isDeleteLoading}
-                      className="rounded-lg border border-[#c5cfdb] px-4 py-2 text-sm font-medium text-[#344b61] transition-colors hover:bg-[#eef2f6] disabled:opacity-50"
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      onClick={() => {
-                        void runDeleteAction(() => onDelete(song.id));
-                      }}
-                      disabled={isDeleteLoading}
-                      className="rounded-lg border border-[#4f84d7] px-4 py-2 text-sm font-medium text-[#4f84d7] transition-colors hover:bg-[#edf4ff] disabled:opacity-50"
-                    >
-                      Parar de indexar pasta
-                    </button>
-                    <button
-                      onClick={() => {
-                        void runDeleteAction(() =>
-                          api.deleteSongWithFiles(song.id),
-                        );
-                      }}
-                      disabled={isDeleteLoading}
-                      className="rounded-lg bg-[#c04b4b] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#a93b3b] disabled:opacity-50"
-                    >
-                      {isDeleteLoading
-                        ? "Processando..."
-                        : "Mover pasta e arquivos para lixeira"}
+                <h2 className="mb-3 text-lg font-semibold text-[#2f4259]">
+                  {t("songRow.deletion")}
+                </h2>
+                <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+                  <button
+                    onClick={closeDeleteModal}
+                    disabled={isDeleteLoading}
+                    className="rounded-lg border border-[#c5cfdb] px-4 py-2 text-sm font-medium text-[#344b61] transition-colors hover:bg-[#eef2f6] disabled:opacity-50"
+                  >
+                    {t("songRow.cancel")}
+                  </button>
+                  <button
+                    onClick={() => {
+                      void runDeleteAction(() => onDelete(song.id));
+                    }}
+                    disabled={isDeleteLoading}
+                    className="rounded-lg border border-[#4f84d7] px-4 py-2 text-sm font-medium text-[#4f84d7] transition-colors hover:bg-[#edf4ff] disabled:opacity-50"
+                  >
+                    {t("songRow.stopIndexing")}
+                  </button>
+                  <button
+                    onClick={() => {
+                      void runDeleteAction(() =>
+                        api.deleteSongWithFiles(song.id),
+                      );
+                    }}
+                    disabled={isDeleteLoading}
+                    className="rounded-lg bg-[#c04b4b] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#a93b3b] disabled:opacity-50"
+                  >
+                    {isDeleteLoading
+                      ? t("songRow.processing")
+                      : t("songRow.moveToTrash")}
                     </button>
                   </div>
                 </div>

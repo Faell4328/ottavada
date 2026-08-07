@@ -1,5 +1,6 @@
 import { useEffect, useRef, type Dispatch } from "react";
 import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next";
 
 import * as api from "../api/commands";
 import type { Action, State } from "./reducer";
@@ -25,6 +26,7 @@ export function useAppBootstrap({
   startupScan,
   enabled = true,
 }: UseAppBootstrapParams) {
+  const { t } = useTranslation();
   const skipNextAutoSongReloadRef = useRef(false);
   const automaticBackupStartedRef = useRef(false);
 
@@ -73,7 +75,7 @@ export function useAppBootstrap({
                       );
                     }
                     toast.success(
-                      `Backup automático gerado em ${formatBackupTimestamp(backupSummary.generated_at)}`,
+                      t("autoBackup.generated", { timestamp: formatBackupTimestamp(backupSummary.generated_at) }),
                       {
                         duration: 8000,
                       }

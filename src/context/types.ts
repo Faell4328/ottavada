@@ -52,8 +52,7 @@ export interface AppContextValue {
   updateSongStatus: (songId: string, status: "main" | "draft") => Promise<void>;
   updateScore: (
     scoreId: string,
-    instrumentName: string | null,
-    filePath: string
+    instrumentName: string | null
   ) => Promise<void>;
   updateScoreStatus: (scoreId: string, status: "main" | "draft" | "ignored") => Promise<void>;
   deleteScore: (scoreId: string) => Promise<void>;
@@ -63,6 +62,7 @@ export interface AppContextValue {
     computerId: string,
     computerName: string,
     organizationName: string | null,
+    language: string | null,
     computerType: string,
     rcloneConfigJson: string
   ) => Promise<void>;

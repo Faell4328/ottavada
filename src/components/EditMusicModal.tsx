@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { useAppState } from "../context/AppContext";
 import type { SongListItem } from "../types";
 import { Modal, ModalFooterButtons, FormField, TextInput, ErrorMessage, AutocompleteInput } from "./ui";
@@ -26,6 +27,7 @@ export function EditMusicModal({
   onClose,
   onSave,
 }: EditMusicModalProps) {
+  const { t } = useTranslation();
   const { state } = useAppState();
   const visibleCategories = state.categories.filter(
     (category) => category.name.toLowerCase() !== "sem categoria"
@@ -100,7 +102,7 @@ export function EditMusicModal({
     const normalizedTitle = normalizeSongNameForSave(title);
 
     if (!score || !normalizedTitle) {
-      setError("O título é obrigatório");
+      setError(t("editMusicModal.titleRequired"));
       return;
     }
 
@@ -117,7 +119,7 @@ export function EditMusicModal({
       });
       onClose();
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Erro ao salvar";
+      const errorMsg = err instanceof Error ? err.message : t("editMusicModal.saveError");
       setError(errorMsg);
     } finally {
       setIsSaving(false);
@@ -130,7 +132,7 @@ export function EditMusicModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Editar Música"
+      title={t("editMusicModal.title")}
       footer={
         <ModalFooterButtons
           onCancel={onClose}
@@ -139,36 +141,36 @@ export function EditMusicModal({
         />
       }
     >
-      <FormField label="Título" required>
+      <FormField label={t("editMusicModal.titleLabel")} required>
         <TextInput
           value={title}
           onChange={(value) => setTitle(normalizeSongNameInput(value))}
-          placeholder="Nome da música"
+          placeholder={t("editMusicModal.titlePlaceholder")}
           disabled={isSaving}
         />
       </FormField>
 
-      <FormField label="Compositor">
+      <FormField label={t("editMusicModal.composerLabel")}>
         <AutocompleteInput
           value={composer}
           onChange={setComposer}
-          placeholder="Nome do compositor"
+          placeholder={t("editMusicModal.composerPlaceholder")}
           disabled={isSaving}
           suggestions={composerSuggestions}
         />
       </FormField>
 
-      <FormField label="Arranjador">
+      <FormField label={t("editMusicModal.arrangerLabel")}>
         <AutocompleteInput
           value={arranger}
           onChange={setArranger}
-          placeholder="Nome do arranjador"
+          placeholder={t("editMusicModal.arrangerPlaceholder")}
           disabled={isSaving}
           suggestions={arrangerSuggestions}
         />
       </FormField>
 
-      <FormField label="Categorias (múltiplas seleções)">
+      <FormField label={t("editMusicModal.categoriesLabel")}>
         <CategoryCheckboxList
           categories={visibleCategories}
           selectedIds={selectedCategories}

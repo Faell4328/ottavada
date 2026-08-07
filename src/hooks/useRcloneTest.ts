@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import toast from "react-hot-toast";
+import i18n from "../i18n";
 
 import * as api from "../api/commands";
 import { getFriendlyRcloneErrorMessage } from "../utils/rcloneErrors";
@@ -15,6 +16,8 @@ interface TestRcloneOptions {
   silent?: boolean;
 }
 
+const t = i18n.t.bind(i18n);
+
 export function useRcloneTest({
   provider,
   onSuccess,
@@ -27,14 +30,14 @@ export function useRcloneTest({
     try {
       await api.testRcloneUpload(provider);
       if (!options.silent) {
-        toast.success("Conexão com a nuvem testada com sucesso.");
+        toast.success(t("rcloneTest.connectionTested"));
       }
       onSuccess?.();
       return true;
     } catch (error) {
-      const providerLabel = provider === "google_drive" ? "Google Drive" : "Koofr";
+      const providerLabel = provider === "google_drive" ? t("rcloneTest.googleDrive") : t("rcloneTest.koofr");
       toast.error(
-        getFriendlyRcloneErrorMessage(error, `Falha ao testar o ${providerLabel}`)
+        getFriendlyRcloneErrorMessage(error, t("rcloneTest.testFailed", { provider: providerLabel }))
       );
       onFailure?.();
       return false;

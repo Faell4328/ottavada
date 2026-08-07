@@ -373,11 +373,15 @@
 
 ## Funcionalidades
 
-- adição de idioma: inglês;
+- adição de idioma: inglês, espanhol, francês, italiano e alemão;
 
 ## Melhorias
 
 - nova versão do rclone;
+
+## Correções
+
+- removendo código legado;
 
 ## Ajuste
 

@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+import i18next from "i18next";
 import { Clock3, Download, Sparkles } from "lucide-react";
 import { Modal, ModalFooterButtons } from "./ui";
 import type { UpdateInfo } from "../types";
@@ -21,7 +23,17 @@ function formatUpdateDate(value: string | null) {
     return value;
   }
 
-  return new Intl.DateTimeFormat("pt-BR", {
+  const localeMap: Record<string, string> = {
+    pt: "pt-BR",
+    en: "en-US",
+    es: "es-ES",
+    fr: "fr-FR",
+    it: "it-IT",
+    de: "de-DE",
+  };
+  const locale = localeMap[i18next.language] || "en-US";
+
+  return new Intl.DateTimeFormat(locale, {
     dateStyle: "short",
     timeStyle: "short",
   }).format(parsedDate);
@@ -34,6 +46,8 @@ export function UpdateModal({
   onCancel,
   onConfirm,
 }: UpdateModalProps) {
+  const { t } = useTranslation();
+
   if (!isOpen || !update) {
     return null;
   }
@@ -45,16 +59,16 @@ export function UpdateModal({
     <Modal
       isOpen={isOpen}
       onClose={onCancel}
-      title="Atualização disponível"
+      title={t("updateModal.title")}
       maxWidth="max-w-xl"
       footer={(
         <ModalFooterButtons
           onCancel={onCancel}
           onConfirm={onConfirm}
           isSaving={isInstalling}
-          cancelLabel="Adiar"
-          confirmLabel="Atualizar agora"
-          savingLabel="Atualizando..."
+          cancelLabel={t("updateModal.defer")}
+          confirmLabel={t("updateModal.updateNow")}
+          savingLabel={t("updateModal.updating")}
         />
       )}
     >
@@ -65,10 +79,10 @@ export function UpdateModal({
           </div>
           <div className="min-w-0">
             <p className="text-sm font-semibold text-[#2f4259]">
-              Nova versão {update.version} detectada
+              {t("updateModal.newVersion", { version: update.version })}
             </p>
             <p className="text-sm text-[#5e7390]">
-              Você pode adiar agora e instalar quando estiver pronto.
+              {t("updateModal.deferHint")}
             </p>
           </div>
         </div>
@@ -76,7 +90,7 @@ export function UpdateModal({
         <div className="grid gap-3 text-sm text-[#4a6278] sm:grid-cols-2">
           <div className="rounded-lg border border-[#dbe6f2] bg-white px-3 py-2">
             <span className="block text-[11px] uppercase tracking-wide text-[#7a8fa8]">
-              Versão atual
+              {t("updateModal.currentVersion")}
             </span>
             <span className="font-medium text-[#2f4259]">{update.current_version}</span>
           </div>
@@ -84,7 +98,7 @@ export function UpdateModal({
             <div className="rounded-lg border border-[#dbe6f2] bg-white px-3 py-2">
               <span className="flex items-center gap-1 text-[11px] uppercase tracking-wide text-[#7a8fa8]">
                 <Clock3 className="h-3 w-3" />
-                Publicada em
+                {t("updateModal.publishedAt")}
               </span>
               <span className="font-medium text-[#2f4259]">{formattedDate}</span>
             </div>
@@ -94,13 +108,13 @@ export function UpdateModal({
         <div className="rounded-xl border border-[#dbe6f2] bg-white p-4">
           <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#2f4259]">
             <Download className="h-4 w-4 text-[#4f84d7]" />
-            Notas da versão
+            {t("updateModal.releaseNotes")}
           </div>
           {renderedBody.length > 0 ? (
             <div className="space-y-3 text-sm leading-6 text-[#4a6278]">{renderedBody}</div>
           ) : (
             <p className="text-sm leading-6 text-[#4a6278]">
-              Sem notas adicionais para esta atualização.
+              {t("updateModal.noNotes")}
             </p>
           )}
         </div>

@@ -2,17 +2,17 @@ O servidor será um simples PHP e SQLite.
 
 Para proteger contra bots. Será necessário enviar uma chave API que fica dentro do aplicativo e é enviada na requisição.
 
-O site atual é `https://ottavada.com`, anterioremente: `https://scoremaestro.rhafaell.com.br`.
+O site atual é `https://ottavada.com`, anteriormente: `https://scoremaestro.rhafaell.com.br`.
 
-## Rotas
+## Rota
 
 **Usuário**
-`GET /v1/update` - retornando o `.json` com as informações para a atualização do aplicativo.
+`GET /update.json` - retornando o `.json` com as informações para a atualização do aplicativo.
 
 ```json
 {
     "version": "0.11.0",
-    "notes": "Sei la",
+    "notes": "undefined",
     "pub_date": "2026-04-09T16:00:00Z",
     "platforms": {
         "windows-x86_64": {
@@ -27,18 +27,15 @@ O site atual é `https://ottavada.com`, anterioremente: `https://scoremaestro.rh
 }
 ```
 
-**Download**
+**Arquivos de download**: Eles ficam no `releases` no GitHub.
 
-`GET /v1/programx32` - download do aplicativo em `x32`.
+# Telemetria <mark>(Não implementado)</mark>
 
-`GET /v1/programx64` - download do aplicativo em `x64`.
+A rota da telemetria é outra: `https://servidor.ottavada.com`, isso ocorre porque é enviado para meu homelab que não ficam ligado o tempo todo. Caso ocorra envio no envio pelo Ottavada não irá dar problema e depois ele irá enviar o que falhou.
 
-**Telemetria** - Deve enviar no `header` o parâmetro `Token`, para que o servidor aceite a telemetria.
+Deve enviar no `header` o parâmetro `Token`, para que o servidor aceite a telemetria.
 
-`POST /v1/telemetry` - para enviar dados de telemetria.
-
-
-# Telemetria
+`POST /telemetry` - para enviar dados de telemetria.
 
 ```json
 // Exemplo de telemetria enviada
@@ -47,6 +44,7 @@ O site atual é `https://ottavada.com`, anterioremente: `https://scoremaestro.rh
     "organizationName": "nome da organização", // Nome da organização/licença vinculada ao uso do software
     "computerName": "nome do computador", // Nome amigável definido pelo usuário
     "type": "server", // Tipo do computador: "server" (gerencia) ou "client" (consulta)
+    "language": "en", // Idioma usado no sistema
     "appVersion": "0.9.1", // Versão do aplicativo em execução
     "os": "windows", // Sistema operacional (windows, linux, etc)
     "arch": "x64", // Arquitetura do sistema (x32 ou x64)
@@ -69,4 +67,4 @@ O site atual é `https://ottavada.com`, anterioremente: `https://scoremaestro.rh
 }
 ```
 
-#
+# 

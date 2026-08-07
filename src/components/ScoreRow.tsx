@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { FileMusic } from "lucide-react";
 import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next";
 import * as api from "../api/commands";
 import type { ScoreListItem } from "../types";
 import { ContextMenu, ContextMenuItem } from "./ui/ContextMenu";
@@ -48,6 +49,7 @@ function ScoreRow({
   isLocked,
 }: ScoreRowProps) {
   const [isOpening, setIsOpening] = useState(false);
+  const { t } = useTranslation();
   const confirmation = useConfirmation();
   const isClient = isClientComputer(computerType);
   const isActionLocked = isClient || isLocked;
@@ -61,7 +63,7 @@ function ScoreRow({
       await api.openFile(score.id);
     } catch (err) {
       console.error("Failed to open file:", err);
-      toast.error("Erro ao abrir arquivo");
+      toast.error(t("scoreRow.openFileError"));
     } finally {
       setIsOpening(false);
     }
@@ -77,7 +79,7 @@ function ScoreRow({
       await api.openFileLocation(score.file_path);
     } catch (err) {
       console.error("Failed to open score location:", err);
-      toast.error("Erro ao abrir local da partitura");
+      toast.error(t("scoreRow.openLocationError"));
     }
   };
 
@@ -103,27 +105,27 @@ function ScoreRow({
       return (
         <>
           <ContextMenuItem
-            label="Não permitir envio"
+            label={t("scoreRow.disallowSend")}
             onClick={(e) => {
               e.stopPropagation();
               requestStatusChange(
                 "draft",
-                "Não permitir envio",
-                "Você realmente deseja não permitir o envio desta partitura?",
-                "Erro ao não permitir envio",
+                t("scoreRow.disallowConfirmTitle"),
+                t("scoreRow.disallowConfirmMessage"),
+                t("scoreRow.disallowError"),
               );
             }}
             disabled={isActionLocked}
           />
           <ContextMenuItem
-            label="Ignorar partitura"
+            label={t("scoreRow.ignoreScore")}
             onClick={(e) => {
               e.stopPropagation();
               requestStatusChange(
                 "ignored",
-                "Ignorar partitura",
-                "Você realmente deseja ignorada essa partitura?",
-                "Erro ao ignorar partitura",
+                t("scoreRow.ignoreConfirmTitle"),
+                t("scoreRow.ignoreConfirmMessage"),
+                t("scoreRow.ignoreError"),
               );
             }}
             disabled={isActionLocked}
@@ -136,27 +138,27 @@ function ScoreRow({
       return (
         <>
           <ContextMenuItem
-            label="Permitir para envio"
+            label={t("scoreRow.allowSend")}
             onClick={(e) => {
               e.stopPropagation();
               requestStatusChange(
                 "main",
-                "Permitir para envio",
-                "Você realmente deseja permitir o envio desta partitura?",
-                "Erro ao permitir envio",
+                t("scoreRow.allowConfirmTitle"),
+                t("scoreRow.allowConfirmMessage"),
+                t("scoreRow.allowError"),
               );
             }}
             disabled={isActionLocked}
           />
           <ContextMenuItem
-            label="Definir como ignorar"
+            label={t("scoreRow.setAsIgnored")}
             onClick={(e) => {
               e.stopPropagation();
               requestStatusChange(
                 "ignored",
-                "Definir como ignorar",
-                'Você realmente deseja marcar esta partitura como "Ignorada"?',
-                "Erro ao definir como ignorar",
+                t("scoreRow.setIgnoredConfirmTitle"),
+                t("scoreRow.setIgnoredConfirmMessage"),
+                t("scoreRow.setIgnoredError"),
               );
             }}
             disabled={isActionLocked}
@@ -168,27 +170,27 @@ function ScoreRow({
     return (
       <>
         <ContextMenuItem
-          label="Permitir para envio"
+          label={t("scoreRow.allowSend")}
           onClick={(e) => {
             e.stopPropagation();
             requestStatusChange(
               "main",
-              "Permitir para envio",
-              "Você realmente deseja permitir o envio desta partitura?",
-              "Erro ao permitir envio",
+              t("scoreRow.allowConfirmTitle"),
+              t("scoreRow.allowConfirmMessage"),
+              t("scoreRow.allowError"),
             );
           }}
           disabled={isActionLocked}
         />
         <ContextMenuItem
-          label="Não permitir envio"
+          label={t("scoreRow.disallowSend")}
           onClick={(e) => {
             e.stopPropagation();
             requestStatusChange(
               "draft",
-              "Não permitir envio",
-              "Você realmente deseja reativar esta partitura sem permitir o envio?",
-              "Erro ao não permitir envio",
+              t("scoreRow.reactivateTitle"),
+              t("scoreRow.reactivateMessage"),
+              t("scoreRow.reactivateError"),
             );
           }}
           disabled={isActionLocked}
@@ -199,15 +201,15 @@ function ScoreRow({
 
   const handleDelete = () => {
     confirmation.requestConfirmation(
-      "Mover para lixeira",
-      "Você realmente deseja mover esta partitura para a lixeira? O arquivo poderá ser recuperado pela lixeira do Windows.",
+      t("scoreRow.moveToTrashTitle"),
+      t("scoreRow.moveToTrashMessage"),
       async () => {
         try {
           await onDelete(score.id);
           onMenuClose();
         } catch (err) {
           console.error("Failed to delete score:", err);
-          toast.error("Erro ao mover partitura para lixeira");
+          toast.error(t("scoreRow.deleteError"));
         }
       },
     );
@@ -221,7 +223,7 @@ function ScoreRow({
           onSelectScore();
         }}
         onDoubleClick={handleDoubleClick}
-        title={isOpening ? "Abrindo arquivo..." : "Duplo clique para abrir"}
+        title={isOpening ? t("statusBar.opening") : t("statusBar.doubleClick")}
         style={{
           contentVisibility: "auto",
           containIntrinsicSize: "34px",
@@ -233,7 +235,7 @@ function ScoreRow({
             <FileMusic
               className={`h-3.5 w-3.5 text-[#8fa3b8] ${isOpening ? "animate-pulse" : ""}`}
             />
-            {score.name ?? "Sem instrumento"}
+            {score.name ?? t("statusBar.noInstrument")}
           </span>
         </td>
         <td className="px-3.5 py-1.5 text-xs text-[#8b9db2]">
@@ -260,7 +262,7 @@ function ScoreRow({
               >
                 {isClient ? (
                   <ContextMenuItem
-                    label="Abrir"
+                    label={t("scoreRow.open")}
                     onClick={(e) => {
                       e.stopPropagation();
                       void openScoreFile();
@@ -272,7 +274,7 @@ function ScoreRow({
                 ) : (
                   <>
                     <ContextMenuItem
-                      label="Abrir"
+                      label={t("scoreRow.open")}
                       onClick={(e) => {
                         e.stopPropagation();
                         void openScoreFile();
@@ -281,7 +283,7 @@ function ScoreRow({
                       disabled={isActionLocked}
                     />
                     <ContextMenuItem
-                      label="Abrir local"
+                      label={t("scoreRow.openLocal")}
                       onClick={(e) => {
                         e.stopPropagation();
                         void openScoreLocation();
@@ -290,7 +292,7 @@ function ScoreRow({
                       disabled={isActionLocked}
                     />
                     <ContextMenuItem
-                      label="Editar"
+                      label={t("scoreRow.edit")}
                       onClick={(e) => {
                         e.stopPropagation();
                         onEdit();
@@ -299,7 +301,7 @@ function ScoreRow({
                       disabled={isActionLocked}
                     />
                     <ContextMenuItem
-                      label="Usar como base"
+                      label={t("scoreRow.useAsBase")}
                       onClick={(e) => {
                         e.stopPropagation();
                         onUseAsBase();
@@ -309,7 +311,7 @@ function ScoreRow({
                     />
                     {renderStatusAction()}
                     <ContextMenuItem
-                      label="Mover para lixeira"
+                      label={t("scoreRow.moveToTrash")}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleDelete();

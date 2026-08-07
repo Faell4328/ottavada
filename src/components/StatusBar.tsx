@@ -1,10 +1,13 @@
 import { Cloud } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import i18n from "../i18n";
 import { useAppState } from "../context/AppContext";
 import { formatBytes, formatEta } from "../utils/formatters";
 import Metronome from "./ui/Metronome";
 
 export default function StatusBar() {
   const { state } = useAppState();
+  const { t } = useTranslation();
 
   const rclonePercentage =
     state.rcloneProgress.percentage !== null
@@ -23,15 +26,15 @@ export default function StatusBar() {
     titleStageLabel !== null && state.operationStatus.stepTotal === 1
       ? titleStageLabel
       : state.operationStatus.stepCurrent !== null && state.operationStatus.stepTotal !== null
-      ? `Etapa ${state.operationStatus.stepCurrent} de ${state.operationStatus.stepTotal}`
+      ? `${t("statusBar.stepPrefix")} ${state.operationStatus.stepCurrent} ${t("statusBar.stepOf")} ${state.operationStatus.stepTotal}`
       : state.operationStatus.stepCurrent !== null
-        ? `Etapa ${state.operationStatus.stepCurrent}`
+        ? `${t("statusBar.stepPrefix")} ${state.operationStatus.stepCurrent}`
         : state.rcloneProgress.active
           ? state.rcloneProgress.direction === null
-            ? "Consultando alterações"
+            ? t("statusBar.checkingChanges")
             : state.rcloneProgress.direction === "upload"
-              ? "Enviando"
-              : "Baixando"
+              ? t("statusBar.uploading")
+              : t("statusBar.downloading")
           : null;
 
   if (!isVisible) {
@@ -41,20 +44,20 @@ export default function StatusBar() {
   const title =
     state.operationStatus.title ||
     (state.isScanningFiles
-      ? "Verificando alterações"
+      ? t("statusBar.verifyingChanges")
       : state.rcloneProgress.active && state.rcloneProgress.direction === null
-        ? "Consultando alterações na nuvem"
+        ? t("statusBar.checkingCloud")
         : state.rcloneProgress.active
-          ? "Sincronizando com a nuvem"
-          : "Processando");
+          ? t("statusBar.syncing")
+          : t("statusBar.processing"));
   const detail =
     state.operationStatus.detail ||
     (state.rcloneProgress.active && state.rcloneProgress.direction === null
-      ? "Verificando snapshot e events da nuvem"
+      ? t("statusBar.verifyingSnapshot")
       : null);
   const itemProgressText =
     state.operationStatus.itemCurrent !== null && state.operationStatus.itemTotal !== null
-      ? `${state.operationStatus.itemCurrent} de ${state.operationStatus.itemTotal}`
+      ? `${state.operationStatus.itemCurrent} ${t("statusBar.itemOf")} ${state.operationStatus.itemTotal}`
       : null;
   const workflowPercentage =
     state.operationStatus.stepCurrent !== null && state.operationStatus.stepTotal !== null
@@ -87,15 +90,15 @@ export default function StatusBar() {
           <div className="min-w-0">
             <div className="flex items-center text-[12px] gap-2 font-semibold text-[#21476c]">
               <Metronome />
-              <span className="truncate">{stageLabel ?? "Processando"}</span>
+              <span className="truncate">{stageLabel ?? t("statusBar.loading")}</span>
               {isRcloneActive && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-[#eaf3ff] px-2 py-0.5 text-[11px] font-semibold text-[#23558b]">
                   <Cloud className="h-3 w-3" />
                   {state.rcloneProgress.direction === "upload"
-                    ? "Enviando"
+                    ? t("statusBar.uploading")
                     : state.rcloneProgress.direction === "download"
-                      ? "Baixando"
-                      : "Consultando"}
+                      ? t("statusBar.downloading")
+                      : t("statusBar.checkingChanges")}
                 </span>
               )}
             </div>
@@ -130,7 +133,7 @@ export default function StatusBar() {
               {state.rcloneProgress.speedBytesPerSec > 0 && (
                 <span>{formatBytes(state.rcloneProgress.speedBytesPerSec)}/s</span>
               )}
-              {bytesRemaining !== null && <span>Faltam {formatBytes(bytesRemaining)}</span>}
+              {bytesRemaining !== null && <span>{t("statusBar.remaining")} {formatBytes(bytesRemaining)}</span>}
               {etaText && <span>ETA {etaText}</span>}
             </>
           ) : null}
@@ -142,10 +145,10 @@ export default function StatusBar() {
 }
 
 function extractStageLabelFromTitle(title: string): string | null {
-  const match = title.match(/^Etapa\s+(\d+)\s*-/i);
+  const match = title.match(/^(?:Etapa|Step)\s+(\d+)\s*-/i);
   if (!match) {
     return null;
   }
 
-  return `Etapa ${match[1]}`;
+  return `${i18n.t("statusBar.stepPrefix")} ${match[1]}`;
 }

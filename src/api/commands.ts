@@ -168,9 +168,8 @@ export async function updateSongStatus(songId: string, status: "main" | "draft")
 export async function updateScore(
   scoreId: string,
   instrumentName: string | null,
-  filePath: string
 ): Promise<void> {
-  return invoke("update_score", { scoreId, instrumentName, filePath });
+  return invoke("update_score", { scoreId, instrumentName });
 }
 
 export async function updateScoreStatus(
@@ -270,6 +269,7 @@ export async function completeFirstRun(
   computerId: string,
   computerName: string,
   organizationName: string | null,
+  language: string | null,
   computerType: string,
   rcloneConfigJson: string
 ): Promise<void> {
@@ -277,6 +277,7 @@ export async function completeFirstRun(
     computerId,
     computerName,
     organizationName,
+    language,
     computerType,
     rcloneConfigJson,
   });

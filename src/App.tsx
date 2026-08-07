@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router";
 import { Toaster } from "react-hot-toast";
 import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import {
   TopBar,
@@ -16,7 +17,6 @@ import {
 import { AppProvider, useAppState } from "./context/AppContext";
 import * as api from "./api/commands";
 import { ConfirmationModal } from "./components/ui/ConfirmationModal";
-import { getErrorMessage } from "./utils/errors";
 import { isUpdateActionLocked as getIsUpdateActionLocked } from "./utils/updateLock";
 import { restoreMainWindow } from "./utils/window";
 import type { UpdateInfo } from "./types";
@@ -27,6 +27,7 @@ const STARTUP_UPDATE_TIMEOUT_MS = 2000;
 const STARTUP_UPDATE_TIMEOUT = Symbol("startup-update-timeout");
 
 export function LoadingScreen() {
+  const { t } = useTranslation();
   return (
     <div className="fixed inset-0 z-9999 flex h-screen w-screen items-center justify-center overflow-hidden bg-linear-to-br from-white via-[#fbfcfe] to-[#eef3f8]">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(79,132,215,0.08),transparent_42%),radial-gradient(circle_at_bottom_right,rgba(93,109,130,0.08),transparent_36%)]" />
@@ -39,8 +40,8 @@ export function LoadingScreen() {
           <div className="h-8 w-8 animate-spin rounded-full border-3 border-[#dbe7f4] border-t-[#4f84d7]" />
         </div>
         <div>
-          <p className="text-lg font-semibold text-[#29445f]">Carregando Ottavada</p>
-          <p className="mt-1 text-sm text-[#6e8399]">Preparando a interface inicial</p>
+          <p className="text-lg font-semibold text-[#29445f]">{t("app.loading")}</p>
+          <p className="mt-1 text-sm text-[#6e8399]">{t("app.loadingSubtitle")}</p>
         </div>
         <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#ecf2f8]">
           <div className="h-full w-2/3 animate-pulse rounded-full bg-linear-to-r from-[#4f84d7] to-[#7cb6ff]" />
@@ -161,6 +162,7 @@ interface AppContentProps {
 
 function AppContent({ startupUpdate }: AppContentProps) {
   const { state, resetScanReport, scanFilesForChanges } = useAppState();
+  const { t } = useTranslation();
   const [showExitModal, setShowExitModal] = useState(false);
   const [exitMessage, setExitMessage] = useState("");
   const [isExitProcessing, setIsExitProcessing] = useState(false);
@@ -204,7 +206,7 @@ function AppContent({ startupUpdate }: AppContentProps) {
 
       if (!result.configured) {
         if (manual) {
-          toast.error("Atualização não configurada no aplicativo");
+          toast.error(t("settings.updateNotConfiguredShort"));
         }
         return;
       }
@@ -213,7 +215,7 @@ function AppContent({ startupUpdate }: AppContentProps) {
         setAvailableUpdate(result.update);
         setIsUpdateModalOpen(true);
       } else if (manual) {
-        toast.success("Nenhuma atualização disponível no momento");
+        toast.success(t("settings.noUpdateAvailable"));
       }
     } catch (error) {
       console.error("Failed to check updates:", error);
@@ -249,10 +251,10 @@ function AppContent({ startupUpdate }: AppContentProps) {
       await api.installUpdate();
       setIsUpdateModalOpen(false);
       setAvailableUpdate(null);
-      toast.success("Atualização instalada com sucesso");
+      toast.success(t("settings.updateInstalled"));
     } catch (error) {
       console.error("Failed to install update:", error);
-      toast.error(`Erro ao instalar atualização: ${getErrorMessage(error)}`);
+      toast.error(t("settings.updateInstallError"));
     } finally {
       setIsInstallingUpdate(false);
     }
@@ -285,7 +287,7 @@ function AppContent({ startupUpdate }: AppContentProps) {
 
         if (isAppBusy) {
           setExitMessage(
-            "Há uma operação em andamento. Sair agora vai encerrar o rclone e interromper snapshot, upload ou download."
+            t("appContent.exitBusyMessage")
           );
           setShowExitModal(true);
           return;
@@ -295,7 +297,7 @@ function AppContent({ startupUpdate }: AppContentProps) {
           const hasPendingChanges = await api.hasPendingChanges();
 
           if (hasPendingChanges) {
-            setExitMessage("Há alterações pendentes para aplicar. Deseja sair mesmo assim?");
+            setExitMessage(t("appContent.exitPendingMessage"));
             setShowExitModal(true);
             return;
           }
@@ -305,7 +307,7 @@ function AppContent({ startupUpdate }: AppContentProps) {
         } catch (error) {
           console.error("Failed to handle close request:", error);
           setExitMessage(
-            "Não foi possível confirmar o estado atual. Deseja sair mesmo assim?"
+            t("appContent.exitUnknownMessage")
           );
           setShowExitModal(true);
           setIsExitProcessing(false);
@@ -335,7 +337,7 @@ function AppContent({ startupUpdate }: AppContentProps) {
       await api.exitApplication();
     } catch (error) {
       console.error("Failed to exit application:", error);
-      toast.error("Falha ao encerrar o aplicativo");
+      toast.error(t("appContent.exitFailed"));
       setIsExitProcessing(false);
     }
   }
@@ -352,7 +354,7 @@ function AppContent({ startupUpdate }: AppContentProps) {
         <LoadingScreen />
         <ConfirmationModal
           isOpen={showExitModal}
-          title="Sair do aplicativo?"
+          title={t("appContent.exitTitle")}
           message={exitMessage}
           isLoading={isExitProcessing}
           onConfirm={handleConfirmExit}
@@ -407,7 +409,7 @@ function AppContent({ startupUpdate }: AppContentProps) {
       />
       <ConfirmationModal
         isOpen={showExitModal}
-        title="Sair do aplicativo?"
+        title={t("appContent.exitTitle")}
         message={exitMessage}
         isLoading={isExitProcessing}
         onConfirm={handleConfirmExit}

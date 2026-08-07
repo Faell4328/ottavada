@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import { ArrowLeft, LoaderCircle } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import i18next from "i18next";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import toast from "react-hot-toast";
 import { useAppState } from "../context/AppContext";
@@ -41,6 +43,7 @@ export default function SettingsPage() {
     resetOperationStatus,
     runSyncWithProgress,
   } = useAppState();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const isClient = isClientComputer(state.settings?.computer_type);
   const isSyncLocked =
@@ -52,6 +55,7 @@ export default function SettingsPage() {
       computer_id: "",
       computer_name: null,
       organization_name: null,
+      language: null,
       computer_type: "Server",
       google_drive_mode: "Local",
       first_run_completed: true,
@@ -146,14 +150,14 @@ export default function SettingsPage() {
 
       toast.success(
         setup.provider === "google_drive"
-          ? "Conexão com o Google Drive concluída."
-          : "Conexão com o Koofr concluída.",
+          ? t("settings.googleDriveConnected")
+          : t("settings.koofrConnected"),
       );
     } catch (error) {
       toast.error(
         getFriendlyRcloneErrorMessage(
           error,
-          "Não foi possível configurar a conexão com a nuvem",
+          t("settings.rcloneConfigError"),
         ),
       );
       throw error;
@@ -165,16 +169,17 @@ export default function SettingsPage() {
       await api.testRcloneUpload(provider);
       toast.success(
         provider === "google_drive"
-          ? "Conexão com o Google Drive validada."
-          : "Conexão com o Koofr validada.",
+          ? t("settings.googleDriveValidated")
+          : t("settings.koofrValidated"),
       );
     } catch (error) {
       toast.error(
         getFriendlyRcloneErrorMessage(
           error,
-          provider === "google_drive"
-            ? "Não foi possível testar o Google Drive"
-            : "Não foi possível testar o Koofr",
+          t("settings.rcloneTestError", {
+            provider:
+              provider === "google_drive" ? "Google Drive" : "Koofr",
+          }),
         ),
       );
       throw error;
@@ -187,7 +192,7 @@ export default function SettingsPage() {
     setHasRcloneConfigChange(true);
 
     if (isSyncLocked) {
-      toast.error("Espere a sincronização terminar para continuar.");
+      toast.error(t("settings.syncLocked"));
       throw new Error("SYNC_LOCKED");
     }
 
@@ -217,16 +222,14 @@ export default function SettingsPage() {
 
       setHasRcloneConfigChange(false);
     } catch (error) {
-      toast.error("Não foi possível trocar a conexão com a nuvem.");
+      toast.error(t("settings.providerChangeError"));
       throw error;
     }
   }
 
   function handleBackNavigation() {
     if (isSettingsOperationInProgress) {
-      toast.error(
-        "Espere a operação terminar antes de sair das configurações.",
-      );
+      toast.error(t("settings.backBusy"));
       return;
     }
 
@@ -247,13 +250,13 @@ export default function SettingsPage() {
       }));
       toast.success(
         result === "Server"
-          ? "Este computador agora é o computador do maestro."
-          : "Este computador agora é um computador de ensaio.",
+          ? t("settings.serverTypeToggled")
+          : t("settings.clientTypeToggled"),
       );
       await loadSettings();
     } catch (err) {
       console.error("Failed to toggle computer type:", err);
-      toast.error("Não foi possível mudar o tipo deste computador.");
+      toast.error(t("settings.toggleError"));
     } finally {
       setIsTogglingType(false);
     }
@@ -261,7 +264,7 @@ export default function SettingsPage() {
 
   async function handleSave() {
     if (isSyncLocked) {
-      toast.error("Espere a sincronização terminar para continuar.");
+      toast.error(t("settings.syncLocked"));
       return;
     }
 
@@ -269,12 +272,12 @@ export default function SettingsPage() {
       settings.computer_type === "Server" &&
       !settings.organization_name?.trim()
     ) {
-      toast.error("Digite o nome da organização ou instituição.");
+      toast.error(t("settings.organizationRequired"));
       return;
     }
 
     if (!rcloneConfigGenerated) {
-      toast.error("Configure a conexão com a nuvem antes de salvar.");
+      toast.error(t("settings.rcloneRequired"));
       return;
     }
 
@@ -289,7 +292,7 @@ export default function SettingsPage() {
     try {
       const previousProvider = state.settings?.rclone_config?.provider ?? null;
       await saveSettings(updatedSettings);
-      toast.success("Configurações salvas.");
+      toast.success(t("settings.settingsSaved"));
 
       const shouldForceSnapshot =
         updatedSettings.computer_type === "Server" &&
@@ -307,7 +310,7 @@ export default function SettingsPage() {
       navigate("/");
     } catch (error) {
       console.error("Failed to save settings:", error);
-      toast.error("Não foi possível salvar as configurações.");
+      toast.error(t("settings.settingsSaveError"));
     }
   }
 
@@ -315,26 +318,24 @@ export default function SettingsPage() {
     const currentSettings = settingsOverride ?? state.settings ?? settings;
 
     if (currentSettings.computer_type !== "Server") {
-      toast.error("Esse recurso só pode ser usado no computador principal.");
+      toast.error(t("settings.serverOnly"));
       return false;
     }
 
     if (isSyncLocked) {
-      toast.error("Espere a sincronização terminar para continuar.");
+      toast.error(t("settings.syncLocked"));
       return false;
     }
 
     setIsGeneratingSnapshot(true);
     setOperationStatus({
-      title: "Etapa 1 - Preparando snapshot",
-      detail: "Bloqueando ações enquanto o backup é reorganizado",
+      title: t("settings.snapshotStep1"),
+      detail: t("settings.snapshotDetail"),
       stepCurrent: 1,
       stepTotal: 1,
     });
     navigate("/");
-    const loadingToastId = toast.loading(
-      "Organizando os dados e aplicando as alterações...",
-    );
+    const loadingToastId = toast.loading(t("settings.snapshotLoading"));
     try {
       const snapshotSummary = await api.generateSnapshotFile(true);
       await loadSettings();
@@ -343,7 +344,7 @@ export default function SettingsPage() {
       await Promise.all([loadSongs(), loadCategories()]);
       return true;
     } catch (error) {
-      toast.error("Não foi possível concluir a atualização.");
+      toast.error(t("settings.snapshotError"));
       return false;
     } finally {
       toast.dismiss(loadingToastId);
@@ -356,19 +357,19 @@ export default function SettingsPage() {
 
   async function handleExportBackup() {
     if (settings.computer_type !== "Server") {
-      toast.error("Esse recurso só pode ser usado no computador principal.");
+      toast.error(t("settings.serverOnly"));
       return;
     }
 
     if (isSyncLocked) {
-      toast.error("Espere a sincronização terminar para continuar.");
+      toast.error(t("settings.syncLocked"));
       return;
     }
 
     const selectedPath = await save({
-      title: "Salvar backup local",
+      title: t("settings.exportBackupTitle"),
       defaultPath: "backup.msgpack",
-      filters: [{ name: "Backup local", extensions: ["msgpack"] }],
+      filters: [{ name: t("settings.exportBackupTitle"), extensions: ["msgpack"] }],
     });
 
     if (!selectedPath) {
@@ -377,18 +378,18 @@ export default function SettingsPage() {
 
     setIsExportingBackup(true);
     setOperationStatus({
-      title: "Exportando backup local",
-      detail: "Gerando o arquivo de backup para salvar no computador",
+      title: t("settings.exportStep"),
+      detail: t("settings.exportDetail"),
       stepCurrent: 1,
       stepTotal: 1,
     });
     try {
       const summary = await api.exportBackupFile(String(selectedPath));
       toast.success(
-        `Backup salvo com sucesso. Incluí ${summary.songs_count} música(s) e ${summary.scores_count} partitura(s).`,
+        t("settings.exportSuccess", { songs: summary.songs_count, scores: summary.scores_count }),
       );
     } catch (error) {
-      toast.error("Não foi possível salvar o backup local.");
+      toast.error(t("settings.exportError"));
     } finally {
       setIsExportingBackup(false);
       resetOperationStatus();
@@ -397,20 +398,20 @@ export default function SettingsPage() {
 
   async function handleImportBackup() {
     if (settings.computer_type !== "Server") {
-      toast.error("Esse recurso só pode ser usado no computador principal.");
+      toast.error(t("settings.serverOnly"));
       return;
     }
 
     if (isSyncLocked) {
-      toast.error("Espere a sincronização terminar para continuar.");
+      toast.error(t("settings.syncLocked"));
       return;
     }
 
     const selectedPath = await open({
-      title: "Selecionar backup local",
+      title: t("settings.importBackupTitle"),
       directory: false,
       multiple: false,
-      filters: [{ name: "Backup local", extensions: ["msgpack"] }],
+      filters: [{ name: t("settings.importBackupTitle"), extensions: ["msgpack"] }],
     });
 
     if (!selectedPath || Array.isArray(selectedPath)) {
@@ -419,20 +420,20 @@ export default function SettingsPage() {
 
     setIsImportingBackup(true);
     setOperationStatus({
-      title: "Importando backup local",
-      detail: "Lendo o arquivo e restaurando o banco de dados",
+      title: t("settings.importStep"),
+      detail: t("settings.importDetail"),
       stepCurrent: 1,
       stepTotal: 1,
     });
     navigate("/");
-    const loadingToastId = toast.loading("Importando o backup local...");
+    const loadingToastId = toast.loading(t("settings.importLoading"));
 
     void (async () => {
       let refreshedSettings: AppSettings | null = null;
       try {
         const summary = await api.importBackupFile(selectedPath);
         toast.success(
-          `Backup importado com sucesso. Ele é de ${formatBackupTimestamp(summary.generated_at)}; mudanças feitas depois disso não entram nesse backup.`,
+          t("settings.importSuccess", { timestamp: formatBackupTimestamp(summary.generated_at) }),
           { duration: 8000 },
         );
         refreshedSettings = await api.getSettings();
@@ -440,7 +441,7 @@ export default function SettingsPage() {
         await Promise.all([loadSettings(), loadSongs(), loadCategories()]);
         await handleForceSnapshot(refreshedSettings ?? undefined);
       } catch (error) {
-        toast.error("Não foi possível importar o backup local.");
+        toast.error(t("settings.importError"));
       } finally {
         toast.dismiss(loadingToastId);
         setIsImportingBackup(false);
@@ -451,25 +452,23 @@ export default function SettingsPage() {
 
   async function handleImportBackupCloud() {
     if (settings.computer_type !== "Server") {
-      toast.error("Esse recurso só pode ser usado no computador principal.");
+      toast.error(t("settings.serverOnly"));
       return;
     }
 
     if (isSyncLocked) {
-      toast.error("Espere a sincronização terminar para continuar.");
+      toast.error(t("settings.syncLocked"));
       return;
     }
 
     if (!settings.rclone_config) {
-      toast.error(
-        "Configure a conexão com a nuvem antes de importar o backup.",
-      );
+      toast.error(t("settings.importCloudRequired"));
       return;
     }
 
     setIsImportingBackupCloud(true);
     navigate("/");
-    const loadingToastId = toast.loading("Importando o backup da nuvem...");
+    const loadingToastId = toast.loading(t("settings.importCloudLoading"));
 
     void (async () => {
       try {
@@ -483,7 +482,7 @@ export default function SettingsPage() {
         const refreshedSettings = await api.getSettings();
         setSettings(refreshedSettings);
       } catch (error) {
-        toast.error("Não foi possível importar o backup da nuvem.");
+        toast.error(t("settings.importCloudError"));
       } finally {
         toast.dismiss(loadingToastId);
         setIsImportingBackupCloud(false);
@@ -495,25 +494,25 @@ export default function SettingsPage() {
     const currentSettings = settingsOverride ?? settings;
 
     if (currentSettings.computer_type !== "Server") {
-      toast.error("Esse recurso só pode ser usado no computador principal.");
+      toast.error(t("settings.serverOnly"));
       return;
     }
 
     if (isSyncLocked) {
-      toast.error("Espere a sincronização terminar para continuar.");
+      toast.error(t("settings.syncLocked"));
       return;
     }
 
     if (!currentSettings.rclone_config) {
-      toast.error("Configure a conexão com a nuvem antes de salvar o backup.");
+      toast.error(t("settings.cloudRequiredForBackup"));
       return;
     }
 
     navigate("/");
     setIsGeneratingBackupCloud(true);
     setOperationStatus({
-      title: "Gerando backup na nuvem",
-      detail: "Compactando e enviando o arquivo de backup",
+      title: t("settings.generateCloudStep"),
+      detail: t("settings.generateCloudDetail"),
       stepCurrent: 1,
       stepTotal: 1,
     });
@@ -521,13 +520,13 @@ export default function SettingsPage() {
       const summary = await api.forceGenerateBackupCloudFile();
       await loadSettings();
       toast.success(
-        `Backup da nuvem pronto em ${formatBackupTimestamp(summary.generated_at)}.`,
+        t("settings.generateCloudSuccess", { timestamp: formatBackupTimestamp(summary.generated_at) }),
         {
           duration: 8000,
         },
       );
     } catch (error) {
-      toast.error("Não foi possível salvar o backup na nuvem.");
+      toast.error(t("settings.generateCloudError"));
     } finally {
       setIsGeneratingBackupCloud(false);
       resetOperationStatus();
@@ -536,7 +535,7 @@ export default function SettingsPage() {
 
   async function handleCheckUpdate() {
     if (isSyncLocked) {
-      toast.error("Espere a sincronização terminar para continuar.");
+      toast.error(t("settings.syncLocked"));
       return;
     }
 
@@ -550,7 +549,7 @@ export default function SettingsPage() {
       const result = await api.checkForUpdates();
 
       if (!result.configured) {
-        toast.error("A verificação de atualização ainda não foi configurada.");
+        toast.error(t("settings.updateNotConfigured"));
         return;
       }
 
@@ -560,9 +559,9 @@ export default function SettingsPage() {
         return;
       }
 
-      toast.success("O aplicativo já está atualizado.");
+      toast.success(t("settings.upToDate"));
     } catch (error) {
-      toast.error("Não foi possível verificar atualizações.");
+      toast.error(t("settings.updateCheckFailed"));
     } finally {
       setIsCheckingUpdate(false);
     }
@@ -579,21 +578,30 @@ export default function SettingsPage() {
       await api.installUpdate();
       setIsUpdateModalOpen(false);
       setAvailableUpdate(null);
-      toast.success("Atualização instalada com sucesso.");
+      toast.success(t("settings.updateInstalled"));
     } catch (error) {
-      toast.error("Não foi possível instalar a atualização.");
+      toast.error(t("settings.updateInstallError"));
     } finally {
       setIsInstallingUpdate(false);
     }
   }
 
+  const localeMap: Record<string, string> = {
+    pt: "pt-BR",
+    en: "en-US",
+    es: "es-ES",
+    fr: "fr-FR",
+    it: "it-IT",
+    de: "de-DE",
+  };
+
   const lastSnapshotLabel = settings.last_snapshot_timestamp
-    ? new Date(settings.last_snapshot_timestamp * 1000).toLocaleString("pt-BR")
-    : "Nunca gerado";
+    ? new Date(settings.last_snapshot_timestamp * 1000).toLocaleString(localeMap[i18next.language] || "en-US")
+    : t("settings.neverGenerated");
 
   const lastBackupLabel = settings.last_backup_timestamp
     ? formatBackupTimestamp(settings.last_backup_timestamp)
-    : "Nunca gerado";
+    : t("settings.neverGenerated");
 
   const librarySummary = settings.library_summary;
 
@@ -609,7 +617,7 @@ export default function SettingsPage() {
         >
           <ArrowLeft className="h-4 w-4 text-[#344b61]" />
         </button>
-        <h1 className="text-lg font-bold text-[#2f4259]">Configurações</h1>
+        <h1 className="text-lg font-bold text-[#2f4259]">{t("settings.title")}</h1>
       </div>
 
       <div className="flex-1 p-6 max-w-2xl mx-auto w-full">
@@ -619,11 +627,11 @@ export default function SettingsPage() {
               <LoaderCircle className="mt-0.5 h-4 w-4 animate-spin text-[#2f7fd1]" />
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-[#21476c]">
-                  {state.operationStatus.title || "Processando..."}
+                  {state.operationStatus.title || t("settings.processing")}
                 </p>
                 <p className="mt-1 text-xs text-[#5e7390]">
                   {state.operationStatus.detail ||
-                    "Aguarde enquanto o aplicativo conclui a operação."}
+                    t("settings.waitFinish")}
                 </p>
               </div>
             </div>
@@ -631,9 +639,9 @@ export default function SettingsPage() {
         )}
 
         {/* Computador */}
-        <Section title="Computador">
+        <Section title={t("settings.computerSection")}>
           <p className="mb-1.5 block text-sm font-semibold text-[#34485d]">
-            Nome do computador
+            {t("settings.computerNameLabel")}
           </p>
           <input
             value={settings.computer_name ?? ""}
@@ -644,7 +652,7 @@ export default function SettingsPage() {
             }
             disabled={isSyncLocked}
             className="w-full h-9 rounded border border-[#c5cfdb] bg-white px-3 text-sm text-[#4d6075] outline-none focus:border-[#7ba0d4]"
-            placeholder="Ex: Estúdio, Home, Sala Ensaio..."
+            placeholder={t("settings.computerNamePlaceholder")}
           />
 
           <OrganizationNameField
@@ -661,13 +669,13 @@ export default function SettingsPage() {
           <br />
 
           <p className="mb-1.5 block text-sm font-semibold text-[#34485d]">
-            Tipo de computador
+            {t("settings.computerTypeLabel")}
           </p>
           <div className="flex items-center gap-2">
             <div className="flex-1 h-9 rounded border border-[#c5cfdb] bg-[#f0f3f8] px-3 text-sm text-[#4d6075] flex items-center">
               {settings.computer_type === "Server"
-                ? "Computador do Maestro"
-                : "Computador de Ensaio"}
+                ? t("settings.serverType")
+                : t("settings.clientType")}
             </div>
             <button
               type="button"
@@ -675,52 +683,51 @@ export default function SettingsPage() {
               disabled={isTogglingType || isSyncLocked}
               className="h-9 px-4 rounded border border-[#c5cfdb] bg-white hover:bg-[#f2f5fa] text-sm font-medium text-[#344b61] disabled:opacity-50 transition-colors cursor-pointer"
             >
-              {isTogglingType ? "Alternando..." : "Alternar"}
+              {isTogglingType ? t("settings.toggling") : t("settings.toggleButton")}
             </button>
           </div>
           <p className="text-xs text-[#8b9db2] mt-1">
             {settings.computer_type === "Server"
-              ? "Computador do maestro - indexa e sincroniza partituras. Clique em 'Alternar' para mudar para Computador de Ensaio."
-              : "Computador de ensaio - consulta e propõe alterações. Clique em 'Alternar' para mudar para Computador do Maestro."}
+              ? t("settings.serverHint")
+              : t("settings.clientHint")}
           </p>
         </Section>
 
-        <Section title="Provedor de nuvem">
+        <Section title={t("settings.cloudSection")}>
           <div className="rounded-xl border border-[#c5cfdb] bg-[#f8fafd] p-4">
             <p className="mt-1 text-xs text-[#6b849e]">
-              Provedor atual:{" "}
+              {t("settings.currentProvider")}{" "}
               <span className="font-semibold text-[#34485d]">
                 {getRcloneProviderLabel(rcloneProvider)}
               </span>
             </p>
             <p className="mt-1 text-xs text-[#6b849e]">
-              Remote padrão:{" "}
+              {t("settings.defaultRemote")}{" "}
               <span className="font-semibold text-[#34485d]">
                 {rcloneProvider === "koofr" ? "koofr" : "gdrive"}
               </span>
             </p>
             <p className="mt-1 text-xs text-[#6b849e]">
-              Caminho padrão:{" "}
+              {t("settings.defaultPath")}{" "}
               <span className="font-semibold text-[#34485d]">Ottavada</span>
             </p>
 
             {rcloneConfigGenerated ? (
               <div className="mt-3 rounded-lg border border-green-200 bg-green-50 p-3">
                 <p className="text-xs font-semibold text-green-800">
-                  Configuração pronta
+                  {t("settings.configReady")}
                 </p>
                 <p className="mt-1 text-xs text-green-700">
-                  A configuração do rclone já foi gerada para este provedor.
+                  {t("settings.configReadyDetail")}
                 </p>
               </div>
             ) : (
               <div className="mt-3 rounded-lg border border-yellow-200 bg-yellow-50 p-3">
                 <p className="text-xs font-semibold text-yellow-800">
-                  Configuração pendente
+                  {t("settings.configPending")}
                 </p>
                 <p className="mt-1 text-xs text-yellow-700">
-                  Clique para abrir o modal e gerar ou trocar o provedor de
-                  nuvem.
+                  {t("settings.configPendingDetail")}
                 </p>
               </div>
             )}
@@ -731,7 +738,7 @@ export default function SettingsPage() {
               disabled={isSettingsOperationInProgress}
               className="mt-4 h-9 rounded border border-[#4f84d7] bg-[#4f84d7] px-4 text-sm font-medium text-white transition-colors hover:bg-[#3d6fb8] cursor-pointer"
             >
-              Mudar de conta ou de provedor de nuvem
+              {t("settings.changeProvider")}
             </button>
           </div>
         </Section>
@@ -754,15 +761,14 @@ export default function SettingsPage() {
               className="h-9 px-4 rounded border border-[#c5cfdb] bg-white hover:bg-[#f2f5fa] text-sm font-medium text-[#344b61] disabled:opacity-50 transition-colors cursor-pointer"
             >
               {isGeneratingSnapshot
-                ? "Gerando..."
-                : "Forçar geração de snapshot"}
+                ? t("settings.generating")
+                : t("settings.snapshotForced")}
             </button>
             <p className="text-xs text-[#8b9db2] mt-1">
-              Gera manualmente o arquivo <code>snapshot.msgpack.zst</code>,
-              ignorando a regra de 2MB.
+              {t("settings.snapshotManualHint")}
             </p>
             <p className="text-xs text-[#8b9db2] mt-1">
-              Último snapshot: {lastSnapshotLabel}
+              {t("settings.lastSnapshot")} {lastSnapshotLabel}
             </p>
           </div>
         </div>
@@ -781,7 +787,7 @@ export default function SettingsPage() {
               }
               className="h-9 px-4 rounded border border-[#c5cfdb] bg-white hover:bg-[#f2f5fa] text-sm font-medium text-[#344b61] disabled:opacity-50 transition-colors cursor-pointer"
             >
-              {isExportingBackup ? "Exportando..." : "Exportar backup local"}
+              {isExportingBackup ? t("settings.exporting") : t("settings.exportBackupButton")}
             </button>
 
             <button
@@ -795,18 +801,17 @@ export default function SettingsPage() {
               }
               className="h-9 px-4 rounded border border-[#c5cfdb] bg-white hover:bg-[#f2f5fa] text-sm font-medium text-[#344b61] disabled:opacity-50 transition-colors cursor-pointer"
             >
-              {isImportingBackup ? "Importando..." : "Importar backup local"}
+              {isImportingBackup ? t("settings.importing") : t("settings.importBackupButton")}
             </button>
           </div>
 
           <p className="text-xs text-[#8b9db2] mt-1">
-            Exporta e importa um backup local completo do banco de dados e das
-            configurações.
+            {t("settings.backupLocalHint")}
           </p>
         </div>
 
         {/* Backup cloud */}
-        <Section title="Backup na nuvem">
+        <Section title={t("settings.cloudBackupSection")}>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
@@ -822,7 +827,7 @@ export default function SettingsPage() {
               }
               className="h-9 px-4 rounded border border-[#c5cfdb] bg-white hover:bg-[#f2f5fa] text-sm font-medium text-[#344b61] disabled:opacity-50 transition-colors cursor-pointer"
             >
-              {isGeneratingBackupCloud ? "Gerando..." : "Fazer backup agora"}
+              {isGeneratingBackupCloud ? t("settings.generating") : t("settings.backupNow")}
             </button>
 
             <button
@@ -837,34 +842,32 @@ export default function SettingsPage() {
               }
               className="h-9 px-4 rounded border border-[#c5cfdb] bg-white hover:bg-[#f2f5fa] text-sm font-medium text-[#344b61] disabled:opacity-50 transition-colors cursor-pointer"
             >
-              {isImportingBackupCloud ? "Importando..." : "Importar backup"}
+              {isImportingBackupCloud ? t("settings.importingBackup") : t("settings.importBackup")}
             </button>
           </div>
 
           <p className="text-xs text-[#8b9db2] mt-1">
-            Gera e envia o backup para a nuvem imediatamente, ou baixa o backup
-            da nuvem para o computador.
+            {t("settings.backupHint")}
           </p>
         </Section>
 
         {/* Backup automático */}
-        <Section title="Backup automático">
+        <Section title={t("settings.autoBackupSection")}>
           <p className="text-xs text-[#8b9db2] mt-1">
-            O computador do maestro gera um backup automaticamente a cada 1
-            hora, mantendo os 10 últimos na nuvem.
+            {t("settings.autoBackupHint")}
           </p>
           <p className="text-xs text-[#8b9db2] mt-1">
-            Último backup automático: {lastBackupLabel}
+            {t("settings.lastAutoBackup")} {lastBackupLabel}
           </p>
         </Section>
 
         {/* Sobre */}
-        <Section title="Sobre">
+        <Section title={t("settings.aboutSection")}>
           <div className="mb-3 rounded-xl border border-[#d8e0ea] bg-white/80 p-3 text-xs text-[#4f6887]">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6b849e]">
-                  Versão do software
+                  {t("settings.versionLabel")}
                 </p>
                 <p className="mt-1 text-sm font-semibold text-[#34485d]">
                   {packageJson.version}
@@ -879,7 +882,7 @@ export default function SettingsPage() {
                 disabled={isSettingsOperationInProgress}
                 className="h-9 rounded border border-[#4f84d7] bg-[#4f84d7] px-4 text-sm font-medium text-white transition-colors hover:bg-[#3d6fb8] disabled:opacity-50 cursor-pointer"
               >
-                {isCheckingUpdate ? "Consultando..." : "Consultar atualização"}
+                {isCheckingUpdate ? t("settings.checkingUpdate") : t("settings.checkUpdate")}
               </button>
             </div>
           </div>
@@ -888,12 +891,12 @@ export default function SettingsPage() {
             <div className="mb-3 rounded-xl border border-[#d8e0ea] bg-white/80 p-3 text-xs text-[#4f6887]">
               <div className="grid gap-3 sm:grid-cols-2">
                 <SummaryColumn
-                  label="Músicas"
+                  label={t("settings.songsLabel")}
                   main={librarySummary.main.songs_count}
                   draft={librarySummary.draft.songs_count}
                 />
                 <SummaryColumn
-                  label="Partituras"
+                  label={t("settings.scoresLabel")}
                   main={librarySummary.main.scores_count}
                   draft={librarySummary.draft.scores_count}
                 />
@@ -904,15 +907,62 @@ export default function SettingsPage() {
           <button
             type="button"
             onClick={() => setIsRcloneLicenseModalOpen(true)}
-            title="abrir licença"
+            title={t("settings.licenseLinkTitle")}
             className="inline-flex items-center gap-1 text-sm font-medium text-[#4f84d7] underline decoration-[#7ba0d4] underline-offset-2 transition-colors hover:text-[#3d6fb8] hover:decoration-[#3d6fb8] cursor-pointer"
           >
-            <span>Este software utiliza rclone (licença MIT)</span>
+            <span>{t("settings.rcloneLicense")}</span>
           </button>
         </Section>
 
-        <Section title="Contato">
+        <Section title={t("settings.supportSection")}>
           <SupportContactsCard email={supportContacts.email} />
+        </Section>
+
+        <Section title={t("settings.languageSection")}>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => i18next.changeLanguage("pt")}
+              className={`h-9 px-4 rounded border cursor-pointer text-sm font-medium transition-colors ${i18next.language === "pt" ? "border-[#4f84d7] bg-[#4f84d7] text-white" : "border-[#c5cfdb] bg-white text-[#344b61] hover:bg-[#f2f5fa]"}`}
+            >
+              Português
+            </button>
+            <button
+              type="button"
+              onClick={() => i18next.changeLanguage("en")}
+              className={`h-9 px-4 rounded border cursor-pointer text-sm font-medium transition-colors ${i18next.language === "en" ? "border-[#4f84d7] bg-[#4f84d7] text-white" : "border-[#c5cfdb] bg-white text-[#344b61] hover:bg-[#f2f5fa]"}`}
+            >
+              English
+            </button>
+            <button
+              type="button"
+              onClick={() => i18next.changeLanguage("es")}
+              className={`h-9 px-4 rounded border cursor-pointer text-sm font-medium transition-colors ${i18next.language === "es" ? "border-[#4f84d7] bg-[#4f84d7] text-white" : "border-[#c5cfdb] bg-white text-[#344b61] hover:bg-[#f2f5fa]"}`}
+            >
+              Español
+            </button>
+            <button
+              type="button"
+              onClick={() => i18next.changeLanguage("fr")}
+              className={`h-9 px-4 rounded border cursor-pointer text-sm font-medium transition-colors ${i18next.language === "fr" ? "border-[#4f84d7] bg-[#4f84d7] text-white" : "border-[#c5cfdb] bg-white text-[#344b61] hover:bg-[#f2f5fa]"}`}
+            >
+              Français
+            </button>
+            <button
+              type="button"
+              onClick={() => i18next.changeLanguage("it")}
+              className={`h-9 px-4 rounded border cursor-pointer text-sm font-medium transition-colors ${i18next.language === "it" ? "border-[#4f84d7] bg-[#4f84d7] text-white" : "border-[#c5cfdb] bg-white text-[#344b61] hover:bg-[#f2f5fa]"}`}
+            >
+              Italiano
+            </button>
+            <button
+              type="button"
+              onClick={() => i18next.changeLanguage("de")}
+              className={`h-9 px-4 rounded border cursor-pointer text-sm font-medium transition-colors ${i18next.language === "de" ? "border-[#4f84d7] bg-[#4f84d7] text-white" : "border-[#c5cfdb] bg-white text-[#344b61] hover:bg-[#f2f5fa]"}`}
+            >
+              Deutsch
+            </button>
+          </div>
         </Section>
 
         {/* Save */}
@@ -923,18 +973,18 @@ export default function SettingsPage() {
             disabled={!rcloneConfigGenerated || isSettingsOperationInProgress}
             className="h-9 rounded bg-[#4f84d7] px-6 text-sm font-semibold text-white hover:bg-[#3d6fb8] transition-colors cursor-pointer border-0"
           >
-            Salvar
+            {t("settings.save")}
           </button>
         </div>
 
         {/* Footer */}
         {Math.round(Math.random() * 10) == 1 ? (
           <div className="mt-12 text-center text-xs text-[#8b9db2]">
-            In total, 200 cups of coffee were consumed and it is increasing ☕📈
+            {t("settings.footerCoffee")}
           </div>
         ) : (
           <div className="mt-12 text-center text-xs text-[#8b9db2]">
-            Made by Rhafaell (@Faell4328) with lots of coffee ☕
+            {t("settings.footerCredit")}
           </div>
         )}
       </div>
@@ -1000,6 +1050,7 @@ function SummaryColumn({
   main: number;
   draft: number;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="rounded-lg border border-[#e1e7ef] bg-[#f8fafd] p-3">
       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6b849e]">
@@ -1007,11 +1058,11 @@ function SummaryColumn({
       </p>
       <div className="mt-2 space-y-1 text-sm text-[#34485d]">
         <div className="flex items-center justify-between">
-          <span>Main</span>
+          <span>{t("scoreStatus.main")}</span>
           <strong>{main}</strong>
         </div>
         <div className="flex items-center justify-between">
-          <span>Rascunho</span>
+          <span>{t("scoreStatus.draft")}</span>
           <strong>{draft}</strong>
         </div>
       </div>

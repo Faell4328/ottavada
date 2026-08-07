@@ -1,5 +1,6 @@
 import { Download, FolderSearch, Settings, RefreshCw } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useAppState } from "../context/AppContext";
@@ -33,14 +34,14 @@ export default function TopBar({
     previewScanFilesForChanges,
   } = useAppState();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const isClient = isClientComputer(state.settings?.computer_type);
   const isSyncLocked =
     state.isScanningFiles ||
     state.rcloneProgress.active ||
     state.operationStatus.stepCurrent !== null;
-  const clientBlockedTitle =
-    "Esse recurso só está disponível no computador do maestro.";
-  const syncBlockedTitle = "Espere a sincronização terminar para continuar.";
+  const clientBlockedTitle = t("topBar.clientBlocked");
+  const syncBlockedTitle = t("topBar.syncBlocked");
   const updateBlockedTitle = getUpdateActionBlockedMessage();
   const [pendingFiles, setPendingFiles] = useState<IndexedFile[]>([]);
   const [existingSongsForAddFiles, setExistingSongsForAddFiles] = useState<
@@ -75,7 +76,7 @@ export default function TopBar({
       if (selected) {
         let files = await api.scanDirectory(selected as string);
         if (files.length === 0) {
-          toast.error("Não encontrei nenhuma música nessa pasta.");
+          toast.error(t("topBar.noSongsFound"));
           return;
         }
         const existingSongs = await api.getAllSongs();
@@ -86,7 +87,7 @@ export default function TopBar({
       }
     } catch (err) {
       console.error("Failed to scan directory:", err);
-      toast.error("Não foi possível ler essa pasta.");
+      toast.error(t("topBar.scanFailed"));
     }
   }
 
@@ -97,7 +98,7 @@ export default function TopBar({
   }
 
   async function handleAddFilesModalSuccess(addedCount: number) {
-    toast.success(`${addedCount} partitura(s) adicionada(s).`);
+    toast.success(t("topBar.scoresAdded", { count: addedCount }));
     handleCloseAddFilesModal();
     await handleScoresChange();
   }
@@ -120,7 +121,7 @@ export default function TopBar({
                   className={`h-4 w-4 ${isUpdateBusy ? "animate-spin" : "animate-pulse"}`}
                 />
               }
-              title={isSyncLocked ? syncBlockedTitle : "Atualização disponível"}
+              title={isSyncLocked ? syncBlockedTitle : t("topBar.updateAvailable")}
               onClick={onUpdateClick}
               disabled={isSyncLocked || isUpdateBusy}
               accent
@@ -130,11 +131,11 @@ export default function TopBar({
             icon={<FolderSearch className="h-4 w-4" />}
             title={
               isClient
-                ? clientBlockedTitle
-                : isSyncLocked
-                  ? syncBlockedTitle
-                  : "Indexar pasta"
-            }
+                    ? clientBlockedTitle
+                    : isSyncLocked
+                      ? syncBlockedTitle
+                      : t("topBar.indexDirectory")
+                  }
             onClick={handleScanDirectory}
             disabled={isClient || isSyncLocked}
           />
@@ -150,8 +151,8 @@ export default function TopBar({
                 : isSyncLocked
                   ? syncBlockedTitle
                   : isClient
-                    ? "Consultar alterações"
-                    : "Aplicar alterações"
+                    ? t("topBar.consultChanges")
+                    : t("topBar.applyChanges")
             }
             onClick={() => {
               if (isUpdateActionLocked) {
@@ -172,7 +173,7 @@ export default function TopBar({
           />
           <ActionButton
             icon={<Settings className="h-4 w-4" />}
-            title={isSyncLocked ? syncBlockedTitle : "Configurações"}
+            title={isSyncLocked ? syncBlockedTitle : t("topBar.settings")}
             onClick={() => {
               if (isSyncLocked) {
                 toast.error(syncBlockedTitle);

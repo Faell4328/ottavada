@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Modal, ModalFooterButtons, FormField, TextInput, ErrorMessage } from "./ui";
+import { useTranslation } from "react-i18next";
 
 interface EditAuthorModalProps {
   isOpen: boolean;
@@ -12,6 +13,8 @@ export function EditAuthorModal({ isOpen, author, onClose, onSave }: EditAuthorM
   const [name, setName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
+
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (isOpen && author) {
@@ -26,7 +29,7 @@ export function EditAuthorModal({ isOpen, author, onClose, onSave }: EditAuthorM
 
     const nextName = name.trim();
     if (!nextName) {
-      setError("O nome não pode ficar vazio.");
+      setError(t("editAuthorModal.nameRequired"));
       return;
     }
 
@@ -37,7 +40,7 @@ export function EditAuthorModal({ isOpen, author, onClose, onSave }: EditAuthorM
       await onSave(author.kind, author.name, nextName);
       onClose();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Erro ao salvar";
+      const message = err instanceof Error ? err.message : t("editAuthorModal.saveError");
       setError(message);
     } finally {
       setIsSaving(false);
@@ -46,8 +49,10 @@ export function EditAuthorModal({ isOpen, author, onClose, onSave }: EditAuthorM
 
   if (!author) return null;
 
-  const title = author.kind === "composer" ? "Editar Compositor" : "Editar Arranjador";
-  const label = author.kind === "composer" ? "Nome do Compositor" : "Nome do Arranjador";
+  //const title = author.kind === "composer" ? "Editar Compositor" : "Editar Arranjador";
+  //const label = author.kind === "composer" ? "Nome do Compositor" : "Nome do Arranjador";
+  const title = author.kind === "composer" ? t("editAuthorModal.editComposerTitle"): t("editAuthorModal.editArrangerTitle");
+  const label = author.kind === "composer" ? t("editAuthorModal.nameComposerLabel"): t("editAuthorModal.nameArrangerLabel");
 
   return (
     <Modal
@@ -67,7 +72,7 @@ export function EditAuthorModal({ isOpen, author, onClose, onSave }: EditAuthorM
         <TextInput
           value={name}
           onChange={setName}
-          placeholder={author.kind === "composer" ? "Digite o nome do compositor" : "Digite o nome do arranjador"}
+          placeholder={author.kind === "composer" ? t("editAuthorModal.nameComposerPlaceholder") : t("editAuthorModal.nameArrangerPlaceholder")}
           disabled={isSaving}
           autoFocus
         />

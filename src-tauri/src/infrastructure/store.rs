@@ -116,6 +116,15 @@ impl SystemStore {
         let computer_type_raw =
             read_string(&store, &["type"]).unwrap_or_else(|| "server".to_string());
 
+        let language = read_string(&store, &["language"]).and_then(|value| {
+            let trimmed = value.trim();
+            if trimmed.is_empty() {
+                None
+            } else {
+                Some(trimmed.to_string())
+            }
+        });
+
         let computer_type = ComputerType::from_store_str(&computer_type_raw);
 
         let rclone_config = store.get("rclone").and_then(Self::parse_rclone_config);
@@ -170,6 +179,7 @@ impl SystemStore {
             computer_id,
             computer_name,
             organization_name,
+            language,
             computer_type,
             google_drive_mode: match store
                 .get("google_drive_mode")
@@ -208,6 +218,21 @@ impl SystemStore {
         store["computerName"] =
             serde_json::json!(settings.computer_name.clone().unwrap_or_default());
         store["type"] = serde_json::json!(settings.computer_type.as_store_str());
+
+        if let Some(language) = settings.language.as_ref() {
+            let language = language.trim();
+            if !language.is_empty() {
+                store["language"] = serde_json::json!(language);
+            } else {
+                store
+                    .as_object_mut()
+                    .map(|obj| obj.remove("language"));
+            }
+        } else {
+            store
+                .as_object_mut()
+                .map(|obj| obj.remove("language"));
+        }
 
         if let Some(organization_name) = settings.organization_name.as_ref() {
             let organization_name = organization_name.trim();

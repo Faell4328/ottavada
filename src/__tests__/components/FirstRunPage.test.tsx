@@ -29,30 +29,17 @@ vi.mock("react-hot-toast", () => ({
 }));
 
 describe("FirstRunPage", () => {
-  it("starts with the intro video and moves to computer type", async () => {
+  it("starts with the language selection screen, opens documentation and advances to computer type", async () => {
     const { openTutorialSite } = await import("../../api/commands");
-    const { container } = renderWithAppProvider(<FirstRunPage />);
+    renderWithAppProvider(<FirstRunPage />);
 
-    expect(screen.getByText("Antes de começar")).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        /Para conseguir utilizar a ferramenta corretamente, assista ao vídeo de introdução/i
-      )
-    ).toBeInTheDocument();
-    expect(container.querySelector("video")).toBeInTheDocument();
-    expect(container.querySelector('video source[type="video/webm"]')).toHaveAttribute(
-      "src",
-      "/intro.webm"
-    );
-    expect(container.querySelector('video source[type="video/mp4"]')).toHaveAttribute(
-      "src",
-      "/intro.mp4"
-    );
-    fireEvent.click(screen.getByText("Abrir tutorial no navegador"));
+    expect(screen.getByText("Escolha seu idioma")).toBeInTheDocument();
+    expect(screen.getByText("Abrir documentação no navegador")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("Abrir documentação no navegador"));
     expect(openTutorialSite).toHaveBeenCalledTimes(1);
-    expect(screen.getByText("Avançar")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByText("Avançar"));
+    fireEvent.click(screen.getByText("Próximo"));
 
     await waitFor(() => {
       expect(screen.getByText("Qual tipo de computador você está configurando?")).toBeInTheDocument();
@@ -62,7 +49,7 @@ describe("FirstRunPage", () => {
   it("shows the name and organization fields for server without exposing the computer id", async () => {
     renderWithAppProvider(<FirstRunPage />);
 
-    fireEvent.click(screen.getByText("Avançar"));
+    fireEvent.click(screen.getByText("Próximo"));
     fireEvent.click(screen.getByText("Computador do Maestro"));
     fireEvent.click(screen.getByText("Próximo"));
 
@@ -70,16 +57,15 @@ describe("FirstRunPage", () => {
       expect(screen.getByText("Configure este computador")).toBeInTheDocument();
     });
 
-    expect(screen.queryByPlaceholderText("Ex: Estúdio, Home, Sala Ensaio...")).not.toBeInTheDocument();
     expect(screen.getByPlaceholderText("Ex: Mesa do maestro, sala de ensaio, igreja...")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("Ex: Orquestra, igreja, ministério...")).toBeInTheDocument();
-    expect(screen.queryByText("ID do computador")).not.toBeInTheDocument();
+    expect(screen.queryByText("Computer ID")).not.toBeInTheDocument();
   });
 
   it("shows the client copy and organization field", async () => {
     renderWithAppProvider(<FirstRunPage />);
 
-    fireEvent.click(screen.getByText("Avançar"));
+    fireEvent.click(screen.getByText("Próximo"));
     fireEvent.click(screen.getByText("Computador de Ensaio"));
     fireEvent.click(screen.getByText("Próximo"));
 

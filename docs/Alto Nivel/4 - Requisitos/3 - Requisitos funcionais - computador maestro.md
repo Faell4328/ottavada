@@ -250,6 +250,10 @@ O sistema deve manter os 10 últimos arquivos de bakcup, o restante deve ser del
 
 Deve ter um time em loop de 1 hora para geração de backup em seções longas <mark>(Não implementado)</mark>.
 
+## 9.1 Importar backup
+
+No "importar backup", caso os arquivos já existam, o Ottavada deve verificar se os arquivos que ele tem é mais recente que o que tem no computador, caso seja, deve substituir o arquivo local pelo que o Ottavada baixou, caso não seja ou seja igual, deve manter o arquivo original <mark>(Não implementado)</mark>.
+
 ---
 
 # 10. Relatório de alterações

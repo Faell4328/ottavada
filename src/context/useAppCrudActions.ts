@@ -1,4 +1,5 @@
 import { useCallback, type Dispatch } from "react";
+import i18n from "../i18n";
 import toast from "react-hot-toast";
 
 import * as api from "../api/commands";
@@ -7,7 +8,9 @@ import type { Action, State } from "./reducer";
 import type { AuthorFilterValue } from "./types";
 import { normalizeAuthorName } from "../utils/songSearch";
 
-function isActionLocked(state: State): boolean {
+const t = i18n.t.bind(i18n);
+
+function isActionLocked(state: State, t: (key: string) => string): boolean {
   if (
     state.settings?.computer_type === "Client" ||
     state.isScanningFiles ||
@@ -16,8 +19,8 @@ function isActionLocked(state: State): boolean {
   ) {
     toast.error(
       state.settings?.computer_type === "Client"
-        ? "Esse recurso só está disponível no computador principal."
-        : "Espere a sincronização terminar para continuar."
+        ? t("crudActions.clientBlocked")
+        : t("crudActions.syncBlocked")
     );
     return true;
   }
@@ -64,6 +67,7 @@ export function useAppCrudActions({
   refreshSelectedSong,
   getErrorMessage,
 }: UseAppCrudActionsParams) {
+
   const setSidebarView = useCallback((view: SidebarView) => {
     dispatch({ type: "SET_SIDEBAR_VIEW", payload: view });
   }, [dispatch]);
@@ -97,7 +101,7 @@ export function useAppCrudActions({
   }, [dispatch]);
 
   const createCategory = useCallback(async (name: string) => {
-    if (isActionLocked(state)) return;
+    if (isActionLocked(state, t)) return;
 
     try {
       await api.createCategory(name);
@@ -114,7 +118,7 @@ export function useAppCrudActions({
   ]);
 
   const updateCategory = useCallback(async (categoryId: string, name: string) => {
-    if (isActionLocked(state)) return;
+    if (isActionLocked(state, t)) return;
 
     try {
       await api.updateCategory(categoryId, name);
@@ -132,7 +136,7 @@ export function useAppCrudActions({
       }
     } catch (err) {
       console.error("Failed to update category:", err);
-      toast.error("Não foi possível salvar a categoria.");
+      toast.error(t("crudActions.categorySaveError"));
       throw err;
     }
   }, [
@@ -146,7 +150,7 @@ export function useAppCrudActions({
   ]);
 
   const deleteCategory = useCallback(async (categoryId: string) => {
-    if (isActionLocked(state)) return;
+    if (isActionLocked(state, t)) return;
 
     try {
       await api.deleteCategory(categoryId);
@@ -177,7 +181,7 @@ export function useAppCrudActions({
     oldName: string,
     newName: string
   ) => {
-    if (isActionLocked(state)) return;
+    if (isActionLocked(state, t)) return;
 
     try {
       if (kind === "composer") {
@@ -204,7 +208,7 @@ export function useAppCrudActions({
       await loadSongs();
     } catch (err) {
       console.error(`Failed to update ${kind}:`, err);
-      toast.error("Não foi possível salvar o nome.");
+      toast.error(t("crudActions.authorSaveError"));
       throw err;
     }
   }, [
@@ -221,7 +225,7 @@ export function useAppCrudActions({
     kind: "composer" | "arranger",
     oldName: string
   ) => {
-    if (isActionLocked(state)) return;
+    if (isActionLocked(state, t)) return;
 
     try {
       if (kind === "composer") {
@@ -248,7 +252,7 @@ export function useAppCrudActions({
       await loadSongs();
     } catch (err) {
       console.error(`Failed to delete ${kind}:`, err);
-      toast.error("Não foi possível remover o nome.");
+      toast.error(t("crudActions.authorDeleteError"));
       throw err;
     }
   }, [
@@ -280,10 +284,10 @@ export function useAppCrudActions({
       await Promise.all([loadSongs(), loadCategories()]);
       await refreshSelectedSong();
       await loadSettings();
-      toast.success("Música atualizada.");
+      toast.success(t("crudActions.songUpdated"));
     } catch (err) {
       console.error("Failed to update song:", err);
-      toast.error("Não foi possível salvar a música.");
+      toast.error(t("crudActions.songSaveError"));
       throw err;
     }
   }, [dispatch, getErrorMessage, loadCategories, loadSettings, loadSongs, refreshSelectedSong]);
@@ -298,10 +302,10 @@ export function useAppCrudActions({
 
         await refreshSelectedSong();
         await loadSettings();
-        toast.success("Status da música atualizado.");
+        toast.success(t("crudActions.songStatusUpdated"));
       } catch (err) {
         console.error("Failed to update song status:", err);
-        toast.error("Não foi possível mudar o status da música.");
+        toast.error(t("crudActions.songStatusError"));
         throw err;
       }
     }, [dispatch, loadSettings, refreshSelectedSong, state.songs]);
@@ -309,20 +313,19 @@ export function useAppCrudActions({
   const updateScore = useCallback(async (
     scoreId: string,
     instrumentName: string | null,
-    filePath: string
   ) => {
     try {
-      await api.updateScore(scoreId, instrumentName, filePath);
+      await api.updateScore(scoreId, instrumentName);
       if (state.selectedScore?.id === scoreId) {
         dispatch({ type: "SET_SELECTED_SCORE", payload: null });
       }
       await loadSongs();
       await refreshSelectedSong();
       await loadSettings();
-      toast.success("Partitura atualizada.");
+      toast.success(t("crudActions.scoreUpdated"));
     } catch (err) {
       console.error("Failed to update score:", err);
-      toast.error("Não foi possível salvar a partitura.");
+      toast.error(t("crudActions.scoreSaveError"));
       throw err;
     }
   }, [dispatch, getErrorMessage, loadSettings, loadSongs, refreshSelectedSong, state.selectedScore]);
@@ -343,10 +346,10 @@ export function useAppCrudActions({
       await refreshSelectedSong();
       await loadSettings();
 
-      toast.success("Status da partitura atualizado.");
+      toast.success(t("crudActions.scoreStatusUpdated"));
     } catch (err) {
       console.error("Failed to update score status:", err);
-      toast.error("Não foi possível mudar o status da partitura.");
+      toast.error(t("crudActions.scoreStatusError"));
       throw err;
     }
   }, [dispatch, getErrorMessage, loadSettings, refreshSelectedSong, state.songs]);
@@ -360,10 +363,10 @@ export function useAppCrudActions({
       await loadSongs();
       await refreshSelectedSong();
       await loadSettings();
-      toast.success("Partitura movida para lixeira.");
+      toast.success(t("crudActions.scoreDeleted"));
     } catch (err) {
       console.error("Failed to delete score:", err);
-      toast.error("Não foi possível mover a partitura para lixeira.");
+      toast.error(t("crudActions.scoreDeleteError"));
       throw err;
     }
   }, [dispatch, getErrorMessage, loadSettings, loadSongs, refreshSelectedSong, state.selectedScore]);
@@ -380,10 +383,10 @@ export function useAppCrudActions({
       await loadSongs();
       await refreshSelectedSong();
       await loadSettings();
-      toast.success("Música movida para lixeira.");
+      toast.success(t("crudActions.songDeleted"));
     } catch (err) {
       console.error("Failed to delete song:", err);
-      toast.error("Não foi possível mover a música para lixeira.");
+      toast.error(t("crudActions.songDeleteError"));
       throw err;
     }
   }, [dispatch, getErrorMessage, loadSettings, loadSongs, refreshSelectedSong, state.selectedSong]);
@@ -394,7 +397,7 @@ export function useAppCrudActions({
       dispatch({ type: "SET_SETTINGS", payload: settings });
     } catch (err) {
       console.error("Failed to save settings:", err);
-      toast.error("Não foi possível salvar as configurações.");
+      toast.error(t("crudActions.settingsSaveError"));
       throw err;
     }
   }, [dispatch]);
@@ -403,6 +406,7 @@ export function useAppCrudActions({
     computerId: string,
     computerName: string,
     organizationName: string | null,
+    language: string | null,
     computerType: string,
     rcloneConfigJson: string
   ) => {
@@ -411,15 +415,16 @@ export function useAppCrudActions({
         computerId,
         computerName,
         organizationName,
+        language,
         computerType,
         rcloneConfigJson
       );
       dispatch({ type: "SET_FIRST_RUN", payload: false });
       await Promise.all([loadSongs(), loadCategories(), loadSettings()]);
-      toast.success("Configuração inicial concluída.");
+      toast.success(t("crudActions.firstRunCompleted"));
     } catch (err) {
       console.error("Failed to complete first run:", err);
-      toast.error("Não foi possível concluir a configuração inicial.");
+      toast.error(t("crudActions.firstRunError"));
       throw err;
     }
   }, [dispatch, loadCategories, loadSettings, loadSongs, refreshSelectedSong]);
@@ -434,10 +439,10 @@ export function useAppCrudActions({
       await loadSongs();
       await refreshSelectedSong();
       await loadSettings();
-      toast.success("Partitura duplicada com sucesso.");
+      toast.success(t("crudActions.scoreDuplicated"));
     } catch (err) {
       console.error("Failed to use score as base:", err);
-      toast.error("Não foi possível duplicar a partitura.");
+      toast.error(t("crudActions.scoreDuplicateError"));
       throw err;
     }
   }, [dispatch, loadSettings, loadSongs, refreshSelectedSong]);

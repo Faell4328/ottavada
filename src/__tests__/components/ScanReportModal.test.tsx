@@ -109,7 +109,7 @@ describe("ScanReportModal", () => {
     expect(screen.queryAllByText((_, element) => element?.textContent?.includes("03 VEZES SANTO.musx") ?? false).length).toBe(0);
     expect(screen.queryAllByText((_, element) => element?.textContent?.includes("VEZES SANTO.MUS foi adicionada") ?? false).length).toBe(0);
     expect(screen.getAllByText((_, element) => element?.textContent?.includes("A partitura /music/Eis o Nosso Deus - Flauta.musx saiu de Envio não permitido e voltou para Envio permitido na música Eis o Nosso Deus") ?? false).length).toBeGreaterThan(0);
-    expect(screen.getAllByText((_, element) => element?.textContent?.includes("A partitura /music/Eis o Nosso Deus - Flute2.musx saiu de ignorada e foi para Envio não permitido na música Eis o Nosso Deus") ?? false).length).toBeGreaterThan(0);
+    expect(screen.getAllByText((_, element) => element?.textContent?.includes("A partitura /music/Eis o Nosso Deus - Flute2.musx saiu de Ignorada e foi para Envio não permitido na música Eis o Nosso Deus") ?? false).length).toBeGreaterThan(0);
     expect(screen.queryByText("Arquivos recuperados")).not.toBeInTheDocument();
     expect(screen.queryByText("Arquivos com erro")).not.toBeInTheDocument();
   });
@@ -199,9 +199,9 @@ describe("ScanReportModal", () => {
     );
 
     const musicSection = screen.getByText("Músicas").closest("section");
-    expect(musicSection).toHaveTextContent("A música 00 - TESTE saiu de sem partitura e voltou para Envio permitido.");
+    expect(musicSection).toHaveTextContent("A música 00 - TESTE saiu de Sem partitura e voltou para Envio permitido.");
     expect(Array.from(musicSection?.querySelectorAll("strong") ?? []).some((element) => element.textContent === "00 - TESTE")).toBe(true);
-    expect(Array.from(musicSection?.querySelectorAll("strong") ?? []).some((element) => element.textContent === "sem partitura")).toBe(true);
+    expect(Array.from(musicSection?.querySelectorAll("strong") ?? []).some((element) => element.textContent === "Sem partitura")).toBe(true);
     expect(Array.from(musicSection?.querySelectorAll("strong") ?? []).some((element) => element.textContent === "Envio permitido")).toBe(true);
   });
 

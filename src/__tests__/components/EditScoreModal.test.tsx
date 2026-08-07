@@ -4,10 +4,6 @@ import { EditScoreModal } from "../../components/EditScoreModal";
 import type { ScoreListItem, SongListItem } from "../../types";
 import * as api from "../../api/commands";
 
-vi.mock("@tauri-apps/plugin-dialog", () => ({
-  open: vi.fn(),
-}));
-
 const sampleSong: SongListItem = {
   id: "song-1",
   name: "HINO NACIONAL",
@@ -101,7 +97,6 @@ describe("EditScoreModal", () => {
         songId: "song-1",
         scoreFileId: "score-1",
         instrumentName: "Flauta 2",
-        filePath: "/music/HINO NACIONAL - Flauta.musx",
       });
     });
   });

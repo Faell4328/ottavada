@@ -306,7 +306,7 @@ describe("AddFilesModal", () => {
       screen.getByText("Instrumentos a adicionar (2)"),
     ).toBeInTheDocument();
     expect(screen.getByText("Ignorada")).toBeInTheDocument();
-    expect(screen.getByTitle("Designorar arquivo")).toBeInTheDocument();
+    expect(screen.getByTitle("Desconsiderar arquivo")).toBeInTheDocument();
     expect(
       screen.getAllByPlaceholderText("Nome do instrumento")[0],
     ).toBeDisabled();
@@ -322,7 +322,7 @@ describe("AddFilesModal", () => {
       screen.getAllByPlaceholderText("Nome do instrumento")[0],
     ).toHaveValue("");
 
-    fireEvent.click(screen.getByTitle("Designorar arquivo"));
+    fireEvent.click(screen.getByTitle("Desconsiderar arquivo"));
 
     expect(
       screen.getByText("Instrumentos a adicionar (2)"),

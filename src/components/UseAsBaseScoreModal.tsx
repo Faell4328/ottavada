@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import type { ScoreListItem, SongListItem } from "../types";
 import { Modal, ModalFooterButtons, FormField, TextInput, ErrorMessage } from "./ui";
+import { useTranslation } from "react-i18next";
 import { normalizeScoreNameForSave, normalizeScoreNameInput } from "../utils/nameFormat";
 import { findScoreNameConflictInSong } from "../utils/libraryDuplicates";
 
@@ -25,6 +26,7 @@ export function UseAsBaseScoreModal({
   const [newScoreName, setNewScoreName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
+  const { t } = useTranslation();
 
   const nameConflict =
     song && score && newScoreName
@@ -46,12 +48,12 @@ export function UseAsBaseScoreModal({
     const nameToSave = newScoreName.trim();
 
     if (!nameToSave) {
-      setError("Digite um nome para a nova partitura");
+      setError(t("useAsBaseScoreModal.nameRequired"));
       return;
     }
 
     if (hasNameConflict) {
-      setError("Já existe uma partitura com esse nome");
+      setError(t("useAsBaseScoreModal.nameConflictError"));
       return;
     }
 
@@ -62,14 +64,14 @@ export function UseAsBaseScoreModal({
       const normalizedName = normalizeScoreNameForSave(nameToSave);
 
       if (!normalizedName) {
-        setError("Digite um nome válido para a nova partitura");
+        setError(t("useAsBaseScoreModal.invalidName"));
         return;
       }
 
       await onSave(score.id, normalizedName);
       onClose();
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Erro ao salvar";
+      const errorMsg = err instanceof Error ? err.message : t("useAsBaseScoreModal.saveError");
       setError(errorMsg);
     } finally {
       setIsSaving(false);
@@ -82,7 +84,7 @@ export function UseAsBaseScoreModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Usar como base"
+      title={t("useAsBaseScoreModal.title")}
       footer={
         <ModalFooterButtons
           onCancel={onClose}
@@ -94,19 +96,19 @@ export function UseAsBaseScoreModal({
     >
       {hasNameConflict && (
         <div className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-          <p className="font-semibold">Nome duplicado</p>
-          <p>Já existe outra partitura com esse nome. Escolha outro nome.</p>
+          <p className="font-semibold">{t("useAsBaseScoreModal.nameConflictTitle")}</p>
+          <p>{t("useAsBaseScoreModal.nameConflictMessage")}</p>
         </div>
       )}
 
-      <FormField label="Nome da Nova Partitura">
+      <FormField label={t("useAsBaseScoreModal.nameLabel")}>
         <TextInput
           value={newScoreName}
           onChange={(value) => {
             setNewScoreName(value);
             setError("");
           }}
-          placeholder="Ex: Flauta - Base"
+          placeholder={t("useAsBaseScoreModal.namePlaceholder")}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               void handleSave();

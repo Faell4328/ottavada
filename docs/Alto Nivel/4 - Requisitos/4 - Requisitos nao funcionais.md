@@ -4,11 +4,15 @@ O aplicativo deve dar suporte aos idiomas:
 
 - Português;
 
-- Inglês <mark>(Não implementado)</mark>;
+- Inglês
 
-- Espanhol <mark> (Não implementado)</mark>;
+- Espanhol;
 
-- Italiano <mark> (Não implementado)</mark>.
+- Frances;
+
+- Italiano;
+
+- Alemão.
 
 # 1. Categorias
 

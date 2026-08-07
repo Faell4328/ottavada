@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import i18next from "i18next";
 import { CheckCircle, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -8,13 +10,23 @@ import { useRcloneTest } from "../hooks/useRcloneTest";
 import { getFriendlyRcloneErrorMessage } from "../utils/rcloneErrors";
 import type { RcloneProvider } from "../types";
 
-type Step = "intro" | "name" | "type" | "rclone-setup" | "confirm";
+type Step = "language" | "type" | "name" | "rclone-setup" | "confirm";
+
+const LANGUAGES = [
+  { code: "pt", label: "Português" },
+  { code: "en", label: "English" },
+  { code: "es", label: "Español" },
+  { code: "fr", label: "Français" },
+  { code: "it", label: "Italiano" },
+  { code: "de", label: "Deutsch" },
+] as const;
 
 function getRcloneProviderLabel(provider: RcloneProvider) {
   return provider === "koofr" ? "Koofr" : "Google Drive";
 }
 
 export default function FirstRunPage() {
+  const { t } = useTranslation();
   const { completeFirstRun } = useAppState();
   const [computerId, setComputerId] = useState("");
   const [organizationName, setOrganizationName] = useState("");
@@ -22,7 +34,7 @@ export default function FirstRunPage() {
   const [computerType, setComputerType] = useState<"Server" | "Client" | "">(
     "",
   );
-  const [step, setStep] = useState<Step>("intro");
+  const [step, setStep] = useState<Step>("language");
   const [rcloneProvider, setRcloneProvider] = useState<RcloneProvider>("koofr");
   const [rcloneEmail, setRcloneEmail] = useState("");
   const [rcloneAppPassword, setRcloneAppPassword] = useState("");
@@ -43,7 +55,7 @@ export default function FirstRunPage() {
       .generateComputerId()
       .then(setComputerId)
       .catch(() => {
-        toast.error("Não foi possível criar o identificador deste computador.");
+        toast.error(t("firstRun.couldNotCreateId"));
       });
   }, []);
 
@@ -58,12 +70,12 @@ export default function FirstRunPage() {
   async function handleGenerateRcloneConfig() {
     if (rcloneProvider === "koofr") {
       if (!rcloneEmail.trim()) {
-        toast.error("Digite o seu email do Koofr.");
+        toast.error(t("firstRun.koofrEmailRequired"));
         return;
       }
 
       if (!rcloneAppPassword.trim()) {
-        toast.error("Digite a senha de aplicativo do Koofr.");
+        toast.error(t("firstRun.koofrPasswordRequired"));
         return;
       }
     }
@@ -88,8 +100,8 @@ export default function FirstRunPage() {
       setRcloneConfigured(true);
       toast.success(
         rcloneProvider === "google_drive"
-          ? "Conexão com o Google Drive pronta para uso."
-          : "Conexão com o Koofr pronta para uso.",
+          ? t("firstRun.googleDriveReady")
+          : t("firstRun.koofrReady"),
       );
     } catch (error) {
       setRcloneConfigGenerated(false);
@@ -97,7 +109,7 @@ export default function FirstRunPage() {
       toast.error(
         getFriendlyRcloneErrorMessage(
           error,
-          "Não foi possível configurar a conexão com a nuvem",
+          t("firstRun.rcloneConfigError"),
         ),
       );
     } finally {
@@ -107,12 +119,12 @@ export default function FirstRunPage() {
 
   function handleNameSubmit() {
     if (!computerName.trim()) {
-      toast.error("Digite um nome para este computador.");
+      toast.error(t("firstRun.computerNameRequired"));
       return;
     }
 
     if (computerType === "Server" && !organizationName.trim()) {
-      toast.error("Digite o nome da organização ou instituição.");
+      toast.error(t("firstRun.organizationRequired"));
       return;
     }
 
@@ -121,7 +133,7 @@ export default function FirstRunPage() {
 
   function handleTypeSubmit() {
     if (!computerType) {
-      toast.error("Escolha o tipo deste computador.");
+      toast.error(t("firstRun.computerTypeRequired"));
       return;
     }
 
@@ -131,13 +143,13 @@ export default function FirstRunPage() {
   async function handleWithRclone() {
     if (!rcloneConfigGenerated) {
       toast.error(
-        "Configure e teste a conexão com a nuvem antes de continuar.",
+        t("firstRun.cloudRequired"),
       );
       return;
     }
 
     if (!rcloneConfigured) {
-      toast.error("Teste a conexão com a nuvem antes de continuar.");
+      toast.error(t("firstRun.testRequired"));
       return;
     }
 
@@ -145,7 +157,7 @@ export default function FirstRunPage() {
       await api.deleteRcloneTestFile();
     } catch (error) {
       console.error("Erro ao deletar arquivo de teste local:", error);
-      toast.error("Erro ao remover arquivo de teste da nuvem.");
+      toast.error(t("firstRun.testDeleteError"));
     }
 
     setStep("confirm");
@@ -162,11 +174,12 @@ export default function FirstRunPage() {
         computerId,
         computerName.trim(),
         organizationName.trim() || null,
+        i18next.language || null,
         computerType,
         JSON.stringify({ provider: rcloneProvider }),
       );
     } catch (error) {
-      toast.error("Não foi possível concluir a configuração inicial.");
+      toast.error(t("firstRun.configError"));
       setIsLoading(false);
     }
   }
@@ -174,7 +187,7 @@ export default function FirstRunPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-[#33465d] to-[#5d6d82]">
       <div className="my-10 w-full max-w-2xl rounded-xl bg-white p-8 shadow-2xl">
-        {step !== "intro" && (
+        {step !== "language" && (
           <div className="mb-4 flex flex-col items-center">
             <img
               src="/icon.png"
@@ -186,39 +199,50 @@ export default function FirstRunPage() {
           </div>
         )}
 
-        {step === "intro" && (
+        {step === "language" && (
           <>
-            <div className="mb-6 rounded-xl border border-[#c5cfdb] bg-[#f8fafd] p-5">
-              <h2 className="mb-3 text-lg font-semibold text-[#34485d]">
-                Antes de começar
+            <div className="mb-8 flex flex-col items-center">
+              <img
+                src="/icon.png"
+                alt="Ottavada"
+                className="mb-6 h-24 w-24 rounded-2xl object-cover"
+              />
+              <h2 className="mb-2 text-xl font-semibold text-[#34485d]">
+                {t("firstRun.chooseLanguage")}
               </h2>
-              <p className="text-sm leading-6 text-[#6b849e]">
-                Para conseguir utilizar a ferramenta corretamente, assista ao
-                vídeo de introdução no site oficial:
-                ottavada.com/#tutorial. Ele mostra o fluxo
-                básico e o que você precisa fazer no primeiro acesso.
+              <p className="text-sm text-[#6b849e]">
+                {t("firstRun.chooseLanguageHint")}
+              </p>
+            </div>
+
+            <div className="mb-8 grid grid-cols-3 gap-3">
+              {LANGUAGES.map(({ code, label }) => (
+                <button
+                  key={code}
+                  type="button"
+                  onClick={() => i18next.changeLanguage(code)}
+                  className={`h-14 rounded-lg border-2 text-sm font-semibold transition-all cursor-pointer ${
+                    i18next.language === code
+                      ? "border-[#4f84d7] bg-[#f0f3f8] text-[#4f84d7]"
+                      : "border-[#c5cfdb] bg-white text-[#4d6075] hover:border-[#7ba0d4] hover:text-[#4f84d7]"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <div className="mb-6 rounded-xl border border-[#c5cfdb] bg-[#f8fafd] p-4">
+              <p className="text-xs leading-5 text-[#6b849e]">
+                {t("firstRun.beforeStartText")}
               </p>
               <button
                 type="button"
                 onClick={handleOpenTutorial}
-                className="mt-4 h-11 w-full rounded-lg border border-[#7ba0d4] bg-white text-sm font-bold text-[#4f84d7] transition-colors hover:bg-[#f8fafd] cursor-pointer"
+                className="mt-3 h-10 w-full rounded-lg border border-[#7ba0d4] bg-white text-sm font-bold text-[#4f84d7] transition-colors hover:bg-[#f8fafd] cursor-pointer"
               >
-                Abrir tutorial no navegador
+                {t("firstRun.openTutorial")}
               </button>
-            </div>
-
-            <div className="mb-6 overflow-hidden rounded-xl">
-              <video
-                autoPlay
-                muted
-                playsInline
-                preload="auto"
-                className="h-auto mx-auto w-4/5 2xl:w-full bg-black"
-              >
-                <source src="/intro.webm" type="video/webm" />
-                <source src="/intro.mp4" type="video/mp4" />
-                Seu navegador não suporta reprodução de vídeo.
-              </video>
             </div>
 
             <button
@@ -226,7 +250,7 @@ export default function FirstRunPage() {
               onClick={() => setStep("type")}
               className="h-11 w-full rounded-lg border-0 bg-[#4f84d7] text-sm font-bold text-white transition-colors hover:bg-[#3d6fb8] cursor-pointer"
             >
-              Avançar
+              {t("firstRun.next")}
             </button>
           </>
         )}
@@ -234,12 +258,11 @@ export default function FirstRunPage() {
         {step === "type" && (
           <>
             <h2 className="mb-4 text-lg font-semibold text-[#34485d] text-center">
-              Qual tipo de computador você está configurando?
+              {t("firstRun.computerTypeTitle")}
             </h2>
 
             <p className="mb-6 text-sm text-[#6b849e] text-center">
-              Isso define como este computador vai funcionar dentro do Score
-              Maestro.
+              {t("firstRun.computerTypeHint")}
             </p>
 
             <div
@@ -264,11 +287,10 @@ export default function FirstRunPage() {
                 </div>
                 <div>
                   <h3 className="mb-1 font-semibold text-[#34485d]">
-                    Computador do Maestro
+                    {t("firstRun.serverType")}
                   </h3>
                   <p className="text-xs text-[#6b849e]">
-                    Use no computador onde você organiza, revisa e confirma as
-                    alterações. Só pode existir um computador do maestro.
+                    {t("firstRun.serverTypeDesc")}
                   </p>
                 </div>
               </div>
@@ -296,12 +318,10 @@ export default function FirstRunPage() {
                 </div>
                 <div>
                   <h3 className="mb-1 font-semibold text-[#34485d]">
-                    Computador de Ensaio
+                    {t("firstRun.clientType")}
                   </h3>
                   <p className="text-xs text-[#6b849e]">
-                    Use em computadores para visualizar e copiar partituras com
-                    menos responsabilidades. Pode existir mais de um computador
-                    de ensaio.
+                    {t("firstRun.clientTypeDesc")}
                   </p>
                 </div>
               </div>
@@ -312,7 +332,7 @@ export default function FirstRunPage() {
               onClick={handleTypeSubmit}
               className="h-11 w-full rounded-lg border-0 bg-[#4f84d7] text-sm font-bold text-white transition-colors hover:bg-[#3d6fb8] cursor-pointer"
             >
-              Próximo
+              {t("firstRun.next")}
             </button>
           </>
         )}
@@ -320,35 +340,34 @@ export default function FirstRunPage() {
         {step === "name" && (
           <>
             <h2 className="mb-4 text-lg font-semibold text-[#34485d] text-center">
-              Configure este computador
+              {t("firstRun.configureComputer")}
             </h2>
 
             <p className="mb-6 text-sm text-[#6b849e] text-center">
-              Dê nomes simples e fáceis de reconhecer. Você pode mudar isso
-              depois nas configurações.
+              {t("firstRun.configureHint")}
             </p>
 
             <div className="mb-6">
               <label className="mb-1.5 block text-sm font-semibold text-[#34485d]">
-                Nome do computador
+                {t("firstRun.computerName")}
               </label>
               <input
                 value={computerName}
                 onChange={(e) => setComputerName(e.target.value)}
                 className="h-10 w-full rounded-lg border border-[#c5cfdb] bg-[#f8fafd] px-3 text-sm text-[#4d6075] outline-none focus:border-[#7ba0d4] focus:ring-2 focus:ring-[#7ba0d4]/20"
-                placeholder="Ex: Mesa do maestro, sala de ensaio, igreja..."
+                placeholder={t("firstRun.computerNamePlaceholder")}
               />
             </div>
 
             <div className="mb-6">
               <label className="mb-1.5 block text-sm font-semibold text-[#34485d]">
-                Organização ou instituição
+                {t("firstRun.organizationName")}
               </label>
               <input
                 value={organizationName}
                 onChange={(e) => setOrganizationName(e.target.value)}
                 className="h-10 w-full rounded-lg border border-[#c5cfdb] bg-[#f8fafd] px-3 text-sm text-[#4d6075] outline-none focus:border-[#7ba0d4] focus:ring-2 focus:ring-[#7ba0d4]/20"
-                placeholder="Ex: Orquestra, igreja, ministério..."
+                placeholder={t("firstRun.organizationNamePlaceholder")}
               />
             </div>
 
@@ -357,7 +376,7 @@ export default function FirstRunPage() {
               onClick={handleNameSubmit}
               className="h-11 w-full rounded-lg border-0 bg-[#4f84d7] text-sm font-bold text-white transition-colors hover:bg-[#3d6fb8] cursor-pointer"
             >
-              Próximo
+              {t("firstRun.next")}
             </button>
 
             <button
@@ -365,7 +384,7 @@ export default function FirstRunPage() {
               onClick={() => setStep("type")}
               className="mt-2 h-10 w-full rounded-lg border border-[#7ba0d4] bg-white text-sm font-semibold text-[#4f84d7] transition-colors hover:bg-[#f8fafd] cursor-pointer"
             >
-              Voltar
+              {t("firstRun.back")}
             </button>
           </>
         )}
@@ -373,27 +392,26 @@ export default function FirstRunPage() {
         {step === "rclone-setup" && (
           <>
             <h2 className="mb-4 text-lg font-semibold text-[#34485d] text-center">
-              Escolha e conecte ao Provedor de Nuvem
+              {t("firstRun.chooseCloudProvider")}
             </h2>
 
             <p className="w-4/5 mx-auto mb-6 text-sm text-[#6b849e] text-center">
-              <b>Importante: </b>
+              <b>{t("firstRun.cloudImportant")} </b>
               <span>
-                Tanto o Computador do Maestro e o Computador do Ensaio, devem
-                usar o mesmo provedor e conta
+                {t("firstRun.cloudImportantText")}
               </span>
             </p>
 
             <div className="mb-4 rounded-xl border border-[#c5cfdb] bg-[#f8fafd] p-4">
               <div className="mb-3 pb-3">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8b9db2]">
-                  Provedor de nuvem
+                  {t("firstRun.cloudProviderLabel")}
                 </p>
               </div>
 
               <div className="mb-2 flex items-center gap-2">
                 <span className="rounded-full bg-[#e8eef7] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.2em] text-[#4f84d7]">
-                  Recomendado
+                  {t("firstRun.recommended")}
                 </span>
               </div>
               <div className="grid gap-3 md:grid-cols-2">
@@ -432,34 +450,34 @@ export default function FirstRunPage() {
                 </p>
                 <p className="mt-2 text-xs text-[#6b849e]">
                   {rcloneProvider === "google_drive"
-                    ? "Ao clicar no botão será aberto seu navegador para escolher a conta Google"
-                    : "Informe o email e a senha de aplicativo do Koofr."}
+                    ? t("firstRun.googleDriveHint")
+                    : t("firstRun.koofrHint")}
                 </p>
               </div>
               {rcloneProvider === "koofr" && (
                 <div className="space-y-3">
                   <div>
                     <label className="mb-2 block text-xs font-semibold text-[#34485d]">
-                      Email do Koofr
+                      {t("firstRun.koofrEmail")}
                     </label>
                     <input
                       value={rcloneEmail}
                       onChange={(e) => setRcloneEmail(e.target.value)}
                       className="h-10 w-full rounded-lg border border-[#c5cfdb] bg-[#f8fafd] px-3 text-sm text-[#4d6075] outline-none focus:border-[#7ba0d4] focus:ring-2 focus:ring-[#7ba0d4]/20"
-                      placeholder="voce@exemplo.com"
+                      placeholder={t("firstRun.koofrEmailPlaceholder")}
                     />
                   </div>
 
                   <div>
                     <label className="mb-2 block text-xs font-semibold text-[#34485d]">
-                      Senha do aplicativo
+                      {t("firstRun.koofrAppPassword")}
                     </label>
                     <input
                       type="password"
                       value={rcloneAppPassword}
                       onChange={(e) => setRcloneAppPassword(e.target.value)}
                       className="h-10 w-full rounded-lg border border-[#c5cfdb] bg-[#f8fafd] px-3 text-sm text-[#4d6075] outline-none focus:border-[#7ba0d4] focus:ring-2 focus:ring-[#7ba0d4]/20"
-                      placeholder="Senha criada no Koofr"
+                      placeholder={t("firstRun.koofrAppPasswordPlaceholder")}
                     />
                   </div>
                 </div>
@@ -488,10 +506,10 @@ export default function FirstRunPage() {
                 <Loader2 className="h-4 w-4 animate-spin" />
               )}
               {isGeneratingRcloneConfig
-                ? "Configurando..."
+                ? t("firstRun.configuring")
                 : rcloneProvider === "google_drive"
-                  ? "Configurar e testar Google Drive"
-                  : "Configurar e testar Koofr"}
+                  ? t("firstRun.configureTestGoogleDrive")
+                  : t("firstRun.configureTestKoofr")}
             </button>
 
             {rcloneConfigured && (
@@ -500,16 +518,16 @@ export default function FirstRunPage() {
                   <CheckCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-green-600" />
                   <div>
                     <p className="text-xs font-semibold text-green-800">
-                      Rclone configurado e testado com sucesso
+                      {t("firstRun.rcloneConfigured")}
                     </p>
                     <p className="mt-1 text-xs text-green-700">
-                      Remote padrão:{" "}
+                      {t("firstRun.remoteDefault")}{" "}
                       <code className="bg-green-100 px-1">
                         {rcloneProvider === "koofr" ? "koofr" : "gdrive"}
                       </code>
                     </p>
                     <p className="text-xs text-green-700">
-                      Caminho padrão:{" "}
+                      {t("firstRun.pathDefault")}{" "}
                       <code className="bg-green-100 px-1">Ottavada</code>
                     </p>
                   </div>
@@ -528,7 +546,7 @@ export default function FirstRunPage() {
                     : "bg-[#4f84d7] hover:bg-[#3d6fb8]"
                 }`}
               >
-                Continuar
+                {t("firstRun.continue")}
               </button>
 
               <button
@@ -536,7 +554,7 @@ export default function FirstRunPage() {
                 onClick={() => setStep("type")}
                 className="h-10 flex-1 rounded-lg border border-[#7ba0d4] bg-white text-sm font-semibold text-[#4f84d7] transition-colors hover:bg-[#f8fafd] cursor-pointer"
               >
-                Voltar
+                {t("firstRun.back")}
               </button>
             </div>
           </>
@@ -545,45 +563,45 @@ export default function FirstRunPage() {
         {step === "confirm" && (
           <>
             <h2 className="mb-6 text-lg font-semibold text-[#34485d]">
-              Confirme suas configurações
+              {t("firstRun.confirmTitle")}
             </h2>
 
             <div className="mb-6 space-y-4">
               <div className="rounded-lg border border-[#c5cfdb] bg-[#f8fafd] p-4">
                 <p className="mb-1 text-xs text-[#8b9db2]">
-                  Nome do computador
+                  {t("firstRun.confirmComputerName")}
                 </p>
                 <p className="text-sm font-semibold text-[#34485d]">
-                  {computerName || "(não preenchido)"}
+                  {computerName || t("firstRun.notFilled")}
                 </p>
               </div>
 
               <div className="rounded-lg border border-[#c5cfdb] bg-[#f8fafd] p-4">
                 <p className="mb-1 text-xs text-[#8b9db2]">
-                  Organização ou instituição
+                  {t("firstRun.confirmOrganizationName")}
                 </p>
                 <p className="text-sm font-semibold text-[#34485d]">
-                  {organizationName || "(não preenchido)"}
+                  {organizationName || t("firstRun.notFilled")}
                 </p>
               </div>
 
               <div className="rounded-lg border border-[#c5cfdb] bg-[#f8fafd] p-4">
                 <p className="mb-1 text-xs text-[#8b9db2]">
-                  Tipo de computador
+                  {t("firstRun.confirmComputerType")}
                 </p>
                 <p className="text-sm font-semibold text-[#34485d]">
                   {computerType === "Server"
-                    ? "Computador do Maestro"
-                    : "Computador de Ensaio"}
+                    ? t("firstRun.serverType")
+                    : t("firstRun.clientType")}
                 </p>
               </div>
 
               <div className="rounded-lg border border-[#c5cfdb] bg-[#f8fafd] p-4">
                 <p className="mb-1 text-xs text-[#8b9db2]">
-                  Modo de sincronização
+                  {t("firstRun.confirmSyncMode")}
                 </p>
                 <p className="text-sm font-semibold text-[#34485d]">
-                  <span className="text-green-600">Rclone</span>
+                  <span className="text-green-600">{t("firstRun.confirmSyncModeValue")}</span>
                   <span className="text-xs text-[#6b849e]">
                     {" "}
                     ({rcloneProvider === "koofr" ? "koofr" : "gdrive"}
@@ -603,7 +621,7 @@ export default function FirstRunPage() {
                   : "bg-[#4f84d7] hover:bg-[#3d6fb8]"
               }`}
             >
-              {isLoading ? "Configurando..." : "Começar a usar"}
+              {isLoading ? t("firstRun.configuring") : t("firstRun.startUsing")}
             </button>
 
             <button
@@ -612,7 +630,7 @@ export default function FirstRunPage() {
               disabled={isLoading}
               className="mt-2 h-10 w-full rounded-lg border border-[#7ba0d4] bg-white text-sm font-semibold text-[#4f84d7] transition-colors hover:bg-[#f8fafd] cursor-pointer"
             >
-              Voltar
+              {t("firstRun.back")}
             </button>
           </>
         )}

@@ -38,6 +38,7 @@ import {
   summarizeScoreConflictsBySong,
 } from "../utils/libraryDuplicates";
 import { analyzeAddFilesReview } from "../utils/addFilesReview";
+import { useTranslation } from "react-i18next";
 
 interface AddFilesModalProps {
   isOpen: boolean;
@@ -59,6 +60,7 @@ export function AddFilesModal({
   defaultCategoryIds = EMPTY_CATEGORY_IDS,
 }: AddFilesModalProps) {
   const { state } = useAppState();
+  const { t } = useTranslation();
   const visibleCategories = state.categories.filter(
     (category) => category.name.toLowerCase() !== "sem categoria",
   );
@@ -263,7 +265,7 @@ export function AddFilesModal({
       setPendingDeleteFile(null);
     } catch (err) {
       const errorMsg =
-        err instanceof Error ? err.message : "Erro ao excluir arquivo";
+        err instanceof Error ? err.message : t("addFilesModal.deleteFileError");
       setError(errorMsg);
     }
   };
@@ -275,7 +277,7 @@ export function AddFilesModal({
     try {
       await api.openFilePath(path);
     } catch {
-      setError("Não foi possível abrir a partitura selecionada");
+      setError(t("editScoreModal.openScoreError"));
     } finally {
       setOpeningScorePath(null);
     }
@@ -288,7 +290,7 @@ export function AddFilesModal({
     try {
       await api.openFileLocation(path);
     } catch {
-      setError("Não foi possível abrir o local da partitura selecionada");
+      setError(t("editScoreModal.openLocalError"));
     } finally {
       setOpeningLocationPath(null);
     }
@@ -296,17 +298,17 @@ export function AddFilesModal({
 
   const handleSave = async () => {
     if (!normalizedTitle) {
-      setError("O título da música é obrigatório");
+      setError(t("addFilesModal.titleRequired"));
       return;
     }
 
     if (fileEntries.length === 0) {
-      setError("Adicione pelo menos um arquivo");
+      setError(t("addFilesModal.noFilesSelected"));
       return;
     }
 
     if (hasPendingIssues) {
-      setError("Corrija as pendências antes de salvar");
+      setError(t("addFilesModal.pendingIssues"));
       return;
     }
 
@@ -340,7 +342,7 @@ export function AddFilesModal({
       await onSuccess(importResult.added_count);
       onClose();
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Erro ao salvar";
+      const errorMsg = err instanceof Error ? err.message : t("addFilesModal.saveError");
       setError(errorMsg);
     } finally {
       setIsSaving(false);
@@ -356,19 +358,19 @@ export function AddFilesModal({
   const reviewItems = useMemo(() => {
     const items: Array<
       | {
-          kind: "single";
-          file: IndexedFile;
-          idx: number;
-          conflict: ScoreConflict | null;
-          conflictMessage: string | null;
-          isLocked: boolean;
-          isIgnored: boolean;
-        }
+        kind: "single";
+        file: IndexedFile;
+        idx: number;
+        conflict: ScoreConflict | null;
+        conflictMessage: string | null;
+        isLocked: boolean;
+        isIgnored: boolean;
+      }
       | {
-          kind: "group";
-          normalizedInstrument: string;
-          entries: Array<{ file: IndexedFile; idx: number }>;
-        }
+        kind: "group";
+        normalizedInstrument: string;
+        entries: Array<{ file: IndexedFile; idx: number }>;
+      }
     > = [];
     const batchGroups = new Map<
       string,
@@ -434,7 +436,7 @@ export function AddFilesModal({
 
     if (isDuplicateSong) {
       messages.push(
-        `A música ${existingSong?.name ?? normalizedTitle} já existe. Altere o nome da música para continuar.`,
+        t("addFilesModal.duplicateSong", { name: existingSong?.name ?? normalizedTitle }),
       );
     }
 
@@ -443,12 +445,12 @@ export function AddFilesModal({
         const firstEntry = item.entries[0];
         const instrumentName = firstEntry
           ? reviewInstrumentNames[firstEntry.idx] ||
-            firstEntry.file.instrument ||
-            item.normalizedInstrument
+          firstEntry.file.instrument ||
+          item.normalizedInstrument
           : item.normalizedInstrument;
 
         messages.push(
-          `${item.entries.length} partituras usam o mesmo instrumento (${instrumentName}). Renomeie ou delete uma delas para continuar.`,
+          t("addFilesModal.twoScoresSameInstrument", { count: item.entries.length, instrument: instrumentName }),
         );
         return;
       }
@@ -471,7 +473,7 @@ export function AddFilesModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Adicionar Partitura(s)"
+      title={t("addFilesModal.title")}
       maxWidth="max-w-lg"
       footer={
         <ModalFooterButtons
@@ -485,7 +487,7 @@ export function AddFilesModal({
       {hasPendingIssues && pendingIssueMessages.length > 0 && (
         <div className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
           <p className="font-semibold">
-            Revise as pendências abaixo antes de salvar.
+              {t("addFilesModal.reviewPending")}
           </p>
           <ul className="mt-1 list-disc space-y-1 pl-4">
             {pendingIssueMessages.map((message) => (
@@ -495,11 +497,11 @@ export function AddFilesModal({
         </div>
       )}
 
-      <FormField label="Nome da Música" required>
+      <FormField label={t("addFilesModal.labelSongName")} required>
         <TextInput
           value={title}
           onChange={(value) => setTitle(normalizeSongNameInput(value))}
-          placeholder="Nome da música"
+          placeholder={t("editMusicModal.titlePlaceholder")}
           autoFocus
           readOnly={isDuplicateSong}
         />
@@ -507,26 +509,26 @@ export function AddFilesModal({
 
       {!isDuplicateSong && (
         <>
-          <FormField label="Compositor">
+          <FormField label={t("addFilesModal.labelComposer")}>
             <AutocompleteInput
               value={composer}
               onChange={setComposer}
-              placeholder="Nome do compositor"
+              placeholder={t("editMusicModal.composerPlaceholder")}
               suggestions={composerSuggestions}
             />
           </FormField>
 
-          <FormField label="Arranjador">
+          <FormField label={t("addFilesModal.labelArranger")}>
             <AutocompleteInput
               value={arranger}
               onChange={setArranger}
-              placeholder="Nome do arranjador"
+              placeholder={t("editMusicModal.arrangerPlaceholder")}
               suggestions={arrangerSuggestions}
             />
           </FormField>
 
           {visibleCategories.length > 0 && (
-            <FormField label="Categorias">
+            <FormField label={t("addFilesModal.labelCategories")}>
               <CategoryCheckboxList
                 categories={visibleCategories}
                 selectedIds={selectedCategories}
@@ -538,7 +540,7 @@ export function AddFilesModal({
       )}
 
       {instrumentCount > 0 && (
-        <FormField label={`Instrumentos a adicionar (${instrumentCount})`}>
+        <FormField label={t("addFilesModal.labelInstrumentsToAdd", { count: instrumentCount })}>
           <div className="rounded border border-[#c5cfdb] bg-white p-3 space-y-4 max-h-120 overflow-y-auto">
             {reviewItems.map((item) => {
               if (item.kind === "group") {
@@ -580,7 +582,7 @@ export function AddFilesModal({
                                 type="button"
                                 onClick={() => ignoreFile(idx)}
                                 className="p-1 text-[#8b9db2] hover:text-[#4f84d7] transition-colors"
-                                title="Ignorar arquivo"
+                                title={t("addFilesModal.titleIgnoreFile")}
                               >
                                 <Ban className="h-4 w-4" />
                               </button>
@@ -590,7 +592,7 @@ export function AddFilesModal({
                                   openDeleteFileModal(idx, file.path, fileName)
                                 }
                                 className="p-1 text-[#8b9db2] hover:text-red-500 transition-colors"
-                                title="Mover para lixeira"
+                                title={t("addFilesModal.titleMoveToTrash")}
                               >
                                 <Trash2 className="h-4 w-4" />
                               </button>
@@ -603,14 +605,14 @@ export function AddFilesModal({
                               onClick={() => handleOpenScore(file.path)}
                               disabled={isBusy}
                               className="inline-flex items-center gap-1 rounded border border-[#d8e0ea] px-2 py-1 text-[11px] text-[#5d738b] hover:bg-[#eef3f8] disabled:cursor-not-allowed disabled:opacity-60"
-                              title="Abrir partitura"
+                              title={t("addFilesModal.titleOpenScore")}
                             >
                               {openingScorePath === file.path ? (
                                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
                               ) : (
                                 <ExternalLink className="h-3.5 w-3.5" />
                               )}
-                              Abrir partitura
+                              {t("addFilesModal.btnOpenScore")}
                             </button>
 
                             <button
@@ -618,14 +620,14 @@ export function AddFilesModal({
                               onClick={() => handleOpenLocal(file.path)}
                               disabled={isBusy}
                               className="inline-flex items-center gap-1 rounded border border-[#d8e0ea] px-2 py-1 text-[11px] text-[#5d738b] hover:bg-[#eef3f8] disabled:cursor-not-allowed disabled:opacity-60"
-                              title="Abrir local"
+                              title={t("addFilesModal.titleOpenLocal")}
                             >
                               {openingLocationPath === file.path ? (
                                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
                               ) : (
                                 <FolderOpen className="h-3.5 w-3.5" />
                               )}
-                              Abrir local
+                              {t("addFilesModal.btnOpenLocal")}
                             </button>
                           </div>
 
@@ -639,7 +641,7 @@ export function AddFilesModal({
                             onBlur={() => {
                               commitInstrumentName(idx);
                             }}
-                            placeholder="Nome do instrumento"
+                            placeholder={t("addFilesModal.placeholderInstrumentName")}
                             autoFocus={visibleFiles[0]?.idx === idx}
                             disabled={isIgnored}
                             readOnly={isLocked}
@@ -692,8 +694,8 @@ export function AddFilesModal({
                         className={`p-1 transition-colors ${item.isIgnored ? "text-[#4f84d7] hover:text-[#345f9e]" : "text-[#8b9db2] hover:text-[#4f84d7]"}`}
                         title={
                           item.isIgnored
-                            ? "Designorar arquivo"
-                            : "Ignorar arquivo"
+                            ? t("addFilesModal.titleUnignoreFile")
+                            : t("addFilesModal.titleIgnoreFile")
                         }
                       >
                         {item.isIgnored ? (
@@ -713,7 +715,7 @@ export function AddFilesModal({
                         }
                         disabled={item.isLocked}
                         className="p-1 text-[#8b9db2] hover:text-red-500 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-                        title="Mover para lixeira"
+                        title={t("addFilesModal.titleMoveToTrash")}
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -723,7 +725,7 @@ export function AddFilesModal({
                   {item.isIgnored && (
                     <div className="flex items-center gap-2">
                       <span className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700">
-                        Ignorada
+                        {t("addFilesModal.badgeIgnored")}
                       </span>
                     </div>
                   )}
@@ -734,14 +736,14 @@ export function AddFilesModal({
                       onClick={() => handleOpenScore(item.file.path)}
                       disabled={isBusy}
                       className="inline-flex items-center gap-1 rounded border border-[#d8e0ea] px-2 py-1 text-[11px] text-[#5d738b] hover:bg-[#eef3f8] disabled:cursor-not-allowed disabled:opacity-60"
-                      title="Abrir partitura"
+                      title={t("addFilesModal.titleOpenScore")}
                     >
                       {openingScorePath === item.file.path ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
                       ) : (
                         <ExternalLink className="h-3.5 w-3.5" />
                       )}
-                      Abrir partitura
+                      {t("addFilesModal.btnOpenScore")}
                     </button>
 
                     <button
@@ -749,14 +751,14 @@ export function AddFilesModal({
                       onClick={() => handleOpenLocal(item.file.path)}
                       disabled={isBusy}
                       className="inline-flex items-center gap-1 rounded border border-[#d8e0ea] px-2 py-1 text-[11px] text-[#5d738b] hover:bg-[#eef3f8] disabled:cursor-not-allowed disabled:opacity-60"
-                      title="Abrir local"
+                      title={t("addFilesModal.titleOpenLocal")}
                     >
                       {openingLocationPath === item.file.path ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
                       ) : (
                         <FolderOpen className="h-3.5 w-3.5" />
                       )}
-                      Abrir
+                      {t("addFilesModal.btnOpen")}
                     </button>
                   </div>
 
@@ -770,7 +772,7 @@ export function AddFilesModal({
                     onBlur={() => {
                       commitInstrumentName(item.idx);
                     }}
-                    placeholder="Nome do instrumento"
+                    placeholder={t("addFilesModal.placeholderInstrumentName")}
                     autoFocus={visibleFiles[0]?.idx === item.idx}
                     disabled={item.isIgnored}
                     readOnly={item.isLocked}

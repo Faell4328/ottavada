@@ -262,7 +262,7 @@ fn open_file_location_on_system(file_path: &str) -> Result<(), AppError> {
 
 #[tauri::command]
 pub fn open_tutorial_url() -> Result<(), AppError> {
-    open_url_on_system("https://ottavada.com/#tutorial")
+    open_url_on_system("https://ottavada.com/docs")
 }
 
 fn extract_score_file_from_archive(
@@ -439,42 +439,22 @@ pub fn update_score(
     store: State<'_, SystemStore>,
     score_id: String,
     instrument_name: Option<String>,
-    file_path: String,
 ) -> Result<(), AppError> {
-    info!(
-        "Atualizando partitura: {} com arquivo: {}",
-        score_id, file_path
-    );
+    info!("Atualizando nome da partitura: {}", score_id);
 
-    let settings = require_server_settings(&store)?;
-    let path = Path::new(&file_path);
-    ensure_supported_score_file(path)?;
-
-    let now = Local::now().naive_local();
-
-    let (file_size, file_modified_at) = read_score_file_metadata(path)?;
-
-    let (score_file_path, file_name) = split_file_path(&file_path);
+    let _settings = require_server_settings(&store)?;
 
     let normalized_instrument_name = normalize_optional_score_name(instrument_name.as_deref());
 
-    db.update_score(
-        &score_id,
-        normalized_instrument_name,
-        &score_file_path,
-        &file_name,
-        file_size,
-        file_modified_at,
-        now,
-    )
-    .map(|_| {
-        info!("Partitura atualizada com sucesso: {}", score_id);
-        let _ = refresh_library_summary_cache(&db, &store);
-    })
-    .map_err(|e| {
-        error!("Erro ao atualizar partitura {}: {:?}", score_id, e);
-        e
-    })
+    db.update_score_name(&score_id, normalized_instrument_name)
+        .map(|_| {
+            info!("Nome da partitura atualizado com sucesso: {}", score_id);
+            let _ = refresh_library_summary_cache(&db, &store);
+        })
+        .map_err(|e| {
+            error!("Erro ao atualizar nome da partitura {}: {:?}", score_id, e);
+            e
+        })
 }
 
 #[tauri::command]
