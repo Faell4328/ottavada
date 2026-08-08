@@ -128,7 +128,7 @@ describe("ChangeComputerTypeModal", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        /Passará a consultar partituras no computador do maestro/,
+        /Passará a consultar partituras no Ottavada Gestor/,
       ),
     ).toBeInTheDocument();
     expect(
@@ -153,7 +153,7 @@ describe("ChangeComputerTypeModal", () => {
       screen.getByText(/Passará a indexar pastas locais/),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/Você está alterando o tipo de computador de Computador de Ensaio para Computador do Maestro/),
+      screen.getByText(/Você está alterando o tipo de computador de Ottavada Consulta para Ottavada Gestor/),
     ).toBeInTheDocument();
   });
 });

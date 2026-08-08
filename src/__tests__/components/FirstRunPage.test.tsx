@@ -50,7 +50,7 @@ describe("FirstRunPage", () => {
     renderWithAppProvider(<FirstRunPage />);
 
     fireEvent.click(screen.getByText("Próximo"));
-    fireEvent.click(screen.getByText("Computador do Maestro"));
+    fireEvent.click(screen.getByText("Ottavada Gestor"));
     fireEvent.click(screen.getByText("Próximo"));
 
     await waitFor(() => {
@@ -66,7 +66,7 @@ describe("FirstRunPage", () => {
     renderWithAppProvider(<FirstRunPage />);
 
     fireEvent.click(screen.getByText("Próximo"));
-    fireEvent.click(screen.getByText("Computador de Ensaio"));
+    fireEvent.click(screen.getByText("Ottavada Consulta"));
     fireEvent.click(screen.getByText("Próximo"));
 
     await waitFor(() => {
