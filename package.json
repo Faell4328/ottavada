@@ -17,6 +17,7 @@
     "tauri:build:win:x64": "dotenv -e src-tauri/.env -- tauri build --target x86_64-pc-windows-msvc && script.bat",
     "tauri:build:mac:x64": "dotenv -e src-tauri/.env -- tauri build --target x86_64-apple-darwin && sh script.sh",
     "tauri:build:mac:arm64": "dotenv -e src-tauri/.env -- tauri build --target aarch64-apple-darwin && sh script.sh",
+    "tauri:build:mac:universal": "sh -c 'APP=src-tauri/target/aarch64-apple-darwin/release/bundle/macos/Ottavada.app; lipo -create \"$APP/Contents/MacOS/Ottavada\" src-tauri/target/x86_64-apple-darwin/release/bundle/macos/Ottavada.app/Contents/MacOS/Ottavada -output \"$APP/Contents/MacOS/Ottavada\" && codesign --force --sign - \"$APP\" && mkdir -p dist && hdiutil create -volname Ottavada -srcfolder \"$APP\" -ov -format UDZO dist/Ottavada_universal.dmg'",
     "tauri:build:linux:x64": "sh -lc 'set -a; . src-tauri/.env; set +a; APPIMAGE_EXTRACT_AND_RUN=1 tauri build --target x86_64-unknown-linux-gnu --bundles appimage' && sh script.sh"
   },
   "dependencies": {
