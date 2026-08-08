@@ -484,7 +484,7 @@ describe("AddFilesModal", () => {
 
     expect(
       screen.getByText(
-        "Uma música CANON com mesmo compositor e arranjador já existe. Altere o nome, compositor ou arranjador para continuar.",
+        "Já existe uma música chamada CANON com o mesmo compositor e arranjador. Altere o nome, compositor ou arranjador para continuar.",
       ),
     ).toBeInTheDocument();
     expect(

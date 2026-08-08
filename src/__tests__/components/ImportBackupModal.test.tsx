@@ -117,7 +117,7 @@ describe("ImportBackupModal", () => {
     );
 
     expect(
-      screen.getByText(/Irá sobrescrever o banco de dados e as configurações atuais/),
+      screen.getByText(/Irá substituir todas as músicas, partituras e configurações atuais/),
     ).toBeInTheDocument();
     expect(
       screen.getByText(/Substitui os dados locais pelo conteúdo do backup/),
