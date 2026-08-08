@@ -242,8 +242,8 @@
     "saveError": "Error al guardar",
     "duplicateSong": "Una canción {{name}} con el mismo compositor y arreglista ya existe. Cambia el nombre, compositor o arreglista para continuar.",
     "reviewPending": "Revisa los pendientes a continuación antes de guardar.",
-    "twoScoresSameInstrument_one": "{{count}} partitura usa el mismo instrumento ({{instrument}}). Renombra o elimina una para continuar.",
-    "twoScoresSameInstrument_other": "{{count}} partituras usan el mismo instrumento ({{instrument}}). Renombra o elimina una de ellas para continuar."
+    "twoScoresSameInstrument_one": "{{count}} partitura usa el mismo instrumento ({{instrument}}). Renombra, ignora o elimina una para continuar.",
+    "twoScoresSameInstrument_other": "{{count}} partituras usan el mismo instrumento ({{instrument}}). Renombra, ignora o elimina una de ellas para continuar."
   },
   "scanReportModal": {
     "title": "Informe de verificación",

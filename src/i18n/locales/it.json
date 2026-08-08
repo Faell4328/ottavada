@@ -242,8 +242,8 @@
     "saveError": "Errore nel salvataggio",
     "duplicateSong": "Un brano {{name}} con lo stesso compositore e arrangiatore esiste già. Cambia il nome, compositore o arrangiatore per continuare.",
     "reviewPending": "Rivedi i problemi in sospeso qui sotto prima di salvare.",
-    "twoScoresSameInstrument_one": "{{count}} spartito utilizza lo stesso strumento ({{instrument}}). Rinomina o elimina uno per continuare.",
-    "twoScoresSameInstrument_other": "{{count}} spartiti utilizzano lo stesso strumento ({{instrument}}). Rinomina o elimina uno per continuare."
+    "twoScoresSameInstrument_one": "{{count}} spartito utilizza lo stesso strumento ({{instrument}}). Rinomina, ignora o elimina uno per continuare.",
+    "twoScoresSameInstrument_other": "{{count}} spartiti utilizzano lo stesso strumento ({{instrument}}). Rinomina, ignora o elimina uno per continuare."
   },
   "scanReportModal": {
     "title": "Rapporto di verifica",

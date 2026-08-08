@@ -508,7 +508,7 @@ describe("AddFilesModal", () => {
       .getAllByRole("listitem")
       .map((element) => element.textContent?.replace(/\s+/g, " ").trim());
     expect(messages).toContain(
-      "2 partituras usam o mesmo instrumento (Flauta). Renomeie ou delete uma delas para continuar.",
+          "2 partituras usam o mesmo instrumento (Flauta). Renomeie, ignore ou delete uma delas para continuar.",
     );
     expect(screen.getByRole("button", { name: "Salvar" })).toBeDisabled();
 
@@ -539,7 +539,7 @@ describe("AddFilesModal", () => {
     expect(document.activeElement).toBe(instrumentInput);
     expect(
       screen.getByText(
-        "2 partituras usam o mesmo instrumento (Flauta). Renomeie ou delete uma delas para continuar.",
+        "2 partituras usam o mesmo instrumento (Flauta). Renomeie, ignore ou delete uma delas para continuar.",
       ),
     ).toBeInTheDocument();
 
@@ -548,7 +548,7 @@ describe("AddFilesModal", () => {
     await waitFor(() => {
       expect(
         screen.queryByText(
-          "2 partituras usam o mesmo instrumento (Flauta). Renomeie ou delete uma delas para continuar.",
+      "2 partituras usam o mesmo instrumento (Flauta). Renomeie, ignore ou delete uma delas para continuar.",
         ),
       ).not.toBeInTheDocument();
     });

@@ -242,8 +242,8 @@
     "saveError": "Fehler beim Speichern",
     "duplicateSong": "Ein Lied {{name}} mit demselben Komponisten und Arrangeur existiert bereits. Ändern Sie den Namen, Komponisten oder Arrangeur, um fortzufahren.",
     "reviewPending": "Überprüfen Sie die unten stehenden ausstehenden Probleme vor dem Speichern.",
-    "twoScoresSameInstrument_one": "{{count}} Note verwendet dasselbe Instrument ({{instrument}}). Benennen Sie eine um oder löschen Sie sie, um fortzufahren.",
-    "twoScoresSameInstrument_other": "{{count}} Noten verwenden dasselbe Instrument ({{instrument}}). Benennen Sie eine um oder löschen Sie sie, um fortzufahren."
+    "twoScoresSameInstrument_one": "{{count}} Note verwendet dasselbe Instrument ({{instrument}}). Benennen Sie eine um, ignorieren Sie sie oder löschen Sie sie, um fortzufahren.",
+    "twoScoresSameInstrument_other": "{{count}} Noten verwenden dasselbe Instrument ({{instrument}}). Benennen Sie eine um, ignorieren Sie sie oder löschen Sie sie, um fortzufahren."
   },
   "scanReportModal": {
     "title": "Prüfungsbericht",

@@ -242,8 +242,8 @@
     "saveError": "Erreur lors de l'enregistrement",
     "duplicateSong": "Un chant {{name}} avec le même compositeur et arrangeur existe déjà. Modifiez le nom, le compositeur ou l'arrangeur pour continuer.",
     "reviewPending": "Vérifiez les problèmes ci-dessous avant d'enregistrer.",
-    "twoScoresSameInstrument_one": "{{count}} partition utilise le même instrument ({{instrument}}). Renommez ou supprimez-en une pour continuer.",
-    "twoScoresSameInstrument_other": "{{count}} partitions utilisent le même instrument ({{instrument}}). Renommez ou supprimez-en une pour continuer."
+    "twoScoresSameInstrument_one": "{{count}} partition utilise le même instrument ({{instrument}}). Renommez, ignorez ou supprimez-en une pour continuer.",
+    "twoScoresSameInstrument_other": "{{count}} partitions utilisent le même instrument ({{instrument}}). Renommez, ignorez ou supprimez-en une pour continuer."
   },
   "scanReportModal": {
     "title": "Rapport de vérification",

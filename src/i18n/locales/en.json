@@ -242,8 +242,8 @@
     "saveError": "Error saving",
     "duplicateSong": "A song {{name}} with the same composer and arranger already exists. Change the name, composer or arranger to continue.",
     "reviewPending": "Review the pending issues below before saving.",
-    "twoScoresSameInstrument_one": "{{count}} score uses the same instrument ({{instrument}}). Rename or delete one to continue.",
-    "twoScoresSameInstrument_other": "{{count}} scores use the same instrument ({{instrument}}). Rename or delete one to continue."
+    "twoScoresSameInstrument_one": "{{count}} score uses the same instrument ({{instrument}}). Rename, ignore, or delete one to continue.",
+    "twoScoresSameInstrument_other": "{{count}} scores use the same instrument ({{instrument}}). Rename, ignore, or delete one to continue."
   },
   "scanReportModal": {
     "title": "Verification report",

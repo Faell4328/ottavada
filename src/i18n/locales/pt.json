@@ -242,8 +242,8 @@
     "saveError": "Erro ao salvar",
     "duplicateSong": "Uma música {{name}} com mesmo compositor e arranjador já existe. Altere o nome, compositor ou arranjador para continuar.",
     "reviewPending": "Revise as pendências abaixo antes de salvar.",
-    "twoScoresSameInstrument_one": "{{count}} partitura usa o mesmo instrumento ({{instrument}}). Renomeie ou delete uma para continuar.",
-    "twoScoresSameInstrument_other": "{{count}} partituras usam o mesmo instrumento ({{instrument}}). Renomeie ou delete uma delas para continuar."
+    "twoScoresSameInstrument_one": "{{count}} partitura usa o mesmo instrumento ({{instrument}}). Renomeie, ignore ou delete uma para continuar.",
+    "twoScoresSameInstrument_other": "{{count}} partituras usam o mesmo instrumento ({{instrument}}). Renomeie, ignore ou delete uma delas para continuar."
   },
   "scanReportModal": {
     "title": "Relatório da verificação",
