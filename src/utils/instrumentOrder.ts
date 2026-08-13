@@ -61,9 +61,9 @@ export function getInstrumentRank(name: string | null | undefined): number {
     return 0;
   }
 
-  // ════════════ MADEIRA ════════════
+  // ════════════ WOODWINDS ════════════
 
-  // 1. Flautim / Piccolo
+  // 1. Piccolo
   if (
     includesAny(normalized, ["picc", "piccolo", "flauti"]) &&
     !includesAny(normalized, ["trumpet", "trompete"])
@@ -71,7 +71,7 @@ export function getInstrumentRank(name: string | null | undefined): number {
     return 1;
   }
 
-  // 3. Flauta Alto / Alto Flute
+  // 3. Alto Flute
   if (
     includesAny(normalized, ["alt"]) &&
     includesAny(normalized, ["flut", "flaut"])
@@ -79,22 +79,22 @@ export function getInstrumentRank(name: string | null | undefined): number {
     return 3;
   }
 
-  // 2. Flauta / Flute
+  // 2. Flute
   if (includesAny(normalized, ["flut", "flaut"])) {
     return 2;
   }
 
-  // 5. Oboé d'Amore / Oboe d'Amore
+  // 5. Oboe d'Amore
   if (includesAny(normalized, ["obo"]) && includesAny(normalized, ["amo"])) {
     return 5;
   }
 
-  // 4. Oboé / Oboe
+  // 4. Oboe
   if (includesAny(normalized, ["obo"])) {
     return 4;
   }
 
-  // 6. Corne Inglês / Cor Anglais
+  // 6. Cor Anglais
   if (
     includesAny(normalized, ["cor", "horn"]) &&
     includesAny(normalized, ["eng", "ing"])
@@ -102,12 +102,12 @@ export function getInstrumentRank(name: string | null | undefined): number {
     return 6;
   }
 
-  // 7. Heckelfone / Heckelphone
+  // 7. Heckelphone
   if (includesAny(normalized, ["heckel"])) {
     return 7;
   }
 
-  // 8. Clarinete Mib (Soprinho) / E♭ Clarinet
+  // 8. E♭ Clarinet
   if (
     includesAny(normalized, ["soprinho"]) ||
     (includesAny(normalized, ["clarinet"]) &&
@@ -116,7 +116,7 @@ export function getInstrumentRank(name: string | null | undefined): number {
     return 8;
   }
 
-  // 12. Clarinete Contrabaixo / Contrabass Clarinet
+  // 12. Contrabass Clarinet
   if (
     includesAny(normalized, ["clarinet"]) &&
     includesAny(normalized, ["contrabass", "contrabaixo"])
@@ -124,7 +124,7 @@ export function getInstrumentRank(name: string | null | undefined): number {
     return 12;
   }
 
-  // 10. Clarinete Baixo / Bass Clarinet
+  // 10. Bass Clarinet
   if (
     includesAny(normalized, ["clarinet"]) &&
     includesAny(normalized, ["bass", "baixo"])
@@ -132,7 +132,7 @@ export function getInstrumentRank(name: string | null | undefined): number {
     return 10;
   }
 
-  // 11. Clarinete Contralto / Contralto Clarinet
+  // 11. Contralto Clarinet
   if (
     includesAny(normalized, ["clarinet"]) &&
     includesAny(normalized, ["contralto"])
@@ -140,12 +140,12 @@ export function getInstrumentRank(name: string | null | undefined): number {
     return 11;
   }
 
-  // 9. Clarinete (Sib/Lá) / Clarinet (B♭/A)
+  // 9. Clarinet (B♭/A)
   if (includesAny(normalized, ["clarinet"])) {
     return 9;
   }
 
-  // 17. Saxofone Baixo / Bass Saxophone
+  // 17. Bass Saxophone
   if (
     includesAny(normalized, ["sax", "saxofone"]) &&
     includesAny(normalized, ["bass", "baixo"])
@@ -153,7 +153,7 @@ export function getInstrumentRank(name: string | null | undefined): number {
     return 17;
   }
 
-  // 16. Saxofone Barítono / Baritone Saxophone
+  // 16. Baritone Saxophone
   if (
     includesAny(normalized, ["bari", "barí"]) &&
     includesAny(normalized, ["sax", "saxofone"])
@@ -161,7 +161,7 @@ export function getInstrumentRank(name: string | null | undefined): number {
     return 16;
   }
 
-  // 15. Saxofone Tenor / Tenor Saxophone
+  // 15. Tenor Saxophone
   if (
     includesAny(normalized, ["tenor"]) &&
     includesAny(normalized, ["sax", "saxofone"])
@@ -169,7 +169,7 @@ export function getInstrumentRank(name: string | null | undefined): number {
     return 15;
   }
 
-  // 14. Saxofone Alto / Alto Saxophone
+  // 14. Alto Saxophone
   if (
     includesAny(normalized, ["alto"]) &&
     includesAny(normalized, ["sax", "saxofone"])
@@ -177,7 +177,7 @@ export function getInstrumentRank(name: string | null | undefined): number {
     return 14;
   }
 
-  // 13. Saxofone Soprano / Soprano Saxophone
+  // 13. Soprano Saxophone
   if (
     includesAny(normalized, ["soprano"]) &&
     includesAny(normalized, ["sax", "saxofone"])
@@ -185,12 +185,12 @@ export function getInstrumentRank(name: string | null | undefined): number {
     return 13;
   }
 
-  // Sax genérico (fallback)
+  // Generic sax (fallback)
   if (includesAny(normalized, ["sax", "saxofone"])) {
     return 13;
   }
 
-  // Standalone (sax sem token "sax")
+  // Standalone (sax without the "sax" token)
   if (includesAny(normalized, ["soprano"])) {
     return 13;
   }
@@ -209,36 +209,36 @@ export function getInstrumentRank(name: string | null | undefined): number {
     return 15;
   }
 
-  // 19. Contrafagote / Contrabassoon
+  // 19. Contrabassoon
   if (includesAny(normalized, ["contrabassoon", "contrafagote"])) {
     return 19;
   }
 
-  // 18. Fagote / Bassoon
+  // 18. Bassoon
   if (includesAny(normalized, ["bassoon", "fagote"])) {
     return 18;
   }
 
-  // ════════════ METAIS ════════════
+  // ════════════ BRASS ════════════
 
-  // 21. Trompa Wagneriana / Wagner Tuba
+  // 21. Wagner Tuba
   if (includesAny(normalized, ["wagner"])) {
     return 21;
   }
 
-  // 30. Eufônio (Barítono) / Euphonium / Baritone Horn
+  // 30. Euphonium / Baritone Horn
   // Must be checked before generic Horn to avoid confusion
   if (includesAny(normalized, ["euphoni", "eufoni", "baritone", "baritono"])) {
     return 30;
   }
 
-  // 26. Fliscorno / Flugelhorn
+  // 26. Flugelhorn
   // Must be checked before generic Horn to avoid "flugelhorn" matching "horn"
   if (includesAny(normalized, ["flugel", "fliscorno"])) {
     return 26;
   }
 
-  // 20. Trompa (Trompa Francesa) / Horn (French Horn)
+  // 20. Horn (French Horn)
   if (
     includesAny(normalized, ["trompa", "horn"]) &&
     !includesAny(normalized, ["baritone", "baritono", "euphoni", "eufoni"])
@@ -246,7 +246,7 @@ export function getInstrumentRank(name: string | null | undefined): number {
     return 20;
   }
 
-  // 22. Trompete Piccolo / Piccolo Trumpet
+  // 22. Piccolo Trumpet
   if (
     includesAny(normalized, ["trumpet", "trompete"]) &&
     includesAny(normalized, ["picc"])
@@ -254,7 +254,7 @@ export function getInstrumentRank(name: string | null | undefined): number {
     return 22;
   }
 
-  // 24. Trompete Baixo / Bass Trumpet
+  // 24. Bass Trumpet
   if (
     includesAny(normalized, ["trumpet", "trompete"]) &&
     includesAny(normalized, ["bass", "baixo"])
@@ -262,17 +262,17 @@ export function getInstrumentRank(name: string | null | undefined): number {
     return 24;
   }
 
-  // 23. Trompete / Trumpet
+  // 23. Trumpet
   if (includesAny(normalized, ["trumpet", "trompete"])) {
     return 23;
   }
 
-  // 25. Cornetim / Cornet (B♭)
+  // 25. Cornet (B♭)
   if (includesAny(normalized, ["cornet"])) {
     return 25;
   }
 
-  // 27. Trombone Alto / Alto Trombone
+  // 27. Alto Trombone
   if (
     includesAny(normalized, ["trombone"]) &&
     includesAny(normalized, ["alto"])
@@ -280,7 +280,7 @@ export function getInstrumentRank(name: string | null | undefined): number {
     return 27;
   }
 
-  // 29. Trombone Baixo / Bass Trombone
+  // 29. Bass Trombone
   if (
     includesAny(normalized, ["trombone"]) &&
     includesAny(normalized, ["bass", "baixo"])
@@ -288,74 +288,74 @@ export function getInstrumentRank(name: string | null | undefined): number {
     return 29;
   }
 
-  // 28. Trombone (Tenor) / Trombone
+  // 28. Trombone
   if (includesAny(normalized, ["trombone"])) {
     return 28;
   }
 
-  // 31. Tuba / Tuba
+  // 31. Tuba
   if (includesAny(normalized, ["tuba"])) {
     return 31;
   }
 
-  // ════════════ PERCUSSÃO ════════════
+  // ════════════ PERCUSSION ════════════
 
-  // 32. Tímpanos / Timpani
+  // 32. Timpani
   if (includesAny(normalized, ["timpan"])) {
     return 32;
   }
 
-  // 33. Caixa Clara / Snare Drum
+  // 33. Snare Drum
   if (includesAny(normalized, ["snare", "caixa"])) {
     return 33;
   }
 
-  // 34. Bumbo / Bass Drum
+  // 34. Bass Drum
   if (includesAny(normalized, ["bumbo", "bombo"]) || normalized.includes("bass drum")) {
     return 34;
   }
 
-  // 35. Tom-tom / Tom-tom (single drum)
+  // 35. Tom-tom (single drum)
   if (normalized.includes("tom tom")) {
     return 35;
   }
 
-  // 36. Bateria / Drum set
+  // 36. Drum set
   if (includesAny(normalized, ["bateria", "drum"])) {
     return 36;
   }
 
-  // 37. Bongôs / Bongos
+  // 37. Bongos
   if (includesAny(normalized, ["bongo"])) {
     return 37;
   }
 
-  // 38. Congas / Congas
+  // 38. Congas
   if (includesAny(normalized, ["conga"])) {
     return 38;
   }
 
-  // 39. Pratos / Cymbals (crash & ride)
+  // 39. Cymbals (crash & ride)
   if (includesAny(normalized, ["cymbal", "prato"])) {
     return 39;
   }
 
-  // 40. Triângulo / Triangle
+  // 40. Triangle
   if (includesAny(normalized, ["tria", "triâ", "triangle"])) {
     return 40;
   }
 
-  // 41. Pandeiro / Tambourine
+  // 41. Tambourine
   if (includesAny(normalized, ["tambourine", "pandeiro"])) {
     return 41;
   }
 
-  // 42. Adufe / Tambour (frame drum)
+  // 42. Tambour (frame drum)
   if (includesAny(normalized, ["adufe", "tambour"])) {
     return 42;
   }
 
-  // 44. Sinos de Trenó / Sleigh bells
+  // 44. Sleigh bells
   if (
     includesAny(normalized, ["sleigh"]) ||
     (includesAny(normalized, ["sino"]) && includesAny(normalized, ["tren"]))
@@ -363,7 +363,7 @@ export function getInstrumentRank(name: string | null | undefined): number {
     return 44;
   }
 
-  // 43. Sinos de Mão / Handbells
+  // 43. Handbells
   if (
     includesAny(normalized, ["handbell", "hand"]) ||
     (includesAny(normalized, ["sino"]) && includesAny(normalized, ["mao"]))
@@ -371,57 +371,57 @@ export function getInstrumentRank(name: string | null | undefined): number {
     return 43;
   }
 
-  // 45. Castanholas / Castanets
+  // 45. Castanets
   if (includesAny(normalized, ["castanhola", "castanet"])) {
     return 45;
   }
 
-  // 46. Bloco de Madeira / Wood block
+  // 46. Wood block
   if (includesAny(normalized, ["wood"])) {
     return 46;
   }
 
-  // 47. Blocos de Templo / Temple blocks
+  // 47. Temple blocks
   if (includesAny(normalized, ["temple"])) {
     return 47;
   }
 
-  // 48. Maracas / Maracas
+  // 48. Maracas
   if (includesAny(normalized, ["maraca"])) {
     return 48;
   }
 
-  // 49. Tam-Tam (Gongo) / Tam-tam (gong)
+  // 49. Tam-tam (gong)
   if (includesAny(normalized, ["gong"]) || normalized.includes("tam tam")) {
     return 49;
   }
 
-  // 50. Crótalos / Crotales
+  // 50. Crotales
   if (includesAny(normalized, ["crotal"])) {
     return 50;
   }
 
-  // 51. Glockenspiel / Glockenspiel
+  // 51. Glockenspiel
   if (includesAny(normalized, ["glo", "glocken", "sininho"])) {
     return 51;
   }
 
-  // 52. Xilofone / Xylophone
+  // 52. Xylophone
   if (includesAny(normalized, ["xyl"])) {
     return 52;
   }
 
-  // 53. Marimba / Marimba
+  // 53. Marimba
   if (includesAny(normalized, ["marimba", "mari"])) {
     return 53;
   }
 
-  // 54. Vibrafone / Vibraphone
+  // 54. Vibraphone
   if (includesAny(normalized, ["vibra"])) {
     return 54;
   }
 
-  // 55. Sinos Tubulares / Tubular bells
+  // 55. Tubular bells
   if (
     includesAny(normalized, ["chime", "carri", "tubular"]) ||
     (includesAny(normalized, ["sino"]) && includesAny(normalized, ["tubu"]))
@@ -429,69 +429,69 @@ export function getInstrumentRank(name: string | null | undefined): number {
     return 55;
   }
 
-  // Fallback timpani (genérico "tim"/"tím")
+  // Fallback timpani (generic "tim"/"tím")
   if (includesAny(normalized, ["tím", "tim"])) {
     return 32;
   }
 
-  // Catch-all percussão
+  // Catch-all percussion
   if (includesAny(normalized, ["percu"])) {
     return 32;
   }
 
-  // ════════════ TECLADOS ════════════
+  // ════════════ KEYBOARDS ════════════
 
-  // 56. Celesta / Celesta
+  // 56. Celesta
   if (includesAny(normalized, ["celesta"])) {
     return 56;
   }
 
-  // 57. Piano / Piano
+  // 57. Piano
   if (includesAny(normalized, ["piano"])) {
     return 57;
   }
 
-  // 58. Cravo / Harpsichord
+  // 58. Harpsichord
   if (includesAny(normalized, ["harps", "cravo"])) {
     return 58;
   }
 
-  // 59. Órgão de Tubos / Pipe organ
+  // 59. Pipe organ
   if (includesAny(normalized, ["órg", "org"])) {
     return 59;
   }
 
-  // 60. Acordeão / Accordion
+  // 60. Accordion
   if (includesAny(normalized, ["accor", "acor", "sanfona"])) {
     return 60;
   }
 
-  // ════════════ HARPA ════════════
+  // ════════════ HARP ════════════
 
-  // 61. Harpa / Harp
+  // 61. Harp
 
   if (includesAny(normalized, ["harpa", "harp"])) {
     return 61;
   }
 
-  // ════════════ CORDAS DE ARCO ════════════
+  // ════════════ BOWED STRINGS ════════════
 
-  // 62. Violino / Violin
+  // 62. Violin
   if (includesAny(normalized, ["violi"])) {
     return 62;
   }
 
-  // 63. Viola / Viola
+  // 63. Viola
   if (includesAny(normalized, ["viola"])) {
     return 63;
   }
 
-  // 64. Violoncelo / Cello (violoncello)
+  // 64. Cello (violoncello)
   if (includesAny(normalized, ["cello", "violoncello", "celo"])) {
     return 64;
   }
 
-  // 65. Contrabaixo / Double bass / Contrabass
+  // 65. Double bass / Contrabass
   if (includesAny(normalized, ["contrabass", "double", "contrabaixo"])) {
     return 65;
   }

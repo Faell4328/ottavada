@@ -187,7 +187,7 @@ mod tests {
     fn test_update_song_categories() {
         let db = make_db();
         let cat1 = make_category("c1", "Hinos");
-        let cat2 = make_category("c2", "Clássicas");
+        let cat2 = make_category("c2", "Classics");
         db.insert_category(&cat1).unwrap();
         db.insert_category(&cat2).unwrap();
 
@@ -214,7 +214,7 @@ mod tests {
     fn test_insert_song_category_ids_are_trimmed_deduplicated_and_blank_filtered() {
         let db = make_db();
         db.insert_category(&make_category("c1", "Hinos")).unwrap();
-        db.insert_category(&make_category("c2", "Clássicas"))
+        db.insert_category(&make_category("c2", "Classics"))
             .unwrap();
 
         let relation_events_before = count_changed_field_for_entity(&db, "categoriesSongs");
@@ -274,7 +274,7 @@ mod tests {
     fn test_update_song_category_ids_are_deduplicated_for_changed_field_generation() {
         let db = make_db();
         db.insert_category(&make_category("c1", "Hinos")).unwrap();
-        db.insert_category(&make_category("c2", "Clássicas"))
+        db.insert_category(&make_category("c2", "Classics"))
             .unwrap();
         db.insert_song(&make_song("s1", "Canon"), &["c1".to_string()])
             .unwrap();

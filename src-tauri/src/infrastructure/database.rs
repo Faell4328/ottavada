@@ -7,7 +7,7 @@ use crate::domain::errors::AppError;
 use crate::services::path_normalizer::from_storage_path;
 
 pub(crate) const DEFAULT_CATEGORY_ID: &str = "default-category";
-pub(crate) const DEFAULT_CATEGORY_NAME: &str = "Sem categoria";
+pub(crate) const DEFAULT_CATEGORY_NAME: &str = "Uncategorized";
 
 pub(crate) const SONGS_SELECT_FIELDS: &str =
     "id, name, composer, arranger, path, datetime('now') AS updated_at, is_favorite, status";

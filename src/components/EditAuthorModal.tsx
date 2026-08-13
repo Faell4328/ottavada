@@ -49,8 +49,8 @@ export function EditAuthorModal({ isOpen, author, onClose, onSave }: EditAuthorM
 
   if (!author) return null;
 
-  //const title = author.kind === "composer" ? "Editar Compositor" : "Editar Arranjador";
-  //const label = author.kind === "composer" ? "Nome do Compositor" : "Nome do Arranjador";
+  //const title = author.kind === "composer" ? "Edit Composer" : "Edit Arranger";
+  //const label = author.kind === "composer" ? "Composer Name" : "Arranger Name";
   const title = author.kind === "composer" ? t("editAuthorModal.editComposerTitle"): t("editAuthorModal.editArrangerTitle");
   const label = author.kind === "composer" ? t("editAuthorModal.nameComposerLabel"): t("editAuthorModal.nameArrangerLabel");
 

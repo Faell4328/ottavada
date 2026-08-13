@@ -40,7 +40,7 @@ mod tests {
     #[test]
     fn test_category_crud() {
         let db = make_db();
-        let cat = make_category("c1", "Harpa Cristã");
+        let cat = make_category("c1", "Christian Harp");
         let cat2 = make_category("c2", "Acordes");
         db.insert_category(&cat).unwrap();
         db.insert_category(&cat2).unwrap();
@@ -48,33 +48,33 @@ mod tests {
         let categories = db.get_all_categories().unwrap();
         assert_eq!(categories.len(), 3);
         assert_eq!(categories[0].id, "default-category");
-        assert_eq!(categories[0].name, "Sem categoria");
+        assert_eq!(categories[0].name, "Uncategorized");
         assert_eq!(categories[1].name, "Acordes");
-        assert_eq!(categories[2].name, "Harpa Cristã");
+        assert_eq!(categories[2].name, "Christian Harp");
 
         db.delete_category("c1").unwrap();
         db.delete_category("c2").unwrap();
         let categories = db.get_all_categories().unwrap();
         assert_eq!(categories.len(), 1);
         assert_eq!(categories[0].id, "default-category");
-        assert_eq!(categories[0].name, "Sem categoria");
+        assert_eq!(categories[0].name, "Uncategorized");
     }
 
     #[test]
     fn test_update_category_renames_category() {
         let db = make_db();
-        let cat = make_category("c1", "Harpa Cristã");
+        let cat = make_category("c1", "Christian Harp");
         db.insert_category(&cat).unwrap();
 
-        db.update_category("c1", "Coral").unwrap();
+        db.update_category("c1", "Choir").unwrap();
 
         let categories = db.get_all_categories().unwrap();
-        assert!(categories.iter().any(|c| c.id == "c1" && c.name == "Coral"));
+        assert!(categories.iter().any(|c| c.id == "c1" && c.name == "Choir"));
 
         let conn = db.lock_conn();
         let change_count: i64 = conn
             .query_row(
-                "SELECT COUNT(*) FROM changedField WHERE entity = 'categories' AND entityId = ?1 AND field = 'name' AND value = 'Coral'",
+                "SELECT COUNT(*) FROM changedField WHERE entity = 'categories' AND entityId = ?1 AND field = 'name' AND value = 'Choir'",
                 ["c1"],
                 |row| row.get(0),
             )
@@ -180,7 +180,7 @@ mod tests {
         let db = make_db();
 
         let cat1 = make_category("c1", "Hinos");
-        let cat2 = make_category("c2", "Clássicas");
+        let cat2 = make_category("c2", "Classics");
         db.insert_category(&cat1).unwrap();
         db.insert_category(&cat2).unwrap();
 

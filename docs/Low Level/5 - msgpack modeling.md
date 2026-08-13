@@ -1,62 +1,62 @@
-**Por questão de simplicidade, a documentação usa JSON nos exemplos, mas o arquivo real é um MessagePack comprimido com Zstandard (`.msgpack.zst`).**
+**For simplicity, the documentation uses JSON in the examples, but the real file is a MessagePack compressed with Zstandard (`.msgpack.zst`).**
 
-Os nomes abaixo são a representação serializada atual. O backup completo possui schema próprio e não deve ser inferido apenas pelos exemplos de snapshot e eventos.
+The names below are the current serialized representation. The full backup has its own schema and must not be inferred only from the snapshot and event examples.
 
 # 1. snapshot.msgpack.zst
 
-Um exemplo simplificado da estrutura.
+A simplified example of the structure.
 
 ```json
 {
     "generatedAt": 1710684000,
     "categories": [
         {
-            "id": "uuid-categoria-1",
-            "name": "Clássica"
+            "id": "uuid-category-1",
+            "name": "Classical"
         }
     ],
     "categoriesSongs": [
         {
-            "id": "uuid-relacao-1",
-            "categoryId": "uuid-categoria-1",
-            "songId": "uuid-musica-1"
+            "id": "uuid-relation-1",
+            "categoryId": "uuid-category-1",
+            "songId": "uuid-song-1"
         }
     ],
     "composers": [
         {
-            "id": "uuid-compositor-1",
+            "id": "uuid-composer-1",
             "name": "Ludwig van Beethoven"
         }
     ],
     "composerSongs": [
         {
-            "id": "uuid-relacao-2",
-            "composerId": "uuid-compositor-1",
-            "songId": "uuid-musica-1"
+            "id": "uuid-relation-2",
+            "composerId": "uuid-composer-1",
+            "songId": "uuid-song-1"
         }
     ],
     "arrangers": [
         {
-            "id": "uuid-arranjador-1",
+            "id": "uuid-arranger-1",
             "name": "Nikolai Rimsky-Korsakov"
         }
     ],
     "arrangerSongs": [
         {
-            "id": "uuid-relacao-3",
-            "arrangerId": "uuid-arranjador-1",
-            "songId": "uuid-musica-1"
+            "id": "uuid-relation-3",
+            "arrangerId": "uuid-arranger-1",
+            "songId": "uuid-song-1"
         }
     ],
     "songs": [
         {
-            "id": "uuid-musica-1",
-            "name": "Hino Nacional",
+            "id": "uuid-song-1",
+            "name": "National Anthem",
             "scores": [
                 {
                     "id": "uuid-score-1",
-                    "songId": "uuid-musica-1",
-                    "name": "Flauta 1",
+                    "songId": "uuid-song-1",
+                    "name": "Flute 1",
                     "fileExtension": ".musx"
                 }
             ]
@@ -69,33 +69,33 @@ Um exemplo simplificado da estrutura.
 
 # 2. events.msgpack.zst
 
-Os eventos são armazenados em ordem crescente de `timestamp`. Quando dois eventos possuem o mesmo timestamp, eles são ordenados pelo `id` do evento. Novos registros são adicionados ao final.
+The events are stored in ascending order of `timestamp`. When two events have the same timestamp, they are ordered by the event's `id`. New records are appended to the end.
 
-Cada evento possui um `id` próprio, mas o cliente atualmente persiste e utiliza `last_change_timestamp` como cursor de sincronização. Portanto, todos os eventos com timestamp maior que o último timestamp aplicado são processados em conjunto. A ordenação por `timestamp` e `id` deve ser preservada no arquivo para garantir aplicação determinística dentro desse conjunto.
+Each event has its own `id`, but the client currently persists and uses `last_change_timestamp` as the synchronization cursor. Therefore, all events with a timestamp greater than the last applied timestamp are processed together. The ordering by `timestamp` and `id` must be preserved in the file to ensure deterministic application within that set.
 
-O `id` do evento não substitui o cursor de timestamp no estado local do cliente.
+The event's `id` does not replace the timestamp cursor in the client's local state.
 
 ---
 
-## 2.1. Categoria
+## 2.1. Category
 
-Utiliza os `type`: `insert`, `update` e `delete`.
+Uses the `type`: `insert`, `update` and `delete`.
 
-### 2.1.1. Inserção
+### 2.1.1. Insert
 
 ```json
 {
     "events": [
         {
-            "id": "uuid-evento-1",
+            "id": "uuid-event-1",
             "timestamp": 1710685000,
             "type": "insert",
             "entity": "categories",
-            "entityId": "uuid-categoria-1",
+            "entityId": "uuid-category-1",
             "data": [
                 {
                     "field": "name",
-                    "value": "Clássica"
+                    "value": "Classical"
                 }
             ]
         }
@@ -103,21 +103,21 @@ Utiliza os `type`: `insert`, `update` e `delete`.
 }
 ```
 
-### 2.1.2. Atualização
+### 2.1.2. Update
 
 ```json
 {
     "events": [
         {
-            "id": "uuid-evento-2",
+            "id": "uuid-event-2",
             "timestamp": 1710685001,
             "type": "update",
             "entity": "categories",
-            "entityId": "uuid-categoria-1",
+            "entityId": "uuid-category-1",
             "data": [
                 {
                     "field": "name",
-                    "value": "Clássica 1"
+                    "value": "Classical 1"
                 }
             ]
         }
@@ -125,45 +125,45 @@ Utiliza os `type`: `insert`, `update` e `delete`.
 }
 ```
 
-### 2.1.3. Exclusão
+### 2.1.3. Delete
 
 ```json
 {
     "events": [
         {
-            "id": "uuid-evento-3",
+            "id": "uuid-event-3",
             "timestamp": 1710685002,
             "type": "delete",
             "entity": "categories",
-            "entityId": "uuid-categoria-1"
+            "entityId": "uuid-category-1"
         }
     ]
 }
 ```
 
-## 2.2. Relação categoria e música
+## 2.2. Category-song relation
 
-Utiliza os `type`: `insert` e `delete`.
+Uses the `type`: `insert` and `delete`.
 
-### 2.2.1. Inserção
+### 2.2.1. Insert
 
 ```json
 {
     "events": [
         {
-            "id": "uuid-evento-4",
+            "id": "uuid-event-4",
             "timestamp": 1710685003,
             "type": "insert",
             "entity": "categoriesSongs",
-            "entityId": "uuid-relacao-1",
+            "entityId": "uuid-relation-1",
             "data": [
                 {
                     "field": "categoryId",
-                    "value": "uuid-categoria-1"
+                    "value": "uuid-category-1"
                 },
                 {
                     "field": "songId",
-                    "value": "uuid-musica-1"
+                    "value": "uuid-song-1"
                 }
             ]
         }
@@ -171,37 +171,37 @@ Utiliza os `type`: `insert` e `delete`.
 }
 ```
 
-### 2.2.2. Exclusão
+### 2.2.2. Delete
 
 ```json
 {
     "events": [
         {
-            "id": "uuid-evento-5",
+            "id": "uuid-event-5",
             "timestamp": 1710685004,
             "type": "delete",
             "entity": "categoriesSongs",
-            "entityId": "uuid-relacao-1"
+            "entityId": "uuid-relation-1"
         }
     ]
 }
 ```
 
-## 2.3. Compositores
+## 2.3. Composers
 
-Utiliza os `type`: `insert`, `update` e `delete`.
+Uses the `type`: `insert`, `update` and `delete`.
 
-### 2.3.1. Inserção
+### 2.3.1. Insert
 
 ```json
 {
     "events": [
         {
-            "id": "uuid-evento-6",
+            "id": "uuid-event-6",
             "timestamp": 1710685005,
             "type": "insert",
             "entity": "composers",
-            "entityId": "uuid-compositor-1",
+            "entityId": "uuid-composer-1",
             "data": [
                 {
                     "field": "name",
@@ -213,17 +213,17 @@ Utiliza os `type`: `insert`, `update` e `delete`.
 }
 ```
 
-### 2.3.2. Atualização
+### 2.3.2. Update
 
 ```json
 {
     "events": [
         {
-            "id": "uuid-evento-7",
+            "id": "uuid-event-7",
             "timestamp": 1710685006,
             "type": "update",
             "entity": "composers",
-            "entityId": "uuid-compositor-1",
+            "entityId": "uuid-composer-1",
             "data": [
                 {
                     "field": "name",
@@ -235,45 +235,45 @@ Utiliza os `type`: `insert`, `update` e `delete`.
 }
 ```
 
-### 2.3.3. Exclusão
+### 2.3.3. Delete
 
 ```json
 {
     "events": [
         {
-            "id": "uuid-evento-8",
+            "id": "uuid-event-8",
             "timestamp": 1710685007,
             "type": "delete",
             "entity": "composers",
-            "entityId": "uuid-compositor-1"
+            "entityId": "uuid-composer-1"
         }
     ]
 }
 ```
 
-## 2.4. Relação compositor e música
+## 2.4. Composer-song relation
 
-Utiliza os `type`: `insert` e `delete`.
+Uses the `type`: `insert` and `delete`.
 
-### 2.4.1. Inserção
+### 2.4.1. Insert
 
 ```json
 {
     "events": [
         {
-            "id": "uuid-evento-9",
+            "id": "uuid-event-9",
             "timestamp": 1710685008,
             "type": "insert",
             "entity": "composerSongs",
-            "entityId": "uuid-relacao-2",
+            "entityId": "uuid-relation-2",
             "data": [
                 {
                     "field": "composerId",
-                    "value": "uuid-compositor-1"
+                    "value": "uuid-composer-1"
                 },
                 {
                     "field": "songId",
-                    "value": "uuid-musica-1"
+                    "value": "uuid-song-1"
                 }
             ]
         }
@@ -281,37 +281,37 @@ Utiliza os `type`: `insert` e `delete`.
 }
 ```
 
-### 2.4.2. Exclusão
+### 2.4.2. Delete
 
 ```json
 {
     "events": [
         {
-            "id": "uuid-evento-10",
+            "id": "uuid-event-10",
             "timestamp": 1710685009,
             "type": "delete",
             "entity": "composerSongs",
-            "entityId": "uuid-relacao-2"
+            "entityId": "uuid-relation-2"
         }
     ]
 }
 ```
 
-## 2.5. Arranjadores
+## 2.5. Arrangers
 
-Utiliza os `type`: `insert`, `update` e `delete`.
+Uses the `type`: `insert`, `update` and `delete`.
 
-### 2.5.1. Inserção
+### 2.5.1. Insert
 
 ```json
 {
     "events": [
         {
-            "id": "uuid-evento-11",
+            "id": "uuid-event-11",
             "timestamp": 1710685010,
             "type": "insert",
             "entity": "arrangers",
-            "entityId": "uuid-arranjador-1",
+            "entityId": "uuid-arranger-1",
             "data": [
                 {
                     "field": "name",
@@ -323,17 +323,17 @@ Utiliza os `type`: `insert`, `update` e `delete`.
 }
 ```
 
-### 2.5.2. Atualização
+### 2.5.2. Update
 
 ```json
 {
     "events": [
         {
-            "id": "uuid-evento-12",
+            "id": "uuid-event-12",
             "timestamp": 1710685011,
             "type": "update",
             "entity": "arrangers",
-            "entityId": "uuid-arranjador-1",
+            "entityId": "uuid-arranger-1",
             "data": [
                 {
                     "field": "name",
@@ -345,45 +345,45 @@ Utiliza os `type`: `insert`, `update` e `delete`.
 }
 ```
 
-### 2.5.3. Exclusão
+### 2.5.3. Delete
 
 ```json
 {
     "events": [
         {
-            "id": "uuid-evento-13",
+            "id": "uuid-event-13",
             "timestamp": 1710685012,
             "type": "delete",
             "entity": "arrangers",
-            "entityId": "uuid-arranjador-1"
+            "entityId": "uuid-arranger-1"
         }
     ]
 }
 ```
 
-## 2.6. Relação arranjador e música
+## 2.6. Arranger-song relation
 
-Utiliza os `type`: `insert` e `delete`.
+Uses the `type`: `insert` and `delete`.
 
-### 2.6.1. Inserção
+### 2.6.1. Insert
 
 ```json
 {
     "events": [
         {
-            "id": "uuid-evento-14",
+            "id": "uuid-event-14",
             "timestamp": 1710685013,
             "type": "insert",
             "entity": "arrangerSongs",
-            "entityId": "uuid-relacao-3",
+            "entityId": "uuid-relation-3",
             "data": [
                 {
                     "field": "arrangerId",
-                    "value": "uuid-arranjador-1"
+                    "value": "uuid-arranger-1"
                 },
                 {
                     "field": "songId",
-                    "value": "uuid-musica-1"
+                    "value": "uuid-song-1"
                 }
             ]
         }
@@ -391,45 +391,45 @@ Utiliza os `type`: `insert` e `delete`.
 }
 ```
 
-### 2.6.2. Exclusão
+### 2.6.2. Delete
 
 ```json
 {
     "events": [
         {
-            "id": "uuid-evento-15",
+            "id": "uuid-event-15",
             "timestamp": 1710685014,
             "type": "delete",
             "entity": "arrangerSongs",
-            "entityId": "uuid-relacao-3"
+            "entityId": "uuid-relation-3"
         }
     ]
 }
 ```
 
-## 2.7. Músicas
+## 2.7. Songs
 
-Utiliza os `type`: `insert`, `update` e `delete`.
+Uses the `type`: `insert`, `update` and `delete`.
 
-### 2.7.1. Inserção
+### 2.7.1. Insert
 
 ```json
 {
     "events": [
         {
-            "id": "uuid-evento-16",
+            "id": "uuid-event-16",
             "timestamp": 1710685015,
             "type": "insert",
             "entity": "songs",
-            "entityId": "uuid-musica-1",
+            "entityId": "uuid-song-1",
             "data": [
                 {
                     "field": "name",
-                    "value": "Hino Nacional"
+                    "value": "National Anthem"
                 },
                 {
                     "field": "path",
-                    "value": "C:/Repertorio/Hino Nacional"
+                    "value": "C:/Repertoire/National Anthem"
                 }
             ]
         }
@@ -437,21 +437,21 @@ Utiliza os `type`: `insert`, `update` e `delete`.
 }
 ```
 
-### 2.7.2. Atualização
+### 2.7.2. Update
 
 ```json
 {
     "events": [
         {
-            "id": "uuid-evento-17",
+            "id": "uuid-event-17",
             "timestamp": 1710685016,
             "type": "update",
             "entity": "songs",
-            "entityId": "uuid-musica-1",
+            "entityId": "uuid-song-1",
             "data": [
                 {
                     "field": "name",
-                    "value": "Hino Nacional ##"
+                    "value": "National Anthem ##"
                 }
             ]
         }
@@ -459,33 +459,33 @@ Utiliza os `type`: `insert`, `update` e `delete`.
 }
 ```
 
-### 2.7.3. Exclusão
+### 2.7.3. Delete
 
 ```json
 {
     "events": [
         {
-            "id": "uuid-evento-18",
+            "id": "uuid-event-18",
             "timestamp": 1710685017,
             "type": "delete",
             "entity": "songs",
-            "entityId": "uuid-musica-1"
+            "entityId": "uuid-song-1"
         }
     ]
 }
 ```
 
-## 2.8. Partituras
+## 2.8. Scores
 
-Utiliza os `type`: `insert`, `update` e `delete`.
+Uses the `type`: `insert`, `update` and `delete`.
 
-### 2.8.1. Inserção
+### 2.8.1. Insert
 
 ```json
 {
     "events": [
         {
-            "id": "uuid-evento-19",
+            "id": "uuid-event-19",
             "timestamp": 1710685018,
             "type": "insert",
             "entity": "scores",
@@ -493,11 +493,11 @@ Utiliza os `type`: `insert`, `update` e `delete`.
             "data": [
                 {
                     "field": "songId",
-                    "value": "uuid-musica-1"
+                    "value": "uuid-song-1"
                 },
                 {
                     "field": "name",
-                    "value": "Flauta 1"
+                    "value": "Flute 1"
                 },
                 {
                     "field": "fileExtension",
@@ -509,13 +509,13 @@ Utiliza os `type`: `insert`, `update` e `delete`.
 }
 ```
 
-### 2.8.2. Atualização
+### 2.8.2. Update
 
 ```json
 {
     "events": [
         {
-            "id": "uuid-evento-20",
+            "id": "uuid-event-20",
             "timestamp": 1710685019,
             "type": "update",
             "entity": "scores",
@@ -523,11 +523,11 @@ Utiliza os `type`: `insert`, `update` e `delete`.
             "data": [
                 {
                     "field": "songId",
-                    "value": "uuid-musica-1"
+                    "value": "uuid-song-1"
                 },
                 {
                     "field": "name",
-                    "value": "Flauta 1 (Solo)"
+                    "value": "Flute 1 (Solo)"
                 },
                 {
                     "field": "fileExtension",
@@ -539,13 +539,13 @@ Utiliza os `type`: `insert`, `update` e `delete`.
 }
 ```
 
-### 2.8.3. Exclusão
+### 2.8.3. Delete
 
 ```json
 {
     "events": [
         {
-            "id": "uuid-evento-21",
+            "id": "uuid-event-21",
             "timestamp": 1710685020,
             "type": "delete",
             "entity": "scores",

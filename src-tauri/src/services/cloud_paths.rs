@@ -13,7 +13,7 @@ const SERVER_APPLY_IN_PROGRESS_FILE_NAME: &str = "server-apply-in-progress.lock"
 pub fn ensure_cloud_root_dir(app_data_dir: &Path) -> Result<PathBuf, AppError> {
     let cloud_dir = app_data_dir.join(CLOUD_DIR_NAME);
     fs::create_dir_all(&cloud_dir)
-        .map_err(|e| AppError::Generic(format!("Erro ao preparar pasta local cloud: {}", e)))?;
+        .map_err(|e| AppError::Generic(format!("Error preparing local cloud folder: {}", e)))?;
     Ok(cloud_dir)
 }
 
@@ -23,7 +23,7 @@ pub fn ensure_sync_cloud_dir(app_data_dir: &Path) -> Result<PathBuf, AppError> {
 
     fs::create_dir_all(&sync_dir).map_err(|e| {
         AppError::Generic(format!(
-            "Erro ao preparar pasta local de sincronização da nuvem: {}",
+            "Error preparing local cloud sync folder: {}",
             e
         ))
     })?;
@@ -37,7 +37,7 @@ pub fn ensure_actions_cloud_dir(app_data_dir: &Path) -> Result<PathBuf, AppError
 
     fs::create_dir_all(&actions_dir).map_err(|e| {
         AppError::Generic(format!(
-            "Erro ao preparar pasta local de ações da nuvem: {}",
+            "Error preparing local cloud actions folder: {}",
             e
         ))
     })?;
@@ -51,7 +51,7 @@ pub fn ensure_backup_cloud_dir(app_data_dir: &Path) -> Result<PathBuf, AppError>
 
     fs::create_dir_all(&backup_dir).map_err(|e| {
         AppError::Generic(format!(
-            "Erro ao preparar pasta local de backup da nuvem: {}",
+            "Error preparing local cloud backup folder: {}",
             e
         ))
     })?;
@@ -65,7 +65,7 @@ pub fn ensure_draft_ignored_backup_dir(app_data_dir: &Path) -> Result<PathBuf, A
 
     fs::create_dir_all(&backup_dir).map_err(|e| {
         AppError::Generic(format!(
-            "Erro ao preparar pasta local de backup de partituras draft/ignored: {}",
+            "Error preparing local draft/ignored score backup folder: {}",
             e
         ))
     })?;
@@ -80,14 +80,14 @@ pub fn server_apply_in_progress_path(app_data_dir: &Path) -> PathBuf {
 pub fn mark_server_apply_in_progress(app_data_dir: &Path) -> Result<(), AppError> {
     let marker_path = server_apply_in_progress_path(app_data_dir);
     fs::write(&marker_path, b"1")
-        .map_err(|e| AppError::Generic(format!("Erro ao marcar apply em andamento: {}", e)))
+        .map_err(|e| AppError::Generic(format!("Error marking apply in progress: {}", e)))
 }
 
 pub fn clear_server_apply_in_progress(app_data_dir: &Path) -> Result<(), AppError> {
     let marker_path = server_apply_in_progress_path(app_data_dir);
     if marker_path.exists() {
         fs::remove_file(&marker_path)
-            .map_err(|e| AppError::Generic(format!("Erro ao limpar apply em andamento: {}", e)))?;
+            .map_err(|e| AppError::Generic(format!("Error clearing apply in progress: {}", e)))?;
     }
 
     Ok(())

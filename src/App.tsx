@@ -220,7 +220,7 @@ function AppContent({ startupUpdate }: AppContentProps) {
     } catch (error) {
       console.error("Failed to check updates:", error);
       if (manual) {
-        //toast.error(`Falha ao verificar atualização: ${getErrorMessage(error)}`);
+        //toast.error(`Failed to check for updates: ${getErrorMessage(error)}`);
       }
     } finally {
       setIsCheckingUpdate(false);

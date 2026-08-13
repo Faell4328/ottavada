@@ -36,10 +36,10 @@ pub fn set_rclone_paths(executable_path: Option<PathBuf>, config_path: PathBuf) 
     let _ = RCLONE_CONFIG_PATH.set(config_path);
 }
 
-/// Retorna o comando correto para executar o rclone do projeto quando disponível.
+/// Returns the correct command to run the project's rclone when available.
 ///
-/// Em ambientes não-Windows, ou quando o binário empacotado não estiver presente,
-/// mantém o fallback para o `rclone` do PATH para não quebrar o desenvolvimento local.
+/// In non-Windows environments, or when the packaged binary is not present,
+/// keeps the fallback to the `rclone` from PATH so local development is not broken.
 fn get_rclone_command() -> PathBuf {
     RCLONE_EXECUTABLE_PATH
         .get()
@@ -76,7 +76,7 @@ where
 {
     let _guard = rclone_operation_lock()
         .lock()
-        .map_err(|_| AppError::Generic("Erro ao bloquear operação do rclone".to_string()))?;
+        .map_err(|_| AppError::Generic("Error locking rclone operation".to_string()))?;
     task()
 }
 
@@ -84,7 +84,7 @@ fn ensure_cloud_dir(app_data_dir: &Path) -> Result<PathBuf, AppError> {
     let cloud_dir = app_data_dir.join("cloud");
 
     std::fs::create_dir_all(&cloud_dir)
-        .map_err(|e| AppError::Generic(format!("Erro ao preparar pasta local cloud: {}", e)))?;
+        .map_err(|e| AppError::Generic(format!("Error preparing local cloud folder: {}", e)))?;
 
     Ok(cloud_dir)
 }
@@ -132,7 +132,7 @@ fn terminate_process_pid(pid: u32) -> Result<(), AppError> {
         .args(["/PID", pid_str.as_str(), "/T", "/F"])
         .output()
         .map_err(|e| {
-            AppError::Generic(format!("Erro ao encerrar processo rclone {}: {}", pid, e))
+            AppError::Generic(format!("Error terminating rclone process {}: {}", pid, e))
         })?;
 
     if output.status.success() {
@@ -141,14 +141,14 @@ fn terminate_process_pid(pid: u32) -> Result<(), AppError> {
 
     let stderr = String::from_utf8_lossy(&output.stderr).to_lowercase();
     if stderr.contains("not found")
-        || stderr.contains("nao foi encontrado")
-        || stderr.contains("não foi encontrado")
+        || stderr.contains("not found")
+        || stderr.contains("not found")
     {
         return Ok(());
     }
 
     Err(AppError::Generic(format!(
-        "Falha ao encerrar processo rclone {}: {}",
+        "Failed to terminate rclone process {}: {}",
         pid,
         String::from_utf8_lossy(&output.stderr)
     )))
@@ -163,7 +163,7 @@ fn terminate_process_pid(pid: u32) -> Result<(), AppError> {
         .args(["-TERM", pid_str.as_str()])
         .output()
         .map_err(|e| {
-            AppError::Generic(format!("Erro ao encerrar processo rclone {}: {}", pid, e))
+            AppError::Generic(format!("Error terminating rclone process {}: {}", pid, e))
         })?;
 
     if term_output.status.success() {
@@ -180,7 +180,7 @@ fn terminate_process_pid(pid: u32) -> Result<(), AppError> {
         .output()
         .map_err(|e| {
             AppError::Generic(format!(
-                "Erro ao forçar encerramento do processo rclone {}: {}",
+                "Error forcing termination of rclone process {}: {}",
                 pid, e
             ))
         })?;
@@ -195,7 +195,7 @@ fn terminate_process_pid(pid: u32) -> Result<(), AppError> {
     }
 
     Err(AppError::Generic(format!(
-        "Falha ao encerrar processo rclone {}: {}",
+        "Failed to terminate rclone process {}: {}",
         pid,
         String::from_utf8_lossy(&kill_output.stderr)
     )))
@@ -211,9 +211,9 @@ fn run_rclone_once_impl(
     cmd.stderr(Stdio::piped());
 
     let child = cmd.spawn().map_err(|e| {
-        error!("Erro ao executar rclone [{}]: {:?}", operation_label, e);
+        error!("Error running rclone [{}]: {:?}", operation_label, e);
         AppError::Generic(format!(
-            "Erro ao executar rclone ({}): {}",
+            "Error running rclone ({}): {}",
             operation_label, e
         ))
     })?;
@@ -223,7 +223,7 @@ fn run_rclone_once_impl(
 
     let output = child.wait_with_output().map_err(|e| {
         AppError::Generic(format!(
-            "Erro ao aguardar execução do rclone ({}): {}",
+            "Error waiting for rclone execution ({}): {}",
             operation_label, e
         ))
     });
@@ -240,7 +240,7 @@ fn rclone_config_path() -> Result<PathBuf, AppError> {
     RCLONE_CONFIG_PATH
         .get()
         .cloned()
-        .ok_or_else(|| AppError::Generic("Caminho do rclone.conf não foi inicializado".to_string()))
+        .ok_or_else(|| AppError::Generic("rclone.conf path was not initialized".to_string()))
 }
 
 fn build_rclone_remote_target(
@@ -278,7 +278,7 @@ fn write_rclone_config(setup: &RcloneSetupRequest) -> Result<(), AppError> {
     let config_path = rclone_config_path()?;
     if let Some(parent_dir) = config_path.parent() {
         std::fs::create_dir_all(parent_dir).map_err(|e| {
-            AppError::Generic(format!("Erro ao preparar diretório do rclone.conf: {}", e))
+            AppError::Generic(format!("Error preparing rclone.conf directory: {}", e))
         })?;
     }
 
@@ -289,14 +289,14 @@ fn write_rclone_config(setup: &RcloneSetupRequest) -> Result<(), AppError> {
                 .as_ref()
                 .map(|value| value.trim())
                 .filter(|value| !value.is_empty())
-                .ok_or_else(|| AppError::Generic("Informe o email do Koofr".to_string()))?;
+                .ok_or_else(|| AppError::Generic("Enter the Koofr email".to_string()))?;
             let app_password = setup
                 .app_password
                 .as_ref()
                 .map(|value| value.trim())
                 .filter(|value| !value.is_empty())
                 .ok_or_else(|| {
-                    AppError::Generic("Informe a senha do aplicativo do Koofr".to_string())
+                    AppError::Generic("Enter the Koofr app password".to_string())
                 })?;
 
             let password_arg = format!("password={}", app_password);
@@ -313,7 +313,7 @@ fn write_rclone_config(setup: &RcloneSetupRequest) -> Result<(), AppError> {
             let output = run_rclone_once(&args, "rclone-config-create-koofr")?;
             if !output.status.success() {
                 return Err(AppError::Generic(format!(
-                    "Falha ao gerar configuração do Koofr: {}",
+                    "Failed to generate Koofr configuration: {}",
                     String::from_utf8_lossy(&output.stderr)
                 )));
             }
@@ -324,7 +324,7 @@ fn write_rclone_config(setup: &RcloneSetupRequest) -> Result<(), AppError> {
             let output = run_rclone_once(&args, "rclone-config-create-drive")?;
             if !output.status.success() {
                 return Err(AppError::Generic(format!(
-                    "Falha ao gerar configuração do Google Drive: {}",
+                    "Failed to generate Google Drive configuration: {}",
                     String::from_utf8_lossy(&output.stderr)
                 )));
             }
@@ -332,16 +332,16 @@ fn write_rclone_config(setup: &RcloneSetupRequest) -> Result<(), AppError> {
     }
 
     let current_config = std::fs::read_to_string(&config_path)
-        .map_err(|e| AppError::Generic(format!("Falha ao validar o rclone.conf gerado: {}", e)))?;
+        .map_err(|e| AppError::Generic(format!("Failed to validate the generated rclone.conf: {}", e)))?;
 
     if current_config.trim().is_empty() {
         return Err(AppError::Generic(
-            "O rclone.conf foi gerado vazio".to_string(),
+            "The rclone.conf was generated empty".to_string(),
         ));
     }
 
     info!(
-        "rclone.conf gerado com sucesso em {} para o remote '{}'",
+        "rclone.conf generated successfully at {} for remote '{}'",
         config_path.display(),
         remote
     );
@@ -353,7 +353,7 @@ fn write_rclone_config(setup: &RcloneSetupRequest) -> Result<(), AppError> {
 pub async fn generate_rclone_config(setup: RcloneSetupRequest) -> Result<(), AppError> {
     tauri::async_runtime::spawn_blocking(move || write_rclone_config(&setup))
         .await
-        .map_err(|e| AppError::Generic(format!("Erro ao gerar configuração do rclone: {}", e)))?
+        .map_err(|e| AppError::Generic(format!("Error generating rclone configuration: {}", e)))?
 }
 
 #[allow(dead_code)]
@@ -364,13 +364,13 @@ pub fn terminate_running_rclone_processes() {
     }
 
     info!(
-        "Encerrando {} processo(s) rclone ativos durante finalização do app",
+        "Terminating {} active rclone process(es) during app shutdown",
         pids.len()
     );
 
     for pid in pids {
         if let Err(err) = terminate_process_pid(pid) {
-            warn!("Falha ao encerrar processo rclone {}: {}", pid, err);
+            warn!("Failed to terminate rclone process {}: {}", pid, err);
         }
         unregister_rclone_pid(pid);
     }
@@ -385,17 +385,17 @@ pub fn terminate_stale_rclone_rc_processes() {
 
         match output {
             Ok(output) if output.status.success() => {
-                info!("Processos rclone órfãos encerrados durante a inicialização");
+                info!("Orphan rclone processes terminated during startup");
             }
             Ok(output) => {
                 let stderr = String::from_utf8_lossy(&output.stderr);
                 if !stderr.trim().is_empty() {
-                    warn!("Falha ao encerrar rclone órfão no Windows: {}", stderr);
+                    warn!("Failed to terminate orphan rclone on Windows: {}", stderr);
                 }
             }
             Err(err) => {
                 warn!(
-                    "Falha ao executar taskkill para limpar rclone órfão: {}",
+                    "Failed to run taskkill to clean up orphan rclone: {}",
                     err
                 );
             }
@@ -411,12 +411,12 @@ pub fn terminate_stale_rclone_rc_processes() {
 
         match output {
             Ok(output) if output.status.success() => {
-                info!("Processos rclone órfãos encerrados durante a inicialização");
+                info!("Orphan rclone processes terminated during startup");
             }
             Ok(output) => {
                 let stderr = String::from_utf8_lossy(&output.stderr);
                 if !stderr.trim().is_empty() {
-                    warn!("Falha ao encerrar rclone órfão no Unix: {}", stderr);
+                    warn!("Failed to terminate orphan rclone on Unix: {}", stderr);
                 }
 
                 let _ = Command::new("pkill")
@@ -424,7 +424,7 @@ pub fn terminate_stale_rclone_rc_processes() {
                     .output();
             }
             Err(err) => {
-                warn!("Falha ao executar pkill para limpar rclone órfão: {}", err);
+                warn!("Failed to run pkill to clean up orphan rclone: {}", err);
             }
         }
     }
@@ -441,7 +441,7 @@ fn run_rclone_with_retry_impl(
 
     let first_stderr = String::from_utf8_lossy(&output.stderr);
     error!(
-        "Falha na 1a tentativa do rclone [{}]: {}",
+        "Failed rclone first attempt [{}]: {}",
         operation_label, first_stderr
     );
 
@@ -449,7 +449,7 @@ fn run_rclone_with_retry_impl(
         && first_stderr.contains("address already in use")
     {
         warn!(
-            "Porta RC ocupada detectada durante [{}]. Tentando limpar processos órfãos antes da segunda tentativa",
+            "Busy RC port detected during [{}]. Trying to clean up orphan processes before the second attempt",
             operation_label
         );
         terminate_stale_rclone_rc_processes();
@@ -457,7 +457,7 @@ fn run_rclone_with_retry_impl(
     }
 
     info!(
-        "Tentando novamente rclone [{}] por falha transitória",
+        "Retrying rclone [{}] due to transient failure",
         operation_label
     );
 
@@ -503,7 +503,7 @@ fn append_common_sync_flags(args: &mut Vec<&str>) {
         RCLONE_CONNECT_TIMEOUT,
         "--timeout",
         RCLONE_IO_TIMEOUT,
-        // Evita sincronizar artefatos temporários do pipeline de geração.
+        // Avoids syncing temporary artifacts from the generation pipeline.
         "--exclude",
         "*.tmp",
         "--exclude",
@@ -531,7 +531,7 @@ fn resolve_sync_targets(
     let settings = store.get_app_settings()?;
     let rclone_config = settings
         .rclone_config
-        .ok_or_else(|| AppError::Generic("Configuração do rclone não encontrada".to_string()))?;
+        .ok_or_else(|| AppError::Generic("rclone configuration not found".to_string()))?;
     let remote_target = build_rclone_remote_target(&rclone_config.provider, relative_path);
 
     let clean_relative_path = relative_path
@@ -548,7 +548,7 @@ fn resolve_sync_targets(
     if clean_relative_path.is_none() {
         std::fs::create_dir_all(&local_target).map_err(|e| {
             AppError::Generic(format!(
-                "Erro ao preparar diretório local para sync do rclone: {}",
+                "Error preparing local directory for rclone sync: {}",
                 e
             ))
         })?;
@@ -573,7 +573,7 @@ impl RcloneSyncDirection {
             "upload" => Ok(Self::Upload),
             "download" => Ok(Self::Download),
             _ => Err(AppError::Generic(format!(
-                "Direção de sync inválida: {}. Use 'upload' ou 'download'",
+                "Invalid sync direction: {}. Use 'upload' or 'download'",
                 value
             ))),
         }
@@ -746,12 +746,12 @@ fn fetch_rclone_rc_stats() -> Result<Option<RcloneRcStats>, AppError> {
     stream
         .set_read_timeout(Some(Duration::from_millis(RCLONE_RC_TIMEOUT_MS)))
         .map_err(|e| {
-            AppError::Generic(format!("Erro ao configurar timeout de leitura RC: {}", e))
+            AppError::Generic(format!("Error configuring RC read timeout: {}", e))
         })?;
     stream
         .set_write_timeout(Some(Duration::from_millis(RCLONE_RC_TIMEOUT_MS)))
         .map_err(|e| {
-            AppError::Generic(format!("Erro ao configurar timeout de escrita RC: {}", e))
+            AppError::Generic(format!("Error configuring RC write timeout: {}", e))
         })?;
 
     let request = concat!(
@@ -765,20 +765,20 @@ fn fetch_rclone_rc_stats() -> Result<Option<RcloneRcStats>, AppError> {
 
     stream
         .write_all(request.as_bytes())
-        .map_err(|e| AppError::Generic(format!("Erro ao consultar RC do rclone: {}", e)))?;
+        .map_err(|e| AppError::Generic(format!("Error querying rclone RC: {}", e)))?;
 
     let mut response = Vec::new();
     stream
         .read_to_end(&mut response)
-        .map_err(|e| AppError::Generic(format!("Erro ao ler resposta RC do rclone: {}", e)))?;
+        .map_err(|e| AppError::Generic(format!("Error reading rclone RC response: {}", e)))?;
 
     let response_text = String::from_utf8_lossy(&response);
     let (_, body) = response_text
         .split_once("\r\n\r\n")
-        .ok_or_else(|| AppError::Generic("Resposta RC inválida do rclone".to_string()))?;
+        .ok_or_else(|| AppError::Generic("Invalid RC response from rclone".to_string()))?;
 
     let parsed: Value = serde_json::from_str(body)
-        .map_err(|e| AppError::Generic(format!("Erro ao parsear core/stats do rclone: {}", e)))?;
+        .map_err(|e| AppError::Generic(format!("Error parsing rclone core/stats: {}", e)))?;
 
     Ok(Some(parse_rclone_rc_stats(&parsed)))
 }
@@ -792,12 +792,12 @@ fn reset_rclone_rc_stats() -> Result<(), AppError> {
     stream
         .set_read_timeout(Some(Duration::from_millis(RCLONE_RC_TIMEOUT_MS)))
         .map_err(|e| {
-            AppError::Generic(format!("Erro ao configurar timeout de leitura RC: {}", e))
+            AppError::Generic(format!("Error configuring RC read timeout: {}", e))
         })?;
     stream
         .set_write_timeout(Some(Duration::from_millis(RCLONE_RC_TIMEOUT_MS)))
         .map_err(|e| {
-            AppError::Generic(format!("Erro ao configurar timeout de escrita RC: {}", e))
+            AppError::Generic(format!("Error configuring RC write timeout: {}", e))
         })?;
 
     let request = concat!(
@@ -811,13 +811,13 @@ fn reset_rclone_rc_stats() -> Result<(), AppError> {
 
     stream
         .write_all(request.as_bytes())
-        .map_err(|e| AppError::Generic(format!("Erro ao resetar RC do rclone: {}", e)))?;
+        .map_err(|e| AppError::Generic(format!("Error resetting rclone RC: {}", e)))?;
 
-    // Consome resposta para fechar corretamente a conexao.
+    // Consume the response to close the connection properly.
     let mut response = Vec::new();
     stream
         .read_to_end(&mut response)
-        .map_err(|e| AppError::Generic(format!("Erro ao ler resposta do reset RC: {}", e)))?;
+        .map_err(|e| AppError::Generic(format!("Error reading RC reset response: {}", e)))?;
 
     Ok(())
 }
@@ -827,48 +827,48 @@ pub fn get_rclone_rc_stats() -> Result<Option<RcloneRcStats>, AppError> {
     fetch_rclone_rc_stats()
 }
 
-/// Testa a conexão com um remote do rclone
+/// Tests the connection to an rclone remote
 ///
-/// # Parâmetros
-/// - `remote`: Nome do remote configurado no rclone (ex: "gdrive", "pcloud")
-/// - `path`: Caminho no remote a testar (ex: "ottavada")
+/// # Parameters
+/// - `remote`: Name of the remote configured in rclone (e.g. "gdrive", "pcloud")
+/// - `path`: Path on the remote to test (e.g. "ottavada")
 ///
-/// # Retorna
-/// - `Ok(true)`: Conexão testada com sucesso
-/// - `Ok(false)`: Falha na conexão
-/// - `Err(AppError)`: Erro ao executar teste
+/// # Returns
+/// - `Ok(true)`: Connection tested successfully
+/// - `Ok(false)`: Connection failure
+/// - `Err(AppError)`: Error running the test
 #[tauri::command]
 pub fn test_rclone_connection(remote: String, path: String) -> Result<bool, AppError> {
     info!(
-        "Testando conexão com rclone remote: {} path: {}",
+        "Testing connection with rclone remote: {} path: {}",
         remote, path
     );
 
-    // Limpar o path (remover barras extras)
+    // Clean up the path (remove extra slashes)
     let clean_path = path.trim().trim_start_matches('/').trim_end_matches('/');
 
-    // Primeiro, testar a conexão com o remote root
-    info!("Testando acesso ao remote: {}", remote);
+    // First, test the connection with the remote root
+    info!("Testing remote access: {}", remote);
     let mut cmd = new_rclone_command();
     let output = cmd
         .args(&["lsd", &format!("{}:", remote), "--max-depth", "1"])
         .output()
         .map_err(|e| {
-            error!("Erro ao executar rclone: {:?}", e);
+            error!("Error running rclone: {:?}", e);
             AppError::Generic(format!(
-                "Erro ao executar rclone. Verifique se o rclone está instalado e configurado: {}",
+                "Error running rclone. Make sure rclone is installed and configured: {}",
                 e
             ))
         })?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        error!("Falha ao acessar remote '{}': {}", remote, stderr);
+        error!("Failed to access remote '{}': {}", remote, stderr);
 
-        // Verificar se é problema de configuração do rclone
+        // Check if it is an rclone configuration problem
         if stderr.contains("didn't find section in config file") {
             return Err(AppError::Generic(format!(
-                "O remote '{}' não está configurado no rclone. Execute 'rclone config' para configurar.",
+                "The remote '{}' is not configured in rclone. Run 'rclone config' to configure it.",
                 remote
             )));
         }
@@ -876,11 +876,11 @@ pub fn test_rclone_connection(remote: String, path: String) -> Result<bool, AppE
         return Ok(false);
     }
 
-    info!("✓ Acesso ao remote '{}' confirmado", remote);
+    info!("✓ Remote access '{}' confirmed", remote);
 
-    // Se um caminho específico foi fornecido, tentar verificar se existe
+    // If a specific path was provided, try to check if it exists
     if !clean_path.is_empty() {
-        info!("Verificando se o caminho existe: {}", clean_path);
+        info!("Checking whether the path exists: {}", clean_path);
         let mut path_cmd = new_rclone_command();
         let path_test = path_cmd
             .args(&[
@@ -891,37 +891,37 @@ pub fn test_rclone_connection(remote: String, path: String) -> Result<bool, AppE
             ])
             .output()
             .map_err(|e| {
-                error!("Erro ao verificar caminho: {:?}", e);
-                AppError::Generic(format!("Erro ao verificar caminho: {}", e))
+                error!("Error checking path: {:?}", e);
+                AppError::Generic(format!("Error checking path: {}", e))
             })?;
 
         if !path_test.status.success() {
             let stderr = String::from_utf8_lossy(&path_test.stderr);
             info!(
-                "Caminho '{}' não encontrado ou inacessível: {}",
+                "Path '{}' not found or inaccessible: {}",
                 clean_path, stderr
             );
-            // Não tratamos como erro - apenas retornamos true pois o remote está configurado
-            // O caminho será criado automaticamente durante o primeiro backup
+            // We don't treat this as an error - we just return true since the remote is configured
+            // The path will be created automatically during the first backup
         } else {
-            info!("✓ Caminho '{}' confirmado", clean_path);
+            info!("✓ Path '{}' confirmed", clean_path);
         }
     }
 
-    info!("✓ Conexão com rclone testada com sucesso");
+    info!("✓ rclone connection tested successfully");
     Ok(true)
 }
 
-/// Faz upload de um arquivo usando rclone
+/// Uploads a file using rclone
 ///
-/// # Parâmetros
-/// - `remote`: Nome do remote configurado no rclone
-/// - `path`: Caminho de destino no remote
-/// - `file_path`: Caminho local do arquivo a fazer upload
+/// # Parameters
+/// - `remote`: Name of the remote configured in rclone
+/// - `path`: Destination path on the remote
+/// - `file_path`: Local path of the file to upload
 ///
-/// # Retorna
-/// - `Ok(String)`: Caminho remoto do arquivo enviado
-/// - `Err(AppError)`: Erro durante o upload
+/// # Returns
+/// - `Ok(String)`: Remote path of the uploaded file
+/// - `Err(AppError)`: Error during upload
 #[tauri::command]
 pub fn upload_with_rclone(
     remote: String,
@@ -929,15 +929,15 @@ pub fn upload_with_rclone(
     file_path: String,
 ) -> Result<String, AppError> {
     info!(
-        "Iniciando upload com rclone: {} -> {}:{}",
+        "Starting upload with rclone: {} -> {}:{}",
         file_path, remote, path
     );
 
-    // Extrair nome do arquivo
+    // Extract the file name
     let file_name = std::path::Path::new(&file_path)
         .file_name()
         .and_then(|n| n.to_str())
-        .ok_or_else(|| AppError::Generic("Caminho inválido".to_string()))?;
+        .ok_or_else(|| AppError::Generic("Invalid path".to_string()))?;
 
     // Executar upload
     let destination = format!("{}:{}", remote, path);
@@ -948,18 +948,18 @@ pub fn upload_with_rclone(
 
     if output.status.success() {
         let remote_path = format!("{}:{}/{}", remote, path, file_name);
-        info!("Upload concluído com sucesso: {}", remote_path);
+        info!("Upload completed successfully: {}", remote_path);
         Ok(remote_path)
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        error!("Falha no upload rclone: {}", stderr);
-        Err(AppError::Generic(format!("Falha no upload: {}", stderr)))
+        error!("Failed rclone upload: {}", stderr);
+        Err(AppError::Generic(format!("Failed upload: {}", stderr)))
     }
 }
 
-/// Sincroniza a pasta local `/cloud` com o remote configurado no rclone usando `rclone sync`.
+/// Syncs the local `/cloud` folder with the remote configured in rclone using `rclone sync`.
 ///
-/// Sempre utiliza os parâmetros exigidos pelo projeto:
+/// Always uses the parameters required by the project:
 /// - `--rc`
 /// - `--rc-addr=127.0.0.1:5572`
 /// - `--transfers=4`
@@ -973,7 +973,7 @@ pub async fn sync_cloud_with_rclone(
 
     run_blocking_with_store(
         app_data_dir,
-        "Falha interna ao sincronizar com rclone",
+        "Internal failure syncing with rclone",
         move |store| {
             sync_cloud_directory_with_rclone_impl(&store, &direction, relative_path.as_deref())
         },
@@ -1046,7 +1046,7 @@ pub async fn upload_cloud_paths_with_rclone(
 
     run_blocking_with_store(
         app_data_dir,
-        "Falha interna ao enviar caminhos selecionados com rclone",
+        "Internal failure uploading selected paths with rclone",
         move |store| upload_cloud_paths_with_rclone_impl(&store, &relative_paths),
     )
     .await
@@ -1061,14 +1061,14 @@ pub fn upload_cloud_paths_with_rclone_impl(
     let settings = store.get_app_settings()?;
     let rclone_config = settings
         .rclone_config
-        .ok_or_else(|| AppError::Generic("Configuração do rclone não encontrada".to_string()))?;
+        .ok_or_else(|| AppError::Generic("rclone configuration not found".to_string()))?;
 
     let remote_target = build_rclone_remote_target(&rclone_config.provider, None);
 
     let cloud_local_dir = ensure_cloud_dir(store.app_data_dir())?;
     let cloud_local_dir_str = cloud_local_dir.to_str().ok_or_else(|| {
         AppError::Generic(format!(
-            "Caminho local da pasta cloud inválido para upload incremental: {}",
+            "Invalid local cloud folder path for incremental upload: {}",
             cloud_local_dir.display()
         ))
     })?;
@@ -1092,7 +1092,7 @@ pub fn upload_cloud_paths_with_rclone_impl(
         let local_path = cloud_local_dir.join(&normalized_relative);
         if !local_path.exists() {
             info!(
-                "Pulando upload incremental de '{}' (arquivo local não existe)",
+                "Skipping incremental upload of '{}' (local file does not exist)",
                 normalized_relative
             );
             skipped_count += 1;
@@ -1110,7 +1110,7 @@ pub fn upload_cloud_paths_with_rclone_impl(
             while let Some(current_dir) = stack.pop() {
                 let entries = std::fs::read_dir(&current_dir).map_err(|e| {
                     AppError::Generic(format!(
-                        "Erro ao listar diretório incremental '{}': {}",
+                        "Error listing incremental directory '{}': {}",
                         current_dir.display(),
                         e
                     ))
@@ -1119,7 +1119,7 @@ pub fn upload_cloud_paths_with_rclone_impl(
                 for entry_result in entries {
                     let entry = entry_result.map_err(|e| {
                         AppError::Generic(format!(
-                            "Erro ao ler entrada de diretório incremental '{}': {}",
+                            "Error reading incremental directory entry '{}': {}",
                             current_dir.display(),
                             e
                         ))
@@ -1138,7 +1138,7 @@ pub fn upload_cloud_paths_with_rclone_impl(
                     let relative_entry =
                         entry_path.strip_prefix(&cloud_local_dir).map_err(|e| {
                             AppError::Generic(format!(
-                            "Erro ao calcular caminho relativo '{}' para upload incremental: {}",
+                            "Error computing relative path '{}' for incremental upload: {}",
                             entry_path.display(),
                             e
                         ))
@@ -1180,7 +1180,7 @@ pub fn upload_cloud_paths_with_rclone_impl(
 
     std::fs::write(&files_from_path, files_from_content).map_err(|e| {
         AppError::Generic(format!(
-            "Erro ao gerar lista de upload incremental '{}': {}",
+            "Error generating incremental upload list '{}': {}",
             files_from_path.display(),
             e
         ))
@@ -1188,7 +1188,7 @@ pub fn upload_cloud_paths_with_rclone_impl(
 
     let files_from_str = files_from_path.to_str().ok_or_else(|| {
         AppError::Generic(format!(
-            "Caminho da lista de upload incremental inválido: {}",
+            "Invalid incremental upload list path: {}",
             files_from_path.display()
         ))
     })?;
@@ -1212,9 +1212,9 @@ pub fn upload_cloud_paths_with_rclone_impl(
     let output = output?;
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        error!("Falha no upload incremental em lote: {}", stderr);
+        error!("Failed batch incremental upload: {}", stderr);
         return Err(AppError::Generic(format!(
-            "Falha no upload incremental em lote: {}",
+            "Failed batch incremental upload: {}",
             stderr
         )));
     }
@@ -1246,7 +1246,7 @@ pub fn sync_cloud_directory_with_rclone_impl(
         RcloneSyncDirection::Download => {
             if !remote_directory_exists(&remote_target) {
                 info!(
-                    "Diretório remoto '{}' não existe, pulando download",
+                    "Remote directory '{}' does not exist, skipping download",
                     remote_target
                 );
                 return Ok(RcloneSyncSummary {
@@ -1265,7 +1265,7 @@ pub fn sync_cloud_directory_with_rclone_impl(
     };
 
     info!(
-        "Iniciando rclone sync [{}]: {} -> {}",
+        "Starting rclone sync [{}]: {} -> {}",
         direction_label, source, destination
     );
 
@@ -1277,16 +1277,16 @@ pub fn sync_cloud_directory_with_rclone_impl(
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        error!("Falha no rclone sync [{}]: {}", direction_label, stderr);
+        error!("Failed rclone sync [{}]: {}", direction_label, stderr);
         return Err(AppError::Generic(format!(
-            "Falha no rclone sync ({}): {}",
+            "Failed rclone sync ({}): {}",
             direction_label, stderr
         )));
     }
 
     let duration_ms = started_at.elapsed().as_millis();
     info!(
-        "✓ rclone sync [{}] concluído em {}ms",
+        "✓ rclone sync [{}] completed in {}ms",
         direction_label, duration_ms
     );
 
@@ -1298,18 +1298,18 @@ pub fn sync_cloud_directory_with_rclone_impl(
     })
 }
 
-/// Faz um teste completo de upload com rclone
+/// Runs a full upload test with rclone
 ///
-/// Cria um arquivo de teste local, faz upload via rclone e remove o arquivo local após sucesso
+/// Creates a local test file, uploads via rclone and removes the local file after success
 ///
-/// # Parâmetros
-/// - `store`: SystemStore para obter o diretório de dados
-/// - `remote`: Nome do remote configurado no rclone
-/// - `path`: Caminho de destino no remote
+/// # Parameters
+/// - `store`: SystemStore to obtain the data directory
+/// - `remote`: Name of the remote configured in rclone
+/// - `path`: Destination path on the remote
 ///
-/// # Retorna
-/// - `Ok(())`: Teste completado com sucesso
-/// - `Err(AppError)`: Erro durante o teste
+/// # Returns
+/// - `Ok(())`: Test completed successfully
+/// - `Err(AppError)`: Error during the test
 #[tauri::command]
 pub async fn test_rclone_upload(
     store: State<'_, SystemStore>,
@@ -1319,7 +1319,7 @@ pub async fn test_rclone_upload(
 
     run_blocking_with_store(
         app_data_dir,
-        "Falha interna ao testar upload do rclone",
+        "Internal failure testing rclone upload",
         move |store| test_rclone_upload_impl(&store, &provider),
     )
     .await
@@ -1330,30 +1330,30 @@ fn test_rclone_upload_impl(
     provider: &crate::domain::models::RcloneProvider,
 ) -> Result<(), AppError> {
     info!(
-        "Iniciando teste de upload com rclone: provider={:?}",
+        "Starting rclone upload test: provider={:?}",
         provider
     );
 
-    // Criar diretório de testes se não existir
+    // Create test directory if it does not exist
     let cloud_dir = ensure_cloud_dir(store.app_data_dir())?;
 
-    info!("Diretório de teste: {:?}", cloud_dir);
+    info!("Test directory: {:?}", cloud_dir);
 
-    // Criar arquivo de teste
+    // Create test file
     let test_file_path = cloud_dir.join("rclone_test.txt");
-    let test_content = "Upload feito com sucesso";
+    let test_content = "Upload completed successfully";
 
     std::fs::write(&test_file_path, test_content)
-        .map_err(|e| AppError::Generic(format!("Erro ao criar arquivo de teste: {}", e)))?;
+        .map_err(|e| AppError::Generic(format!("Error creating test file: {}", e)))?;
 
-    info!("Arquivo de teste criado: {:?}", test_file_path);
+    info!("Test file created: {:?}", test_file_path);
 
     let remote_path = build_rclone_remote_target(provider, None);
 
-    // Fazer upload do arquivo de teste
-    info!("Iniciando upload para: {}", remote_path);
+    // Upload the test file
+    info!("Starting upload to: {}", remote_path);
     let test_file_str = test_file_path.to_str().ok_or_else(|| {
-        AppError::Generic("Caminho local de teste inválido para upload rclone".to_string())
+        AppError::Generic("Invalid local test path for rclone upload".to_string())
     })?;
     let test_file_str = normalize_path_for_rclone(test_file_str);
 
@@ -1368,54 +1368,54 @@ fn test_rclone_upload_impl(
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        error!("Falha no teste de upload: {}", stderr);
+        error!("Failed upload test: {}", stderr);
 
-        // Tentar remover o arquivo de teste mesmo após falha
+        // Try to remove the test file even after failure
         let _ = std::fs::remove_file(&test_file_path);
 
         return Err(AppError::Generic(format!(
-            "Falha no teste de upload: {}",
+            "Failed upload test: {}",
             stderr
         )));
     }
 
-    info!("✓ Upload de teste concluído com sucesso");
+    info!("✓ Test upload completed successfully");
 
-    // Remover arquivo de teste local após sucesso
+    // Remove local test file after success
     std::fs::remove_file(&test_file_path).map_err(|e| {
-        error!("Aviso: Erro ao remover arquivo de teste: {}", e);
-        AppError::Generic(format!("Aviso: Erro ao remover arquivo de teste: {}", e))
+        error!("Warning: Error removing test file: {}", e);
+        AppError::Generic(format!("Warning: Error removing test file: {}", e))
     })?;
 
-    info!("✓ Arquivo de teste removido com sucesso");
+    info!("✓ Test file removed successfully");
     Ok(())
 }
 
-/// Deleta o arquivo de teste local em /cloud após o usuário prosseguir com rclone
+/// Deletes the local test file in /cloud after the user proceeds with rclone
 ///
-/// # Parâmetros
-/// - `store`: SystemStore para obter o diretório de dados
+/// # Parameters
+/// - `store`: SystemStore to obtain the data directory
 ///
-/// # Retorna
-/// - `Ok(())`: Arquivo deletado com sucesso ou não encontrado
+/// # Returns
+/// - `Ok(())`: File deleted successfully or not found
 #[tauri::command]
 pub fn delete_rclone_test_file(store: State<'_, SystemStore>) -> Result<(), AppError> {
-    info!("Deletando arquivo de teste local");
+    info!("Deleting local test file");
 
     let app_data_dir = store.app_data_dir();
     let cloud_dir = ensure_cloud_dir(app_data_dir)?;
     let test_file_path = cloud_dir.join("rclone_test.txt");
 
-    // Deletar arquivo local se existir
+    // Delete the local file if it exists
     if test_file_path.exists() {
         std::fs::remove_file(&test_file_path).map_err(|e| {
-            error!("Erro ao remover arquivo de teste local: {}", e);
-            AppError::Generic(format!("Erro ao remover arquivo de teste: {}", e))
+            error!("Error removing local test file: {}", e);
+            AppError::Generic(format!("Error removing test file: {}", e))
         })?;
 
-        info!("✓ Arquivo de teste local removido com sucesso");
+        info!("✓ Local test file removed successfully");
     } else {
-        info!("Arquivo de teste local não encontrado, nada a remover");
+        info!("Local test file not found, nothing to remove");
     }
 
     Ok(())

@@ -33,7 +33,7 @@ pub fn backup_draft_ignored_scores(
         )
         .map_err(|e| {
             AppError::Generic(format!(
-                "Nao foi possivel baixar backups draft/ignored existentes: {}",
+                "Could not download existing draft/ignored backups: {}",
                 e
             ))
         })?;
@@ -64,7 +64,7 @@ pub fn restore_draft_ignored_scores_from_backup(
         Some(BACKUP_DRAFT_IGNORED_RELATIVE_PATH),
     ) {
         warn!(
-            "Nao foi possivel baixar backups draft/ignored da nuvem: {}",
+            "Could not download draft/ignored backups from the cloud: {}",
             err
         );
         return Ok(0);
@@ -86,13 +86,13 @@ pub fn remove_backup_file_for_draft_ignored_score(
     if file_path.is_file() {
         fs::remove_file(&file_path).map_err(|e| {
             AppError::Generic(format!(
-                "Erro ao remover arquivo draft/ignored do backup {}: {}",
+                "Error removing draft/ignored file from backup {}: {}",
                 file_path.display(),
                 e
             ))
         })?;
         info!(
-            "Arquivo draft/ignored removido do backup_scores_draft_ignored: {}",
+            "Draft/ignored file removed from backup_scores_draft_ignored: {}",
             file_path.display()
         );
     }
@@ -120,7 +120,7 @@ fn restore_draft_ignored_scores_from_dir(
         if let Some(parent) = dest_path.parent() {
             fs::create_dir_all(parent).map_err(|e| {
                 AppError::Generic(format!(
-                    "Erro ao criar diretorio para restaurar partitura draft/ignored {}: {}",
+                    "Error creating directory to restore draft/ignored score {}: {}",
                     dest_path.display(),
                     e
                 ))
@@ -129,7 +129,7 @@ fn restore_draft_ignored_scores_from_dir(
 
         fs::copy(&source_path, &dest_path).map_err(|e| {
             AppError::Generic(format!(
-                "Erro ao restaurar partitura draft/ignored {} -> {}: {}",
+                "Error restoring draft/ignored score {} -> {}: {}",
                 source_path.display(),
                 dest_path.display(),
                 e
@@ -138,7 +138,7 @@ fn restore_draft_ignored_scores_from_dir(
 
         restored += 1;
         info!(
-            "Partitura draft/ignored restaurada: {} -> {}",
+            "Draft/ignored score restored: {} -> {}",
             score.id,
             dest_path.display()
         );
@@ -164,7 +164,7 @@ fn backup_draft_ignored_scores_to_dir(
 
         if !source_path.is_file() {
             warn!(
-                "Arquivo de partitura draft/ignored nao encontrado: {}",
+                "Draft/ignored score file not found: {}",
                 source_path.display()
             );
             continue;
@@ -173,7 +173,7 @@ fn backup_draft_ignored_scores_to_dir(
         if needs_update(&source_path, &dest_path) {
             fs::copy(&source_path, &dest_path).map_err(|e| {
                 AppError::Generic(format!(
-                    "Erro ao copiar partitura draft/ignored {} -> {}: {}",
+                    "Error copying draft/ignored score {} -> {}: {}",
                     source_path.display(),
                     dest_path.display(),
                     e
@@ -181,7 +181,7 @@ fn backup_draft_ignored_scores_to_dir(
             })?;
             backed_up += 1;
             info!(
-                "Partitura draft/ignored copiada: {} -> {}",
+                "Draft/ignored score copied: {} -> {}",
                 score.id,
                 dest_path.display()
             );
@@ -191,7 +191,7 @@ fn backup_draft_ignored_scores_to_dir(
     let removed = cleanup_orphan_draft_ignored_files(backup_dir, &active_ids)?;
     if removed > 0 {
         info!(
-            "Limpeza de arquivos draft/ignored orfaos: {} removido(s)",
+            "Cleanup of orphan draft/ignored files: {} removed",
             removed
         );
     }
@@ -270,13 +270,13 @@ fn cleanup_orphan_draft_ignored_files(
 
     for entry in fs::read_dir(backup_dir).map_err(|e| {
         AppError::Generic(format!(
-            "Erro ao ler diretorio backup_scores_draft_ignored: {}",
+            "Error reading backup_scores_draft_ignored directory: {}",
             e
         ))
     })? {
         let entry = entry.map_err(|e| {
             AppError::Generic(format!(
-                "Erro ao ler entrada de backup_scores_draft_ignored: {}",
+                "Error reading backup_scores_draft_ignored directory entry: {}",
                 e
             ))
         })?;
@@ -300,7 +300,7 @@ fn cleanup_orphan_draft_ignored_files(
 
         fs::remove_file(&path).map_err(|e| {
             AppError::Generic(format!(
-                "Erro ao remover arquivo orfao draft/ignored {}: {}",
+                "Error removing orphan draft/ignored file {}: {}",
                 path.display(),
                 e
             ))
@@ -371,7 +371,7 @@ mod tests {
         db.insert_song(
             &Song {
                 id: "song-1".to_string(),
-                name: "Musica".to_string(),
+                name: "Music".to_string(),
                 composer: None,
                 arranger: None,
                 path: song_dir.to_string_lossy().to_string(),
@@ -444,7 +444,7 @@ mod tests {
         db.insert_song(
             &Song {
                 id: "song-1".to_string(),
-                name: "Musica".to_string(),
+                name: "Music".to_string(),
                 composer: None,
                 arranger: None,
                 path: song_dir.to_string_lossy().to_string(),
@@ -464,7 +464,7 @@ mod tests {
             name: None,
             host_id: "server-test".to_string(),
             file_path: song_dir.to_string_lossy().to_string(),
-            file_name: "nao-existe.musx".to_string(),
+            file_name: "not-exists.musx".to_string(),
             file_size: 0,
             file_modified_at: now,
             updated_at: now,
@@ -492,7 +492,7 @@ mod tests {
         db.insert_song(
             &Song {
                 id: "song-1".to_string(),
-                name: "Musica".to_string(),
+                name: "Music".to_string(),
                 composer: None,
                 arranger: None,
                 path: song_dir.to_string_lossy().to_string(),
@@ -555,7 +555,7 @@ mod tests {
         db.insert_song(
             &Song {
                 id: "song-1".to_string(),
-                name: "Musica".to_string(),
+                name: "Music".to_string(),
                 composer: None,
                 arranger: None,
                 path: song_dir.to_string_lossy().to_string(),
@@ -624,7 +624,7 @@ mod tests {
         db.insert_song(
             &Song {
                 id: "song-1".to_string(),
-                name: "Musica".to_string(),
+                name: "Music".to_string(),
                 composer: None,
                 arranger: None,
                 path: song_dir.to_string_lossy().to_string(),
@@ -674,7 +674,7 @@ mod tests {
         db.insert_song(
             &Song {
                 id: "song-1".to_string(),
-                name: "Musica".to_string(),
+                name: "Music".to_string(),
                 composer: None,
                 arranger: None,
                 path: song_dir.to_string_lossy().to_string(),

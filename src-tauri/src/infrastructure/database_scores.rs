@@ -501,6 +501,6 @@ impl Database {
 
     pub fn compress_zstd(data: &[u8]) -> Result<Vec<u8>, AppError> {
         zstd::encode_all(data, 3)
-            .map_err(|e| AppError::Generic(format!("Erro ao comprimir com zstd: {}", e)))
+            .map_err(|e| AppError::Generic(format!("Error compressing with zstd: {}", e)))
     }
 }

@@ -219,7 +219,7 @@ fn create_song_temp_dir(temp_root: &Path, song_id: &str) -> Result<PathBuf, AppE
 fn copy_and_rename_scores(entries: &[ScoreArchiveEntry], temp_dir: &Path) -> Result<(), AppError> {
     if entries.is_empty() {
         return Err(AppError::Generic(
-            "Nenhuma partitura elegível para gerar backup".to_string(),
+            "No eligible score to generate backup".to_string(),
         ));
     }
 
@@ -233,7 +233,7 @@ fn copy_and_rename_scores(entries: &[ScoreArchiveEntry], temp_dir: &Path) -> Res
 fn copy_single_score(entry: &ScoreArchiveEntry, temp_dir: &Path) -> Result<(), AppError> {
     if !entry.source_path.is_file() {
         return Err(AppError::Generic(format!(
-            "Arquivo não encontrado para score {}: {}",
+            "File not found for score {}: {}",
             entry.score_id,
             entry.source_path.display()
         )));
@@ -242,7 +242,7 @@ fn copy_single_score(entry: &ScoreArchiveEntry, temp_dir: &Path) -> Result<(), A
     let destination = temp_dir.join(&entry.tar_name);
     fs::copy(&entry.source_path, &destination).map_err(|e| {
         AppError::Generic(format!(
-            "Erro ao copiar arquivo {} para {}: {}",
+            "Error copying file {} to {}: {}",
             entry.source_path.display(),
             destination.display(),
             e
@@ -267,7 +267,7 @@ fn copy_and_rename_scores_parallel(
 ) -> Result<(), AppError> {
     if entries.is_empty() {
         return Err(AppError::Generic(
-            "Nenhuma partitura elegível para gerar backup".to_string(),
+            "No eligible score to generate backup".to_string(),
         ));
     }
 
@@ -322,7 +322,7 @@ fn zstd_threads_per_archive(archive_workers: usize) -> u32 {
         .max(1);
     let workers = archive_workers.max(1);
 
-    // Divide os núcleos entre os arquivos paralelos para evitar oversubscription.
+    // Split the cores among the parallel files to avoid oversubscription.
     (total_cores / workers).max(1) as u32
 }
 
@@ -344,7 +344,7 @@ fn create_tar_zst_from_temp_dir_with_threads(
 ) -> Result<u64, AppError> {
     let output = File::create(output_file).map_err(|e| {
         AppError::Generic(format!(
-            "Erro ao criar arquivo temporário {}: {}",
+            "Error creating temporary file {}: {}",
             output_file.display(),
             e
         ))
@@ -352,11 +352,11 @@ fn create_tar_zst_from_temp_dir_with_threads(
 
     let level = 5;
     let mut encoder = zstd::stream::Encoder::new(output, level)
-        .map_err(|e| AppError::Generic(format!("Erro ao inicializar encoder zstd: {}", e)))?;
+        .map_err(|e| AppError::Generic(format!("Error initializing zstd encoder: {}", e)))?;
 
     encoder
         .multithread(zstd_threads)
-        .map_err(|e| AppError::Generic(format!("Erro ao configurar multithread do zstd: {}", e)))?;
+        .map_err(|e| AppError::Generic(format!("Error configuring zstd multithreading: {}", e)))?;
 
     {
         let mut tar_builder = Builder::new(&mut encoder);
@@ -372,7 +372,7 @@ fn create_tar_zst_from_temp_dir_with_threads(
                 .file_name()
                 .ok_or_else(|| {
                     AppError::Generic(
-                        "Nome de arquivo inválido no diretório temporário".to_string(),
+                        "Invalid file name in the temporary directory".to_string(),
                     )
                 })?
                 .to_owned();
@@ -381,7 +381,7 @@ fn create_tar_zst_from_temp_dir_with_threads(
                 .append_path_with_name(&file, Path::new(&file_name))
                 .map_err(|e| {
                     AppError::Generic(format!(
-                        "Erro ao adicionar {} no tar: {}",
+                        "Error adding {} to the tar: {}",
                         file.display(),
                         e
                     ))
@@ -390,12 +390,12 @@ fn create_tar_zst_from_temp_dir_with_threads(
 
         tar_builder
             .finish()
-            .map_err(|e| AppError::Generic(format!("Erro ao finalizar tar: {}", e)))?;
+            .map_err(|e| AppError::Generic(format!("Error finalizing tar: {}", e)))?;
     }
 
     encoder
         .finish()
-        .map_err(|e| AppError::Generic(format!("Erro ao finalizar zstd: {}", e)))?;
+        .map_err(|e| AppError::Generic(format!("Error finalizing zstd: {}", e)))?;
 
     let size = fs::metadata(output_file)?.len();
     Ok(size)
@@ -443,7 +443,7 @@ fn cleanup_orphan_archives(songs_dir: &Path, rows: &[SongBackupRow]) -> Result<u
         fs::remove_file(&path)?;
         removed_count += 1;
         info!(
-            "Arquivo órfão removido do cache local da nuvem: {}",
+            "Orphan file removed from the local cloud cache: {}",
             path.display()
         );
     }
@@ -490,7 +490,7 @@ fn generate_archive_with_retry(
             Err(err) => {
                 last_error = Some(err.to_string());
                 warn!(
-                    "Falha ao gerar arquivo da música {} na tentativa {}: {}",
+                    "Failed to generate file for song {} on attempt {}: {}",
                     song_id, attempt, err
                 );
             }
@@ -498,7 +498,7 @@ fn generate_archive_with_retry(
     }
 
     Err(AppError::Generic(last_error.unwrap_or_else(|| {
-        "Falha desconhecida ao gerar arquivo da música".to_string()
+        "Unknown failure generating the song file".to_string()
     })))
 }
 
@@ -573,7 +573,7 @@ fn run_archive_jobs_parallel(
                             .copied()
                             .or_else(|| panic_payload.downcast_ref::<String>().map(|s| s.as_str()))
                             .unwrap_or("worker panic");
-                        Err(AppError::Generic(format!("Worker panicou: {}", panic_msg)))
+                        Err(AppError::Generic(format!("Worker panicked: {}", panic_msg)))
                     });
 
                     if tx.send((idx, job.row.clone(), result)).is_err() {
@@ -618,7 +618,7 @@ fn generate_song_archives_with_prepared_versions(
     let removed_orphans = cleanup_orphan_archives(&songs_dir, &rows)?;
     if removed_orphans > 0 {
         info!(
-            "Limpeza de arquivos órfãos concluída: {} arquivo(s) removido(s)",
+            "Orphan files cleanup completed: {} file(s) removed",
             removed_orphans
         );
     }
@@ -631,7 +631,7 @@ fn generate_song_archives_with_prepared_versions(
 
         if filtered_rows.is_empty() {
             return Err(AppError::Generic(
-                "Nenhuma música encontrada para gerar backup".to_string(),
+                "No song found to generate backup".to_string(),
             ));
         }
 
@@ -650,7 +650,7 @@ fn generate_song_archives_with_prepared_versions(
 
             if let Err(err) = update_backup_status(db, &row.song_id, "ok") {
                 error!(
-                    "Erro ao atualizar status de backup (draft skip) para {}: {}",
+                    "Error updating backup status (draft skip) for {}: {}",
                     row.song_id, err
                 );
             }
@@ -668,7 +668,7 @@ fn generate_song_archives_with_prepared_versions(
 
         if let Err(err) = upsert_processing_status(db, &row.song_id) {
             error!(
-                "Erro ao iniciar status de processamento para {}: {}",
+                "Error starting backup processing status for {}: {}",
                 row.song_id, err
             );
             results.push(SongArchiveResult {
@@ -687,7 +687,7 @@ fn generate_song_archives_with_prepared_versions(
         if !should_generate {
             if let Err(err) = update_backup_status(db, &row.song_id, "ok") {
                 error!(
-                    "Erro ao atualizar status de backup (skip) para {}: {}",
+                    "Error updating backup status (skip) for {}: {}",
                     row.song_id, err
                 );
             }
@@ -709,7 +709,7 @@ fn generate_song_archives_with_prepared_versions(
                 let error_text = err.to_string();
                 if let Err(status_err) = update_backup_status(db, &row.song_id, "error") {
                     error!(
-                        "Erro ao atualizar status de backup (error) para {}: {}",
+                        "Error updating backup status (error) for {}: {}",
                         row.song_id, status_err
                     );
                 }
@@ -732,13 +732,13 @@ fn generate_song_archives_with_prepared_versions(
 
             if let Err(err) = update_backup_status(db, &row.song_id, "ok") {
                 error!(
-                    "Erro ao atualizar status de backup (clean) para {}: {}",
+                    "Error updating backup status (clean) for {}: {}",
                     row.song_id, err
                 );
             }
 
             info!(
-                "Arquivo {}.tar.zst removido porque não há partituras main",
+                "File {}.tar.zst removed because there are no main scores",
                 row.song_id
             );
 
@@ -760,7 +760,7 @@ fn generate_song_archives_with_prepared_versions(
         let workers = archive_worker_count(jobs.len());
         let zstd_threads = zstd_threads_per_archive(workers);
         info!(
-            "Gerando {} arquivo(s) .tar.zst com até {} worker(s) e {} thread(s) zstd por arquivo",
+            "Generating {} .tar.zst file(s) with up to {} worker(s) and {} zstd thread(s) per file",
             jobs.len(),
             workers,
             zstd_threads
@@ -772,13 +772,13 @@ fn generate_song_archives_with_prepared_versions(
             Ok((archive_path, archive_size)) => {
                 if let Err(err) = update_backup_status(db, &row.song_id, "ok") {
                     error!(
-                        "Erro ao atualizar status de backup (ok) para {}: {}",
+                        "Error updating backup status (ok) for {}: {}",
                         row.song_id, err
                     );
                 }
 
                 info!(
-                    "Arquivo {}.tar.zst gerado com sucesso em {}",
+                    "File {}.tar.zst generated successfully at {}",
                     row.song_id, archive_path
                 );
 
@@ -796,7 +796,7 @@ fn generate_song_archives_with_prepared_versions(
 
                 if let Err(status_err) = update_backup_status(db, &row.song_id, "error") {
                     error!(
-                        "Erro ao atualizar status de backup (error) para {}: {}",
+                        "Error updating backup status (error) for {}: {}",
                         row.song_id, status_err
                     );
                 }
@@ -897,7 +897,7 @@ mod tests {
 
         let row = SongBackupRow {
             song_id: "song-1".to_string(),
-            song_name: "Musica".to_string(),
+            song_name: "Music".to_string(),
             song_status: "main".to_string(),
             last_uploadable_score_modified_at: Some(100),
             last_status_change_at: None,
@@ -915,7 +915,7 @@ mod tests {
 
         let row = SongBackupRow {
             song_id: "song-2".to_string(),
-            song_name: "Musica".to_string(),
+            song_name: "Music".to_string(),
             song_status: "main".to_string(),
             last_uploadable_score_modified_at: Some(100),
             last_status_change_at: None,
@@ -999,7 +999,7 @@ mod tests {
 
         let row = SongBackupRow {
             song_id: "song-3".to_string(),
-            song_name: "Musica".to_string(),
+            song_name: "Music".to_string(),
             song_status: "main".to_string(),
             last_uploadable_score_modified_at: Some(200),
             last_status_change_at: None,
@@ -1020,7 +1020,7 @@ mod tests {
 
         let row = SongBackupRow {
             song_id: "song-4".to_string(),
-            song_name: "Musica".to_string(),
+            song_name: "Music".to_string(),
             song_status: "draft".to_string(),
             last_uploadable_score_modified_at: None,
             last_status_change_at: None,
@@ -1054,7 +1054,7 @@ mod tests {
         db.insert_song(
             &Song {
                 id: "song-1".to_string(),
-                name: "Musica".to_string(),
+                name: "Music".to_string(),
                 composer: None,
                 arranger: None,
                 path: song_dir.to_string_lossy().to_string(),
@@ -1147,7 +1147,7 @@ mod tests {
         db.insert_song(
             &Song {
                 id: "song-1".to_string(),
-                name: "Musica".to_string(),
+                name: "Music".to_string(),
                 composer: None,
                 arranger: None,
                 path: song_dir.to_string_lossy().to_string(),
@@ -1207,7 +1207,7 @@ mod tests {
         db.insert_song(
             &Song {
                 id: "song-1".to_string(),
-                name: "Musica".to_string(),
+                name: "Music".to_string(),
                 composer: None,
                 arranger: None,
                 path: song_dir.to_string_lossy().to_string(),

@@ -27,8 +27,8 @@ struct ScoreMetadataEntry {
     status: ScoreStatus,
 }
 
-/// Verifica se há alterações nos arquivos de partituras.
-/// Arquivos alterados passam para draft e arquivos ausentes aparecem apenas no relatório.
+/// Checks for changes in score files.
+/// Changed files move to draft and missing files only appear in the report.
 #[tauri::command]
 pub async fn scan_files_for_changes(
     db: State<'_, Database>,
@@ -41,7 +41,7 @@ pub async fn scan_files_for_changes(
 
     run_blocking_with_store(
         app_data_dir,
-        "Falha interna ao verificar alterações",
+        "Internal failure checking for changes",
         move |store| scan_files_for_changes_impl(&db, &store, apply_missing_deletions),
     )
     .await
@@ -57,7 +57,7 @@ pub async fn preview_scan_files_for_changes(
 
     run_blocking_with_store(
         app_data_dir,
-        "Falha interna ao verificar alterações",
+        "Internal failure checking for changes",
         move |store| preview_scan_files_for_changes_impl(&db, &store),
     )
     .await
@@ -68,7 +68,7 @@ fn scan_files_for_changes_impl(
     store: &SystemStore,
     apply_missing_deletions: bool,
 ) -> Result<ScanResult, AppError> {
-    info!("Iniciando verificação de alterações nos arquivos de partituras");
+    info!("Starting score file change check");
 
     let settings = store.get_app_settings()?;
     settings.require_server_only()?;
@@ -135,7 +135,7 @@ fn scan_files_for_changes_impl(
 
                         match db.insert_score(&score) {
                             Ok(()) => {
-                                info!("Novo arquivo indexado: {}", current_path);
+                                info!("New file indexed: {}", current_path);
                                 added_files.push(build_score_change_report_item(
                                     &song.name,
                                     &None,
@@ -143,20 +143,20 @@ fn scan_files_for_changes_impl(
                                 ));
                             }
                             Err(e) => {
-                                warn!("Erro ao inserir novo arquivo {}: {:?}", current_path, e);
+                                warn!("Error inserting new file {}: {:?}", current_path, e);
                                 failed_files.push((
                                     current_path.clone(),
-                                    format!("Erro ao indexar novo arquivo: {:?}", e),
+                                    format!("Error indexing new file: {:?}", e),
                                 ));
                             }
                         }
                     }
                     Err(e) => {
                         warn!(
-                            "Erro ao obter metadados do novo arquivo {}: {:?}",
+                            "Error getting metadata for new file {}: {:?}",
                             current_path, e
                         );
-                        failed_files.push((current_path.clone(), format!("Erro ao ler: {}", e)));
+                        failed_files.push((current_path.clone(), format!("Error reading: {}", e)));
                     }
                 }
             }
@@ -184,13 +184,13 @@ fn scan_files_for_changes_impl(
             let path = Path::new(&full_path);
 
             if !path.exists() || !path.is_file() {
-                warn!("Arquivo não encontrado: {}", full_path);
+                warn!("File not found: {}", full_path);
                 if apply_missing_deletions {
                     if let Err(e) = db.delete_score(&score.score_id) {
-                        warn!("Erro ao remover score ausente do banco: {:?}", e);
+                        warn!("Error removing missing score from database: {:?}", e);
                         failed_files.push((
                             full_path.clone(),
-                            format!("Erro ao remover do banco: {:?}", e),
+                            format!("Error removing from database: {:?}", e),
                         ));
                     }
                 }
@@ -215,7 +215,7 @@ fn scan_files_for_changes_impl(
                     );
 
                     if detector.has_changed() {
-                        info!("Alteração detectada em: {}", full_path);
+                        info!("Change detected in: {}", full_path);
 
                         if let Err(e) = db.update_score_status(
                             &score.score_id,
@@ -223,9 +223,9 @@ fn scan_files_for_changes_impl(
                             &updated_by,
                             Some((current_size, current_modified_at)),
                         ) {
-                            warn!("Erro ao atualizar status para draft: {:?}", e);
+                            warn!("Error updating status to draft: {:?}", e);
                             failed_files
-                                .push((full_path.clone(), format!("Erro ao atualizar: {:?}", e)));
+                                .push((full_path.clone(), format!("Error updating: {:?}", e)));
                         } else {
                             changed_files.push(build_score_change_report_item(
                                 &song.name,
@@ -236,8 +236,8 @@ fn scan_files_for_changes_impl(
                     }
                 }
                 Err(e) => {
-                    warn!("Erro ao obter metadados do arquivo {}: {:?}", full_path, e);
-                    failed_files.push((full_path, format!("Erro ao ler: {}", e)));
+                    warn!("Error getting file metadata {}: {:?}", full_path, e);
+                    failed_files.push((full_path, format!("Error reading: {}", e)));
                 }
             }
         }
@@ -266,7 +266,7 @@ fn scan_files_for_changes_impl(
 
                     match db.insert_score(&score) {
                         Ok(()) => {
-                            info!("Novo arquivo indexado: {}", current_path);
+                            info!("New file indexed: {}", current_path);
                             added_files.push(build_score_change_report_item(
                                 &song.name,
                                 &None,
@@ -274,27 +274,27 @@ fn scan_files_for_changes_impl(
                             ));
                         }
                         Err(e) => {
-                            warn!("Erro ao inserir novo arquivo {}: {:?}", current_path, e);
+                            warn!("Error inserting new file {}: {:?}", current_path, e);
                             failed_files.push((
                                 current_path.clone(),
-                                format!("Erro ao indexar novo arquivo: {:?}", e),
+                                format!("Error indexing new file: {:?}", e),
                             ));
                         }
                     }
                 }
                 Err(e) => {
                     warn!(
-                        "Erro ao obter metadados do novo arquivo {}: {:?}",
+                        "Error getting metadata for new file {}: {:?}",
                         current_path, e
                     );
-                    failed_files.push((current_path.clone(), format!("Erro ao ler: {}", e)));
+                    failed_files.push((current_path.clone(), format!("Error reading: {}", e)));
                 }
             }
         }
     }
 
     info!(
-        "Verificação concluída. {} alterados, {} adicionados, {} não encontrados, {} recuperados, {} erros",
+        "Check completed. {} changed, {} added, {} not found, {} recovered, {} errors",
         changed_files.len(),
         added_files.len(),
         deleted_files.len(),
@@ -328,7 +328,7 @@ fn preview_scan_files_for_changes_impl(
     db: &Database,
     store: &SystemStore,
 ) -> Result<ScanResult, AppError> {
-    info!("Iniciando prévia de alterações nos arquivos de partituras");
+    info!("Starting score file change preview");
 
     let settings = store.get_app_settings()?;
     settings.require_server_only()?;
@@ -436,9 +436,9 @@ fn preview_scan_files_for_changes_impl(
                             &updated_by,
                             Some((current_size, current_modified_at)),
                         ) {
-                            warn!("Erro ao atualizar status para draft: {:?}", e);
+                            warn!("Error updating status to draft: {:?}", e);
                             failed_files
-                                .push((full_path.clone(), format!("Erro ao atualizar: {:?}", e)));
+                                .push((full_path.clone(), format!("Error updating: {:?}", e)));
                         } else {
                             changed_files.push(build_score_change_report_item(
                                 &song.name,
@@ -449,8 +449,8 @@ fn preview_scan_files_for_changes_impl(
                     }
                 }
                 Err(e) => {
-                    warn!("Erro ao obter metadados do arquivo {}: {:?}", full_path, e);
-                    failed_files.push((full_path, format!("Erro ao ler: {}", e)));
+                    warn!("Error getting file metadata {}: {:?}", full_path, e);
+                    failed_files.push((full_path, format!("Error reading: {}", e)));
                 }
             }
         }
@@ -473,7 +473,7 @@ fn preview_scan_files_for_changes_impl(
     }
 
     info!(
-        "Prévia concluída. {} alterados, {} adicionados, {} deletados, {} recuperados, {} erros",
+        "Preview completed. {} changed, {} added, {} deleted, {} recovered, {} errors",
         changed_files.len(),
         added_files.len(),
         deleted_files.len(),
@@ -535,13 +535,13 @@ pub struct ScanResult {
     pub database_changes_count: usize,
 }
 
-/// Faz uma verificação simples de conectividade com a internet usando socket TCP.
-/// Não depende de rclone: tenta conectar em servidores DNS públicos bem conhecidos.
+/// Performs a simple internet connectivity check using a TCP socket.
+/// Does not depend on rclone: tries to connect to well-known public DNS servers.
 #[tauri::command]
 pub async fn has_internet_connection() -> Result<bool, AppError> {
     tauri::async_runtime::spawn_blocking(has_internet_connection_impl)
         .await
-        .map_err(|e| AppError::Generic(format!("Falha interna ao verificar internet: {}", e)))
+        .map_err(|e| AppError::Generic(format!("Internal failure checking internet: {}", e)))
 }
 
 fn has_internet_connection_impl() -> bool {
@@ -585,7 +585,7 @@ mod tests {
         store
             .save_app_settings(&AppSettings {
                 computer_id: "server-1".to_string(),
-                computer_name: Some("Servidor".to_string()),
+                computer_name: Some("Server".to_string()),
                 computer_type: ComputerType::Server,
                 first_run_completed: true,
                 ..Default::default()
@@ -622,7 +622,7 @@ mod tests {
         db.insert_score(&Score {
             id: "score-1".to_string(),
             song_id: "song-1".to_string(),
-            name: Some("flauta".to_string()),
+            name: Some("flute".to_string()),
             host_id: "server-1".to_string(),
             file_path: score_dir.to_string_lossy().to_string(),
             file_name: "score-1.musx".to_string(),
@@ -684,7 +684,7 @@ mod tests {
         db.insert_score(&Score {
             id: "score-ignored".to_string(),
             song_id: "song-1".to_string(),
-            name: Some("flauta".to_string()),
+            name: Some("flute".to_string()),
             host_id: "server-1".to_string(),
             file_path: score_dir.to_string_lossy().to_string(),
             file_name: "score-ignored.musx".to_string(),
@@ -713,7 +713,7 @@ mod tests {
         store
             .save_app_settings(&AppSettings {
                 computer_id: "server-1".to_string(),
-                computer_name: Some("Servidor".to_string()),
+                computer_name: Some("Server".to_string()),
                 computer_type: ComputerType::Server,
                 first_run_completed: true,
                 ..Default::default()
@@ -729,7 +729,7 @@ mod tests {
         db.insert_song(
             &Song {
                 id: "song-1".to_string(),
-                name: "Bem aventurança do crente".to_string(),
+                name: "Blessed is the believer".to_string(),
                 composer: None,
                 arranger: None,
                 path: song_dir.to_string_lossy().to_string(),
@@ -764,7 +764,7 @@ mod tests {
         assert_eq!(result.changed_files.len(), 1);
         assert_eq!(
             result.changed_files[0],
-            "Score.mus na música Bem aventurança do crente"
+            "Score.mus in the song Blessed is the believer"
         );
     }
 
@@ -777,7 +777,7 @@ mod tests {
         store
             .save_app_settings(&AppSettings {
                 computer_id: "server-1".to_string(),
-                computer_name: Some("Servidor".to_string()),
+                computer_name: Some("Server".to_string()),
                 computer_type: ComputerType::Server,
                 first_run_completed: true,
                 ..Default::default()
@@ -824,7 +824,7 @@ mod tests {
         store
             .save_app_settings(&AppSettings {
                 computer_id: "server-1".to_string(),
-                computer_name: Some("Servidor".to_string()),
+                computer_name: Some("Server".to_string()),
                 computer_type: ComputerType::Server,
                 first_run_completed: true,
                 ..Default::default()
@@ -834,7 +834,7 @@ mod tests {
         let song_dir = dir.path().join("songs").join("song-1");
         fs::create_dir_all(&song_dir).expect("create song dir");
 
-        let score_path = song_dir.join("Canon - Trompete.musx");
+        let score_path = song_dir.join("Canon - Trumpet.musx");
         fs::write(&score_path, b"score").expect("write score");
 
         let (file_size, file_modified_at) = get_file_metadata(&score_path).expect("metadata");
@@ -858,10 +858,10 @@ mod tests {
         db.insert_score(&Score {
             id: "score-1".to_string(),
             song_id: "song-1".to_string(),
-            name: Some("Trompete".to_string()),
+            name: Some("Trumpet".to_string()),
             host_id: "server-1".to_string(),
             file_path: song_dir.to_string_lossy().to_string(),
-            file_name: "Canon - Trompete.musx".to_string(),
+            file_name: "Canon - Trumpet.musx".to_string(),
             file_size,
             file_modified_at,
             updated_at: now(),
@@ -889,7 +889,7 @@ mod tests {
         store
             .save_app_settings(&AppSettings {
                 computer_id: "server-1".to_string(),
-                computer_name: Some("Servidor".to_string()),
+                computer_name: Some("Server".to_string()),
                 computer_type: ComputerType::Server,
                 first_run_completed: true,
                 ..Default::default()
@@ -899,9 +899,9 @@ mod tests {
         let song_dir = dir.path().join("songs").join("song-1");
         fs::create_dir_all(&song_dir).expect("create song dir");
 
-        let main_score_path = song_dir.join("Canon - Flauta.musx");
-        let removed_score_path = song_dir.join("Canon - Trompete.musx");
-        let new_score_path = song_dir.join("Canon - Clarinete.musx");
+        let main_score_path = song_dir.join("Canon - Flute.musx");
+        let removed_score_path = song_dir.join("Canon - Trumpet.musx");
+        let new_score_path = song_dir.join("Canon - Clarinet.musx");
 
         fs::write(&main_score_path, b"main-score").expect("write main score");
         fs::write(&removed_score_path, b"removed-score").expect("write removed score");
@@ -930,10 +930,10 @@ mod tests {
         db.insert_score(&Score {
             id: "score-1".to_string(),
             song_id: "song-1".to_string(),
-            name: Some("Flauta".to_string()),
+            name: Some("Flute".to_string()),
             host_id: "server-1".to_string(),
             file_path: song_dir.to_string_lossy().to_string(),
-            file_name: "Canon - Flauta.musx".to_string(),
+            file_name: "Canon - Flute.musx".to_string(),
             file_size: main_file_size,
             file_modified_at: main_file_modified_at,
             updated_at: now(),
@@ -945,10 +945,10 @@ mod tests {
         db.insert_score(&Score {
             id: "score-2".to_string(),
             song_id: "song-1".to_string(),
-            name: Some("Trompete".to_string()),
+            name: Some("Trumpet".to_string()),
             host_id: "server-1".to_string(),
             file_path: song_dir.to_string_lossy().to_string(),
-            file_name: "Canon - Trompete.musx".to_string(),
+            file_name: "Canon - Trumpet.musx".to_string(),
             file_size: removed_file_size,
             file_modified_at: removed_file_modified_at,
             updated_at: now(),
@@ -965,16 +965,16 @@ mod tests {
 
         assert_eq!(result.deleted_files.len(), 1);
         assert_eq!(result.added_files.len(), 1);
-        assert!(result.deleted_files[0].contains("Trompete.musx"));
+        assert!(result.deleted_files[0].contains("Trumpet.musx"));
         assert!(result.deleted_files[0].contains("CANON"));
-        assert!(result.added_files[0].contains("Clarinete.musx"));
+        assert!(result.added_files[0].contains("Clarinet.musx"));
         assert!(result.added_files[0].contains("CANON"));
         assert!(scores
             .iter()
-            .any(|score| score.file_path.ends_with("Canon - Clarinete.musx")));
+            .any(|score| score.file_path.ends_with("Canon - Clarinet.musx")));
         assert!(scores
             .iter()
-            .any(|score| score.file_path.ends_with("Canon - Trompete.musx")
+            .any(|score| score.file_path.ends_with("Canon - Trumpet.musx")
                 && score.status == ScoreStatus::Main));
     }
 
@@ -987,7 +987,7 @@ mod tests {
         store
             .save_app_settings(&AppSettings {
                 computer_id: "server-1".to_string(),
-                computer_name: Some("Servidor".to_string()),
+                computer_name: Some("Server".to_string()),
                 computer_type: ComputerType::Server,
                 first_run_completed: true,
                 ..Default::default()
@@ -1054,7 +1054,7 @@ mod tests {
         store
             .save_app_settings(&AppSettings {
                 computer_id: "server-1".to_string(),
-                computer_name: Some("Servidor".to_string()),
+                computer_name: Some("Server".to_string()),
                 computer_type: ComputerType::Server,
                 first_run_completed: true,
                 ..Default::default()
@@ -1064,7 +1064,7 @@ mod tests {
         let song_dir = dir.path().join("songs").join("song-1");
         fs::create_dir_all(&song_dir).expect("create song dir");
 
-        let main_score_path = song_dir.join("08 H.C. CRISTO, O FIEL AMIGO - Flauta.musx");
+        let main_score_path = song_dir.join("08 H.C. CRISTO, O FIEL AMIGO - Flute.musx");
         let ignored_score_path = song_dir.join("08 H.C. CRISTO, O FIEL AMIGO - Flute2.musx");
 
         fs::write(&main_score_path, b"main-score").expect("write main score");
@@ -1094,10 +1094,10 @@ mod tests {
         db.insert_score(&Score {
             id: "score-main".to_string(),
             song_id: "song-1".to_string(),
-            name: Some("Flauta".to_string()),
+            name: Some("Flute".to_string()),
             host_id: "server-1".to_string(),
             file_path: song_dir.to_string_lossy().to_string(),
-            file_name: "08 H.C. CRISTO, O FIEL AMIGO - Flauta.musx".to_string(),
+            file_name: "08 H.C. CRISTO, O FIEL AMIGO - Flute.musx".to_string(),
             file_size: main_file_size,
             file_modified_at: main_file_modified_at,
             updated_at: now(),
@@ -1139,7 +1139,7 @@ mod tests {
         store
             .save_app_settings(&AppSettings {
                 computer_id: "server-1".to_string(),
-                computer_name: Some("Servidor".to_string()),
+                computer_name: Some("Server".to_string()),
                 computer_type: ComputerType::Server,
                 first_run_completed: true,
                 ..Default::default()
@@ -1197,7 +1197,7 @@ mod tests {
         assert!(result
             .report_items
             .iter()
-            .any(|item| item.contains("foi para rascunho")));
+            .any(|item| item.contains("went to draft")));
 
         fs::write(&score_path, b"changed-version-again").expect("rewrite score again");
 
@@ -1235,10 +1235,10 @@ mod tests {
         db.insert_score(&Score {
             id: "score-1".to_string(),
             song_id: "song-1".to_string(),
-            name: Some("Flauta".to_string()),
+            name: Some("Flute".to_string()),
             host_id: "server-1".to_string(),
             file_path: song_dir.to_string_lossy().to_string(),
-            file_name: "HINO NOVO - Flauta.musx".to_string(),
+            file_name: "HINO NOVO - Flute.musx".to_string(),
             file_size: 1024,
             file_modified_at: now(),
             updated_at: now(),
@@ -1251,7 +1251,7 @@ mod tests {
             .expect("update score status");
 
         let added_files = vec![song_dir
-            .join("HINO NOVO - Flauta.musx")
+            .join("HINO NOVO - Flute.musx")
             .to_string_lossy()
             .to_string()];
         let changed_fields = db.get_changed_fields_ordered().expect("changed fields");
@@ -1261,14 +1261,14 @@ mod tests {
 
         assert!(report_items
             .iter()
-            .any(|item| item.contains("Música criada: HINO NOVO")));
+            .any(|item| item.contains("Song created: HINO NOVO")));
         assert!(report_items
             .iter()
-            .any(|item| item.contains("foi para rascunho")));
+            .any(|item| item.contains("went to draft")));
         assert!(report_items
             .iter()
-            .any(|item| item.contains("Partitura adicionada:")
-                && item.contains("HINO NOVO - Flauta.musx")));
+            .any(|item| item.contains("Score added:")
+                && item.contains("HINO NOVO - Flute.musx")));
     }
 
     #[test]
@@ -1321,7 +1321,7 @@ mod tests {
 
         assert_eq!(
             description,
-            "Partitura adicionada: Sem Instrumento.MUS na música 03 VEZES SANTO."
+            "Score added: No Instrument.MUS in the song 03 VEZES SANTO."
         );
     }
 }

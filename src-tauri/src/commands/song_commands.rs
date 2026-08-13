@@ -19,7 +19,7 @@ fn normalized_required_song_name(name: &str) -> Result<String, AppError> {
     let normalized = normalize_song_name(name);
     if normalized.is_empty() {
         return Err(AppError::Generic(
-            "Nome da música não pode estar vazio".into(),
+            "Song name cannot be empty".into(),
         ));
     }
     Ok(normalized)
@@ -41,7 +41,7 @@ fn normalized_required_song_path(path: &str) -> Result<String, AppError> {
     let normalized = path.trim().to_string();
     if normalized.is_empty() {
         return Err(AppError::Generic(
-            "Caminho da música não pode estar vazio".into(),
+            "Song path cannot be empty".into(),
         ));
     }
     Ok(normalized)
@@ -73,7 +73,7 @@ fn ensure_unique_song_name(
 
     if has_conflict {
         return Err(AppError::Generic(
-            "Uma música com esse nome, compositor e arranjador já existe".into(),
+            "A song with this name, composer and arranger already exists".into(),
         ));
     }
 
@@ -86,7 +86,7 @@ where
 {
     match query() {
         Ok(songs) => {
-            info!("{}: {} músicas", operation, songs.len());
+            info!("{}: {} songs", operation, songs.len());
             Ok(songs)
         }
         Err(e) => {
@@ -112,7 +112,7 @@ fn delete_song_core(db: &Database, store: &SystemStore, song_id: &str) -> Result
     if archive_path.is_file() {
         trash::delete(&archive_path).map_err(|e| {
             AppError::Generic(format!(
-                "Erro ao mover arquivo compactado da música '{}' para lixeira: {}",
+                "Error moving song '{}' compressed file to trash: {}",
                 archive_path.display(),
                 e
             ))
@@ -148,22 +148,22 @@ pub fn delete_file_path(store: State<'_, SystemStore>, file_path: String) -> Res
 
     let expanded = from_storage_path(&file_path);
     let path = std::path::Path::new(&expanded);
-    info!("Excluindo arquivo da tela de revisão: {}", path.display());
+    info!("Deleting file from review screen: {}", path.display());
     remove_path_if_exists(path)
 }
 
 #[tauri::command]
 pub fn get_all_songs(db: State<'_, Database>) -> Result<Vec<SongListItem>, AppError> {
-    info!("Buscando todas as músicas");
-    run_song_query_with_logging("Busca de todas as músicas concluída", || {
+    info!("Fetching all songs");
+    run_song_query_with_logging("Fetching all songs completed", || {
         db.get_all_songs()
     })
 }
 
 #[tauri::command]
 pub fn get_all_song_summaries(db: State<'_, Database>) -> Result<Vec<SongListItem>, AppError> {
-    info!("Buscando resumos de todas as músicas");
-    run_song_query_with_logging("Busca de resumos de músicas concluída", || {
+    info!("Fetching summaries of all songs");
+    run_song_query_with_logging("Fetching song summaries completed", || {
         db.get_all_song_summaries()
     })
 }
@@ -215,11 +215,11 @@ pub fn get_song_summaries_with_not_found(
 #[tauri::command]
 pub fn search_songs(db: State<'_, Database>, query: String) -> Result<Vec<SongListItem>, AppError> {
     if query.trim().is_empty() {
-        info!("Busca vazia, retornando todas as músicas");
+        info!("Empty search, returning all songs");
         return run_song_query_with_logging("Busca vazia", || db.get_all_songs());
     }
-    info!("Buscando músicas com query: '{}'", query);
-    run_song_query_with_logging("Busca por músicas concluída", || db.search_songs(&query))
+    info!("Searching songs with query: '{}'", query);
+    run_song_query_with_logging("Song search completed", || db.search_songs(&query))
 }
 
 #[tauri::command]
@@ -227,14 +227,14 @@ pub fn toggle_favorite(
     db: State<'_, Database>,
     song_id: String,
 ) -> Result<bool, AppError> {
-    info!("Alternando favorito para música: {}", song_id);
+    info!("Toggling favorite for song: {}", song_id);
     match db.toggle_favorite(&song_id) {
         Ok(is_now_favorite) => {
-            info!("Música {} agora é favorita: {}", song_id, is_now_favorite);
+            info!("Song {} is now favorite: {}", song_id, is_now_favorite);
             Ok(is_now_favorite)
         }
         Err(e) => {
-            error!("Erro ao alternar favorito para {}: {:?}", song_id, e);
+            error!("Error toggling favorite for {}: {:?}", song_id, e);
             Err(e)
         }
     }
@@ -251,7 +251,7 @@ pub fn update_composer(
 
     let normalized_new_name = normalize_author_change_name(
         &new_name,
-        "Nome do compositor não pode estar vazio",
+        "Composer name cannot be empty",
     )?;
 
     db.update_composer(&old_name, &normalized_new_name)
@@ -279,7 +279,7 @@ pub fn update_arranger(
 
     let normalized_new_name = normalize_author_change_name(
         &new_name,
-        "Nome do arranjador não pode estar vazio",
+        "Arranger name cannot be empty",
     )?;
 
     db.update_arranger(&old_name, &normalized_new_name)
@@ -326,7 +326,7 @@ pub fn reindex_song_directory(
 
     if indexed_files.is_empty() {
         return Err(AppError::Generic(
-            "Nenhuma partitura válida encontrada nesse diretório".into(),
+            "No valid score found in this directory".into(),
         ));
     }
 
@@ -354,7 +354,7 @@ pub fn reindex_song_directory(
             Ok(metadata) => metadata,
             Err(e) => {
                 warn!(
-                    "Erro ao obter metadados do arquivo reindexado {}: {:?}",
+                    "Error getting metadata of reindexed file {}: {:?}",
                     indexed_file.path, e
                 );
                 continue;
@@ -376,7 +376,7 @@ pub fn reindex_song_directory(
     }
 
     info!(
-        "Reindexação concluída para música {}: {} arquivos adicionados",
+        "Reindexing completed for song {}: {} files added",
         song_id, added_count
     );
 
@@ -384,8 +384,8 @@ pub fn reindex_song_directory(
     db.get_song_list_item_by_id(&song_id)
 }
 
-/// Importa arquivos indexados, agrupando por nome da música.
-/// Músicas existentes (case-insensitive) não são duplicadas.
+/// Imports indexed files, grouping by song name.
+/// Existing songs (case-insensitive) are not duplicated.
 fn import_files_core(
     db: &Database,
     store: &SystemStore,
@@ -398,7 +398,7 @@ fn import_files_core(
 ) -> Result<ImportIndexedFilesResult, AppError> {
     let now = Local::now().naive_local();
 
-    // Agrupar arquivos por nome da música
+    // Group files by song name
     let mut groups: std::collections::HashMap<String, Vec<&IndexedFile>> =
         std::collections::HashMap::new();
     for file in files {
@@ -457,7 +457,7 @@ fn import_files_core(
                     Ok(metadata) => metadata,
                     Err(e) => {
                         warn!(
-                            "Erro ao obter metadados do arquivo {}: {:?}",
+                            "Error getting file metadata {}: {:?}",
                             indexed_file.path, e
                         );
                         (0, now)
@@ -585,7 +585,7 @@ pub fn import_indexed_files_with_metadata(
 ) -> Result<ImportIndexedFilesResult, AppError> {
     let settings = require_server_settings(&store)?;
     info!(
-        "Importando arquivos indexados com metadados: files={}, categories={}, composer_set={}, arranger_set={}",
+        "Importing indexed files with metadata: files={}, categories={}, composer_set={}, arranger_set={}",
         files.len(),
         category_ids.len(),
         composer.as_ref().map(|v| !v.trim().is_empty()).unwrap_or(false),
@@ -605,14 +605,14 @@ pub fn import_indexed_files_with_metadata(
     .map(|result| {
         let _ = refresh_library_summary_cache(&db, &store);
         info!(
-            "Importação de arquivos concluída com sucesso: músicas retornadas={}, partituras adicionadas={}",
+            "File import completed successfully: songs returned={}, scores added={}",
             result.songs.len(),
             result.added_count
         );
         result
     })
     .map_err(|e| {
-        error!("Erro ao importar arquivos indexados: {:?}", e);
+        error!("Error importing indexed files: {:?}", e);
         e
     })
 }
@@ -633,7 +633,7 @@ pub fn get_song_summaries_by_category(
     db.get_song_summaries_by_category(&category_id)
 }
 
-/// Verifica se é servidor e valida nome único, retornando o computer_id
+/// Checks if it is a server and validates unique name, returning the computer_id
 fn validate_server_create_song(
     db: &Database,
     store: &SystemStore,
@@ -656,7 +656,7 @@ fn resolve_manual_song_status(requested_status: &str) -> Result<ScoreStatus, App
         "draft" => Ok(ScoreStatus::Draft),
         "main" => Ok(ScoreStatus::Main),
         _ => Err(AppError::Generic(
-            "Apenas as mudanças para 'draft' ou 'main' são permitidas manualmente".into(),
+            "Only changes to 'draft' or 'main' are allowed manually".into(),
         )),
     }
 }
@@ -697,7 +697,7 @@ pub fn create_song_with_metadata(
     let now = Local::now().naive_local();
     let song_id = uuid::Uuid::new_v4().to_string();
 
-    info!("Criando nova música: {}", normalized_name);
+    info!("Creating new song: {}", normalized_name);
     let song = Song {
         id: song_id.clone(),
         name: normalized_name,
@@ -712,7 +712,7 @@ pub fn create_song_with_metadata(
 
     db.insert_song(&song, &category_ids).map_err(|e| {
         error!(
-            "Erro ao criar música '{}' (id={}): {:?}",
+            "Error creating song '{}' (id={}): {:?}",
             song.name, song_id, e
         );
         e
@@ -722,7 +722,7 @@ pub fn create_song_with_metadata(
 
     db.get_song_list_item_by_id(&song_id).map(|created| {
         info!(
-            "Música criada com sucesso: {} ({})",
+            "Song created successfully: {} ({})",
             created.name, created.id
         );
         created
@@ -747,7 +747,7 @@ pub fn update_song(
     let all_songs = db.get_all_songs()?;
     ensure_unique_song_name(&all_songs, &normalized_name, composer.as_deref(), arranger.as_deref(), Some(&song_id))?;
 
-    info!("Atualizando música: {} -> {}", song_id, normalized_name);
+    info!("Updating song: {} -> {}", song_id, normalized_name);
     let original_song = db.get_song_by_id(&song_id)?;
     let now = Local::now().naive_local();
 
@@ -778,7 +778,7 @@ pub fn update_song_status(
     let settings = require_server_settings(&store)?;
     let next_status = resolve_manual_song_status(&status)?;
 
-    info!("Atualizando status da música: {} para: {}", song_id, status);
+    info!("Updating song status: {} to: {}", song_id, status);
     db.update_song_status_for_song(&song_id, next_status, &settings.computer_id)?;
 
     let _ = refresh_library_summary_cache(&db, &store);
@@ -809,11 +809,11 @@ pub fn delete_song(
 ) -> Result<(), AppError> {
     require_server_settings(&store)?;
 
-    info!("Deletando música: {}", song_id);
+    info!("Deleting song: {}", song_id);
 
     delete_song_core(&db, &store, &song_id)?;
 
-    info!("Música deletada com sucesso: {}", song_id);
+    info!("Song deleted successfully: {}", song_id);
     Ok(())
 }
 
@@ -825,11 +825,11 @@ pub fn delete_song_with_files(
 ) -> Result<(), AppError> {
     require_server_settings(&store)?;
 
-    info!("Deletando diretório da música: {}", song_id);
+    info!("Deleting song directory: {}", song_id);
 
     delete_song_with_files_core(&db, &store, &song_id)?;
 
-    info!("Diretório da música deletado com sucesso: {}", song_id);
+    info!("Song directory deleted successfully: {}", song_id);
     Ok(())
 }
 
@@ -875,7 +875,7 @@ mod tests {
         store
             .save_app_settings(&AppSettings {
                 computer_id: "server-1".to_string(),
-                computer_name: Some("Servidor".to_string()),
+                computer_name: Some("Server".to_string()),
                 computer_type: ComputerType::Server,
                 first_run_completed: true,
                 ..Default::default()
@@ -925,7 +925,7 @@ mod tests {
         store
             .save_app_settings(&AppSettings {
                 computer_id: "server-1".to_string(),
-                computer_name: Some("Servidor".to_string()),
+                computer_name: Some("Server".to_string()),
                 computer_type: ComputerType::Server,
                 first_run_completed: true,
                 ..Default::default()
@@ -972,7 +972,7 @@ mod tests {
         store
             .save_app_settings(&AppSettings {
                 computer_id: "server-1".to_string(),
-                computer_name: Some("Servidor".to_string()),
+                computer_name: Some("Server".to_string()),
                 computer_type: ComputerType::Server,
                 first_run_completed: true,
                 ..Default::default()
@@ -1020,7 +1020,7 @@ mod tests {
         store
             .save_app_settings(&AppSettings {
                 computer_id: "server-1".to_string(),
-                computer_name: Some("Servidor".to_string()),
+                computer_name: Some("Server".to_string()),
                 computer_type: ComputerType::Server,
                 first_run_completed: true,
                 ..Default::default()
@@ -1062,7 +1062,7 @@ mod tests {
         store
             .save_app_settings(&AppSettings {
                 computer_id: "server-1".to_string(),
-                computer_name: Some("Servidor".to_string()),
+                computer_name: Some("Server".to_string()),
                 computer_type: ComputerType::Server,
                 first_run_completed: true,
                 ..Default::default()

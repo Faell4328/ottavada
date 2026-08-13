@@ -2,23 +2,23 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum AppError {
-    #[error("Erro de banco de dados: {0}")]
+    #[error("Database error: {0}")]
     Database(#[from] rusqlite::Error),
 
-    #[error("Erro de I/O: {0}")]
+    #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
 
-    #[error("Música não encontrada: {0}")]
+    #[error("Song not found: {0}")]
     SongNotFound(String),
 
-    #[error("Partitura não encontrada: {0}")]
+    #[error("Score not found: {0}")]
     ScoreNotFound(String),
 
 
-    #[error("Diretório inválido: {0}")]
+    #[error("Invalid directory: {0}")]
     InvalidDirectory(String),
 
-    #[error("Operação não permitida para cliente")]
+    #[error("Operation not allowed for client")]
     ClientOperationNotAllowed,
 
     #[error("{0}")]

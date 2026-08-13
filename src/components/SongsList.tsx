@@ -209,7 +209,7 @@ export default function SongsList() {
           await loadSongScores(song.id);
           scrollSongIntoView(song.id);
         } catch {
-          // loadSongScores já exibe o toast de erro.
+          // loadSongScores already shows the error toast.
         }
       })();
     },

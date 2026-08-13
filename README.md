@@ -2,118 +2,118 @@
   <img src="public/icon.png" width="200">
 </p>
 
-O **Ottavada** é um software gratuito para Windows 10 e 11 (Exe, `x32` e `x64`), Linux (AppImage, `x64`) e macOS (DMG universal, `x64` e `arm`), desenvolvido com Tauri e React. É um aplicativo desktop que facilita o dia a dia de pessoas que lidam com muitas músicas e partituras. Seu principal objetivo é resolver desafios comuns relacionados à localização, organização e movimentação entre computadores.
+**Ottavada** is free software for Windows 10 and 11 (Exe, `x32` and `x64`), Linux (AppImage, `x64`) and macOS (universal DMG, `x64` and `arm`), built with Tauri and React. It is a desktop application that makes life easier for people who deal with many songs and scores. Its main goal is to solve common challenges related to finding, organizing and moving them between computers.
 
-É importante destacar que o **Ottavada** não é uma ferramenta de criação, edição ou leitura de partituras. Ele atua como um intermediário e facilitador, integrando e organizando o seu fluxo de trabalho. Foi projetado para funcionar em conjunto com ferramentas amplamente utilizadas na criação e edição de partituras, como **Finale**, **MuseScore**, **Sibelius**, **Dorico** e **Encore**, além de outros programas compatíveis com formatos como **MusicXML**, **MIDI** e **PDF**.
+It is important to note that **Ottavada** is not a tool for creating, editing or reading scores. It acts as an intermediary and facilitator, integrating and organizing your workflow. It was designed to work alongside widely used score creation and editing tools, such as **Finale**, **MuseScore**, **Sibelius**, **Dorico** and **Encore**, as well as other programs compatible with formats such as **MusicXML**, **MIDI** and **PDF**.
 
-# Como ele faz isso?
+# How does it do this?
 
-**Localização**: Filtros por categoria, compositor, arranjador e uma barra de pesquisa tornam rápida a busca por músicas. A lista exibe apenas o nome da música e, com um clique, expande para mostrar as partituras daquela música, seguindo a **ordem orquestral tradicional** (o padrão: [Standard Orchestral Score Order](./docs/Alto%20Nivel/4%20-%20Requisitos/1%20-%20Requisitos%20funcionais%20-%20ambos.md#62-instrumentos-suportados-e-a-ordem)), mantendo a tela limpa e sem poluição visual.
+**Finding**: Filters by category, composer, arranger and a search bar make finding songs fast. The list shows only the song name and, with one click, expands to show the scores of that song, following the **traditional orchestral order** (the pattern: [Standard Orchestral Score Order](./docs/High%20Level/4%20-%20Requirements/1%20-%20Functional%20requirements%20-%20both.md#62-supported-instruments-and-their-order)), keeping the screen clean and free of visual clutter.
 
-**Organização**: O sistema impede duplicação, não aceitando duas músicas com o mesmo nome, compositor e arranjador (ao menos um dos três deve ser diferente) e não permite instrumentos repetidos dentro de uma mesma música.
+**Organization**: The system prevents duplication by not accepting two songs with the same name, composer and arranger (at least one of the three must differ) and by not allowing repeated instruments within the same song.
 
-- Exemplo **corretos de músicas**: 
-  
-  - Nome da música, sem compositor e sem arranjador:
+- **Correct** examples of songs:
+
+  - Song name, with no composer and no arranger:
     - "Va pensieiro";
     - "Va pensieiro com coral".
-  - Nome da música - compositor - arranjador:
+  - Song name - composer - arranger:
     - "Serenata" - "Schubert" - "Ana";
     - "Serenata" - "Schubert" - "Carlos".
 
-- Exemplo **corretos de instrumentos**:
-  
-  - "Trumpet" e "Trumpet (solo)";
-  - "Trumpet 1" e "Trumpet 2".
+- **Correct** examples of instruments:
 
-**Movimentação entre computadores**: Envie músicas de um computador para o outro com um clique, com controle total do que vai e do que fica. Cada computador tem um [papel](./docs/Alto%20Nivel/1%20-%20Modo%20de%20uso.md) definido na configuração inicial.
+  - "Trumpet" and "Trumpet (solo)";
+  - "Trumpet 1" and "Trumpet 2".
 
-**Backup automático**: O Ottavada gera backups periodicamente, assim, mesmo que seu computador seja perdido ou danificado, suas músicas e partituras permanecem seguras e podem ser restauradas em outro computador.
+**Moving between computers**: Send songs from one computer to another with one click, with full control over what goes and what stays. Each computer has a [role](./docs/High%20Level/1%20-%20Usage%20mode.md) defined in the initial setup.
 
----
-
-# Filosofia do sistema
-
-O **Ottavada** adiciona músicas e partituras exclusivamente por meio de **indexação de pastas**. O processo é simples: basta selecionar uma pasta que contenha arquivos de partituras. A ferramenta lê esse conteúdo e o incorpora internamente (não alterando nada em seus arquivos). A partir daí, qualquer alteração feita nos arquivos dentro das pastas, como: adições, modificações ou exclusões, é automaticamente refletida no Ottavada.
-
-Isso significa que a organização das músicas e partituras segue a estrutura de pastas definida por você. A ferramenta se adapta à sua forma de organização, e não o contrário, ideal para quem quer manter o controle sobre suas pastas e arquivos.
-
-O Ottavada **não modifica suas pastas nem seus arquivos**, com uma exceção que é **mover para lixeira** música e/ou partitura, quando o usuário seleciona na ferramenta. Os nomes de músicas e partituras definidos no sistema são utilizados apenas internamente para organização e identificação, não afetando os nomes reais dos arquivos ou diretórios.
-
-Se um dia você decidir deixar de usar o Ottavada, toda a suas pastas e arquivos permanecerá exatamente no mesmo lugar.
+**Automatic backup**: Ottavada generates backups periodically, so even if your computer is lost or damaged, your songs and scores remain safe and can be restored on another computer.
 
 ---
 
-# Benefícios e Limitações do Ottavada
+# System philosophy
 
-Além dos benefícios citados em [**Como ele faz isso?**](#como-ele-faz-isso), existem outros benefícios, mas também limitações, que são inerentes à arquitetura escolhida no desenvolvimento da ferramenta. Os benefícios são:
+**Ottavada** adds songs and scores exclusively through **folder indexing**. The process is simple: just select a folder that contains score files. The tool reads that content and incorporates it internally (without changing anything in your files). From then on, any change made to the files inside the folders, such as additions, modifications or deletions, is automatically reflected in Ottavada.
 
-## Benefícios
+This means that the organization of songs and scores follows the folder structure defined by you. The tool adapts to your way of organizing, not the other way around — ideal for those who want to keep control over their folders and files.
 
-### 1° Benefício - Você tem o controle TOTAL sobre suas pastas e arquivos
+Ottavada **does not modify your folders or your files**, with one exception: **moving to the trash** a song and/or score when the user selects it in the tool. The song and score names defined in the system are used only internally for organization and identification, and do not affect the real names of the files or directories.
 
-O Ottavada foi planejado para se "moldar" à forma como você trabalha, ou seja, seus arquivos continuam em seu controle e em sua organização. Com isso você não tem a dificuldade que outras ferramentas/serviços têm, que é o objetivo de dificultar sua saída ao máximo e fazer você se tornar um refém deles.
-
-### 2° Benefício - Custo zero ou muito baixo
-
-Utilizando o "provedor de nuvem" como ponte de comunicação e troca de arquivos entre os seus computadores com Ottavada, reduz a complexidade e o custo.
-
-### 3° Benefício - Controle total do que vai para o(s) Ottavada(s) no modo Consultar
-
-Como falado anteriormente, existem dois modos de usar o Ottavada. Com isso, você tem o controle total do que vai ou não para o modo Consultar.
-
-### 4° Benefício - Backup
-
-Além de ter um sistema de backup integrado, eles voltam EXATAMENTE para o mesmo lugar onde estavam no outro computador. Não precisando ter que aprender uma nova organização ou ficar procurando.
-
-### 5° Benefício - Simples para que é de fora
-
-Como o Ottavada segue um padrão simples, isso facilita DEMAIS para caso outra pessoa precise acessar seu repertório musical, porque ela não precisa aprender como você organiza suas pastas e arquivos, ela simplesmente precisa fazer uma pesquisa sem/com filtros, expandir a música e achar a partitura (que está ordenada).
-
-### 6° Benefício - Funciona mesmo sem internet (com limitações)
-
-A internet é indispensável para **enviar e receber atualizações** entre computadores, sem conexão essa etapa não é possível. Porém, o repertório **já baixado anteriormente** pelo Ottavada no modo **consultar** fica armazenado localmente no seu computador.
-
-Isso significa que, mesmo estando **sem internet**, você ainda consegue **pesquisar, visualizar e abrir** todas as músicas e partituras que já foram baixadas antes.
-
-**Resumo**: online você recebe o que há de novo; offline você continua usando tudo que já baixou.
-
-### Complemento
-
-Tem outros benefícios, como evitar duplicação (que facilita muito para você e outras pessoas), mas como já foi citado em textos acima, não irei repetir aqui.  
-
-## Limitações
-
-### 1° Limitação - Você precisa adicionar músicas manualmente
-
-Quando você precisa adicionar nova(s) música(s) e partitura(s), você precisa ter o trabalho manual de ir ao explorador do seu sistema operacional e criar o diretório, nomeá-lo, mover as partituras para ele, nomeá-las, para indexar no Ottavada. 
-
-Atualmente essa é uma limitação que não tem solução no Ottavada, mas a solução já está em **planejamento**.
-
-### 2° Limitação - Problema se você precisar reorganizar as pastas
-
-Caso você precise reorganizar suas pastas, quando indexa uma pasta, o Ottavada guarda o "endereço" dela. Se você mover a pasta de lugar e o endereço mudar, será necessário **reindexar a pasta** manualmente.
-
-Atualmente essa é uma limitação que não tem solução no Ottavada, mas a solução já está em **planejamento**.
-
-### 3° Limitação - Conflito no uso simultâneo entre computadores no modo Gerir
-
-Não é recomendado utilizar ao mesmo tempo dois ou mais computadores no modo Gerir, devido a conflitos de escrita e reescrita no provedor de nuvem, isso é uma limitação da arquitetura.
-
-Atualmente essa é uma limitação que não tem solução no Ottavada, mas a solução já está em **planejamento**.
-
-### 4° Limitação - Aprender uma nova ferramenta
-
-Existe também uma questão de custo/benefício: há **uma curva de aprendizado e adaptação**, você vai precisar entender como a ferramenta funciona e se acostumar com ela, o que leva um tempo. Mas, ao longo do tempo, você irá ter os benefícios citados anteriormente.
+If one day you decide to stop using Ottavada, all your folders and files will remain exactly where they were.
 
 ---
 
-# Sobre a documentação
+# Benefits and Limitations of Ottavada
 
-A documentação do projeto está em `docs/` e foi dividida em três seções:
+Beyond the benefits mentioned in [**How does it do this?**](#how-does-it-do-this), there are other benefits, but also limitations, that are inherent to the architecture chosen in the development of the tool. The benefits are:
 
-- **Alto Nível** — visão geral do sistema: requisitos, funcionalidades, arquitetura.
-- **Anotações** — diário de desenvolvimento e ideias.
-- **Baixo Nível** — aspectos técnicos: ferramentas, modelagem, fluxos, decisões de implementação.
+## Benefits
 
-> Se esta é sua primeira vez lendo a documentação, comece pelo **Alto Nível** antes de ir para o **Baixo Nível**. Entenda o *porquê* antes do *como*. Também recomendo ler os arquivos segundo a ordem no nome das pastas e dos arquivos.
+### 1st Benefit - You have TOTAL control over your folders and files
+
+Ottavada was designed to "mold" itself to the way you work, meaning your files remain under your control and in your organization. With it, you don't face the difficulty that other tools/services have, which is the goal of making your exit as hard as possible and turning you into their hostage.
+
+### 2nd Benefit - Zero or very low cost
+
+Using the "cloud provider" as the communication bridge for exchanging files between your computers with Ottavada reduces complexity and cost.
+
+### 3rd Benefit - Full control over what goes to the Ottavada(s) in Consult mode
+
+As mentioned before, there are two modes of using Ottavada. With that, you have full control over what goes or not to the Consult mode.
+
+### 4th Benefit - Backup
+
+Besides having an integrated backup system, they return EXACTLY to the same place they were on the other computer. You don't need to learn a new organization or go looking for them.
+
+### 5th Benefit - Simple for outsiders
+
+Because Ottavada follows a simple pattern, it makes it MUCH easier if someone else needs to access your musical repertoire, because they don't need to learn how you organize your folders and files — they simply need to perform a search with/without filters, expand the song and find the score (which is already ordered).
+
+### 6th Benefit - Works even without internet (with limitations)
+
+The internet is essential for **sending and receiving updates** between computers; without a connection this step is not possible. However, the repertoire **previously downloaded** by Ottavada in **consult** mode is stored locally on your computer.
+
+This means that, even when **offline**, you can still **search, view and open** all the songs and scores that were downloaded before.
+
+**Summary**: online you receive what's new; offline you keep using everything you've already downloaded.
+
+### Complement
+
+There are other benefits, such as avoiding duplication (which makes things much easier for you and other people), but as they were already mentioned in the texts above, I won't repeat them here.
+
+## Limitations
+
+### 1st Limitation - You need to add songs manually
+
+When you need to add new song(s) and score(s), you need the manual work of going to your operating system's explorer and creating the directory, naming it, moving the scores into it, naming them, in order to index them in Ottavada.
+
+Currently this is a limitation that has no solution in Ottavada, but the solution is already in **planning**.
+
+### 2nd Limitation - Problem if you need to reorganize the folders
+
+If you need to reorganize your folders, when you index a folder, Ottavada stores its "address". If you move the folder and the address changes, you will need to **re-index the folder** manually.
+
+Currently this is a limitation that has no solution in Ottavada, but the solution is already in **planning**.
+
+### 3rd Limitation - Conflict in simultaneous use between computers in Manage mode
+
+It is not recommended to use two or more computers in Manage mode at the same time, due to write and rewrite conflicts in the cloud provider; this is a limitation of the architecture.
+
+Currently this is a limitation that has no solution in Ottavada, but the solution is already in **planning**.
+
+### 4th Limitation - Learning a new tool
+
+There is also a cost/benefit question: there is **a learning and adaptation curve**, you will need to understand how the tool works and get used to it, which takes time. But over time you will reap the benefits mentioned above.
+
+---
+
+# About the documentation
+
+The project documentation is in `docs/` and was divided into three sections:
+
+- **High Level** — general overview of the system: requirements, features, architecture.
+- **Notes** — development diary and ideas.
+- **Low Level** — technical aspects: tools, modeling, flows, implementation decisions.
+
+> If this is your first time reading the documentation, start with **High Level** before moving to **Low Level**. Understand the *why* before the *how*. I also recommend reading the files following the order in the folder and file names.

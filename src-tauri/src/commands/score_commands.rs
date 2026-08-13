@@ -90,19 +90,19 @@ fn find_score_usage_in_library<'a>(
 
 fn ensure_supported_score_file(path: &Path) -> Result<(), AppError> {
     if !path.exists() || !path.is_file() {
-        warn!("Arquivo não encontrado: {}", path.display());
-        return Err(AppError::Generic("Arquivo não encontrado".into()));
+        warn!("File not found: {}", path.display());
+        return Err(AppError::Generic("File not found".into()));
     }
 
     let extension = path
         .extension()
         .and_then(|e| e.to_str())
-        .ok_or_else(|| AppError::Generic("Extensão de arquivo inválida".into()))?
+        .ok_or_else(|| AppError::Generic("Invalid file extension".into()))?
         .to_lowercase();
 
     if !VALID_SCORE_EXTENSIONS.contains(&extension.as_str()) {
-        warn!("Extensão de arquivo não suportada: {}", extension);
-        return Err(AppError::Generic("Tipo de arquivo não suportado".into()));
+        warn!("Unsupported file extension: {}", extension);
+        return Err(AppError::Generic("Unsupported file type".into()));
     }
 
     Ok(())
@@ -117,9 +117,9 @@ fn resolve_manual_score_status(
         "ignored" => Ok(ScoreStatus::Ignored),
         "main" => {
             if current_status != ScoreStatus::Draft && current_status != ScoreStatus::Ignored {
-                warn!("Tentativa de definir score como main fora do fluxo draft/ignored -> main");
+                warn!("Attempt to set score as main outside the draft/ignored -> main flow");
                 return Err(AppError::Generic(
-                    "A partitura precisa estar como 'draft' ou 'ignored' para ser definida como 'main'".into(),
+                    "The score must be 'draft' or 'ignored' to be set as 'main'".into(),
                 ));
             }
 
@@ -127,11 +127,11 @@ fn resolve_manual_score_status(
         }
         _ => {
             warn!(
-                "Fluxo inválido de status manual solicitado: {}",
+                "Invalid manual status flow requested: {}",
                 requested_status
             );
             Err(AppError::Generic(
-                "Apenas as mudanças para 'draft', 'main' ou 'ignored' são permitidas manualmente"
+                "Only changes to 'draft', 'main' or 'ignored' are allowed manually"
                     .into(),
             ))
         }
@@ -146,8 +146,8 @@ fn delete_score_core(db: &Database, score_id: &str) -> Result<(), AppError> {
 
 fn read_score_file_metadata(path: &Path) -> Result<(u64, chrono::NaiveDateTime), AppError> {
     get_file_metadata(path).map_err(|e| {
-        error!("Erro ao obter metadados do arquivo: {:?}", e);
-        AppError::Generic(format!("Erro ao ler arquivo: {}", e))
+        error!("Error getting file metadata: {:?}", e);
+        AppError::Generic(format!("Error reading file: {}", e))
     })
 }
 
@@ -158,7 +158,7 @@ fn open_path_on_system(file_path: &str) -> Result<(), AppError> {
         let mut cmd = configure_no_window_command(std::process::Command::new("cmd"));
         cmd.args(["/C", "start", "", &normalized_path])
             .spawn()
-            .map_err(|e| AppError::Generic(format!("Erro ao abrir arquivo: {}", e)))?;
+            .map_err(|e| AppError::Generic(format!("Error opening file: {}", e)))?;
     }
 
     #[cfg(target_os = "macos")]
@@ -166,7 +166,7 @@ fn open_path_on_system(file_path: &str) -> Result<(), AppError> {
         std::process::Command::new("open")
             .arg(file_path)
             .spawn()
-            .map_err(|e| AppError::Generic(format!("Erro ao abrir arquivo: {}", e)))?;
+            .map_err(|e| AppError::Generic(format!("Error opening file: {}", e)))?;
     }
 
     #[cfg(target_os = "linux")]
@@ -174,7 +174,7 @@ fn open_path_on_system(file_path: &str) -> Result<(), AppError> {
         std::process::Command::new("xdg-open")
             .arg(file_path)
             .spawn()
-            .map_err(|e| AppError::Generic(format!("Erro ao abrir arquivo: {}", e)))?;
+            .map_err(|e| AppError::Generic(format!("Error opening file: {}", e)))?;
     }
 
     Ok(())
@@ -186,7 +186,7 @@ fn open_url_on_system(url: &str) -> Result<(), AppError> {
         let mut cmd = configure_no_window_command(std::process::Command::new("cmd"));
         cmd.args(["/C", "start", "", url])
             .spawn()
-            .map_err(|e| AppError::Generic(format!("Erro ao abrir URL: {}", e)))?;
+            .map_err(|e| AppError::Generic(format!("Error opening URL: {}", e)))?;
     }
 
     #[cfg(target_os = "macos")]
@@ -194,7 +194,7 @@ fn open_url_on_system(url: &str) -> Result<(), AppError> {
         std::process::Command::new("open")
             .arg(url)
             .spawn()
-            .map_err(|e| AppError::Generic(format!("Erro ao abrir URL: {}", e)))?;
+            .map_err(|e| AppError::Generic(format!("Error opening URL: {}", e)))?;
     }
 
     #[cfg(target_os = "linux")]
@@ -202,7 +202,7 @@ fn open_url_on_system(url: &str) -> Result<(), AppError> {
         std::process::Command::new("xdg-open")
             .arg(url)
             .spawn()
-            .map_err(|e| AppError::Generic(format!("Erro ao abrir URL: {}", e)))?;
+            .map_err(|e| AppError::Generic(format!("Error opening URL: {}", e)))?;
     }
 
     Ok(())
@@ -215,18 +215,18 @@ fn open_file_location_on_system(file_path: &str) -> Result<(), AppError> {
         let path = Path::new(&normalized_path);
 
         if !path.exists() {
-            return Err(AppError::Generic("Arquivo não encontrado".into()));
+            return Err(AppError::Generic("File not found".into()));
         }
 
         let mut cmd = configure_no_window_command(std::process::Command::new("explorer"));
         if path.is_dir() {
             cmd.arg(&normalized_path).spawn().map_err(|e| {
-                AppError::Generic(format!("Erro ao abrir local do diretório: {}", e))
+                AppError::Generic(format!("Error opening directory location: {}", e))
             })?;
         } else {
             cmd.args(["/select,", &normalized_path])
                 .spawn()
-                .map_err(|e| AppError::Generic(format!("Erro ao abrir local do arquivo: {}", e)))?;
+                .map_err(|e| AppError::Generic(format!("Error opening file location: {}", e)))?;
         }
     }
 
@@ -235,7 +235,7 @@ fn open_file_location_on_system(file_path: &str) -> Result<(), AppError> {
         let path = Path::new(file_path);
 
         if !path.exists() {
-            return Err(AppError::Generic("Arquivo não encontrado".into()));
+            return Err(AppError::Generic("File not found".into()));
         }
 
         let mut command = std::process::Command::new("open");
@@ -247,7 +247,7 @@ fn open_file_location_on_system(file_path: &str) -> Result<(), AppError> {
 
         command
             .spawn()
-            .map_err(|e| AppError::Generic(format!("Erro ao abrir local do arquivo: {}", e)))?;
+            .map_err(|e| AppError::Generic(format!("Error opening file location: {}", e)))?;
     }
 
     #[cfg(target_os = "linux")]
@@ -255,17 +255,17 @@ fn open_file_location_on_system(file_path: &str) -> Result<(), AppError> {
         let path = Path::new(file_path);
 
         if !path.exists() {
-            return Err(AppError::Generic("Arquivo não encontrado".into()));
+            return Err(AppError::Generic("File not found".into()));
         }
 
         let parent = path.parent().ok_or_else(|| {
-            AppError::Generic("Não foi possível identificar o diretório do arquivo".into())
+            AppError::Generic("Could not identify the file's directory".into())
         })?;
 
         std::process::Command::new("xdg-open")
             .arg(parent)
             .spawn()
-            .map_err(|e| AppError::Generic(format!("Erro ao abrir local do arquivo: {}", e)))?;
+            .map_err(|e| AppError::Generic(format!("Error opening file location: {}", e)))?;
     }
 
     Ok(())
@@ -284,21 +284,21 @@ fn extract_score_file_from_archive(
 ) -> Result<std::path::PathBuf, AppError> {
     if !archive_path.is_file() {
         return Err(AppError::Generic(format!(
-            "Arquivo compactado da música não encontrado: {}",
+            "Compressed song file not found: {}",
             archive_path.display()
         )));
     }
 
     fs::create_dir_all(destination_dir).map_err(|e| {
         AppError::Generic(format!(
-            "Erro ao criar diretório temporário para abrir partitura: {}",
+            "Error creating temporary directory to open score: {}",
             e
         ))
     })?;
 
     let archive_file = File::open(archive_path).map_err(|e| {
         AppError::Generic(format!(
-            "Erro ao abrir arquivo compactado {}: {}",
+            "Error opening compressed file {}: {}",
             archive_path.display(),
             e
         ))
@@ -306,7 +306,7 @@ fn extract_score_file_from_archive(
 
     let decoder = zstd::stream::read::Decoder::new(archive_file).map_err(|e| {
         AppError::Generic(format!(
-            "Erro ao descompactar arquivo {}: {}",
+            "Error decompressing file {}: {}",
             archive_path.display(),
             e
         ))
@@ -315,7 +315,7 @@ fn extract_score_file_from_archive(
     let mut archive = tar::Archive::new(decoder);
     let mut entries = archive.entries().map_err(|e| {
         AppError::Generic(format!(
-            "Erro ao listar arquivos do pacote {}: {}",
+            "Error listing package files {}: {}",
             archive_path.display(),
             e
         ))
@@ -324,7 +324,7 @@ fn extract_score_file_from_archive(
     while let Some(entry_result) = entries.next() {
         let mut entry = entry_result.map_err(|e| {
             AppError::Generic(format!(
-                "Erro ao ler entrada do pacote {}: {}",
+                "Error reading package entry {}: {}",
                 archive_path.display(),
                 e
             ))
@@ -336,7 +336,7 @@ fn extract_score_file_from_archive(
 
         let entry_path = entry.path().map_err(|e| {
             AppError::Generic(format!(
-                "Erro ao ler caminho dentro do pacote {}: {}",
+                "Error reading path inside package {}: {}",
                 archive_path.display(),
                 e
             ))
@@ -370,7 +370,7 @@ fn extract_score_file_from_archive(
         if output_path.exists() {
             fs::remove_file(&output_path).map_err(|e| {
                 AppError::Generic(format!(
-                    "Erro ao limpar arquivo temporário {}: {}",
+                    "Error cleaning temporary file {}: {}",
                     output_path.display(),
                     e
                 ))
@@ -379,7 +379,7 @@ fn extract_score_file_from_archive(
 
         entry.unpack(&output_path).map_err(|e| {
             AppError::Generic(format!(
-                "Erro ao extrair partitura para {}: {}",
+                "Error extracting score to {}: {}",
                 output_path.display(),
                 e
             ))
@@ -389,7 +389,7 @@ fn extract_score_file_from_archive(
     }
 
     Err(AppError::Generic(format!(
-        "Partitura '{}' não encontrada dentro do pacote {}",
+        "Score '{}' not found inside package {}",
         score_id,
         archive_path.display()
     )))
@@ -408,7 +408,7 @@ fn resolve_openable_score_path(
     }
 
     Err(AppError::Generic(format!(
-        "Arquivo da partitura não encontrado: {}",
+        "Score file not found: {}",
         file_path
     )))
 }
@@ -451,7 +451,7 @@ pub fn update_score(
     score_id: String,
     instrument_name: Option<String>,
 ) -> Result<(), AppError> {
-    info!("Atualizando nome da partitura: {}", score_id);
+    info!("Updating score name: {}", score_id);
 
     let _settings = require_server_settings(&store)?;
 
@@ -459,11 +459,11 @@ pub fn update_score(
 
     db.update_score_name(&score_id, normalized_instrument_name)
         .map(|_| {
-            info!("Nome da partitura atualizado com sucesso: {}", score_id);
+            info!("Score name updated successfully: {}", score_id);
             let _ = refresh_library_summary_cache(&db, &store);
         })
         .map_err(|e| {
-            error!("Erro ao atualizar nome da partitura {}: {:?}", score_id, e);
+            error!("Error updating score name {}: {:?}", score_id, e);
             e
         })
 }
@@ -553,7 +553,7 @@ pub fn update_score_status(
     let settings = require_server_settings(&store)?;
 
     info!(
-        "Atualizando status da partitura: {} para: {}",
+        "Updating score status: {} to: {}",
         score_id, status
     );
     let song_id = db.get_song_id_for_score(&score_id)?;
@@ -581,7 +581,7 @@ pub fn update_score_status(
     let _ = refresh_library_summary_cache(&db, &store);
 
     info!(
-        "Status da partitura {} atualizado com sucesso para {}",
+        "Score status {} updated successfully to {}",
         score_id, status
     );
     db.get_song_list_item_by_id(&song_id)
@@ -595,7 +595,7 @@ pub fn delete_score(
 ) -> Result<(), AppError> {
     require_server_settings(&store)?;
 
-    info!("Deletando partitura: {}", score_id);
+    info!("Deleting score: {}", score_id);
 
     let song_id = db.get_song_id_for_score(&score_id)?;
     let song = db.get_song_list_item_by_id(&song_id)?;
@@ -608,11 +608,11 @@ pub fn delete_score(
 
     delete_score_core(&db, &score_id)
         .map(|_| {
-            info!("Partitura deletada com sucesso: {}", score_id);
+            info!("Score deleted successfully: {}", score_id);
             let _ = refresh_library_summary_cache(&db, &store);
         })
         .map_err(|e| {
-            error!("Erro ao deletar partitura: {:?}", e);
+            error!("Error deleting score: {:?}", e);
             e
         })
 }
@@ -627,7 +627,7 @@ pub fn use_score_as_base(
     let settings = require_server_settings(&store)?;
 
     info!(
-        "Usando partitura como base: source_score_id={}, new_score_name={}",
+        "Using score as base: source_score_id={}, new_score_name={}",
         source_score_id, new_score_name
     );
 
@@ -642,7 +642,7 @@ pub fn use_score_as_base(
                 .map(|score| (song, score))
         })
         .ok_or_else(|| {
-            AppError::Generic(format!("Partitura não encontrada: {}", source_score_id))
+            AppError::Generic(format!("Score not found: {}", source_score_id))
         })?;
 
     let song_id = &song.id;
@@ -650,17 +650,17 @@ pub fn use_score_as_base(
     let source_full_path = Path::new(&db.get_score_file_path(&source_score_id)?).to_path_buf();
 
     if !source_full_path.exists() || !source_full_path.is_file() {
-        return Err(AppError::Generic("Arquivo de origem não encontrado".into()));
+        return Err(AppError::Generic("Source file not found".into()));
     }
 
     let source_file_name = source_full_path
         .file_name()
         .and_then(|name| name.to_str())
-        .ok_or_else(|| AppError::Generic("Nome do arquivo de origem inválido".into()))?;
+        .ok_or_else(|| AppError::Generic("Invalid source file name".into()))?;
 
     let (song_prefix, extension) = source_file_name
         .rsplit_once('.')
-        .ok_or_else(|| AppError::Generic("Extensão de arquivo inválida".into()))?;
+        .ok_or_else(|| AppError::Generic("Invalid file extension".into()))?;
 
     let file_name_prefix = song_prefix
         .rsplit_once(" - ")
@@ -675,19 +675,19 @@ pub fn use_score_as_base(
         file_name_prefix, compacted_score_name, extension
     );
     let source_parent = source_full_path.parent().ok_or_else(|| {
-        AppError::Generic("Não foi possível identificar o diretório da partitura de origem".into())
+        AppError::Generic("Could not identify the source score's directory".into())
     })?;
     let new_file_path = source_parent.join(&new_filename);
 
     // Copy the file
     fs::copy(&source_full_path, &new_file_path).map_err(|e| {
         error!(
-            "Erro ao copiar arquivo: {} -> {}: {}",
+            "Error copying file: {} -> {}: {}",
             source_full_path.display(),
             new_file_path.display(),
             e
         );
-        AppError::Generic(format!("Erro ao copiar arquivo: {}", e))
+        AppError::Generic(format!("Error copying file: {}", e))
     })?;
 
     // Create new score entry
@@ -712,7 +712,7 @@ pub fn use_score_as_base(
 
     db.insert_score(&new_score).map_err(|e| {
         error!(
-            "Erro ao inserir nova partitura em song_id={}: {:?}",
+            "Error inserting new score in song_id={}: {:?}",
             song_id, e
         );
         // Rollback: delete the copied file if database insertion fails
@@ -721,7 +721,7 @@ pub fn use_score_as_base(
     })?;
 
     info!(
-        "Partitura criada com sucesso a partir da base: song_id={}, new_score_id={}",
+        "Score created successfully from base: song_id={}, new_score_id={}",
         song_id, new_score.id
     );
 
@@ -741,7 +741,7 @@ pub fn open_song_temp_dir(
 
     if settings.computer_type != ComputerType::Client {
         return Err(AppError::Generic(
-            "Operação disponível apenas no cliente".into(),
+            "Operation available only on the client".into(),
         ));
     }
 
@@ -822,14 +822,14 @@ mod tests {
         let extracted = extract_score_file_from_archive(
             &archive_path,
             "score-b",
-            "MUSICA TESTE - flute 1",
+            "TEST MUSIC - flute 1",
             &output_dir,
         )
         .expect("extract");
 
         assert_eq!(
             extracted.file_name().and_then(|name| name.to_str()),
-            Some("MUSICA TESTE - flute 1.pdf")
+            Some("TEST MUSIC - flute 1.pdf")
         );
         assert_eq!(fs::read_to_string(extracted).expect("read file"), "B");
     }
@@ -844,7 +844,7 @@ mod tests {
         let result = extract_score_file_from_archive(
             &archive_path,
             "score-z",
-            "MUSICA TESTE - flute",
+            "TEST MUSIC - flute",
             &output_dir,
         );
 
@@ -1121,6 +1121,6 @@ mod tests {
 
         assert!(err
             .to_string()
-            .contains("Arquivo da partitura não encontrado"));
+            .contains("Score file not found"));
     }
 }

@@ -1,8 +1,8 @@
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 
-/// Representa uma música no sistema.
-/// Uma música pode ter múltiplas partituras (Score), cada uma para um instrumento.
+/// Represents a song in the system.
+/// A song can have multiple scores, one for each instrument.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Song {
     pub id: String,
@@ -16,7 +16,7 @@ pub struct Song {
     pub updated_by: String,
 }
 
-/// Status de uma partitura
+/// Score status
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum ScoreStatus {
@@ -47,7 +47,7 @@ impl ScoreStatus {
     }
 }
 
-/// Representa uma partitura (instrumento específico de uma música).
+/// Represents a score (a specific instrument of a song).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Score {
     pub id: String,
@@ -64,7 +64,7 @@ pub struct Score {
 }
 
 impl Score {
-    /// Factory method para criar uma nova partitura a partir de um arquivo indexado
+    /// Factory method to create a new score from an indexed file
     pub fn new_from_file(
         song_id: String,
         host_id: String,
@@ -89,7 +89,7 @@ impl Score {
     }
 }
 
-/// Categoria criada pelo usuário (ex: "Harpa Cristã")
+/// User-created category (e.g.: "Christian Harp")
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Category {
     pub id: String,
@@ -98,7 +98,7 @@ pub struct Category {
     pub updated_by: String,
 }
 
-/// Configurações da aplicação
+/// Application settings
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppSettings {
     pub computer_id: String,
@@ -191,7 +191,7 @@ pub struct LibrarySummary {
     pub draft: LibraryStatusSummary,
 }
 
-/// Trait para validar permissões de operação baseado na configuração do computador
+/// Trait to validate operation permissions based on the computer configuration
 pub trait OperationGuard {
     fn require_server_only(&self) -> Result<(), crate::domain::errors::AppError>;
 }
@@ -205,19 +205,19 @@ impl OperationGuard for AppSettings {
     }
 }
 
-/// Constantes e funções para formatação de data/hora
+/// Constants and functions for date/time formatting
 pub mod datetime_utils {
     use chrono::NaiveDateTime;
 
     pub const DATETIME_FORMAT: &str = "%Y-%m-%d %H:%M:%S";
 
-    /// Formata uma data/hora no padrão da aplicação
+    /// Formats a date/time in the application's pattern
     pub fn format_datetime(dt: NaiveDateTime) -> String {
         dt.format(DATETIME_FORMAT).to_string()
     }
 }
 
-/// Tipo de computador
+/// Computer type
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum ComputerType {
     Server,
@@ -258,7 +258,7 @@ impl Default for ComputerType {
     }
 }
 
-/// Modo de backup do Google Drive
+/// Google Drive backup mode
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum GoogleDriveMode {
     Local,
@@ -284,29 +284,29 @@ impl GoogleServiceAccount {
     #[allow(dead_code)]
     pub fn validate(&self) -> Result<(), String> {
         if self.r#type != "service_account" {
-            return Err("Tipo deve ser 'service_account'".to_string());
+            return Err("Type must be 'service_account'".to_string());
         }
         if self.project_id.is_empty() {
-            return Err("project_id é obrigatório".to_string());
+            return Err("project_id is required".to_string());
         }
         if self.private_key.is_empty() {
-            return Err("private_key é obrigatória".to_string());
+            return Err("private_key is required".to_string());
         }
         if self.client_email.is_empty() {
-            return Err("client_email é obrigatório".to_string());
+            return Err("client_email is required".to_string());
         }
         Ok(())
     }
 }
 
-/// Configuração do Rclone para sincronização em nuvem
+/// Rclone configuration for cloud synchronization
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RcloneConfig {
     #[serde(default)]
     pub provider: RcloneProvider,
 }
 
-/// Provedor de nuvem usado pelo rclone
+/// Cloud provider used by rclone
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum RcloneProvider {
@@ -333,7 +333,7 @@ impl RcloneProvider {
     }
 }
 
-/// Status de um backup
+/// Backup status
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum BackupStatus {
     Pending,
@@ -363,14 +363,14 @@ impl BackupStatus {
     }
 }
 
-/// Status do backup do banco de dados
+/// Database backup status
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BackupDatabaseStep {
     pub status: BackupStatus,
     pub updated_at: i64,
 }
 
-/// Status do backup de uma música
+/// Song backup status
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SongBackupStatus {
     pub id: String,
@@ -380,7 +380,7 @@ pub struct SongBackupStatus {
     pub error_message: Option<String>,
 }
 
-/// Dados retornados para a listagem de músicas no frontend
+/// Data returned for the song listing in the frontend
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SongListItem {
     pub id: String,
@@ -395,7 +395,7 @@ pub struct SongListItem {
     pub scores: Vec<ScoreListItem>,
 }
 
-/// Dados de uma partitura na listagem
+/// Score data in the listing
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ScoreListItem {
     pub id: String,
@@ -406,7 +406,7 @@ pub struct ScoreListItem {
     pub status: ScoreStatus,
 }
 
-/// Dados para indexação de um diretório
+/// Data for indexing a directory
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IndexedFile {
     pub path: String,
@@ -416,19 +416,19 @@ pub struct IndexedFile {
     pub status: Option<ScoreStatus>,
 }
 
-// ── REMOVIDO: Estruturas para exportação MessagePack (database completo) ──
+// ── REMOVED: Structures for MessagePack export (full database) ──
 //
-// Conforme atualização da documentação v0.3, a estratégia mudou de:
-// - ❌ Exportar todo o banco de dados como ExportDatabase
-// Para:
-// - ✅ Exportar apenas mudanças como {computerId}.msgpack
+// Following the v0.3 documentation update, the strategy changed from:
+// - ❌ Exporting the entire database as ExportDatabase
+// To:
+// - ✅ Exporting only changes as {computerId}.msgpack
 //
-// Estruturas removidas:
-// - ExportChange - Alteração individual
-// - ExportChangeList - Grupo de alterações
-// - ExportCategory - Categoria para export
-// - ExportScore - Partitura para export
-// - ExportSong - Música para export
-// - ExportDatabase - Banco completo para export
+// Removed structures:
+// - ExportChange - Individual change
+// - ExportChangeList - Group of changes
+// - ExportCategory - Category for export
+// - ExportScore - Score for export
+// - ExportSong - Song for export
+// - ExportDatabase - Full database for export
 //
-// TODO: Implementar estruturas corretas para {computerId}.msgpack com "events"
+// TODO: Implement correct structures for {computerId}.msgpack with "events"

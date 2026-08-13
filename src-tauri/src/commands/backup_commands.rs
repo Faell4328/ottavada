@@ -29,7 +29,7 @@ pub async fn generate_song_archives_files(
 
     run_blocking_with_store(
         app_data_dir,
-        "Falha interna ao gerar arquivos das músicas",
+        "Internal failure generating song archives",
         move |store| {
             require_server_settings(&store)?;
 
@@ -51,7 +51,7 @@ pub async fn generate_events_file(
 
     run_blocking_with_store(
         app_data_dir,
-        "Falha interna ao gerar events.msgpack",
+        "Internal failure generating events.msgpack",
         move |store| {
             require_server_settings(&store)?;
 
@@ -73,7 +73,7 @@ pub async fn generate_snapshot_file(
 
     run_blocking_with_store(
         app_data_dir,
-        "Falha interna ao gerar snapshot.msgpack",
+        "Internal failure generating snapshot.msgpack",
         move |store| {
             require_server_settings(&store)?;
 
@@ -101,7 +101,7 @@ pub async fn export_backup_file(
 
     run_blocking_with_store(
         app_data_dir,
-        "Falha interna ao exportar backup local",
+        "Internal failure exporting local backup",
         move |store| {
             require_server_settings(&store)?;
             export_backup_msgpack(&db, &store, output_path)
@@ -121,7 +121,7 @@ pub async fn import_backup_file(
 
     run_blocking_with_store(
         app_data_dir,
-        "Falha interna ao importar backup local",
+        "Internal failure importing local backup",
         move |store| {
             require_server_settings(&store)?;
 
@@ -141,7 +141,7 @@ pub async fn generate_automatic_backup_file(
 
     run_blocking_with_store(
         app_data_dir,
-        "Falha interna ao gerar backup automático",
+        "Internal failure generating automatic backup",
         move |store| {
             require_server_settings(&store)?;
 
@@ -161,7 +161,7 @@ pub async fn force_generate_backup_cloud_file(
 
     run_blocking_with_store(
         app_data_dir,
-        "Falha interna ao gerar backup da nuvem",
+        "Internal failure generating cloud backup",
         move |store| {
             require_server_settings(&store)?;
 
@@ -179,7 +179,7 @@ pub async fn validate_cloud_backup_cmd(
 
     run_blocking_with_store(
         app_data_dir,
-        "Falha interna ao validar backup da nuvem",
+        "Internal failure validating cloud backup",
         move |store| validate_cloud_backup(&store),
     )
     .await
@@ -195,7 +195,7 @@ pub async fn restore_backup_db_from_cloud(
 
     run_blocking_with_store(
         app_data_dir,
-        "Falha interna ao restaurar banco do backup",
+        "Internal failure restoring database from backup",
         move |store| restore_database_from_cloud_backup(&db, &store),
     )
     .await
@@ -217,7 +217,7 @@ pub async fn restore_songs_from_cloud_archives(
 
     run_blocking_with_store(
         app_data_dir,
-        "Falha interna ao restaurar partituras",
+        "Internal failure restoring scores",
         move |store| {
             let (songs, scores) = restore_song_files_from_cloud_archives(&db, store.app_data_dir())?;
             Ok(RestoreSongsResult {
@@ -239,7 +239,7 @@ pub async fn restore_draft_ignored_from_cloud(
 
     run_blocking_with_store(
         app_data_dir,
-        "Falha interna ao restaurar partituras draft/ignored",
+        "Internal failure restoring draft/ignored scores",
         move |store| {
             require_server_settings(&store)?;
             restore_draft_ignored_scores_from_backup(&db, &store)
@@ -258,7 +258,7 @@ pub async fn import_backup_cloud_file(
 
     run_blocking_with_store(
         app_data_dir,
-        "Falha interna ao importar backup da nuvem",
+        "Internal failure importing cloud backup",
         move |store| {
             require_server_settings(&store)?;
 
@@ -278,7 +278,7 @@ pub async fn apply_server_changes_on_client(
 
     run_blocking_with_store(
         app_data_dir,
-        "Falha interna ao aplicar alterações do servidor no cliente",
+        "Internal failure applying server changes on the client",
         move |store| apply_server_changes_for_client(&db, &store),
     )
     .await

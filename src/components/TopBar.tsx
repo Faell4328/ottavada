@@ -58,9 +58,9 @@ export default function TopBar({
     [state.sidebarView],
   );
 
-  // Forçar reload quando scores muda - isso garante que a UI atualiza
+  // Force reload when scores change - ensures the UI updates
   const handleScoresChange = async () => {
-    // Pequeno delay para garantir que backend processou tudo
+    // Small delay to ensure the backend has processed everything
     await new Promise((resolve) => setTimeout(resolve, 100));
     await Promise.all([loadSongs(), loadCategories()]);
   };

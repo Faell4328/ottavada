@@ -20,14 +20,14 @@ struct ScoreMetadataEntry {
     status: ScoreStatus,
 }
 
-/// Executa a verificação inicial de alterações nos arquivos de partituras
+/// Runs the initial check for changes in score files
 pub fn run_initial_scan(db: &Database, host_id: &str) {
-    info!("Executando verificação inicial de alterações");
+    info!("Running initial change check");
 
     let scores = match db.get_all_scores_with_metadata_by_host(host_id) {
         Ok(s) => s,
         Err(e) => {
-            tracing::error!("Erro ao buscar scores para verificação inicial: {:?}", e);
+            tracing::error!("Error fetching scores for initial check: {:?}", e);
             return;
         }
     };
@@ -63,7 +63,7 @@ pub fn run_initial_scan(db: &Database, host_id: &str) {
             });
     }
 
-    info!("Total de músicas para verificar: {}", scores_by_song.len());
+    info!("Total songs to check: {}", scores_by_song.len());
 
     for (song_id, song_scores) in scores_by_song {
         if song_scores.is_empty() {
@@ -95,7 +95,7 @@ pub fn run_initial_scan(db: &Database, host_id: &str) {
 
             if !path.exists() || !path.is_file() {
                 deleted_count += 1;
-                info!("✓ Arquivo não encontrado: {}", full_path);
+                info!("✓ File not found: {}", full_path);
                 continue;
             }
 
@@ -120,7 +120,7 @@ pub fn run_initial_scan(db: &Database, host_id: &str) {
                         .is_ok()
                     {
                         changed_count += 1;
-                        info!("✓ Status atualizado para draft: {}", full_path);
+                        info!("✓ Status updated to draft: {}", full_path);
                     }
                 }
             }
@@ -154,7 +154,7 @@ pub fn run_initial_scan(db: &Database, host_id: &str) {
                     .is_ok()
                 {
                     recovered_count += 1;
-                    info!("✓ Score recuperado: {}", full_path);
+                    info!("✓ Score recovered: {}", full_path);
                 }
             }
         }
@@ -182,14 +182,14 @@ pub fn run_initial_scan(db: &Database, host_id: &str) {
 
                     if db.insert_score(&score).is_ok() {
                         added_count += 1;
-                        info!("✓ Novo arquivo indexado: {}", current_path);
+                        info!("✓ New file indexed: {}", current_path);
                     } else {
-                        warn!("Erro ao indexar novo arquivo: {}", current_path);
+                        warn!("Error indexing new file: {}", current_path);
                     }
                 }
                 Err(e) => {
                     warn!(
-                        "Erro ao obter metadados do novo arquivo {}: {:?}",
+                        "Error getting metadata for new file {}: {:?}",
                         current_path, e
                     );
                 }
@@ -198,7 +198,7 @@ pub fn run_initial_scan(db: &Database, host_id: &str) {
     }
 
     info!(
-        "Verificação inicial concluída: {} alterações, {} adicionados, {} deletados, {} recuperados",
+        "Initial check completed: {} changes, {} added, {} deleted, {} recovered",
         changed_count, added_count, deleted_count, recovered_count
     );
 }

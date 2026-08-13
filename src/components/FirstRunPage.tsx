@@ -156,7 +156,7 @@ export default function FirstRunPage() {
     try {
       await api.deleteRcloneTestFile();
     } catch (error) {
-      console.error("Erro ao deletar arquivo de teste local:", error);
+      console.error("Error deleting local test file:", error);
       toast.error(t("firstRun.testDeleteError"));
     }
 

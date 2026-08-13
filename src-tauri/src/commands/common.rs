@@ -59,7 +59,7 @@ pub fn remove_path_if_exists(path: &Path) -> Result<(), AppError> {
     }
     trash::delete(path).map_err(|e| {
         AppError::Generic(format!(
-            "Erro ao mover '{}' para lixeira: {}",
+            "Error moving '{}' to trash: {}",
             path.display(),
             e
         ))
@@ -111,7 +111,7 @@ mod tests {
         store
             .save_app_settings(&AppSettings {
                 computer_id: "server-1".to_string(),
-                computer_name: Some("Servidor".to_string()),
+                computer_name: Some("Server".to_string()),
                 computer_type: ComputerType::Server,
                 first_run_completed: true,
                 ..Default::default()
@@ -145,7 +145,7 @@ mod tests {
         db.insert_score(&Score {
             id: "score-1".to_string(),
             song_id: song_id.clone(),
-            name: Some("flauta".to_string()),
+            name: Some("flute".to_string()),
             host_id: "server-1".to_string(),
             file_path: source_dir.to_string_lossy().to_string(),
             file_name: "score-1.musx".to_string(),

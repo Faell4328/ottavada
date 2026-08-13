@@ -40,7 +40,7 @@ export function EditMusicModal({
   const { t } = useTranslation();
   const { state } = useAppState();
   const visibleCategories = state.categories.filter(
-    (category) => category.name.toLowerCase() !== "sem categoria"
+    (category) => category.name.toLowerCase() !== "uncategorized"
   );
   const [allSongSuggestions, setAllSongSuggestions] = useState(state.songs);
   const composerSuggestions = useMemo(

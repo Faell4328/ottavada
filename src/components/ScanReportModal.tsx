@@ -236,7 +236,7 @@ function buildActionGroups(
       const songName = item.songName ?? item.raw;
       const resolvedAction = resolveEntityAction(action, songName, songSets);
       composerItems.push(
-        renderPersonItem("compositor", resolvedAction, item.value, songName, t),
+        renderPersonItem("composer", resolvedAction, item.value, songName, t),
       );
       continue;
     }
@@ -245,7 +245,7 @@ function buildActionGroups(
       const songName = item.songName ?? item.raw;
       const resolvedAction = resolveEntityAction(action, songName, songSets);
       arrangerItems.push(
-        renderPersonItem("arranjador", resolvedAction, item.value, songName, t),
+        renderPersonItem("arranger", resolvedAction, item.value, songName, t),
       );
       continue;
     }
@@ -265,7 +265,7 @@ function buildActionGroups(
         if (statusChange) {
           const key = `${action}|${normalizeKey(statusChange.songName)}|${normalizeKey(statusChange.previousStatus)}|${normalizeKey(statusChange.nextStatus)}`;
           const existingGroup = customScoreGroups.get(key);
-          const isCombined = item.customText.includes("foi alterada e");
+          const isCombined = item.customText.includes("was changed and");
 
           if (existingGroup) {
             if (
@@ -483,13 +483,13 @@ function renderCategoryItem(
 }
 
 function renderPersonItem(
-  role: "compositor" | "arranjador",
+  role: "composer" | "arranger",
   action: ReviewAction,
   value: string | undefined,
   songName: string,
   t: (key: string, options?: Record<string, unknown>) => string,
 ): ReactNode {
-  const keyPrefix = role === "compositor" ? "composer" : "arranger";
+  const keyPrefix = role === "composer" ? "composer" : "arranger";
   const personName = value ?? t("scanReportModal.noName");
 
   if (action === "adding") {
@@ -552,10 +552,10 @@ function renderCustomSongText(
   text: string,
   t: (key: string, options?: Record<string, unknown>) => string,
 ): ReactNode {
-  const match = text.match(/^A música\s+(.+?)\s+teve o nome alterado\.$/);
+  const match = text.match(/^The song\s+(.+?)\s+had its name changed\.$/);
   if (!match) {
     const statusChangeMatch = text.match(
-      /^A música\s+(.+?)\s+saiu de\s+(.+?)\s+e\s+(?:voltou para principal|foi para\s+(.+?))\.$/,
+      /^The song\s+(.+?)\s+went from\s+(.+?)\s+and\s+(?:returned to main|went to\s+(.+?))\.$/,
     );
 
     if (!statusChangeMatch) {
@@ -565,14 +565,14 @@ function renderCustomSongText(
     const songName = statusChangeMatch[1];
     const previousStatus = statusChangeMatch[2];
     const nextStatus = statusChangeMatch[3];
-    const returnsToMain = text.includes("voltou para principal");
+    const returnsToMain = text.includes("returned to main");
 
     const formatStatusLabelT = (value: string) => {
       const v = value.toLowerCase();
-      if (v === "ignored" || v === "ignorada") return t("scoreStatus.ignored");
-      if (v === "draft" || v === "rascunho") return t("scoreStatus.draft");
-      if (v === "not_found" || v === "sem partitura") return t("scoreStatus.not_found");
-      if (v === "main" || v === "principal") return t("scoreStatus.main");
+      if (v === "ignored") return t("scoreStatus.ignored");
+      if (v === "draft") return t("scoreStatus.draft");
+      if (v === "not_found") return t("scoreStatus.not_found");
+      if (v === "main") return t("scoreStatus.main");
       return value;
     };
 
@@ -772,7 +772,7 @@ function joinStrongList(values: string[]): ReactNode[] {
     const parts: ReactNode[] = [];
 
     if (index > 0) {
-      parts.push(index === values.length - 1 ? " e " : ", ");
+      parts.push(index === values.length - 1 ? " and " : ", ");
     }
 
     parts.push(<strong key={`${value}-${index}`}>{value}</strong>);
@@ -785,10 +785,10 @@ function formatStatusLabelT(
   t: (key: string, options?: Record<string, unknown>) => string,
 ): string {
   const v = value.toLowerCase();
-  if (v === "ignored" || v === "ignorada") return t("scoreStatus.ignored");
-  if (v === "draft" || v === "rascunho") return t("scoreStatus.draft");
-  if (v === "not_found" || v === "sem partitura") return t("scoreStatus.not_found");
-  if (v === "main" || v === "principal") return t("scoreStatus.main");
+  if (v === "ignored") return t("scoreStatus.ignored");
+  if (v === "draft") return t("scoreStatus.draft");
+  if (v === "not_found") return t("scoreStatus.not_found");
+  if (v === "main") return t("scoreStatus.main");
   return value;
 }
 
@@ -798,7 +798,7 @@ function renderCustomScoreText(
   _i18n: { language: string },
 ): ReactNode {
   const extensionOnlyMatch = text.match(
-    /^A partitura\s+(.+?)\s+teve a extensão alterada na música\s+(.+)\.$/,
+    /^The score\s+(.+?)\s+had its extension changed in the song\s+(.+)\.$/,
   );
   if (extensionOnlyMatch) {
     const scoreName = formatScoreDisplayName(extensionOnlyMatch[1]);
@@ -822,7 +822,7 @@ function renderCustomScoreText(
     );
   }
 
-  const deleteMatch = text.match(/^A partitura\s+(.+?)\s+foi deletada\.$/);
+  const deleteMatch = text.match(/^The score\s+(.+?)\s+was deleted\.$/);
   if (deleteMatch) {
     const parsed = parseScoreReference(deleteMatch[1]);
     return (
@@ -896,7 +896,7 @@ function renderCustomScoreText(
   }
 
   const renameMatch = text.match(
-    /^A partitura\s+(.+?)\s+teve o nome alterado\.$/,
+    /^The score\s+(.+?)\s+had its name changed\.$/,
   );
   if (renameMatch) {
     return (
@@ -908,7 +908,7 @@ function renderCustomScoreText(
   }
 
   const renameWithSongMatch = text.match(
-    /^A partitura\s+(.+?)\s+teve o nome alterado na música\s+(.+)\.$/,
+    /^The score\s+(.+?)\s+had its name changed in the song\s+(.+)\.$/,
   );
   if (renameWithSongMatch) {
     return (

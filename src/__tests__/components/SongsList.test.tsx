@@ -111,20 +111,12 @@ const sampleScores: ScoreListItem[] = [
 function SongsListHarness() {
   const { loadSongs, updateScore, updateSongStatus } = useAppState();
 
-  useEffect(() => {
-    void loadSongs();
-    triggerUpdateScore = updateScore;
-    return () => {
-      triggerUpdateScore = null;
-    };
-  }, [loadSongs, updateScore]);
+  triggerUpdateScore = updateScore;
+  triggerUpdateSongStatus = updateSongStatus;
 
   useEffect(() => {
-    triggerUpdateSongStatus = updateSongStatus;
-    return () => {
-      triggerUpdateSongStatus = null;
-    };
-  }, [updateSongStatus]);
+    void loadSongs();
+  }, [loadSongs]);
 
   return <SongsList />;
 }

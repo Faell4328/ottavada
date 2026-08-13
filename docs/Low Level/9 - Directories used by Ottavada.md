@@ -1,37 +1,37 @@
 # Local
 
-## Diretórios
+## Directories
 
-Diretório **raiz**:
+**Root** directory:
 
 - `C:\Users\<user>\AppData\Roaming\ottavada\` (Windows).
 - `/home/<user>/.local/share/ottavada` (Linux).
 - `/Users/<user>/Library/Application Support/ottavada/` (macOS).
 
-Os arquivos de log rotativos são gravados diretamente nesse diretório, com o nome `ottavada.log`. Eles não são gravados no diretório do projeto ou da instalação.
+The rotating log files are written directly to this directory, with the name `ottavada.log`. They are not written to the project or installation directory.
 
 ---
 
-Diretório para os **arquivos temporários**:
+Directory for the **temporary files**:
 
 - `C:\Users\<user>\AppData\Roaming\ottavada\temp` (Windows).
 - `/home/<user>/.local/share/ottavada/temp` (Linux).
 - `/Users/<user>/Library/Application Support/ottavada/temp` (macOS).
 
-O backend também utiliza `tmp/` para restauração de arquivos de backup e limpa seu conteúdo durante a inicialização ou após a restauração. `temp/` e `tmp/` são diretórios distintos no código atual.
+The backend also uses `tmp/` to restore backup files and clears its content during startup or after restoration. `temp/` and `tmp/` are distinct directories in the current code.
 
 ---
 
-Diretório raiz da **nuvem**:
+**Cloud** root directory:
 
 - `C:\Users\<user>\AppData\Roaming\ottavada\cloud` (Windows).
 - `/home/<user>/.local/share/ottavada/cloud` (Linux).
 - `/Users/<user>/Library/Application Support/ottavada/cloud` (macOS).
-  > **Nota:** Esse diretório é utilizado para sincronizar com a nuvem.
+  > **Note:** This directory is used to synchronize with the cloud.
 
 ---
 
-Diretório com as partituras **agrupadas** e **compactadas** para serem enviados a **nuvem**:
+Directory with the scores **grouped** and **compressed** to be sent to the **cloud**:
 
 - `C:\Users\<user>\AppData\Roaming\ottavada\cloud\songs` (Windows).
 - `/home/<user>/.local/share/ottavada/cloud/songs` (Linux).
@@ -39,7 +39,7 @@ Diretório com as partituras **agrupadas** e **compactadas** para serem enviados
 
 ---
 
-Diretório onde fica as **ações** (`events` e `snapshot`) para serem enviados a **nuvem**:
+Directory where the **actions** (`events` and `snapshot`) to be sent to the **cloud** live:
 
 - `C:\Users\<user>\AppData\Roaming\ottavada\cloud\actions` (Windows).
 - `/home/<user>/.local/share/ottavada/cloud/actions` (Linux).
@@ -47,7 +47,7 @@ Diretório onde fica as **ações** (`events` e `snapshot`) para serem enviados 
 
 ---
 
-Diretório onde fica os **backups** para serem enviados a **nuvem**:
+Directory where the **backups** to be sent to the **cloud** live:
 
 - `C:\Users\<user>\AppData\Roaming\ottavada\cloud\backup` (Windows).
 - `/home/<user>/.local/share/ottavada/cloud/backup` (Linux).
@@ -55,7 +55,7 @@ Diretório onde fica os **backups** para serem enviados a **nuvem**:
 
 ---
 
-Diretório onde fica as partituras **draft** e **ignored** para não se perder no backup:
+Directory where the **draft** and **ignored** scores live so they are not lost in the backup:
 
 - `C:\Users\<user>\AppData\Roaming\ottavada\cloud\backup_scores_draft_ignored` (Windows).
 - `/home/<user>/.local/share/ottavada/cloud/backup_scores_draft_ignored` (Linux).
@@ -63,7 +63,7 @@ Diretório onde fica as partituras **draft** e **ignored** para não se perder n
 
 ---
 
-**Diretório das configurações do `rclone`**:
+**`rclone` configuration directory**:
 
 - `C:\Users\<user>\AppData\Roaming\ottavada\rclone` (Windows).
 - `/home/<user>/.local/share/ottavada/rclone` (Linux).
@@ -71,10 +71,10 @@ Diretório onde fica as partituras **draft** e **ignored** para não se perder n
 
 ---
 
-# Nuvem
+# Cloud
 
-## Diretórios
+## Directories
 
-É criado uma pasta chamada "ottavada" na nuvem e é lá que os arquivos são enviados.
+A folder called "ottavada" is created in the cloud and that is where the files are sent.
 
-É enviado apenas o **diretório cloud**: seu subdiretórios e seus arquivos.
+Only the **cloud directory** is sent: its subdirectories and its files.

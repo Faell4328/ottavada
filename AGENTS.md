@@ -1,130 +1,130 @@
 # AGENTS.md
 
-## 🎯 Objetivo
+## 🎯 Objective
 
-Definir regras CLARAS de como o agente deve escrever código.
+Define CLEAR rules for how the agent should write code.
 
-Este documento NÃO descreve o projeto — apenas como implementar.
-
----
-
-## 🧠 Regras Absolutas
-
-### 1. Simplicidade acima de tudo
-
-- Sempre escolha a solução mais simples possível
-- Evite abstrações desnecessárias
-- Código deve ser óbvio de entender
+This document does NOT describe the project — only how to implement it.
 
 ---
 
-### 2. Modularidade obrigatória
+## 🧠 Absolute Rules
 
-- Uma função = uma responsabilidade
-- Um módulo = um domínio claro
-- Separar sempre:
-  - lógica de negócio
-  - acesso a banco
+### 1. Simplicity above all
+
+- Always choose the simplest possible solution
+- Avoid unnecessary abstractions
+- Code must be obvious to understand
+
+---
+
+### 2. Mandatory modularity
+
+- One function = one responsibility
+- One module = one clear domain
+- Always separate:
+  - business logic
+  - database access
   - filesystem
-  - rede
+  - network
 
 ---
 
-### 3. Implementar + Testar + Rodar
+### 3. Implement + Test + Run
 
-Toda tarefa DEVE seguir:
+Every task MUST follow:
 
-1. Implementar
-2. Criar testes
-3. Rodar testes
-4. Só então finalizar
-
----
-
-## 🧪 Testes (MANDATÓRIO)
-
-### Regras
-
-- ❗ Nenhum código sem teste
-- ❗ Nenhuma entrega sem rodar testes
-- ❗ Testar comportamento, não implementação
+1. Implement
+2. Create tests
+3. Run tests
+4. Only then finish
 
 ---
 
-### Cobertura mínima
+## 🧪 Tests (MANDATORY)
 
-- Caso feliz
-- Caso de erro
+### Rules
+
+- ❗ No code without a test
+- ❗ No delivery without running tests
+- ❗ Test behavior, not implementation
+
+---
+
+### Minimum coverage
+
+- Happy path
+- Error case
 - Edge cases
 
 ---
 
-## 🧩 Padrões de Código
+## 🧩 Code Standards
 
-### Funções
+### Functions
 
-- Máx ~30 linhas
-- Nome claro e direto
-- Uma única responsabilidade
-
----
-
-### Estado
-
-- Evitar estado global
-- Preferir imutabilidade
-- Passar dados por parâmetro
+- Max ~30 lines
+- Clear and direct name
+- A single responsibility
 
 ---
 
-### Erros
+### State
 
-- Nunca ignorar erro
-- Nunca usar try/catch vazio
-- Sempre tratar ou propagar erro
-
----
-
-## 🏗 Arquitetura (OBRIGATÓRIA)
-
-Separação em camadas:
-
-- Core → lógica pura
-- Infra → DB, FS, rede
-- Application → orquestração
-
-Regra crítica:
-
-Core NÃO depende de Infra
+- Avoid global state
+- Prefer immutability
+- Pass data by parameter
 
 ---
 
-## 🚫 Proibições
+### Errors
 
-- ❌ Funções grandes
-- ❌ Código duplicado
-- ❌ Acoplamento entre módulos
-- ❌ Regra de negócio acessando DB direto
-- ❌ Código sem teste
-- ❌ Finalizar sem rodar testes
+- Never ignore an error
+- Never use an empty try/catch
+- Always handle or propagate the error
 
 ---
 
-## ✅ Checklist de entrega
+## 🏗 Architecture (MANDATORY)
 
-Antes de finalizar:
+Separation into layers:
 
-- [ ] Código simples
-- [ ] Funções pequenas
-- [ ] Sem acoplamento indevido
-- [ ] Testes escritos
-- [ ] Testes passando
-- [ ] Sem código morto ou debug
+- Core → pure logic
+- Infra → DB, FS, network
+- Application → orchestration
+
+Critical rule:
+
+Core does NOT depend on Infra
 
 ---
 
-## 🔄 Regra Final
+## 🚫 Prohibitions
 
-Sem teste = errado  
-Não rodou teste = incompleto  
-Código complexo = refatorar
+- ❌ Large functions
+- ❌ Duplicated code
+- ❌ Coupling between modules
+- ❌ Business rule accessing the DB directly
+- ❌ Code without tests
+- ❌ Finishing without running tests
+
+---
+
+## ✅ Delivery checklist
+
+Before finishing:
+
+- [ ] Simple code
+- [ ] Small functions
+- [ ] No undue coupling
+- [ ] Tests written
+- [ ] Tests passing
+- [ ] No dead or debug code
+
+---
+
+## 🔄 Final Rule
+
+No test = wrong  
+Didn't run tests = incomplete  
+Complex code = refactor

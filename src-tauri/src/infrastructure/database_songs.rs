@@ -163,7 +163,7 @@ impl Database {
 
         if song.path.trim().is_empty() {
             return Err(AppError::Generic(
-                "Caminho da música não pode estar vazio".to_string(),
+                "Song path cannot be empty".to_string(),
             ));
         }
 
@@ -729,14 +729,14 @@ impl Database {
 
         if category_id == DEFAULT_CATEGORY_ID {
             return Err(AppError::Generic(
-                "A categoria 'Sem categoria' nao pode ser editada".to_string(),
+                "The 'Uncategorized' category cannot be edited".to_string(),
             ));
         }
 
         let trimmed_name = name.trim();
         if trimmed_name.is_empty() {
             return Err(AppError::Generic(
-                "Nome da categoria não pode estar vazio".to_string(),
+                "Category name cannot be empty".to_string(),
             ));
         }
 
@@ -746,7 +746,7 @@ impl Database {
                 params![category_id],
                 |row| row.get(0),
             )
-            .map_err(|_| AppError::Generic("Categoria não encontrada".to_string()))?;
+            .map_err(|_| AppError::Generic("Category not found".to_string()))?;
 
         if current_name == trimmed_name {
             return Ok(());
@@ -760,7 +760,7 @@ impl Database {
 
         if duplicate_exists.is_ok() {
             return Err(AppError::Generic(
-                "Já existe uma categoria com esse nome".to_string(),
+                "A category with this name already exists".to_string(),
             ));
         }
 
@@ -792,7 +792,7 @@ impl Database {
 
         if trimmed_old_name.is_empty() {
             return Err(AppError::Generic(
-                "Nome não pode estar vazio".to_string(),
+                "Name cannot be empty".to_string(),
             ));
         }
 
@@ -806,7 +806,7 @@ impl Database {
 
         if !matches!(field_name, "composer" | "arranger") {
             return Err(AppError::Generic(format!(
-                "Campo inválido para atualização de autor: {}",
+                "Invalid field for author update: {}",
                 field_name
             )));
         }
@@ -896,7 +896,7 @@ impl Database {
 
         if category_id == DEFAULT_CATEGORY_ID {
             return Err(AppError::Generic(
-                "A categoria 'Sem categoria' nao pode ser removida".to_string(),
+                "The 'Uncategorized' category cannot be removed".to_string(),
             ));
         }
 
@@ -978,7 +978,7 @@ impl Database {
 
         let affected = conn.execute("DELETE FROM songs WHERE id = ?1", params![song_id])?;
         if affected == 0 {
-            return Err(AppError::Generic("Música não encontrada".into()));
+            return Err(AppError::Generic("Song not found".into()));
         }
 
         for (score_id, file_name) in score_rows {
@@ -1017,7 +1017,7 @@ impl Database {
 }
 
 impl Database {
-    // ===== Métodos para rastreamento de atualização do banco de dados =====
+    // ===== Methods for tracking database updates =====
 
     pub fn get_latest_songs_update_timestamp(&self) -> Result<Option<i64>, AppError> {
         let conn = self.lock_conn();

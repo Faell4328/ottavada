@@ -1,8 +1,8 @@
-# IMPORTANTE
+# IMPORTANT
 
-Os scripts de build preparam o arquivo `rclone` antes do build:
+The build scripts prepare the `rclone` file before the build:
 
-- Windows: copia `rclone64.exe` ou `rclone.exe` para `rclone`.
-- macOS/Linux: espera o binário Unix em `rclone`.
+- Windows: copies `rclone64.exe` or `rclone.exe` to `rclone`.
+- macOS/Linux: expects the Unix binary in `rclone`.
 
-O arquivo `rclone` é ignorado pelo Git porque é um binário específico da plataforma.
+The `rclone` file is ignored by Git because it is a platform-specific binary.

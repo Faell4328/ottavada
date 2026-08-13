@@ -44,23 +44,23 @@ pub fn build_report_items(
     }
 
     for item in added_files {
-        items.push(format!("Partitura adicionada: {}", item));
+        items.push(format!("Score added: {}", item));
     }
 
     for item in changed_files {
-        items.push(format!("Partitura alterada: {}", item));
+        items.push(format!("Score changed: {}", item));
     }
 
     for item in deleted_files {
-        items.push(format!("A partitura {} foi deletada.", item));
+        items.push(format!("The score {} was deleted.", item));
     }
 
     for item in recovered_files {
-        items.push(format!("Partitura recuperada: {}", item));
+        items.push(format!("Score recovered: {}", item));
     }
 
     for (path, error) in failed_files {
-        items.push(format!("Falha ao processar {}: {}", path, error));
+        items.push(format!("Failed to process {}: {}", path, error));
     }
 
     for change in changed_fields {
@@ -150,11 +150,11 @@ pub fn describe_song_category_change(
 
     match change.change_type.as_str() {
         "insert" => Some(format!(
-            "A categoria {} foi adicionada à música {}.",
+            "The category {} was added to the song {}.",
             category_name, song_name
         )),
         "delete" => Some(format!(
-            "A categoria {} foi removida da música {}.",
+            "The category {} was removed from the song {}.",
             category_name, song_name
         )),
         _ => None,
@@ -170,48 +170,48 @@ pub fn describe_song_change(db: &Database, change: &ChangedFieldRecord) -> Optio
 
     match (change.change_type.as_str(), change.field.as_deref()) {
         ("insert", Some("name")) => Some(format!(
-            "Música criada: {}",
+            "Song created: {}",
             change.value.clone().unwrap_or(song_name)
         )),
         ("delete", Some("name")) => Some(format!(
-            "A música {} foi deletada.",
+            "The song {} was deleted.",
             change.value.clone().unwrap_or(song_name)
         )),
         ("update", Some("name")) => Some(format!(
-            "A música {} teve o nome alterado.",
+            "The song {} had its name changed.",
             change.value.clone().unwrap_or(song_name)
         )),
         ("update", Some("status")) => {
             let previous_status_label = match change.value.as_deref() {
-                Some("draft") => "rascunho",
-                Some("main") => "principal",
-                Some("not_found") => "sem partitura",
+                Some("draft") => "draft",
+                Some("main") => "main",
+                Some("not_found") => "not_found",
                 Some(other) => other,
-                None => "rascunho",
+                None => "draft",
             };
 
             match song.as_ref().map(|song| song.status.as_str()) {
                 Some("main") => Some(format!(
-                    "A música {} saiu de {} e voltou para principal.",
+                    "The song {} went from {} and returned to main.",
                     song_name, previous_status_label
                 )),
                 Some("draft") => Some(format!(
-                    "A música {} saiu de {} e foi para rascunho.",
+                    "The song {} went from {} and went to draft.",
                     song_name, previous_status_label
                 )),
                 Some("not_found") => Some(format!(
-                    "A música {} saiu de {} e foi para sem partitura.",
+                    "The song {} went from {} and went to not_found.",
                     song_name, previous_status_label
                 )),
                 _ => Some(format!(
-                    "A música {} teve o status alterado.",
+                    "The song {} had its status changed.",
                     song_name
                 )),
             }
         }
         ("insert", Some("composer")) => change.value.as_ref().map(|value| {
             format!(
-                "O compositor {} foi adicionado à música {}.",
+                "The composer {} was added to the song {}.",
                 value, song_name
             )
         }),
@@ -220,22 +220,22 @@ pub fn describe_song_change(db: &Database, change: &ChangedFieldRecord) -> Optio
             song.as_ref().and_then(|song| song.composer.clone()),
         ) {
             (Some(value), Some(current_value)) if current_value == value => Some(format!(
-                "O compositor {} foi modificado na música {}.",
+                "The composer {} was changed in the song {}.",
                 value, song_name
             )),
             (Some(value), None) => Some(format!(
-                "O compositor {} foi deletado da música {}.",
+                "The composer {} was deleted from the song {}.",
                 value, song_name
             )),
             (Some(value), Some(current_value)) if current_value != value => Some(format!(
-                "O compositor {} foi modificado na música {}.",
+                "The composer {} was changed in the song {}.",
                 current_value, song_name
             )),
             _ => None,
         },
         ("insert", Some("arranger")) => change.value.as_ref().map(|value| {
             format!(
-                "O arranjador {} foi adicionado à música {}.",
+                "The arranger {} was added to the song {}.",
                 value, song_name
             )
         }),
@@ -244,15 +244,15 @@ pub fn describe_song_change(db: &Database, change: &ChangedFieldRecord) -> Optio
             song.as_ref().and_then(|song| song.arranger.clone()),
         ) {
             (Some(value), Some(current_value)) if current_value == value => Some(format!(
-                "O arranjador {} foi modificado na música {}.",
+                "The arranger {} was changed in the song {}.",
                 value, song_name
             )),
             (Some(value), None) => Some(format!(
-                "O arranjador {} foi deletado da música {}.",
+                "The arranger {} was deleted from the song {}.",
                 value, song_name
             )),
             (Some(value), Some(current_value)) if current_value != value => Some(format!(
-                "O arranjador {} foi modificado na música {}.",
+                "The arranger {} was changed in the song {}.",
                 current_value, song_name
             )),
             _ => None,
@@ -264,14 +264,14 @@ pub fn describe_song_change(db: &Database, change: &ChangedFieldRecord) -> Optio
 pub fn describe_category_change(change: &ChangedFieldRecord) -> Option<String> {
     match (change.change_type.as_str(), change.field.as_deref()) {
         ("insert", Some("name")) => Some(format!(
-            "Categoria criada: {}",
+            "Category created: {}",
             change
                 .value
                 .clone()
                 .unwrap_or_else(|| change.entity_id.clone())
         )),
         ("delete", Some("name")) => Some(format!(
-            "A categoria {} foi deletada.",
+            "The category {} was deleted.",
             change
                 .value
                 .clone()
@@ -292,7 +292,7 @@ pub fn describe_score_change(db: &Database, change: &ChangedFieldRecord) -> Opti
     match (change.change_type.as_str(), change.field.as_deref()) {
         ("insert", Some("name")) => describe_score_added(db, change),
         ("delete", Some("file_name")) => Some(format!(
-            "A partitura {} foi deletada.",
+            "The score {} was deleted.",
             change
                 .value
                 .clone()
@@ -304,10 +304,10 @@ pub fn describe_score_change(db: &Database, change: &ChangedFieldRecord) -> Opti
                 .clone()
                 .unwrap_or_else(|| change.entity_id.clone());
             if score_song_name.is_empty() {
-                Some(format!("A partitura {} teve o nome alterado.", score_name))
+                Some(format!("The score {} had its name changed.", score_name))
             } else {
                 Some(format!(
-                    "A partitura {} teve o nome alterado na música {}.",
+                    "The score {} had its name changed in the song {}.",
                     score_name, score_song_name
                 ))
             }
@@ -338,7 +338,7 @@ pub fn describe_score_change(db: &Database, change: &ChangedFieldRecord) -> Opti
             );
 
             Some(format!(
-                "A partitura {} teve a extensão alterada na música {}.",
+                "The score {} had its extension changed in the song {}.",
                 score_name_with_extension, result.2
             ))
         }
@@ -363,14 +363,14 @@ pub fn resolve_score_display_name(
         .trim();
 
     if file_stem.is_empty() {
-        return "Sem Instrumento".to_string();
+        return "No Instrument".to_string();
     }
 
     let normalized_song_score_name = normalize_score_name(song_name);
     let normalized_file_stem = normalize_score_name(file_stem);
 
     if normalized_file_stem.eq_ignore_ascii_case(&normalized_song_score_name) {
-        return "Sem Instrumento".to_string();
+        return "No Instrument".to_string();
     }
 
     if file_stem
@@ -384,7 +384,7 @@ pub fn resolve_score_display_name(
             }
         }
 
-        return "Sem Instrumento".to_string();
+        return "No Instrument".to_string();
     }
 
     file_stem.to_string()
@@ -425,17 +425,17 @@ pub fn describe_score_status_change(db: &Database, change: &ChangedFieldRecord) 
 
     let song_name = result.3;
     let previous_status_label = match change.value.as_deref() {
-        Some("ignored") => "ignorada",
-        Some("draft") => "rascunho",
-        Some("main") => "principal",
+        Some("ignored") => "ignored",
+        Some("draft") => "draft",
+        Some("main") => "main",
         Some(other) => other,
-        None => "rascunho",
+        None => "draft",
     };
 
     let current_status = result.4.as_str();
     let current_status_label = match current_status {
-        "ignored" => "ignorada",
-        "draft" => "rascunho",
+        "ignored" => "ignored",
+        "draft" => "draft",
         "main" => "main",
         other => other,
     };
@@ -448,12 +448,12 @@ pub fn describe_score_status_change(db: &Database, change: &ChangedFieldRecord) 
 
     if current_status == "main" {
         Some(format!(
-            "A partitura {} saiu de {} e voltou para main na música {}.",
+            "The score {} went from {} and returned to main in the song {}.",
             score_name_with_extension, previous_status_label, song_name
         ))
     } else {
         Some(format!(
-            "A partitura {} saiu de {} e foi para {} na música {}.",
+            "The score {} went from {} and went to {} in the song {}.",
             score_name_with_extension, previous_status_label, current_status_label, song_name
         ))
     }
@@ -496,7 +496,7 @@ pub fn build_score_change_report_item(song_name: &str, score_name: &Option<Strin
                 .unwrap_or(file_name)
         });
 
-    format!("{}{} na música {}", display_name, extension, song_name)
+    format!("{}{} in the song {}", display_name, extension, song_name)
 }
 
 pub fn describe_score_status_change_summary(
@@ -540,7 +540,7 @@ pub fn describe_score_added(db: &Database, change: &ChangedFieldRecord) -> Optio
         .unwrap_or_default();
 
     Some(format!(
-        "Partitura adicionada: {}{} na música {}.",
+        "Score added: {}{} in the song {}.",
         score_name, score_extension, result.2
     ))
 }
@@ -615,7 +615,7 @@ mod tests {
 
         let text = describe_score_change(&db, &change).expect("description");
 
-        assert!(text.contains("Sem Instrumento.musx"));
+        assert!(text.contains("No Instrument.musx"));
         assert!(!text.contains("CANON.musx"));
     }
 
@@ -695,35 +695,35 @@ mod tests {
 
         let text = describe_score_change(&db, &change).expect("description");
 
-        assert!(text.contains("principal"));
-        assert!(text.contains("voltou para main"));
+        assert!(text.contains("went from main"));
+        assert!(text.contains("returned to main"));
     }
 
     #[test]
     fn describes_score_status_change_from_ignored_to_draft() {
         let text = describe_score_status_change_for_previous_and_current_status("ignored", "draft");
 
-        assert!(text.contains("ignorada"));
-        assert!(text.contains("rascunho"));
-        assert!(text.contains("foi para rascunho"));
+        assert!(text.contains("ignored"));
+        assert!(text.contains("draft"));
+        assert!(text.contains("went to draft"));
     }
 
     #[test]
     fn describes_score_status_change_from_draft_to_ignored() {
         let text = describe_score_status_change_for_previous_and_current_status("draft", "ignored");
 
-        assert!(text.contains("rascunho"));
-        assert!(text.contains("ignorada"));
-        assert!(text.contains("foi para ignorada"));
+        assert!(text.contains("draft"));
+        assert!(text.contains("ignored"));
+        assert!(text.contains("went to ignored"));
     }
 
     #[test]
     fn describes_score_status_change_from_main_to_ignored() {
         let text = describe_score_status_change_for_previous_and_current_status("main", "ignored");
 
-        assert!(text.contains("principal"));
-        assert!(text.contains("ignorada"));
-        assert!(text.contains("foi para ignorada"));
+        assert!(text.contains("main"));
+        assert!(text.contains("ignored"));
+        assert!(text.contains("went to ignored"));
     }
 
     fn describe_score_status_change_for_previous_and_current_status(
@@ -857,7 +857,7 @@ mod tests {
 
         assert_eq!(
             text,
-            "Partitura adicionada: Flute2.musx na música 08 H.C. CRISTO, O FIEL AMIGO."
+            "Score added: Flute2.musx in the song 08 H.C. CRISTO, O FIEL AMIGO."
         );
     }
 
@@ -868,7 +868,7 @@ mod tests {
         db.insert_song(
             &Song {
                 id: "song-1".to_string(),
-                name: "277 H.C. SALVO ESTÁS LIMPO ESTÁS".to_string(),
+                name: "277 H.C. SAVED YOU ARE CLEAN YOU ARE".to_string(),
                 composer: None,
                 arranger: None,
                 path: "/music/song-1".to_string(),
@@ -887,7 +887,7 @@ mod tests {
             name: Some("Score".to_string()),
             host_id: "server-1".to_string(),
             file_path: "/music/song-1".to_string(),
-            file_name: "H.C. SALVO ESTÁS LIMPO ESTÁS.musx".to_string(),
+            file_name: "H.C. SAVED YOU ARE CLEAN YOU ARE.musx".to_string(),
             file_size: 1024,
             file_modified_at: now(),
             updated_at: now(),
@@ -910,7 +910,7 @@ mod tests {
 
         assert_eq!(
             text,
-            "A partitura Score.musx teve a extensão alterada na música 277 H.C. SALVO ESTÁS LIMPO ESTÁS."
+            "The score Score.musx had its extension changed in the song 277 H.C. SAVED YOU ARE CLEAN YOU ARE."
         );
     }
 
@@ -1007,11 +1007,11 @@ mod tests {
 
         assert_eq!(
             describe_song_change(&db, &composer_added),
-            Some("O compositor Neusom foi adicionado à música Eis o Nosso Deus.".to_string())
+            Some("The composer Neusom was added to the song Eis o Nosso Deus.".to_string())
         );
         assert_eq!(
             describe_song_change(&db, &arranger_added),
-            Some("O arranjador Maria foi adicionado à música Eis o Nosso Deus.".to_string())
+            Some("The arranger Maria was added to the song Eis o Nosso Deus.".to_string())
         );
     }
 
@@ -1047,7 +1047,7 @@ mod tests {
 
         assert_eq!(
             describe_song_change(&db, &status_changed),
-            Some("A música Eis o Nosso Deus saiu de rascunho e voltou para principal.".to_string())
+            Some("The song Eis o Nosso Deus went from draft and returned to main.".to_string())
         );
     }
 
@@ -1083,7 +1083,7 @@ mod tests {
 
         assert_eq!(
             describe_song_change(&db, &status_changed),
-            Some("A música 00 - TESTE saiu de sem partitura e voltou para principal.".to_string())
+            Some("The song 00 - TESTE went from not_found and returned to main.".to_string())
         );
     }
 
@@ -1134,7 +1134,7 @@ mod tests {
                 entity: "categories".to_string(),
                 entity_id: category_id.clone(),
                 field: Some("name".to_string()),
-                value: Some("Coral".to_string()),
+                value: Some("Choir".to_string()),
                 timestamp: 1,
             },
             ChangedFieldRecord {
@@ -1150,7 +1150,7 @@ mod tests {
 
         let report_items = build_report_items(&db, &[], &[], &[], &[], &[], &changed_fields);
 
-        assert!(report_items.iter().any(|item| item.contains("Coral")));
+        assert!(report_items.iter().any(|item| item.contains("Choir")));
         assert!(report_items.iter().all(|item| !item.contains("category-1")));
     }
 
@@ -1159,7 +1159,7 @@ mod tests {
         let db = Database::new_in_memory().expect("db");
         db.insert_category(&crate::domain::models::Category {
             id: "category-1".to_string(),
-            name: "Coral".to_string(),
+            name: "Choir".to_string(),
             updated_at: now(),
             updated_by: "server-1".to_string(),
         })

@@ -12,7 +12,7 @@ pub fn serialize_msgpack_named<T: Serialize>(
     file_label: &str,
 ) -> Result<Vec<u8>, AppError> {
     rmp_serde::to_vec_named(payload)
-        .map_err(|e| AppError::Generic(format!("Erro ao serializar {}: {}", file_label, e)))
+        .map_err(|e| AppError::Generic(format!("Error serializing {}: {}", file_label, e)))
 }
 
 pub fn compress_zstd_with_threads(
@@ -22,7 +22,7 @@ pub fn compress_zstd_with_threads(
 ) -> Result<Vec<u8>, AppError> {
     let mut encoder = zstd::stream::Encoder::new(Vec::new(), 5).map_err(|e| {
         AppError::Generic(format!(
-            "Erro ao iniciar compressao zstd de {}: {}",
+            "Error starting zstd compression of {}: {}",
             file_label, e
         ))
     })?;
@@ -33,21 +33,21 @@ pub fn compress_zstd_with_threads(
 
     encoder.multithread(worker_count as u32).map_err(|e| {
         AppError::Generic(format!(
-            "Erro ao configurar multithread do zstd de {}: {}",
+            "Error configuring zstd multithreading for {}: {}",
             file_label, e
         ))
     })?;
 
     std::io::Write::write_all(&mut encoder, data).map_err(|e| {
         AppError::Generic(format!(
-            "Erro ao escrever payload de {} no zstd: {}",
+            "Error writing payload of {} to zstd: {}",
             file_label, e
         ))
     })?;
 
     encoder.finish().map_err(|e| {
         AppError::Generic(format!(
-            "Erro ao finalizar compressao zstd de {}: {}",
+            "Error finalizing zstd compression of {}: {}",
             file_label, e
         ))
     })
@@ -59,7 +59,7 @@ pub fn read_zstd_msgpack<T: serde::de::DeserializeOwned>(
 ) -> Result<T, AppError> {
     let file = fs::File::open(path).map_err(|e| {
         AppError::Generic(format!(
-            "Erro ao ler {} em {}: {}",
+            "Error reading {} at {}: {}",
             file_label,
             path.display(),
             e
@@ -68,7 +68,7 @@ pub fn read_zstd_msgpack<T: serde::de::DeserializeOwned>(
 
     let decoder = zstd::stream::read::Decoder::new(file).map_err(|e| {
         AppError::Generic(format!(
-            "Erro ao descompactar {} em {}: {}",
+            "Error decompressing {} at {}: {}",
             file_label,
             path.display(),
             e
@@ -77,7 +77,7 @@ pub fn read_zstd_msgpack<T: serde::de::DeserializeOwned>(
 
     rmp_serde::from_read::<_, T>(decoder).map_err(|e| {
         AppError::Generic(format!(
-            "Erro ao desserializar MessagePack {} em {}: {}",
+            "Error deserializing MessagePack {} at {}: {}",
             file_label,
             path.display(),
             e
@@ -90,13 +90,13 @@ pub fn write_atomic(path: &Path, bytes: &[u8], file_label: &str) -> Result<(), A
 
     fs::write(&temp_path, bytes).map_err(|e| {
         AppError::Generic(format!(
-            "Erro ao escrever arquivo temporario de {}: {}",
+            "Error writing temporary file of {}: {}",
             file_label, e
         ))
     })?;
 
     fs::rename(&temp_path, path)
-        .map_err(|e| AppError::Generic(format!("Erro ao finalizar {}: {}", file_label, e)))
+        .map_err(|e| AppError::Generic(format!("Error finalizing {}: {}", file_label, e)))
 }
 
 fn temp_path_for(path: &Path) -> PathBuf {

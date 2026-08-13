@@ -10,37 +10,37 @@ const report = {
   recovered_files: [],
   failed_files: [],
   report_items: [
-    "Música criada: Hino Nacional",
-    "A música Eis o Nosso Deus teve o nome alterado.",
-    "A música Hino Antigo foi deletada.",
-    "A música Eis o Nosso Deus saiu de rascunho e voltou para principal.",
-    "Partitura adicionada: /music/Eis o Nosso Deus - Oboe.musx",
-    "Partitura adicionada: /music/Eis o Nosso Deus - Tenor Saxophone.musx",
-    "Partitura adicionada: /music/Eis o Nosso Deus - Flauta.pdf",
-    "Partitura adicionada: Score.pdf na música 03 VEZES SANTO.",
-    "Partitura adicionada: Score.MUS na música 03 VEZES SANTO.",
-    "Partitura adicionada: VEZES SANTO.MUS na música 03 VEZES SANTO.",
-    "Partitura alterada: /music/Eis o Nosso Deus - Oboes.musx",
-    "Partitura alterada: /music/Eis o Nosso Deus - Clarinete.musx",
-    "A partitura /music/Eis o Nosso Deus - Trompete.musx foi deletada.",
-    "A partitura /music/Eis o Nosso Deus - Trombone.musx foi deletada.",
-    "Partitura alterada: /music/03 VEZES SANTO/03 VEZES SANTO.musx",
-    "A partitura /music/03 VEZES SANTO/03 VEZES SANTO.musx foi deletada.",
-    "Categoria criada: Coral",
-    "A categoria Juventude foi deletada.",
-    "A categoria Sem categoria foi adicionada à música 03 VEZES SANTO.",
-    "A categoria Sem categoria foi removida da música 03 VEZES SANTO.",
-    "A categoria Hinos foi adicionada à música 3 VEZES SANTO.",
-    "A categoria Hinos foi removida da música 3 VEZES SANTO.",
-    "O compositor Neusom foi adicionado à música Eis o Nosso Deus.",
-    "O compositor Neusom foi modificado na música Eis o Nosso Deus.",
-    "O compositor Neusom foi removido da música Eis o Nosso Deus.",
-    "O arranjador Maria foi adicionado à música Eis o Nosso Deus.",
-    "O arranjador Maria foi modificado na música Eis o Nosso Deus.",
-    "O arranjador Maria foi removido da música Eis o Nosso Deus.",
-    "A partitura /music/Eis o Nosso Deus - Flauta.musx saiu de draft e voltou para main na música Eis o Nosso Deus.",
-    "A partitura /music/Eis o Nosso Deus - Flute2.musx saiu de ignored e foi para draft na música Eis o Nosso Deus.",
-    "Partitura alterada: /music/Eis o Nosso Deus - CANON.musx",
+    "Song created: Hino Nacional",
+    "The song Eis o Nosso Deus had its name changed.",
+    "The song Hino Antigo was deleted.",
+    "The song Eis o Nosso Deus went from draft and returned to main.",
+    "Score added: /music/Eis o Nosso Deus - Oboe.musx",
+    "Score added: /music/Eis o Nosso Deus - Tenor Saxophone.musx",
+    "Score added: /music/Eis o Nosso Deus - Flauta.pdf",
+    "Score added: Score.pdf in the song 03 VEZES SANTO.",
+    "Score added: Score.MUS in the song 03 VEZES SANTO.",
+    "Score added: VEZES SANTO.MUS in the song 03 VEZES SANTO.",
+    "Score changed: /music/Eis o Nosso Deus - Oboes.musx",
+    "Score changed: /music/Eis o Nosso Deus - Clarinete.musx",
+    "The score /music/Eis o Nosso Deus - Trompete.musx was deleted.",
+    "The score /music/Eis o Nosso Deus - Trombone.musx was deleted.",
+    "Score changed: /music/03 VEZES SANTO/03 VEZES SANTO.musx",
+    "The score /music/03 VEZES SANTO/03 VEZES SANTO.musx was deleted.",
+    "Category created: Coral",
+    "The category Juventude was deleted.",
+    "The category Uncategorized was added to the song 03 VEZES SANTO.",
+    "The category Uncategorized was removed from the song 03 VEZES SANTO.",
+    "The category Hinos was added to the song 3 VEZES SANTO.",
+    "The category Hinos was removed from the song 3 VEZES SANTO.",
+    "The composer Neusom was added to the song Eis o Nosso Deus.",
+    "The composer Neusom was changed in the song Eis o Nosso Deus.",
+    "The composer Neusom was deleted from the song Eis o Nosso Deus.",
+    "The arranger Maria was added to the song Eis o Nosso Deus.",
+    "The arranger Maria was changed in the song Eis o Nosso Deus.",
+    "The arranger Maria was deleted from the song Eis o Nosso Deus.",
+    "The score /music/Eis o Nosso Deus - Flauta.musx went from draft and returned to main in the song Eis o Nosso Deus.",
+    "The score /music/Eis o Nosso Deus - Flute2.musx went from ignored and went to draft in the song Eis o Nosso Deus.",
+    "Score changed: /music/Eis o Nosso Deus - CANON.musx",
   ],
 };
 
@@ -79,15 +79,15 @@ describe("ScanReportModal", () => {
     expect(screen.getAllByText((_, element) => element?.textContent === "O arranjador da música Eis o Nosso Deus foi alterado para Maria.").length).toBeGreaterThan(0);
     expect(screen.getAllByText((_, element) => element?.textContent === "O compositor Neusom foi deletado da música Eis o Nosso Deus.").length).toBeGreaterThan(0);
     expect(screen.getAllByText((_, element) => element?.textContent === "O arranjador Maria foi deletado da música Eis o Nosso Deus.").length).toBeGreaterThan(0);
-    expect(screen.getAllByText((_, element) => element?.textContent === "As partituras Flauta.pdf, Oboe.musx e Tenor Saxophone.musx foram adicionadas na música Eis o Nosso Deus.").length).toBeGreaterThan(0);
+    expect(screen.getAllByText((_, element) => element?.textContent === "As partituras Flauta.pdf, Oboe.musx and Tenor Saxophone.musx foram adicionadas na música Eis o Nosso Deus.").length).toBeGreaterThan(0);
     expect(screen.getAllByText((_, element) => element?.textContent?.includes("Partituras · Eis o Nosso Deus") ?? false).length).toBeGreaterThan(0);
     expect(screen.getAllByText((_, element) => element?.textContent?.includes("Partituras · 03 VEZES SANTO") ?? false).length).toBeGreaterThan(0);
     expect(
       screen.getAllByText((_, element) =>
         Boolean(
-          element?.textContent?.includes("Score.pdf") &&
+            element?.textContent?.includes("Score.pdf") &&
             element?.textContent?.includes("Score.MUS") &&
-            element?.textContent?.includes("Sem Instrumento.MUS") &&
+            element?.textContent?.includes("No Instrument.MUS") &&
             element?.textContent?.includes("03 VEZES SANTO") &&
             element?.textContent?.includes("foram adicionadas")
         )
@@ -104,8 +104,8 @@ describe("ScanReportModal", () => {
         )
       ).length
     ).toBeGreaterThan(0);
-    expect(screen.getAllByText((_, element) => element?.textContent === "As partituras Trompete.musx e Trombone.musx foram deletadas na música Eis o Nosso Deus.").length).toBeGreaterThan(0);
-    expect(screen.queryAllByText((_, element) => element?.textContent?.includes("Sem Instrumento") ?? false).length).toBeGreaterThan(0);
+    expect(screen.getAllByText((_, element) => element?.textContent === "As partituras Trompete.musx and Trombone.musx foram deletadas na música Eis o Nosso Deus.").length).toBeGreaterThan(0);
+    expect(screen.queryAllByText((_, element) => element?.textContent?.includes("No Instrument") ?? false).length).toBeGreaterThan(0);
     expect(screen.queryAllByText((_, element) => element?.textContent?.includes("03 VEZES SANTO.musx") ?? false).length).toBe(0);
     expect(screen.queryAllByText((_, element) => element?.textContent?.includes("VEZES SANTO.MUS foi adicionada") ?? false).length).toBe(0);
     expect(screen.getAllByText((_, element) => element?.textContent?.includes("A partitura /music/Eis o Nosso Deus - Flauta.musx saiu de Envio não permitido e voltou para Envio permitido na música Eis o Nosso Deus") ?? false).length).toBeGreaterThan(0);
@@ -141,8 +141,8 @@ describe("ScanReportModal", () => {
           recovered_files: [],
           failed_files: [],
           report_items: [
-            "A partitura Score teve o nome alterado na música 03 VEZES SANTO.",
-            "Partitura adicionada: /music/03 VEZES SANTO/03 VEZES SANTO - Score.MUS",
+            "The score Score had its name changed in the song 03 VEZES SANTO.",
+            "Score added: /music/03 VEZES SANTO/03 VEZES SANTO - Score.MUS",
           ],
         }}
         isConfirming={false}
@@ -165,7 +165,7 @@ describe("ScanReportModal", () => {
           deleted_files: [],
           recovered_files: [],
           failed_files: [],
-          report_items: ["A música Eis o Nosso Deus saiu de rascunho e voltou para principal."],
+          report_items: ["The song Eis o Nosso Deus went from draft and returned to main."],
         }}
         isConfirming={false}
         onClose={() => undefined}
@@ -190,7 +190,7 @@ describe("ScanReportModal", () => {
           deleted_files: [],
           recovered_files: [],
           failed_files: [],
-          report_items: ["A música 00 - TESTE saiu de sem partitura e voltou para principal."],
+          report_items: ["The song 00 - TESTE went from not_found and returned to main."],
         }}
         isConfirming={false}
         onClose={() => undefined}
@@ -216,8 +216,8 @@ describe("ScanReportModal", () => {
           recovered_files: [],
           failed_files: [],
           report_items: [
-            "A partitura Flauta.musx saiu de principal e foi para draft na música Eis o Nosso Deus.",
-            "A partitura Oboe.musx saiu de principal e foi para draft na música Eis o Nosso Deus.",
+            "The score Flauta.musx went from main and went to draft in the song Eis o Nosso Deus.",
+            "The score Oboe.musx went from main and went to draft in the song Eis o Nosso Deus.",
           ],
         }}
         isConfirming={false}
@@ -229,7 +229,7 @@ describe("ScanReportModal", () => {
     expect(
       screen.getAllByText((_, element) =>
         element?.textContent ===
-        "As partituras Flauta.musx e Oboe.musx saíram de Envio permitido e foram para Envio não permitido na música Eis o Nosso Deus."
+        "As partituras Flauta.musx and Oboe.musx saíram de Envio permitido e foram para Envio não permitido na música Eis o Nosso Deus."
       ).length
     ).toBeGreaterThan(0);
     expect(
@@ -255,8 +255,8 @@ describe("ScanReportModal", () => {
           recovered_files: [],
           failed_files: [],
           report_items: [
-            "Partitura alterada: /music/TICO-TICO NO FUBA/Flute I.musx",
-            "A partitura Flute I.musx saiu de principal e foi para draft na música TICO-TICO NO FUBA.",
+            "Score changed: /music/TICO-TICO NO FUBA/Flute I.musx",
+            "The score Flute I.musx went from main and went to draft in the song TICO-TICO NO FUBA.",
           ],
         }}
         isConfirming={false}
@@ -289,10 +289,10 @@ describe("ScanReportModal", () => {
           recovered_files: [],
           failed_files: [],
           report_items: [
-            "Partitura alterada: /music/Eis o Nosso Deus - Flauta.musx",
-            "Partitura alterada: /music/Eis o Nosso Deus - Oboe.musx",
-            "A partitura Flauta.musx saiu de principal e foi para draft na música Eis o Nosso Deus.",
-            "A partitura Oboe.musx saiu de principal e foi para draft na música Eis o Nosso Deus.",
+            "Score changed: /music/Eis o Nosso Deus - Flauta.musx",
+            "Score changed: /music/Eis o Nosso Deus - Oboe.musx",
+            "The score Flauta.musx went from main and went to draft in the song Eis o Nosso Deus.",
+            "The score Oboe.musx went from main and went to draft in the song Eis o Nosso Deus.",
           ],
         }}
         isConfirming={false}
@@ -304,12 +304,12 @@ describe("ScanReportModal", () => {
     expect(
       screen.getAllByText((_, element) =>
         element?.textContent ===
-        "As partituras Flauta.musx e Oboe.musx foram alteradas e saíram de Envio permitido e foram para Envio não permitido na música Eis o Nosso Deus."
+        "As partituras Flauta.musx and Oboe.musx foram alteradas e saíram de Envio permitido e foram para Envio não permitido na música Eis o Nosso Deus."
       ).length
     ).toBeGreaterThan(0);
     expect(
       screen.queryAllByText((_, element) =>
-        element?.textContent === "As partituras Flauta.musx e Oboe.musx foram alteradas na música Eis o Nosso Deus."
+        element?.textContent === "As partituras Flauta.musx and Oboe.musx foram alteradas na música Eis o Nosso Deus."
       ).length
     ).toBe(0);
   });
@@ -324,7 +324,7 @@ describe("ScanReportModal", () => {
           deleted_files: [],
           recovered_files: [],
           failed_files: [],
-          report_items: ["Partitura alterada: Score.mus na música Bem aventurança do crente"],
+          report_items: ["Score changed: Score.mus in the song Bem aventurança do crente"],
         }}
         isConfirming={false}
         onClose={() => undefined}

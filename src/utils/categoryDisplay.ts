@@ -1,6 +1,6 @@
 import i18next from "i18next";
 
-const DEFAULT_CATEGORY_KEY = "sem categoria";
+const DEFAULT_CATEGORY_KEY = "uncategorized";
 
 export function getCategoryDisplayName(name: string): string {
   if (name.toLowerCase() === DEFAULT_CATEGORY_KEY) {

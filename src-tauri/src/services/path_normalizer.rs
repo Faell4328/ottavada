@@ -1,4 +1,4 @@
-/// Obtém o diretório de perfil do usuário (equivalente a `%USERPROFILE%` no Windows).
+/// Gets the user profile directory (equivalent to `%USERPROFILE%` on Windows).
 pub fn get_user_profile() -> Option<String> {
     #[cfg(target_os = "windows")]
     {
@@ -10,10 +10,10 @@ pub fn get_user_profile() -> Option<String> {
     }
 }
 
-/// Converte um caminho absoluto para o formato de armazenamento com `%USERPROFILE%`.
+/// Converts an absolute path to the storage format using `%USERPROFILE%`.
 ///
-/// Apenas aplica a conversão se o caminho estiver dentro do diretório de perfil do usuário.
-/// Caso contrário, retorna o caminho original.
+/// Only applies the conversion if the path is inside the user profile directory.
+/// Otherwise, returns the original path.
 pub fn to_storage_path(path: &str) -> String {
     let trimmed = path.trim();
     if trimmed.is_empty() {
@@ -45,9 +45,9 @@ pub fn to_storage_path(path: &str) -> String {
     }
 }
 
-/// Expande `%USERPROFILE%` de volta para o caminho absoluto real (para operações no sistema de arquivos).
+/// Expands `%USERPROFILE%` back to the real absolute path (for file system operations).
 ///
-/// Se o caminho não começar com `%USERPROFILE%`, retorna o original.
+/// If the path does not start with `%USERPROFILE%`, returns the original.
 pub fn from_storage_path(path: &str) -> String {
     let trimmed = path.trim();
     if trimmed.is_empty() {

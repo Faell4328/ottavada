@@ -14,10 +14,10 @@ export function normalizeScoreStatus(status: unknown): string {
 export function getScoreStatusLabel(status: unknown): string {
   const normalized = normalizeScoreStatus(status) as ScoreStatusKey;
   const fallbackLabels: Record<ScoreStatusKey, string> = {
-    main: "Envio permitido",
-    draft: "Envio não permitido",
-    ignored: "Ignorada",
-    not_found: "Sem partitura",
+    main: "Sending allowed",
+    draft: "Sending not allowed",
+    ignored: "Ignored",
+    not_found: "No score",
   };
   return i18next.t(`scoreStatus.${normalized}`, fallbackLabels[normalized] ?? String(status ?? ""));
 }

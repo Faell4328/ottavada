@@ -33,19 +33,19 @@ export function stripFileExtension(value: string): string {
 
 export function formatStatusLabel(value: string): string {
   if (value === "ignored" || value === "ignorada") {
-    return "ignorada";
+    return "ignored";
   }
 
   if (value === "draft" || value === "rascunho") {
-    return "Envio não permitido";
+    return "draft";
   }
 
   if (value === "not_found" || value === "sem partitura") {
-    return "sem partitura";
+    return "not_found";
   }
 
   if (value === "main" || value === "principal") {
-    return "Envio permitido";
+    return "main";
   }
 
   return value;
@@ -67,7 +67,7 @@ export function formatScoreDisplayName(value: string, songName?: string): string
     normalizedSongName &&
     normalizeKey(normalized) === normalizeKey(normalizedSongName)
   ) {
-    return `Sem Instrumento${fileExtension}`;
+    return `No Instrument${fileExtension}`;
   }
 
   if (normalizeKey(normalized) === normalizeKey("Score")) {
@@ -81,7 +81,7 @@ export function parseScoreReference(rawPath: string): {
   songName: string;
   scoreName: string;
 } {
-  const explicitSongMatch = rawPath.match(/^(.+?)\s+na música\s+(.+)$/);
+  const explicitSongMatch = rawPath.match(/^(.+?)\s+in the song\s+(.+)$/);
   if (explicitSongMatch) {
     return {
       scoreName: explicitSongMatch[1].trim(),
@@ -135,7 +135,7 @@ export function parseScoreAdditionReference(rawText: string): {
   songName: string;
   scoreName: string;
 } {
-  const additionWithSongMatch = rawText.match(/^(.+?)\s+na música\s+(.+)\.$/);
+  const additionWithSongMatch = rawText.match(/^(.+?)\s+in the song\s+(.+)\.$/);
   if (additionWithSongMatch) {
     return {
       scoreName: additionWithSongMatch[1].trim(),
@@ -147,7 +147,7 @@ export function parseScoreAdditionReference(rawText: string): {
 }
 
 export function parseReviewItem(raw: string): ReviewItem | null {
-  const songCreatedMatch = raw.match(/^Música criada:\s*(.+)$/);
+  const songCreatedMatch = raw.match(/^Song created:\s*(.+)$/);
   if (songCreatedMatch) {
     return {
       action: "adding",
@@ -158,7 +158,7 @@ export function parseReviewItem(raw: string): ReviewItem | null {
   }
 
   const songRenamedMatch = raw.match(
-    /^A música\s+(.+?)\s+teve o nome alterado\.$/,
+    /^The song\s+(.+?)\s+had its name changed\.$/,
   );
   if (songRenamedMatch) {
     return {
@@ -170,7 +170,7 @@ export function parseReviewItem(raw: string): ReviewItem | null {
     };
   }
 
-  const songUpdatedMatch = raw.match(/^Música alterada:\s*(.+)$/);
+  const songUpdatedMatch = raw.match(/^Song changed:\s*(.+)$/);
   if (songUpdatedMatch) {
     return {
       action: "modified",
@@ -181,7 +181,7 @@ export function parseReviewItem(raw: string): ReviewItem | null {
   }
 
   const songStatusChangeMatch = raw.match(
-    /^A música\s+(.+?)\s+saiu de\s+(.+?)\s+e\s+(?:voltou para principal|foi para\s+(.+?))\.$/,
+    /^The song\s+(.+?)\s+went from\s+(.+?)\s+and\s+(?:returned to main|went to\s+(.+?))\.$/,
   );
   if (songStatusChangeMatch) {
     return {
@@ -193,7 +193,7 @@ export function parseReviewItem(raw: string): ReviewItem | null {
     };
   }
 
-  const songRemovedMatch = raw.match(/^A música\s+(.+?)\s+foi deletada\.$/);
+  const songRemovedMatch = raw.match(/^The song\s+(.+?)\s+was deleted\.$/);
   if (songRemovedMatch) {
     return {
       action: "deleted",
@@ -203,7 +203,7 @@ export function parseReviewItem(raw: string): ReviewItem | null {
     };
   }
 
-  const categoryCreatedMatch = raw.match(/^Categoria criada:\s*(.+)$/);
+  const categoryCreatedMatch = raw.match(/^Category created:\s*(.+)$/);
   if (categoryCreatedMatch) {
     return {
       action: "adding",
@@ -214,10 +214,10 @@ export function parseReviewItem(raw: string): ReviewItem | null {
   }
 
   const categoryAddedToSongMatch = raw.match(
-    /^A categoria\s+(.+?)\s+foi adicionada à música\s+(.+)\.$/,
+    /^The category\s+(.+?)\s+was added to the song\s+(.+)\.$/,
   );
   if (categoryAddedToSongMatch) {
-    if (categoryAddedToSongMatch[1].trim().toLowerCase() === "sem categoria") {
+    if (categoryAddedToSongMatch[1].trim().toLowerCase() === "uncategorized") {
       return null;
     }
 
@@ -231,7 +231,7 @@ export function parseReviewItem(raw: string): ReviewItem | null {
   }
 
   const categoryRemovedMatch = raw.match(
-    /^A categoria\s+(.+?)\s+foi deletada\.$/,
+    /^The category\s+(.+?)\s+was deleted\.$/,
   );
   if (categoryRemovedMatch) {
     return {
@@ -243,11 +243,11 @@ export function parseReviewItem(raw: string): ReviewItem | null {
   }
 
   const categoryRemovedFromSongMatch = raw.match(
-    /^A categoria\s+(.+?)\s+foi removida da música\s+(.+)\.$/,
+    /^The category\s+(.+?)\s+was removed from the song\s+(.+)\.$/,
   );
   if (categoryRemovedFromSongMatch) {
     if (
-      categoryRemovedFromSongMatch[1].trim().toLowerCase() === "sem categoria"
+      categoryRemovedFromSongMatch[1].trim().toLowerCase() === "uncategorized"
     ) {
       return null;
     }
@@ -262,7 +262,7 @@ export function parseReviewItem(raw: string): ReviewItem | null {
   }
 
   const composerAddedMatch = raw.match(
-    /^O compositor\s+(.+?)\s+foi adicionado à música\s+(.+)\.$/,
+    /^The composer\s+(.+?)\s+was added to the song\s+(.+)\.$/,
   );
   if (composerAddedMatch) {
     return {
@@ -275,7 +275,7 @@ export function parseReviewItem(raw: string): ReviewItem | null {
   }
 
   const composerModifiedMatch = raw.match(
-    /^O compositor\s+(.+?)\s+foi modificado na música\s+(.+)\.$/,
+    /^The composer\s+(.+?)\s+was changed in the song\s+(.+)\.$/,
   );
   if (composerModifiedMatch) {
     return {
@@ -288,7 +288,7 @@ export function parseReviewItem(raw: string): ReviewItem | null {
   }
 
   const composerRemovedMatch = raw.match(
-    /^O compositor\s+(.+?)\s+foi (?:deletado|removido) da música\s+(.+)\.$/,
+    /^The composer\s+(.+?)\s+was (?:deleted|removed) from the song\s+(.+)\.$/,
   );
   if (composerRemovedMatch) {
     return {
@@ -301,7 +301,7 @@ export function parseReviewItem(raw: string): ReviewItem | null {
   }
 
   const arrangerAddedMatch = raw.match(
-    /^O arranjador\s+(.+?)\s+foi adicionado à música\s+(.+)\.$/,
+    /^The arranger\s+(.+?)\s+was added to the song\s+(.+)\.$/,
   );
   if (arrangerAddedMatch) {
     return {
@@ -314,7 +314,7 @@ export function parseReviewItem(raw: string): ReviewItem | null {
   }
 
   const arrangerModifiedMatch = raw.match(
-    /^O arranjador\s+(.+?)\s+foi modificado na música\s+(.+)\.$/,
+    /^The arranger\s+(.+?)\s+was changed in the song\s+(.+)\.$/,
   );
   if (arrangerModifiedMatch) {
     return {
@@ -327,7 +327,7 @@ export function parseReviewItem(raw: string): ReviewItem | null {
   }
 
   const arrangerRemovedMatch = raw.match(
-    /^O arranjador\s+(.+?)\s+foi (?:deletado|removido) da música\s+(.+)\.$/,
+    /^The arranger\s+(.+?)\s+was (?:deleted|removed) from the song\s+(.+)\.$/,
   );
   if (arrangerRemovedMatch) {
     return {
@@ -339,7 +339,7 @@ export function parseReviewItem(raw: string): ReviewItem | null {
     };
   }
 
-  const scoreAddedMatch = raw.match(/^Partitura adicionada:\s*(.+)$/);
+  const scoreAddedMatch = raw.match(/^Score added:\s*(.+)$/);
   if (scoreAddedMatch) {
     const parsed = parseScoreAdditionReference(scoreAddedMatch[1].trim());
     return {
@@ -351,7 +351,7 @@ export function parseReviewItem(raw: string): ReviewItem | null {
     };
   }
 
-  const scoreChangedMatch = raw.match(/^Partitura alterada:\s*(.+)$/);
+  const scoreChangedMatch = raw.match(/^Score changed:\s*(.+)$/);
   if (scoreChangedMatch) {
     const parsed = parseScoreReference(scoreChangedMatch[1].trim());
     return {
@@ -364,7 +364,7 @@ export function parseReviewItem(raw: string): ReviewItem | null {
   }
 
   const scoreRenamedMatch = raw.match(
-    /^A partitura\s+(.+?)\s+teve o nome alterado\.$/,
+    /^The score\s+(.+?)\s+had its name changed\.$/,
   );
   if (scoreRenamedMatch) {
     return {
@@ -377,7 +377,7 @@ export function parseReviewItem(raw: string): ReviewItem | null {
   }
 
   const scoreRenamedWithSongMatch = raw.match(
-    /^A partitura\s+(.+?)\s+teve o nome alterado na música\s+(.+)\.$/,
+    /^The score\s+(.+?)\s+had its name changed in the song\s+(.+)\.$/,
   );
   if (scoreRenamedWithSongMatch) {
     return {
@@ -390,7 +390,7 @@ export function parseReviewItem(raw: string): ReviewItem | null {
     };
   }
 
-  const scoreRemovedMatch = raw.match(/^A partitura\s+(.+?)\s+foi deletada\.$/);
+  const scoreRemovedMatch = raw.match(/^The score\s+(.+?)\s+was deleted\.$/);
   if (scoreRemovedMatch) {
     const parsed = parseScoreReference(scoreRemovedMatch[1].trim());
     return {
@@ -403,7 +403,7 @@ export function parseReviewItem(raw: string): ReviewItem | null {
   }
 
   const scoreExtensionOnlyMatch = raw.match(
-    /^A partitura\s+(.+?)\s+teve a extensão alterada na música\s+(.+)\.$/,
+    /^The score\s+(.+?)\s+had its extension changed in the song\s+(.+)\.$/,
   );
   if (scoreExtensionOnlyMatch) {
     return {
@@ -416,7 +416,7 @@ export function parseReviewItem(raw: string): ReviewItem | null {
     };
   }
 
-  const recoveredMatch = raw.match(/^Partitura recuperada:\s*(.+)$/);
+  const recoveredMatch = raw.match(/^Score recovered:\s*(.+)$/);
   if (recoveredMatch) {
     const parsed = parseScoreReference(recoveredMatch[1].trim());
     const isStandaloneScoreName = parsed.songName === parsed.scoreName;
@@ -426,14 +426,14 @@ export function parseReviewItem(raw: string): ReviewItem | null {
       songName: parsed.songName,
       scoreName: parsed.scoreName,
       customText: isStandaloneScoreName
-        ? `A partitura ${parsed.scoreName} saiu de draft e voltou para main.`
-        : `A partitura ${parsed.scoreName} saiu de draft e voltou para main na música ${parsed.songName}.`,
+        ? `The score ${parsed.scoreName} went from draft and returned to main.`
+        : `The score ${parsed.scoreName} went from draft and returned to main in the song ${parsed.songName}.`,
       raw,
     };
   }
 
   const statusChangeMatch = raw.match(
-    /^A partitura\s+(.+?)\s+saiu de\s+(.+?)\s+e\s+(?:voltou para main|foi para\s+(.+?))\s+na música\s+(.+)\.$/,
+    /^The score\s+(.+?)\s+went from\s+(.+?)\s+and\s+(?:returned to main|went to\s+(.+?))\s+in the song\s+(.+)\.$/,
   );
   if (statusChangeMatch) {
     return {
@@ -549,7 +549,7 @@ export function coalesceScoreRenameAdditions(items: ReviewItem[]): ReviewItem[] 
       continue;
     }
 
-    if (!item.customText?.includes("teve o nome alterado")) {
+    if (!item.customText?.includes("had its name changed")) {
       continue;
     }
 
@@ -606,7 +606,7 @@ export function buildExtensionOnlyScoreChangeText(
   songName: string,
   scoreName: string,
 ): string {
-  return `A partitura ${scoreName} teve a extensão alterada na música ${songName}.`;
+  return `The score ${scoreName} had its extension changed in the song ${songName}.`;
 }
 
 export function coalesceScoreFileAndStatusChanges(items: ReviewItem[]): ReviewItem[] {
@@ -660,11 +660,11 @@ function buildCombinedScoreFileAndStatusText(
   const prevLabel = formatStatusLabel(previousStatus);
 
   if (nextStatus === "main") {
-    return `A partitura ${scoreName} foi alterada e saiu de ${prevLabel} e voltou para ${formatStatusLabel("main")} na música ${songName}.`;
+    return `The score ${scoreName} was changed and went from ${prevLabel} and returned to ${formatStatusLabel("main")} in the song ${songName}.`;
   }
 
   const nextLabel = formatStatusLabel(nextStatus);
-  return `A partitura ${scoreName} foi alterada e saiu de ${prevLabel} e foi para ${nextLabel} na música ${songName}.`;
+  return `The score ${scoreName} was changed and went from ${prevLabel} and went to ${nextLabel} in the song ${songName}.`;
 }
 
 export function parseCustomScoreStatusChange(text: string): {
@@ -674,7 +674,7 @@ export function parseCustomScoreStatusChange(text: string): {
   nextStatus: string;
 } | null {
   const statusChangeMatch = text.match(
-    /^A partitura\s+(.+?)\s+(?:foi alterada e )?saiu de\s+(.+?)\s+e\s+(?:voltou para main|foi para\s+(.+?))\s+na música\s+(.+)\.$/,
+    /^The score\s+(.+?)\s+(?:was changed and )?went from\s+(.+?)\s+and\s+(?:returned to main|went to\s+(.+?))\s+in the song\s+(.+)\.$/,
   );
   if (!statusChangeMatch) {
     return null;
@@ -719,12 +719,12 @@ export function resolveEntityAction(
 }
 
 export function getScoreReviewSongNameFromText(text: string): string | null {
-  const directMatch = text.match(/\bna música\s+(.+)\.$/);
+  const directMatch = text.match(/\bin the song\s+(.+)\.$/);
   if (directMatch) {
     return directMatch[1].trim();
   }
 
-  const statusChangeMatch = text.match(/\bna música\s+(.+)\.$/);
+  const statusChangeMatch = text.match(/\bin the song\s+(.+)\.$/);
   if (statusChangeMatch) {
     return statusChangeMatch[1].trim();
   }

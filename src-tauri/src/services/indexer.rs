@@ -5,12 +5,12 @@ use walkdir::WalkDir;
 use crate::domain::models::IndexedFile;
 use crate::services::name_formatter::{normalize_optional_score_name, normalize_song_name};
 
-/// Extensões de arquivo suportadas
+/// Supported file extensions
 const SUPPORTED_EXTENSIONS: &[&str] = &[
     "pdf", "mus", "musx", "mscx", "mscz", "xml", "musicxml", "sib", "enc", "dorico", "mid", "midi",
 ];
 
-/// Indexa um diretório, retornando todos os arquivos de partitura encontrados.
+/// Indexes a directory, returning all score files found.
 pub fn scan_directory(dir_path: &Path) -> Vec<IndexedFile> {
     let mut files = Vec::new();
 
@@ -95,7 +95,7 @@ fn looks_like_known_instrument(value: &str) -> bool {
     }
 
     const PREFIXES: &[&str] = &[
-        // Genérico
+        // Generic
         "grade",
         "score",
         "completa",
@@ -136,7 +136,7 @@ fn looks_like_known_instrument(value: &str) -> bool {
         "baritone",
         "baritono",
         "tuba",
-        // Percussão (Percussion)
+        // Percussion
         "timpan",
         "tim",
         "tím",
@@ -199,8 +199,8 @@ fn looks_like_known_instrument(value: &str) -> bool {
     PREFIXES.iter().any(|prefix| normalized.contains(prefix))
 }
 
-/// Extrai o nome do instrumento a partir do nome do arquivo.
-/// Suporta tanto "nome da música - instrumento.ext" quanto "instrumento.ext".
+/// Extracts the instrument name from the file name.
+/// Supports both "song name - instrument.ext" and "instrument.ext".
 fn parse_instrument_from_file_stem(file_stem: &str, song_name: &str) -> Option<String> {
     if let Some(idx) = file_stem.rfind(" - ") {
         let normalized = normalize_optional_score_name(Some(&file_stem[idx + 3..]));
@@ -215,7 +215,7 @@ fn parse_instrument_from_file_stem(file_stem: &str, song_name: &str) -> Option<S
     })
 }
 
-/// Separa um caminho completo de arquivo em (diretório, nome_do_arquivo)
+/// Splits a full file path into (directory, file_name)
 pub fn split_file_path(file_path: &str) -> (String, String) {
     let last_sep = file_path.rfind(|c: char| c == '/' || c == '\\');
     match last_sep {
@@ -232,9 +232,9 @@ pub fn split_file_path(file_path: &str) -> (String, String) {
     }
 }
 
-/// Compara caminhos de arquivo de forma resiliente entre plataformas.
-/// - Normaliza separadores para '/'
-/// - Em paths estilo Windows (com letra de drive), comparação é case-insensitive
+/// Compares file paths resiliently across platforms.
+/// - Normalizes separators to '/'
+/// - In Windows-style paths (with drive letter), comparison is case-insensitive
 pub fn paths_match(path_a: &str, path_b: &str) -> bool {
     let normalized_a = path_a.replace('\\', "/");
     let normalized_b = path_b.replace('\\', "/");
@@ -253,7 +253,7 @@ pub fn paths_match(path_a: &str, path_b: &str) -> bool {
     }
 }
 
-/// Obtém os metadados do arquivo (size e modified_at)
+/// Gets the file metadata (size and modified_at)
 pub fn get_file_metadata(file_path: &Path) -> Result<(u64, NaiveDateTime), std::io::Error> {
     let metadata = std::fs::metadata(file_path)?;
     let file_size = metadata.len();
@@ -271,7 +271,7 @@ pub fn get_file_metadata(file_path: &Path) -> Result<(u64, NaiveDateTime), std::
     Ok((file_size, modified_at))
 }
 
-/// Detecta alterações no arquivo comparando size e modified_at
+/// Detects changes in the file by comparing size and modified_at
 pub struct FileChangeDetector {
     pub current_size: u64,
     pub current_modified_at: NaiveDateTime,
@@ -294,7 +294,7 @@ impl FileChangeDetector {
         }
     }
 
-    /// Verifica se o arquivo foi alterado
+    /// Checks if the file has changed
     pub fn has_changed(&self) -> bool {
         self.current_size != self.stored_size || self.current_modified_at != self.stored_modified_at
     }
@@ -361,7 +361,7 @@ mod tests {
 
     #[test]
     fn test_parse_instrument_returns_none_for_unrecognized_file_name() {
-        let instrument = parse_instrument_from_file_stem("tema principal", "EIS O NOSSO DEUS");
+        let instrument = parse_instrument_from_file_stem("main theme", "EIS O NOSSO DEUS");
         assert_eq!(instrument, None);
     }
 
@@ -464,7 +464,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let song_dir = dir.path().join("Eis o nosso deus");
         std::fs::create_dir(&song_dir).unwrap();
-        std::fs::write(song_dir.join("tema principal.SIB"), b"data").unwrap();
+        std::fs::write(song_dir.join("main theme.SIB"), b"data").unwrap();
 
         let files = scan_directory(&song_dir);
         assert_eq!(files.len(), 1);

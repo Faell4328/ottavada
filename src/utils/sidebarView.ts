@@ -3,10 +3,10 @@ import i18next from "i18next";
 import { getCategoryDisplayName } from "./categoryDisplay";
 
 export function getSidebarViewLabel(sidebarView: SidebarView): string {
-  if (sidebarView === "all") return i18next.t("sidebarViewLabels.all", "Todas as Músicas");
-  if (sidebarView === "favorites") return i18next.t("sidebarViewLabels.favorites", "Favoritos");
-  if (sidebarView === "drafts") return i18next.t("sidebarViewLabels.drafts", "Com envio não permitido");
-  if (sidebarView === "not_found") return i18next.t("sidebarViewLabels.not_found", "Músicas sem partituras");
+  if (sidebarView === "all") return i18next.t("sidebarViewLabels.all", "All Songs");
+  if (sidebarView === "favorites") return i18next.t("sidebarViewLabels.favorites", "Favorites");
+  if (sidebarView === "drafts") return i18next.t("sidebarViewLabels.drafts", "With sending not allowed");
+  if (sidebarView === "not_found") return i18next.t("sidebarViewLabels.not_found", "Missing Scores");
   if (typeof sidebarView === "object") return getCategoryDisplayName(sidebarView.name);
   return "";
 }

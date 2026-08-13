@@ -8,11 +8,11 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [profile.release]
-opt-level = 3       # máximo nível de otimização
+opt-level = 3       # maximum optimization level
 lto = true          # link-time optimization
-codegen-units = 1   # melhor otimização (mais lento pra compilar)
-panic = "abort"     # reduz tamanho e melhora performance
-strip = true        # remove símbolos
+codegen-units = 1   # better optimization (slower to compile)
+panic = "abort"     # reduces size and improves performance
+strip = true        # removes symbols
 
 [lib]
 # The `_lib` suffix may seem redundant but it is necessary

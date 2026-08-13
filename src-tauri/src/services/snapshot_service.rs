@@ -258,7 +258,7 @@ pub fn generate_snapshot_msgpack(
     let file_size = fs::metadata(&output_path)
         .map_err(|e| {
             AppError::Generic(format!(
-                "Erro ao obter metadados de snapshot.msgpack: {}",
+                "Error getting snapshot.msgpack metadata: {}",
                 e
             ))
         })?
@@ -288,7 +288,7 @@ fn compress_snapshot_with_retry(msgpack_bytes: &[u8]) -> Result<Vec<u8>, AppErro
             Ok(compressed) => return Ok(compressed),
             Err(err) => {
                 warn!(
-                    "Falha ao compactar snapshot.msgpack (tentativa {}): {}",
+                    "Failed to compress snapshot.msgpack (attempt {}): {}",
                     attempt, err
                 );
                 last_error = Some(err);
@@ -297,22 +297,22 @@ fn compress_snapshot_with_retry(msgpack_bytes: &[u8]) -> Result<Vec<u8>, AppErro
     }
 
     Err(AppError::Generic(format!(
-        "Nao foi possivel compactar o arquivo de alteracao snapshot.msgpack: {}",
+        "Could not compress the snapshot.msgpack change file: {}",
         last_error
             .map(|e| e.to_string())
-            .unwrap_or_else(|| "erro desconhecido".to_string())
+            .unwrap_or_else(|| "unknown error".to_string())
     )))
 }
 
 fn clear_events_artifacts(cloud_dir: &std::path::Path) -> Result<(), AppError> {
     for entry in fs::read_dir(cloud_dir).map_err(|e| {
         AppError::Generic(format!(
-            "Erro ao listar diretório de ações após snapshot: {}",
+            "Error listing actions directory after snapshot: {}",
             e
         ))
     })? {
         let entry = entry.map_err(|e| {
-            AppError::Generic(format!("Erro ao ler entrada de ações após snapshot: {}", e))
+            AppError::Generic(format!("Error reading actions directory entry after snapshot: {}", e))
         })?;
 
         let path = entry.path();
@@ -323,14 +323,14 @@ fn clear_events_artifacts(cloud_dir: &std::path::Path) -> Result<(), AppError> {
         if path.is_file() {
             fs::remove_file(&path).map_err(|e| {
                 AppError::Generic(format!(
-                    "Erro ao remover arquivo de ações após snapshot: {}",
+                    "Error removing actions file after snapshot: {}",
                     e
                 ))
             })?;
         } else if path.is_dir() {
             fs::remove_dir_all(&path).map_err(|e| {
                 AppError::Generic(format!(
-                    "Erro ao remover diretório de ações após snapshot: {}",
+                    "Error removing actions directory after snapshot: {}",
                     e
                 ))
             })?;
@@ -344,7 +344,7 @@ fn clear_events_artifacts(cloud_dir: &std::path::Path) -> Result<(), AppError> {
     if legacy_events_path.exists() {
         fs::remove_file(&legacy_events_path).map_err(|e| {
             AppError::Generic(format!(
-                "Erro ao remover events legado após snapshot: {}",
+                "Error removing legacy events file after snapshot: {}",
                 e
             ))
         })?;
@@ -375,7 +375,7 @@ mod tests {
 
         let settings = crate::domain::models::AppSettings {
             computer_id: "server-1".to_string(),
-            computer_name: Some("Servidor".to_string()),
+            computer_name: Some("Server".to_string()),
             computer_type: crate::domain::models::ComputerType::Server,
             ..Default::default()
         };
@@ -391,7 +391,7 @@ mod tests {
 
         let song = Song {
             id: "song-1".to_string(),
-            name: "Musica Teste".to_string(),
+            name: "Test Music".to_string(),
             composer: None,
             arranger: None,
             path: dir
@@ -456,7 +456,7 @@ mod tests {
 
         let settings = crate::domain::models::AppSettings {
             computer_id: "server-1".to_string(),
-            computer_name: Some("Servidor".to_string()),
+            computer_name: Some("Server".to_string()),
             computer_type: crate::domain::models::ComputerType::Server,
             ..Default::default()
         };
@@ -472,7 +472,7 @@ mod tests {
 
         let song = Song {
             id: "song-1".to_string(),
-            name: "Musica Teste".to_string(),
+            name: "Test Music".to_string(),
             composer: None,
             arranger: None,
             path: "/music/song-1".to_string(),
@@ -514,7 +514,7 @@ mod tests {
 
         let settings = crate::domain::models::AppSettings {
             computer_id: "server-1".to_string(),
-            computer_name: Some("Servidor".to_string()),
+            computer_name: Some("Server".to_string()),
             computer_type: crate::domain::models::ComputerType::Server,
             ..Default::default()
         };
@@ -522,7 +522,7 @@ mod tests {
 
         let main_song = Song {
             id: "song-main".to_string(),
-            name: "Musica Principal".to_string(),
+            name: "Main Music".to_string(),
             composer: None,
             arranger: None,
             path: "/music/song-main".to_string(),
@@ -535,7 +535,7 @@ mod tests {
 
         let draft_song = Song {
             id: "song-draft".to_string(),
-            name: "Musica Rascunho".to_string(),
+            name: "Draft Music".to_string(),
             composer: None,
             arranger: None,
             path: "/music/song-draft".to_string(),

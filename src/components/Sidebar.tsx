@@ -130,7 +130,7 @@ export default function Sidebar() {
       setNewCategoryName("");
       setShowNewCategory(false);
     } catch (error) {
-      console.error("Falha ao criar categoria:", error);
+      console.error("Failed to create category:", error);
     } finally {
       setIsCreatingCategory(false);
     }
@@ -144,10 +144,10 @@ export default function Sidebar() {
   const canEditCategory = (categoryId: string, categoryName: string) =>
     !isCategoryLocked &&
     categoryId !== "default-category" &&
-    categoryName.toLowerCase() !== "sem categoria";
+    categoryName.toLowerCase() !== "uncategorized";
 
   const canEditAuthor = (kind: "composer" | "arranger", authorName: string) =>
-    !isCategoryLocked && authorName.toLowerCase() !== `sem ${kind}`;
+    !isCategoryLocked && authorName.toLowerCase() !== `no ${kind}`;
 
   const openEditAuthor = (kind: "composer" | "arranger", name: string) => {
     setAuthorToEdit({ kind, name });
@@ -155,7 +155,7 @@ export default function Sidebar() {
 
   return (
     <aside className="flex w-60 flex-col gap-2.5 border-r border-white/20 bg-[rgba(35,52,72,0.94)] px-3 py-3 text-[#dce7f5]">
-      {/* Biblioteca */}
+      {/* Library */}
       <div className="border-b border-white/15 pb-2">
         <div className="flex items-center gap-1.5 text-sm font-bold mb-1.5">
           <Library className="h-4 w-4" />
@@ -179,7 +179,7 @@ export default function Sidebar() {
         </nav>
       </div>
 
-      {/* Categorias */}
+      {/* Categories */}
       <div>
         <div className="flex items-center justify-between text-sm font-bold mb-1.5">
           <span>{t("sidebar.categories")}</span>

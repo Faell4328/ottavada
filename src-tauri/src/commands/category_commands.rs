@@ -9,14 +9,14 @@ use crate::infrastructure::{database::Database, store::SystemStore};
 
 #[tauri::command]
 pub fn get_categories(db: State<'_, Database>) -> Result<Vec<Category>, AppError> {
-    info!("Buscando todas as categorias");
+    info!("Fetching all categories");
     db.get_all_categories()
         .map(|categories| {
-            info!("Retornou {} categorias", categories.len());
+            info!("Returned {} categories", categories.len());
             categories
         })
         .map_err(|e| {
-            error!("Erro ao buscar categorias: {:?}", e);
+            error!("Error fetching categories: {:?}", e);
             e
         })
 }
@@ -27,13 +27,13 @@ pub fn create_category(
     store: State<'_, SystemStore>,
     name: String,
 ) -> Result<Category, AppError> {
-    info!("Criando nova categoria: {}", name);
+    info!("Creating new category: {}", name);
 
     let settings = require_server_settings(&store)?;
 
     if name.trim().is_empty() {
         return Err(AppError::Generic(
-            "Nome da categoria não pode estar vazio".into(),
+            "Category name cannot be empty".into(),
         ));
     }
 
@@ -47,11 +47,11 @@ pub fn create_category(
     };
     db.insert_category(&category)
         .map(|_| {
-            info!("Categoria criada com sucesso: {}", category.id);
+            info!("Category created successfully: {}", category.id);
             category
         })
         .map_err(|e| {
-            error!("Erro ao criar categoria: {:?}", e);
+            error!("Error creating category: {:?}", e);
             e
         })
 }
@@ -63,14 +63,14 @@ pub fn update_category(
     category_id: String,
     name: String,
 ) -> Result<Category, AppError> {
-    info!("Atualizando categoria: {}", category_id);
+    info!("Updating category: {}", category_id);
 
     let settings = require_server_settings(&store)?;
     let trimmed_name = name.trim();
 
     if trimmed_name.is_empty() {
         return Err(AppError::Generic(
-            "Nome da categoria não pode estar vazio".into(),
+            "Category name cannot be empty".into(),
         ));
     }
 
@@ -78,7 +78,7 @@ pub fn update_category(
 
     db.update_category(&category_id, trimmed_name)
         .map(|_| {
-            info!("Categoria atualizada com sucesso: {}", category_id);
+            info!("Category updated successfully: {}", category_id);
             Category {
                 id: category_id,
                 name: trimmed_name.to_string(),
@@ -87,7 +87,7 @@ pub fn update_category(
             }
         })
         .map_err(|e| {
-            error!("Erro ao atualizar categoria: {:?}", e);
+            error!("Error updating category: {:?}", e);
             e
         })
 }
@@ -100,13 +100,13 @@ pub fn delete_category(
 ) -> Result<(), AppError> {
     require_server_settings(&store)?;
 
-    info!("Deletando categoria: {}", category_id);
+    info!("Deleting category: {}", category_id);
     db.delete_category(&category_id)
         .map(|_| {
-            info!("Categoria deletada com sucesso: {}", category_id);
+            info!("Category deleted successfully: {}", category_id);
         })
         .map_err(|e| {
-            error!("Erro ao deletar categoria: {:?}", e);
+            error!("Error deleting category: {:?}", e);
             e
         })
 }

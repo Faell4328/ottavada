@@ -77,7 +77,7 @@ export function RcloneProviderModal({
       await onApprove(selectedProvider);
       onClose();
     } catch {
-      // O erro já é tratado no componente pai; o modal apenas permanece aberto.
+      // The error is already handled in the parent component; the modal just stays open.
     } finally {
       setIsSubmitting(false);
     }

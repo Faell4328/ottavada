@@ -44,10 +44,10 @@ fn list_backup_files(backup_dir: &Path) -> Result<Vec<(i64, PathBuf)>, AppError>
         return Ok(backups);
     }
     for entry in fs::read_dir(backup_dir)
-        .map_err(|e| AppError::Generic(format!("Erro ao ler diretorio de backup: {}", e)))?
+        .map_err(|e| AppError::Generic(format!("Error reading backup directory: {}", e)))?
     {
         let entry = entry.map_err(|e| {
-            AppError::Generic(format!("Erro ao ler entrada do diretorio de backup: {}", e))
+            AppError::Generic(format!("Error reading backup directory entry: {}", e))
         })?;
         let path = entry.path();
         if !path.is_file() {
@@ -70,13 +70,13 @@ fn cleanup_old_backups(backup_dir: &Path) -> Result<usize, AppError> {
     let mut removed = 0;
     for (_timestamp, path) in backups.iter().skip(MAX_BACKUP_FILES) {
         if let Err(e) = fs::remove_file(path) {
-            warn!("Erro ao remover backup antigo {}: {}", path.display(), e);
+            warn!("Error removing old backup {}: {}", path.display(), e);
         } else {
             removed += 1;
         }
     }
     if removed > 0 {
-        info!("Removidos {} backups antigos", removed);
+        info!("Removed {} old backups", removed);
     }
     Ok(removed)
 }
@@ -97,7 +97,7 @@ fn find_latest_valid_backup(backup_dir: &Path) -> Result<Option<PathBuf>, AppErr
 fn read_backup_payload_from_file(path: &Path) -> Result<BackupMessagePack, AppError> {
     let bytes = fs::read(path).map_err(|e| {
         AppError::Generic(format!(
-            "Erro ao ler arquivo de backup {}: {}",
+            "Error reading backup file {}: {}",
             path.display(),
             e
         ))
@@ -110,7 +110,7 @@ fn read_backup_payload_from_file(path: &Path) -> Result<BackupMessagePack, AppEr
 
     rmp_serde::from_slice(&msgpack_bytes).map_err(|e| {
         AppError::Generic(format!(
-            "Erro ao desserializar backup {}: {}",
+            "Error deserializing backup {}: {}",
             path.display(),
             e
         ))
@@ -246,7 +246,7 @@ pub fn export_backup_msgpack(
     if let Some(parent) = output_path.parent() {
         fs::create_dir_all(parent).map_err(|e| {
             AppError::Generic(format!(
-                "Erro ao criar diretorio para backup.msgpack: {}",
+                "Error creating directory for backup.msgpack: {}",
                 e
             ))
         })?;
@@ -256,7 +256,7 @@ pub fn export_backup_msgpack(
 
     let file_size = fs::metadata(&output_path)
         .map_err(|e| {
-            AppError::Generic(format!("Erro ao obter metadados de backup.msgpack: {}", e))
+            AppError::Generic(format!("Error getting backup.msgpack metadata: {}", e))
         })?
         .len();
 
@@ -324,7 +324,7 @@ fn restore_backup_from_path(
 
     if payload.schema_version != BACKUP_SCHEMA_VERSION {
         return Err(AppError::Generic(format!(
-            "Versao de schema do backup nao suportada: {}",
+            "Unsupported backup schema version: {}",
             payload.schema_version
         )));
     }
@@ -363,7 +363,7 @@ pub fn force_generate_backup_msgpack_in_cloud(
     store: &SystemStore,
 ) -> Result<BackupFileSummary, AppError> {
     generate_backup_msgpack_in_cloud(db, store, true)?
-        .ok_or_else(|| AppError::Generic("Falha ao gerar backup da nuvem".to_string()))
+        .ok_or_else(|| AppError::Generic("Failed to generate cloud backup".to_string()))
 }
 
 fn generate_backup_msgpack_in_cloud(
@@ -384,7 +384,7 @@ fn generate_backup_msgpack_in_cloud(
     let payload = collect_backup_payload(db, settings)?;
 
     if !force && payload.songs.is_empty() {
-        info!("Biblioteca vazia: backup automático pulado");
+        info!("Empty library: automatic backup skipped");
         return Ok(None);
     }
 
@@ -395,14 +395,14 @@ fn generate_backup_msgpack_in_cloud(
     let backup_dir = ensure_backup_cloud_dir(store.app_data_dir())?;
 
     sync_cloud_directory_with_rclone_impl(store, "download", Some("backup"))
-        .map_err(|e| AppError::Generic(format!("Nao foi possivel baixar backups existentes: {}", e)))?;
+        .map_err(|e| AppError::Generic(format!("Could not download existing backups: {}", e)))?;
 
     let backup_path = backup_dir.join(backup_filename(payload.generated_at));
 
     write_atomic(&backup_path, &compressed, "backup.msgpack.zst")?;
 
     let file_size = fs::metadata(&backup_path)
-        .map_err(|e| AppError::Generic(format!("Erro ao obter metadados do backup: {}", e)))?
+        .map_err(|e| AppError::Generic(format!("Error getting backup metadata: {}", e)))?
         .len();
 
     cleanup_old_backups(&backup_dir)?;
@@ -411,7 +411,7 @@ fn generate_backup_msgpack_in_cloud(
 
     let draft_count = backup_draft_ignored_scores(db, store)?;
     if draft_count > 0 {
-        info!("Backup de {} partituras draft/ignored concluido", draft_count);
+        info!("Backup of {} draft/ignored scores completed", draft_count);
     }
 
     let mut updated_settings = store.get_app_settings()?;
@@ -451,7 +451,7 @@ pub fn import_backup_msgpack_from_cloud(
         db, store,
     )?;
     if draft_count > 0 {
-        info!("{} partituras draft/ignored restauradas do backup", draft_count);
+        info!("{} draft/ignored scores restored from backup", draft_count);
     }
 
     Ok(summary)
@@ -467,7 +467,7 @@ pub fn validate_cloud_backup(store: &SystemStore) -> Result<CloudBackupValidatio
 
     let backup_path = find_latest_valid_backup(&backup_dir)?.ok_or_else(|| {
         AppError::Generic(
-            "Nenhum backup valido encontrado na nuvem. Verifique se ja foi gerado um backup antes."
+            "No valid backup found in the cloud. Check that a backup has been generated before."
                 .to_string(),
         )
     })?;
@@ -494,7 +494,7 @@ pub fn restore_database_from_cloud_backup(
 
     let backup_path = find_latest_valid_backup(&backup_dir)?.ok_or_else(|| {
         AppError::Generic(
-            "Nenhum backup valido encontrado na nuvem. Verifique se ja foi gerado um backup antes."
+            "No valid backup found in the cloud. Check that a backup has been generated before."
                 .to_string(),
         )
     })?;
@@ -540,11 +540,11 @@ pub fn restore_missing_songs_from_archives(
 
     if songs_cloud_dir.is_dir() {
         for entry in fs::read_dir(&songs_cloud_dir).map_err(|e| {
-            AppError::Generic(format!("Erro ao ler diretorio de musicas da nuvem: {}", e))
+            AppError::Generic(format!("Error reading cloud songs directory: {}", e))
         })? {
             let entry = entry.map_err(|e| {
                 AppError::Generic(format!(
-                    "Erro ao ler entrada do diretorio de musicas: {}",
+                    "Error reading songs directory entry: {}",
                     e
                 ))
             })?;
@@ -562,7 +562,7 @@ pub fn restore_missing_songs_from_archives(
             let temp_song_dir = temp_songs_root.join(song_id);
             fs::create_dir_all(&temp_song_dir).map_err(|e| {
                 AppError::Generic(format!(
-                    "Erro ao criar diretorio temporario para musica {}: {}",
+                    "Error creating temporary directory for song {}: {}",
                     song_id, e
                 ))
             })?;
@@ -592,7 +592,7 @@ pub fn restore_missing_songs_from_archives(
         if !song_dirs_created.contains(&score_ref.song_id) {
             fs::create_dir_all(&song_dir).map_err(|e| {
                 AppError::Generic(format!(
-                    "Erro ao criar diretorio da musica {}: {}",
+                    "Error creating song directory {}: {}",
                     song_dir.display(),
                     e
                 ))
@@ -604,7 +604,7 @@ pub fn restore_missing_songs_from_archives(
         match move_score_from_temp(&temp_song_dir, &score_ref.score_id, &destination) {
             Ok(true) => {
                 info!(
-                    "Partitura restaurada: {} -> {}",
+                    "Score restored: {} -> {}",
                     score_ref.score_id,
                     destination.display()
                 );
@@ -612,13 +612,13 @@ pub fn restore_missing_songs_from_archives(
             }
             Ok(false) => {
                 warn!(
-                    "Partitura {} nao encontrada no diretorio temporario da musica {}",
+                    "Score {} not found in the temporary directory of song {}",
                     score_ref.score_id, score_ref.song_id
                 );
             }
             Err(e) => {
                 warn!(
-                    "Nao foi possivel restaurar partitura {} da musica {}: {}",
+                    "Could not restore score {} of song {}: {}",
                     score_ref.score_id, score_ref.song_id, e
                 );
             }
@@ -660,7 +660,7 @@ fn extract_full_archive(
 ) -> Result<(), AppError> {
     let archive_file = File::open(archive_path).map_err(|e| {
         AppError::Generic(format!(
-            "Erro ao abrir arquivo compactado {}: {}",
+            "Error opening compressed file {}: {}",
             archive_path.display(),
             e
         ))
@@ -668,7 +668,7 @@ fn extract_full_archive(
 
     let decoder = zstd::stream::read::Decoder::new(archive_file).map_err(|e| {
         AppError::Generic(format!(
-            "Erro ao descompactar arquivo {}: {}",
+            "Error decompressing file {}: {}",
             archive_path.display(),
             e
         ))
@@ -677,7 +677,7 @@ fn extract_full_archive(
     let mut archive = tar::Archive::new(decoder);
     let entries = archive.entries().map_err(|e| {
         AppError::Generic(format!(
-            "Erro ao listar arquivos do pacote {}: {}",
+            "Error listing package files {}: {}",
             archive_path.display(),
             e
         ))
@@ -686,7 +686,7 @@ fn extract_full_archive(
     for entry_result in entries {
         let mut entry = entry_result.map_err(|e| {
             AppError::Generic(format!(
-                "Erro ao ler entrada do pacote {}: {}",
+                "Error reading package entry {}: {}",
                 archive_path.display(),
                 e
             ))
@@ -698,7 +698,7 @@ fn extract_full_archive(
 
         let entry_path = entry.path().map_err(|e| {
             AppError::Generic(format!(
-                "Erro ao ler caminho dentro do pacote {}: {}",
+                "Error reading path inside package {}: {}",
                 archive_path.display(),
                 e
             ))
@@ -712,7 +712,7 @@ fn extract_full_archive(
         let output_path = dest_dir.join(&file_name);
         entry.unpack(&output_path).map_err(|e| {
             AppError::Generic(format!(
-                "Erro ao extrair partitura {} do pacote {}: {}",
+                "Error extracting score {} from package {}: {}",
                 file_name,
                 archive_path.display(),
                 e
@@ -721,7 +721,7 @@ fn extract_full_archive(
     }
 
     info!(
-        "Arquivo da musica {} extraido para {}",
+        "Files of song {} extracted to {}",
         song_id,
         dest_dir.display()
     );
@@ -736,14 +736,14 @@ fn move_score_from_temp(
 ) -> Result<bool, AppError> {
     for entry in fs::read_dir(temp_song_dir).map_err(|e| {
         AppError::Generic(format!(
-            "Erro ao ler diretorio temporario {}: {}",
+            "Error reading temporary directory {}: {}",
             temp_song_dir.display(),
             e
         ))
     })? {
         let entry = entry.map_err(|e| {
             AppError::Generic(format!(
-                "Erro ao ler entrada do diretorio temporario: {}",
+                "Error reading temporary directory entry: {}",
                 e
             ))
         })?;
@@ -760,7 +760,7 @@ fn move_score_from_temp(
             if destination.exists() {
                 fs::remove_file(destination).map_err(|e| {
                     AppError::Generic(format!(
-                        "Erro ao remover arquivo existente {}: {}",
+                        "Error removing existing file {}: {}",
                         destination.display(),
                         e
                     ))
@@ -768,7 +768,7 @@ fn move_score_from_temp(
             }
             fs::copy(&path, destination).map_err(|e| {
                 AppError::Generic(format!(
-                    "Erro ao copiar partitura de {} para {}: {}",
+                    "Error copying score from {} to {}: {}",
                     path.display(),
                     destination.display(),
                     e
@@ -1040,7 +1040,7 @@ fn resolve_output_path(
 
     if path.file_name().is_none() {
         return Err(AppError::Generic(
-            "Caminho de saida invalido para backup.msgpack".to_string(),
+            "Invalid output path for backup.msgpack".to_string(),
         ));
     }
 
@@ -1053,26 +1053,26 @@ fn empty_directory_contents(dir: &Path) -> Result<(), AppError> {
     }
     for entry in fs::read_dir(dir).map_err(|e| {
         AppError::Generic(format!(
-            "Erro ao ler diretorio para esvaziar {}: {}",
+            "Error reading directory to empty {}: {}",
             dir.display(),
             e
         ))
     })? {
         let entry = entry.map_err(|e| {
-            AppError::Generic(format!("Erro ao ler entrada em {}: {}", dir.display(), e))
+            AppError::Generic(format!("Error reading entry in {}: {}", dir.display(), e))
         })?;
         let path = entry.path();
         if path.is_dir() {
             fs::remove_dir_all(&path).map_err(|e| {
                 AppError::Generic(format!(
-                    "Erro ao remover diretorio {}: {}",
+                    "Error removing directory {}: {}",
                     path.display(),
                     e
                 ))
             })?;
         } else {
             fs::remove_file(&path).map_err(|e| {
-                AppError::Generic(format!("Erro ao remover arquivo {}: {}", path.display(), e))
+                AppError::Generic(format!("Error removing file {}: {}", path.display(), e))
             })?;
         }
     }
@@ -1167,7 +1167,7 @@ mod tests {
 
         let source_settings = crate::domain::models::AppSettings {
             computer_id: "server-a".to_string(),
-            computer_name: Some("Servidor A".to_string()),
+            computer_name: Some("Server A".to_string()),
             computer_type: crate::domain::models::ComputerType::Server,
             first_run_completed: true,
             ..Default::default()
@@ -1188,7 +1188,7 @@ mod tests {
 
         let song = Song {
             id: "song-1".to_string(),
-            name: "Musica Teste".to_string(),
+            name: "Test Music".to_string(),
             composer: Some("Composer".to_string()),
             arranger: Some("Arranger".to_string()),
             path: "/music/song-1".to_string(),
@@ -1236,7 +1236,7 @@ mod tests {
 
         let target_settings = crate::domain::models::AppSettings {
             computer_id: "server-b".to_string(),
-            computer_name: Some("Servidor B".to_string()),
+            computer_name: Some("Server B".to_string()),
             computer_type: crate::domain::models::ComputerType::Server,
             first_run_completed: true,
             ..Default::default()
@@ -1269,7 +1269,7 @@ mod tests {
             .any(|category| category.id == "cat-1" && category.name == "Classica"));
         assert!(categories
             .iter()
-            .any(|category| category.id == "default-category" && category.name == "Sem categoria"));
+            .any(|category| category.id == "default-category" && category.name == "Uncategorized"));
         assert_eq!(songs[0].category_ids, vec!["cat-1".to_string()]);
         assert!(!changed_fields.is_empty());
 
@@ -1279,7 +1279,7 @@ mod tests {
         assert_eq!(imported_settings.computer_id, "server-a");
         assert_eq!(
             imported_settings.computer_name.as_deref(),
-            Some("Servidor A")
+            Some("Server A")
         );
         assert_eq!(
             imported_settings.last_backup_timestamp,
@@ -1295,7 +1295,7 @@ mod tests {
 
         let source_settings = crate::domain::models::AppSettings {
             computer_id: "server-c".to_string(),
-            computer_name: Some("Servidor C".to_string()),
+            computer_name: Some("Server C".to_string()),
             computer_type: crate::domain::models::ComputerType::Server,
             first_run_completed: true,
             ..Default::default()
@@ -1316,7 +1316,7 @@ mod tests {
 
         let song = Song {
             id: "song-2".to_string(),
-            name: "Musica Teste 2".to_string(),
+            name: "Test Music 2".to_string(),
             composer: None,
             arranger: None,
             path: "/music/song-2".to_string(),
@@ -1347,7 +1347,7 @@ mod tests {
 
         let target_settings = crate::domain::models::AppSettings {
             computer_id: "server-d".to_string(),
-            computer_name: Some("Servidor D".to_string()),
+            computer_name: Some("Server D".to_string()),
             computer_type: crate::domain::models::ComputerType::Server,
             first_run_completed: true,
             ..Default::default()

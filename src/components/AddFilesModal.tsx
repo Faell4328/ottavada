@@ -62,7 +62,7 @@ export function AddFilesModal({
   const { state } = useAppState();
   const { t } = useTranslation();
   const visibleCategories = state.categories.filter(
-    (category) => category.name.toLowerCase() !== "sem categoria",
+    (category) => category.name.toLowerCase() !== "uncategorized",
   );
   const songsForDuplicateCheck = existingSongs ?? state.songs;
   const [allSongSuggestions, setAllSongSuggestions] = useState(state.songs);

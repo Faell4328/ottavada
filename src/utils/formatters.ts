@@ -49,6 +49,6 @@ export function formatBackupTimestamp(timestamp: number): string {
     it: " alle ",
     de: " um ",
   };
-  const separator = separatorMap[i18n.language] || " às ";
+  const separator = separatorMap[i18n.language] || " at ";
   return `${formattedDate}${separator}${formattedTime}`;
 }

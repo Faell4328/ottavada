@@ -43,25 +43,25 @@ fn configured_pubkey() -> Option<&'static str> {
 
 fn configure_updater(app: &AppHandle) -> Result<Option<tauri_plugin_updater::Updater>, AppError> {
     let Some(endpoint) = configured_endpoint() else {
-        warn!("Atualização não configurada: endpoint ausente");
+        warn!("Update not configured: missing endpoint");
         return Ok(None);
     };
 
     let Some(pubkey) = configured_pubkey() else {
-        warn!("Atualização não configurada: chave pública ausente");
+        warn!("Update not configured: missing public key");
         return Ok(None);
     };
 
     let endpoint_url = Url::parse(endpoint)
-        .map_err(|err| AppError::Generic(format!("Endpoint de atualização inválido: {}", err)))?;
+        .map_err(|err| AppError::Generic(format!("Invalid update endpoint: {}", err)))?;
 
     let updater = app
         .updater_builder()
         .pubkey(pubkey)
         .endpoints(vec![endpoint_url])
-        .map_err(|err| AppError::Generic(format!("Erro ao configurar atualização: {}", err)))?
+        .map_err(|err| AppError::Generic(format!("Error configuring update: {}", err)))?
         .build()
-        .map_err(|err| AppError::Generic(format!("Erro ao iniciar updater: {}", err)))?;
+        .map_err(|err| AppError::Generic(format!("Error starting updater: {}", err)))?;
 
     Ok(Some(updater))
 }
@@ -75,11 +75,11 @@ pub async fn check_for_updates(app: AppHandle) -> Result<UpdateCheckResult, AppE
         });
     };
 
-    info!("Verificando atualização do software");
+    info!("Checking for software update");
     let update = updater
         .check()
         .await
-        .map_err(|err| AppError::Generic(format!("Erro ao verificar atualização: {}", err)))?;
+        .map_err(|err| AppError::Generic(format!("Error checking for update: {}", err)))?;
 
     let update = update.map(|update| UpdateInfo {
         current_version: update.current_version,
@@ -98,15 +98,15 @@ pub async fn check_for_updates(app: AppHandle) -> Result<UpdateCheckResult, AppE
 pub async fn install_update(app: AppHandle) -> Result<(), AppError> {
     let Some(updater) = configure_updater(&app)? else {
         return Err(AppError::Generic(
-            "Atualização não configurada no aplicativo".to_string(),
+            "Update not configured in the application".to_string(),
         ));
     };
 
-    info!("Iniciando instalação da atualização");
+    info!("Starting update installation");
     let Some(update) = updater
         .check()
         .await
-        .map_err(|err| AppError::Generic(format!("Erro ao verificar atualização: {}", err)))?
+        .map_err(|err| AppError::Generic(format!("Error checking for update: {}", err)))?
     else {
         return Ok(());
     };
@@ -114,5 +114,5 @@ pub async fn install_update(app: AppHandle) -> Result<(), AppError> {
     update
         .download_and_install(|_, _| {}, || {})
         .await
-        .map_err(|err| AppError::Generic(format!("Erro ao instalar atualização: {}", err)))
+        .map_err(|err| AppError::Generic(format!("Error installing update: {}", err)))
 }

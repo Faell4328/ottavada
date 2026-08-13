@@ -158,7 +158,7 @@ pub fn apply_server_changes_for_client(
     let mut settings = store.get_app_settings()?;
     if settings.computer_type != ComputerType::Client {
         return Err(AppError::Generic(
-            "Sincronização de alterações do servidor disponível apenas para cliente".to_string(),
+            "Server change synchronization available only for client".to_string(),
         ));
     }
 
@@ -183,7 +183,7 @@ pub fn apply_server_changes_for_client(
             settings.last_snapshot_timestamp = Some(snapshot_payload.generated_at);
             snapshot_applied = true;
 
-            // Evita reaplicar eventos antigos em caso de reset por snapshot.
+            // Avoids reapplying old events when a snapshot reset happens.
             settings.last_change_timestamp =
                 Some(known_change_timestamp.max(snapshot_payload.generated_at));
         }
@@ -244,7 +244,7 @@ pub fn has_pending_server_changes(db: &Database, store: &SystemStore) -> Result<
         Ok(_) => {}
         Err(err) => {
             warn!(
-                "Falha ao ler snapshot local para validar alterações: {}",
+                "Failed to read local snapshot to validate changes: {}",
                 err
             );
             return Ok(true);
@@ -257,7 +257,7 @@ pub fn has_pending_server_changes(db: &Database, store: &SystemStore) -> Result<
         }
         Ok(_) => {}
         Err(err) => {
-            warn!("Falha ao ler events local para validar alterações: {}", err);
+            warn!("Failed to read local events to validate changes: {}", err);
             return Ok(true);
         }
     }
@@ -631,7 +631,7 @@ fn apply_upsert_field_event(
                 let song_id = item
                     .value
                     .clone()
-                    .ok_or_else(|| AppError::Generic("Evento de score sem songId".to_string()))?;
+                    .ok_or_else(|| AppError::Generic("Score event without songId".to_string()))?;
 
                 ensure_song_exists(tx, &song_id, event.timestamp)?;
                 ensure_score_exists(tx, &event.entity_id, &song_id, event.timestamp)?;
@@ -711,7 +711,7 @@ fn apply_upsert_field_event(
                     pending.extension = Some(extension);
                 }
             }
-            // "file" é evento sem payload detalhado no design atual.
+            // "file" is an event without detailed payload in the current design.
             "file" => {}
             _ => {}
         },
@@ -843,7 +843,7 @@ fn song_stored_path(song_id: &str) -> String {
 }
 
 fn category_fallback_name(category_id: &str) -> String {
-    format!("Categoria {}", category_id)
+    format!("Category {}", category_id)
 }
 
 fn normalize_extension(raw_extension: Option<&str>) -> Option<String> {
@@ -899,7 +899,7 @@ fn resolve_cloud_dir(app_data_dir: &std::path::Path) -> Result<std::path::PathBu
     if legacy_dir.exists() {
         fs::rename(&legacy_dir, &cloud_dir).map_err(|e| {
             AppError::Generic(format!(
-                "Erro ao migrar diretório legado '{}' para '{}': {}",
+                "Error migrating legacy directory '{}' to '{}': {}",
                 legacy_dir.display(),
                 cloud_dir.display(),
                 e
@@ -908,7 +908,7 @@ fn resolve_cloud_dir(app_data_dir: &std::path::Path) -> Result<std::path::PathBu
     }
 
     fs::create_dir_all(&cloud_dir)
-        .map_err(|e| AppError::Generic(format!("Erro ao criar diretório cloud: {}", e)))?;
+        .map_err(|e| AppError::Generic(format!("Error creating cloud directory: {}", e)))?;
 
     Ok(cloud_dir)
 }
@@ -1053,7 +1053,7 @@ mod tests {
             arranger_songs: Vec::new(),
             songs: vec![SnapshotSongTestPayload {
                 id: "song-1".to_string(),
-                name: "Musica 1".to_string(),
+                name: "Music 1".to_string(),
                 scores: vec![SnapshotScoreTestPayload {
                     id: "score-1".to_string(),
                     song_id: "song-1".to_string(),
@@ -1078,7 +1078,7 @@ mod tests {
                 entity_id: "song-1".to_string(),
                 data: Some(vec![EventDataTestPayload {
                     field: "name".to_string(),
-                    value: Some("Musica 1 Atualizada".to_string()),
+                    value: Some("Updated Music 1".to_string()),
                 }]),
             }],
         };
@@ -1097,7 +1097,7 @@ mod tests {
 
         let songs = db.get_all_songs().expect("get songs");
         assert_eq!(songs.len(), 1);
-        assert_eq!(songs[0].name, "Musica 1 Atualizada");
+        assert_eq!(songs[0].name, "Updated Music 1");
         assert_eq!(songs[0].scores.len(), 1);
         assert_eq!(songs[0].scores[0].file_extension, "musx");
         assert_eq!(songs[0].category_ids, vec!["cat-1".to_string()]);
@@ -1107,7 +1107,7 @@ mod tests {
         assert!(categories.iter().any(|category| category.name == "Harpa"));
         assert!(categories
             .iter()
-            .any(|category| category.name == "Sem categoria"));
+            .any(|category| category.name == "Uncategorized"));
     }
 
     #[test]
@@ -1138,17 +1138,17 @@ mod tests {
             categories_songs: Vec::new(),
             composers: vec![SnapshotNamedEntityTestPayload {
                 id: "composer-1".to_string(),
-                name: "Compositor".to_string(),
+                name: "Composer".to_string(),
             }],
             composer_songs: Vec::new(),
             arrangers: vec![SnapshotNamedEntityTestPayload {
                 id: "arranger-1".to_string(),
-                name: "Arranjador".to_string(),
+                name: "Arranger".to_string(),
             }],
             arranger_songs: Vec::new(),
             songs: vec![SnapshotSongTestPayload {
                 id: "song-1".to_string(),
-                name: "Musica 1".to_string(),
+                name: "Music 1".to_string(),
                 scores: Vec::new(),
             }],
         };
@@ -1255,7 +1255,7 @@ mod tests {
         conn.execute(
             "INSERT INTO songs (id, name, composer, arranger, path, is_favorite, last_score_file_modified_at)
              VALUES (?1, ?2, NULL, NULL, ?3, 0, 0)",
-            params!["song-1", "Musica 1", "/songs/song-1"],
+            params!["song-1", "Music 1", "/songs/song-1"],
         )
         .expect("insert song");
         conn.execute(
@@ -1281,7 +1281,7 @@ mod tests {
             arranger_songs: Vec::new(),
             songs: vec![SnapshotSongTestPayload {
                 id: "song-1".to_string(),
-                name: "Musica 1".to_string(),
+                name: "Music 1".to_string(),
                 scores: vec![],
             }],
         };
@@ -1441,7 +1441,7 @@ mod tests {
             arranger_songs: Vec::new(),
             songs: vec![SnapshotSongTestPayload {
                 id: "song-1".to_string(),
-                name: "Musica do Snapshot".to_string(),
+                name: "Snapshot Music".to_string(),
                 scores: vec![],
             }],
         };
@@ -1459,7 +1459,7 @@ mod tests {
 
         let songs = db.get_all_songs().expect("get songs");
         assert_eq!(songs.len(), 1);
-        assert_eq!(songs[0].name, "Musica do Snapshot");
+        assert_eq!(songs[0].name, "Snapshot Music");
     }
 
     #[test]
@@ -1471,7 +1471,7 @@ mod tests {
 
         let settings = AppSettings {
             computer_id: "server-4".to_string(),
-            computer_name: Some("Servidor".to_string()),
+            computer_name: Some("Server".to_string()),
             computer_type: ComputerType::Server,
             first_run_completed: true,
             last_snapshot_timestamp: Some(10),
@@ -1507,7 +1507,7 @@ mod tests {
 
         let settings = AppSettings {
             computer_id: "server-5".to_string(),
-            computer_name: Some("Servidor".to_string()),
+            computer_name: Some("Server".to_string()),
             computer_type: ComputerType::Server,
             first_run_completed: true,
             last_snapshot_timestamp: Some(25),

@@ -58,7 +58,7 @@ fn planned_restore_window_actions(is_minimized: bool) -> Vec<RestoreWindowAction
 
 fn restore_main_window<R: tauri::Runtime, M: tauri::Manager<R>>(manager: &M) {
     let Some(window) = manager.get_webview_window("main") else {
-        warn!("Janela principal não encontrada ao restaurar estado inicial");
+        warn!("Main window not found when restoring initial state");
         return;
     };
 
@@ -91,9 +91,9 @@ fn boost_current_process_priority() {
     unsafe {
         let process = GetCurrentProcess();
         if SetPriorityClass(process, ABOVE_NORMAL_PRIORITY_CLASS) == 0 {
-            warn!("Falha ao elevar a prioridade do processo principal");
+            warn!("Failed to raise the priority of the main process");
         } else {
-            info!("Prioridade do processo principal ajustada para acima do normal");
+            info!("Main process priority adjusted to above normal");
         }
     }
 }
@@ -115,8 +115,8 @@ fn resolve_rclone_executable(app: &tauri::App) -> Option<PathBuf> {
         .resolve(rclone_bundled_relative_path(), BaseDirectory::Resource)
     {
         Ok(path) if path.exists() => return Some(path),
-        Ok(path) => warn!("Binário do rclone empacotado não encontrado em {}", path.display()),
-        Err(err) => warn!("Falha ao resolver o binário do rclone empacotado: {}", err),
+        Ok(path) => warn!("Packaged rclone binary not found at {}", path.display()),
+        Err(err) => warn!("Failed to resolve the packaged rclone binary: {}", err),
     }
 
     if let Some(path) = find_rclone_in_path() {
@@ -124,7 +124,7 @@ fn resolve_rclone_executable(app: &tauri::App) -> Option<PathBuf> {
         return Some(path);
     }
 
-    warn!("Binário do rclone não encontrado no bundle nem no PATH");
+    warn!("rclone binary not found in the bundle nor in PATH");
     None
 }
 
@@ -208,36 +208,36 @@ pub fn run() {
             let app_data_dir = app
                 .path()
                 .app_data_dir()
-                .expect("Não foi possível obter diretório de dados");
+                .expect("Could not obtain data directory");
 
             std::fs::create_dir_all(&app_data_dir)
-                .expect("Não foi possível criar diretório de dados");
+                .expect("Could not create data directory");
 
             // Inicializar logger
-            logger::init_logger(&app_data_dir).expect("Não foi possível inicializar o logger");
+            logger::init_logger(&app_data_dir).expect("Could not initialize the logger");
 
             boost_current_process_priority();
             restore_main_window(app);
 
             if let Err(e) = reset_temp_directory(&app_data_dir) {
                 warn!(
-                    "Falha ao limpar diretório temporário na inicialização ({}): {}",
+                    "Failed to clean temporary directory at startup ({}): {}",
                     app_data_dir.join("tmp").display(),
                     e
                 );
             } else {
                 info!(
-                    "Diretório temporário limpo na inicialização: {}",
+                    "Temporary directory cleaned at startup: {}",
                     app_data_dir.join("tmp").display()
                 );
             }
 
-            info!("Aplicação iniciada");
-            info!("Diretório de dados: {:?}", app_data_dir);
+            info!("Application started");
+            info!("Data directory: {:?}", app_data_dir);
 
             let rclone_config_dir = app_data_dir.join("rclone");
             std::fs::create_dir_all(&rclone_config_dir)
-                .expect("Não foi possível criar diretório de configuração do rclone");
+                .expect("Could not create rclone configuration directory");
 
             let rclone_config_path = rclone_config_dir.join("rclone.conf");
 
@@ -246,12 +246,12 @@ pub fn run() {
             commands::rclone_commands::set_rclone_paths(rclone_executable_path, rclone_config_path);
             commands::rclone_commands::terminate_stale_rclone_rc_processes();
 
-            // Inicializar banco de dados
+            // Initialize the database
             let db_path = app_data_dir.join("ottavada.db");
             let db =
-                Database::new(&db_path).expect("Não foi possível inicializar o banco de dados");
+                Database::new(&db_path).expect("Could not initialize the database");
 
-            // Estado para rastrear se o scan inicial terminou
+            // State to track whether the initial scan has finished
             let initial_scan_completed = Arc::new(AtomicBool::new(false));
 
             app.manage(db.clone());
@@ -263,7 +263,7 @@ pub fn run() {
             );
             app.manage(telemetry_shutdown);
 
-            // Inicializar store de configurações
+            // Initialize settings store
             let store = SystemStore::new(app_data_dir.clone());
             app.manage(store);
 
@@ -277,13 +277,13 @@ pub fn run() {
                             &db_for_telemetry,
                             &store,
                         ) {
-                            tracing::warn!("Falha ao enviar telemetria na abertura: {}", error);
+                            tracing::warn!("Failed to send telemetry at startup: {}", error);
                         }
                     });
                 }
             }
 
-            // Executar scan inicial em thread separada
+            // Run the initial scan in a separate thread
             let db_clone = db.clone();
             let app_data_dir_clone = app_data_dir.clone();
             let scan_completed_flag = initial_scan_completed.clone();
@@ -299,7 +299,7 @@ pub fn run() {
                         (settings.computer_id, is_server)
                     }
                     Err(e) => {
-                        tracing::error!("Erro ao obter settings para scan inicial: {:?}", e);
+                        tracing::error!("Error getting settings for initial scan: {:?}", e);
                         scan_completed_flag.store(true, Ordering::SeqCst);
                         return;
                     }
@@ -308,10 +308,10 @@ pub fn run() {
                 if should_scan {
                     services::background_scanner::run_initial_scan(&db_clone, &host_id);
                 } else {
-                    info!("Scan inicial ignorado: computador cliente");
+                    info!("Initial scan skipped: client computer");
                 }
                 scan_completed_flag.store(true, Ordering::SeqCst);
-                info!("✓ Flag 'initial_scan_completed' setada para true");
+                info!("✓ Flag 'initial_scan_completed' set to true");
             });
 
             Ok(())

@@ -27,9 +27,9 @@ pub async fn get_settings(
 
     run_blocking_with_store(
         app_data_dir,
-        "Falha interna ao buscar configurações",
+        "Internal failure fetching settings",
         move |store| {
-            info!("Buscando configurações");
+            info!("Fetching settings");
             let mut settings = store.get_app_settings()?;
             settings.library_summary = Some(db.get_library_summary_counts()?);
             Ok(settings)
@@ -55,7 +55,7 @@ pub async fn refresh_library_summary_cache(
 
     run_blocking_with_store(
         app_data_dir,
-        "Falha interna ao atualizar resumo da biblioteca",
+        "Internal failure updating library summary",
         move |_store| db.get_library_summary_counts(),
     )
     .await
@@ -64,16 +64,16 @@ pub async fn refresh_library_summary_cache(
 #[tauri::command]
 pub fn save_settings(store: State<'_, SystemStore>, settings: AppSettings) -> Result<(), AppError> {
     info!(
-        "Salvando configurações para computador: {}",
+        "Saving settings for computer: {}",
         settings.computer_id
     );
     match store.save_app_settings(&settings) {
         Ok(_) => {
-            info!("Configurações salvas com sucesso");
+            info!("Settings saved successfully");
             Ok(())
         }
         Err(e) => {
-            error!("Erro ao salvar configurações: {:?}", e);
+            error!("Error saving settings: {:?}", e);
             Err(e)
         }
     }
@@ -83,14 +83,14 @@ pub fn save_settings(store: State<'_, SystemStore>, settings: AppSettings) -> Re
 pub fn is_first_run(store: State<'_, SystemStore>) -> Result<bool, AppError> {
     let settings = store.get_app_settings()?;
     let is_first = !settings.first_run_completed;
-    info!("Verificando primeira execução: {}", is_first);
+    info!("Checking first run: {}", is_first);
     Ok(is_first)
 }
 
 #[tauri::command]
 pub fn generate_computer_id() -> String {
     let id = uuid::Uuid::new_v4().to_string();
-    info!("ID do computador gerado: {}", id);
+    info!("Generated computer ID: {}", id);
     id
 }
 
@@ -100,7 +100,7 @@ fn open_url_on_system(url: &str) -> Result<(), AppError> {
         let mut cmd = crate::commands::common::configure_no_window_command(Command::new("cmd"));
         cmd.args(["/C", "start", "", url])
             .spawn()
-            .map_err(|e| AppError::Generic(format!("Erro ao abrir o navegador: {}", e)))?;
+            .map_err(|e| AppError::Generic(format!("Error opening browser: {}", e)))?;
     }
 
     #[cfg(target_os = "macos")]
@@ -108,7 +108,7 @@ fn open_url_on_system(url: &str) -> Result<(), AppError> {
         Command::new("open")
             .arg(url)
             .spawn()
-            .map_err(|e| AppError::Generic(format!("Erro ao abrir o navegador: {}", e)))?;
+            .map_err(|e| AppError::Generic(format!("Error opening browser: {}", e)))?;
     }
 
     #[cfg(target_os = "linux")]
@@ -116,7 +116,7 @@ fn open_url_on_system(url: &str) -> Result<(), AppError> {
         Command::new("xdg-open")
             .arg(url)
             .spawn()
-            .map_err(|e| AppError::Generic(format!("Erro ao abrir o navegador: {}", e)))?;
+            .map_err(|e| AppError::Generic(format!("Error opening browser: {}", e)))?;
     }
 
     Ok(())
@@ -124,7 +124,7 @@ fn open_url_on_system(url: &str) -> Result<(), AppError> {
 
 #[tauri::command]
 pub fn open_tutorial_site() -> Result<(), AppError> {
-    info!("Abrindo site de documentação");
+    info!("Opening documentation site");
     open_url_on_system("https://ottavada.com/docs")
 }
 
@@ -139,7 +139,7 @@ pub fn complete_first_run(
     rclone_config_json: String,
 ) -> Result<(), AppError> {
     info!(
-        "Completando primeira execução para: {} ({}) - Tipo: {} - Idioma: {:?}",
+        "Completing first run for: {} ({}) - Type: {} - Language: {:?}",
         computer_name, computer_id, computer_type, language
     );
     let mut settings = store.get_app_settings()?;
@@ -152,7 +152,7 @@ pub fn complete_first_run(
 
     info!("Configurando Rclone");
     let rclone_config: RcloneConfig = serde_json::from_str(&rclone_config_json)
-        .map_err(|e| AppError::Generic(format!("Configuração rclone inválida: {}", e)))?;
+        .map_err(|e| AppError::Generic(format!("Invalid rclone configuration: {}", e)))?;
 
     settings.rclone_config = Some(rclone_config);
     settings.google_drive_mode = GoogleDriveMode::Local;
@@ -169,7 +169,7 @@ pub fn is_initial_scan_completed(scan_flag: State<'_, Arc<AtomicBool>>) -> bool 
 
 #[tauri::command]
 pub fn toggle_computer_type(store: State<'_, SystemStore>) -> Result<String, AppError> {
-    info!("Alternando tipo de computador");
+    info!("Toggling computer type");
     let mut settings = store.get_app_settings()?;
 
     let new_type = match settings.computer_type {
@@ -178,7 +178,7 @@ pub fn toggle_computer_type(store: State<'_, SystemStore>) -> Result<String, App
     };
 
     info!(
-        "Alternar tipo de computador de {} para {}",
+        "Switch computer type from {} to {}",
         settings.computer_type.as_str(),
         new_type.as_str()
     );
@@ -186,7 +186,7 @@ pub fn toggle_computer_type(store: State<'_, SystemStore>) -> Result<String, App
     settings.computer_type = new_type.clone();
     store.save_app_settings(&settings)?;
 
-    info!("Tipo de computador alterado com sucesso");
+    info!("Computer type changed successfully");
     Ok(new_type.as_str().to_string())
 }
 
@@ -274,7 +274,7 @@ mod tests {
         store
             .save_app_settings(&AppSettings {
                 computer_id: "server-1".to_string(),
-                computer_name: Some("Servidor".to_string()),
+                computer_name: Some("Server".to_string()),
                 computer_type: ComputerType::Server,
                 first_run_completed: true,
                 ..Default::default()

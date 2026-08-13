@@ -97,7 +97,7 @@ pub fn generate_events_msgpack(
 
             let file_size = fs::metadata(&output_path)
                 .map_err(|e| {
-                    AppError::Generic(format!("Erro ao obter metadados de events.msgpack: {}", e))
+                    AppError::Generic(format!("Error getting events.msgpack metadata: {}", e))
                 })?
                 .len();
 
@@ -111,7 +111,7 @@ pub fn generate_events_msgpack(
 
         let file_size = fs::metadata(&output_path)
             .map_err(|e| {
-                AppError::Generic(format!("Erro ao obter metadados de events.msgpack: {}", e))
+                AppError::Generic(format!("Error getting events.msgpack metadata: {}", e))
             })?
             .len();
 
@@ -141,7 +141,7 @@ pub fn generate_events_msgpack(
     if output_path.exists() {
         let existing_bytes = fs::read(&output_path).map_err(|e| {
             AppError::Generic(format!(
-                "Erro ao ler events.msgpack atual para comparação: {}",
+                "Error reading current events.msgpack for comparison: {}",
                 e
             ))
         })?;
@@ -161,7 +161,7 @@ pub fn generate_events_msgpack(
 
     let file_size = fs::metadata(&output_path)
         .map_err(|e| {
-            AppError::Generic(format!("Erro ao obter metadados de events.msgpack: {}", e))
+            AppError::Generic(format!("Error getting events.msgpack metadata: {}", e))
         })?
         .len();
 
@@ -638,7 +638,7 @@ mod tests {
 
         let settings = crate::domain::models::AppSettings {
             computer_id: "server-1".to_string(),
-            computer_name: Some("Servidor".to_string()),
+            computer_name: Some("Server".to_string()),
             computer_type: crate::domain::models::ComputerType::Server,
             ..Default::default()
         };
@@ -654,7 +654,7 @@ mod tests {
 
         let song = Song {
             id: "song-1".to_string(),
-            name: "Musica Teste".to_string(),
+            name: "Test Music".to_string(),
             composer: None,
             arranger: None,
             path: dir
@@ -691,7 +691,7 @@ mod tests {
 
         let settings = crate::domain::models::AppSettings {
             computer_id: "server-1".to_string(),
-            computer_name: Some("Servidor".to_string()),
+            computer_name: Some("Server".to_string()),
             computer_type: crate::domain::models::ComputerType::Server,
             ..Default::default()
         };
@@ -704,7 +704,7 @@ mod tests {
         conn.execute(
             "INSERT INTO songs (id, name, composer, arranger, path, is_favorite, last_score_file_modified_at)
              VALUES (?1, ?2, NULL, NULL, ?3, 0, 0)",
-            params!["song-1", "MUSICA TESTE", "/music/song-1"],
+            params!["song-1", "TEST MUSIC", "/music/song-1"],
         )
         .expect("insert song");
 
@@ -771,7 +771,7 @@ mod tests {
 
         let settings = crate::domain::models::AppSettings {
             computer_id: "server-1".to_string(),
-            computer_name: Some("Servidor".to_string()),
+            computer_name: Some("Server".to_string()),
             computer_type: crate::domain::models::ComputerType::Server,
             ..Default::default()
         };
@@ -779,7 +779,7 @@ mod tests {
 
         let song = Song {
             id: "song-1".to_string(),
-            name: "Musica Teste".to_string(),
+            name: "Test Music".to_string(),
             composer: None,
             arranger: None,
             path: dir
@@ -842,7 +842,7 @@ mod tests {
 
         let settings = crate::domain::models::AppSettings {
             computer_id: "server-1".to_string(),
-            computer_name: Some("Servidor".to_string()),
+            computer_name: Some("Server".to_string()),
             computer_type: crate::domain::models::ComputerType::Server,
             ..Default::default()
         };
@@ -850,7 +850,7 @@ mod tests {
 
         let song = Song {
             id: "song-1".to_string(),
-            name: "Musica Teste".to_string(),
+            name: "Test Music".to_string(),
             composer: None,
             arranger: None,
             path: dir
@@ -901,7 +901,7 @@ mod tests {
 
         let settings = crate::domain::models::AppSettings {
             computer_id: "server-1".to_string(),
-            computer_name: Some("Servidor".to_string()),
+            computer_name: Some("Server".to_string()),
             computer_type: crate::domain::models::ComputerType::Server,
             ..Default::default()
         };
@@ -909,7 +909,7 @@ mod tests {
 
         let song = Song {
             id: "song-1".to_string(),
-            name: "Musica Teste".to_string(),
+            name: "Test Music".to_string(),
             composer: None,
             arranger: None,
             path: dir
@@ -989,7 +989,7 @@ mod tests {
 
         let settings = crate::domain::models::AppSettings {
             computer_id: "server-1".to_string(),
-            computer_name: Some("Servidor".to_string()),
+            computer_name: Some("Server".to_string()),
             computer_type: crate::domain::models::ComputerType::Server,
             ..Default::default()
         };
@@ -997,7 +997,7 @@ mod tests {
 
         let song = Song {
             id: "song-1".to_string(),
-            name: "Musica Teste".to_string(),
+            name: "Test Music".to_string(),
             composer: None,
             arranger: None,
             path: dir
@@ -1055,7 +1055,7 @@ mod tests {
         assert_eq!(payload["events"][0]["entity"], "songs");
         assert_eq!(payload["events"][0]["entityId"], "song-1");
         assert_eq!(payload["events"][0]["data"][0]["field"], "name");
-        assert_eq!(payload["events"][0]["data"][0]["value"], "Musica Teste");
+        assert_eq!(payload["events"][0]["data"][0]["value"], "Test Music");
         assert_eq!(payload["events"][1]["type"], "insert");
         assert_eq!(payload["events"][1]["entity"], "categoriesSongs");
     }
@@ -1069,7 +1069,7 @@ mod tests {
 
         let settings = crate::domain::models::AppSettings {
             computer_id: "server-1".to_string(),
-            computer_name: Some("Servidor".to_string()),
+            computer_name: Some("Server".to_string()),
             computer_type: crate::domain::models::ComputerType::Server,
             ..Default::default()
         };
@@ -1077,9 +1077,9 @@ mod tests {
 
         let song = Song {
             id: "song-1".to_string(),
-            name: "Musica Teste".to_string(),
-            composer: Some("Compositor".to_string()),
-            arranger: Some("Arranjador".to_string()),
+            name: "Test Music".to_string(),
+            composer: Some("Composer".to_string()),
+            arranger: Some("Arranger".to_string()),
             path: dir
                 .path()
                 .join("songs")
@@ -1093,11 +1093,11 @@ mod tests {
         };
 
         let conn = db.conn.lock().expect("lock db");
-        conn.execute("INSERT INTO categories (id, name) VALUES (?1, ?2)", params!["cat-1", "Coral"])
+        conn.execute("INSERT INTO categories (id, name) VALUES (?1, ?2)", params!["cat-1", "Choir"])
             .expect("insert category");
-        conn.execute("INSERT INTO composer (id, name) VALUES (?1, ?2)", params!["composer-1", "Compositor"])
+        conn.execute("INSERT INTO composer (id, name) VALUES (?1, ?2)", params!["composer-1", "Composer"])
             .expect("insert composer");
-        conn.execute("INSERT INTO arranger (id, name) VALUES (?1, ?2)", params!["arranger-1", "Arranjador"])
+        conn.execute("INSERT INTO arranger (id, name) VALUES (?1, ?2)", params!["arranger-1", "Arranger"])
             .expect("insert arranger");
         drop(conn);
 
@@ -1154,7 +1154,7 @@ mod tests {
 
         let settings = crate::domain::models::AppSettings {
             computer_id: "server-1".to_string(),
-            computer_name: Some("Servidor".to_string()),
+            computer_name: Some("Server".to_string()),
             computer_type: crate::domain::models::ComputerType::Server,
             ..Default::default()
         };
@@ -1162,9 +1162,9 @@ mod tests {
 
         let song = Song {
             id: "song-1".to_string(),
-            name: "Musica Teste".to_string(),
-            composer: Some("Compositor".to_string()),
-            arranger: Some("Arranjador".to_string()),
+            name: "Test Music".to_string(),
+            composer: Some("Composer".to_string()),
+            arranger: Some("Arranger".to_string()),
             path: dir
                 .path()
                 .join("songs")
@@ -1178,11 +1178,11 @@ mod tests {
         };
 
         let conn = db.conn.lock().expect("lock db");
-        conn.execute("INSERT INTO categories (id, name) VALUES (?1, ?2)", params!["cat-1", "Coral"])
+        conn.execute("INSERT INTO categories (id, name) VALUES (?1, ?2)", params!["cat-1", "Choir"])
             .expect("insert category");
-        conn.execute("INSERT INTO composer (id, name) VALUES (?1, ?2)", params!["composer-1", "Compositor"])
+        conn.execute("INSERT INTO composer (id, name) VALUES (?1, ?2)", params!["composer-1", "Composer"])
             .expect("insert composer");
-        conn.execute("INSERT INTO arranger (id, name) VALUES (?1, ?2)", params!["arranger-1", "Arranjador"])
+        conn.execute("INSERT INTO arranger (id, name) VALUES (?1, ?2)", params!["arranger-1", "Arranger"])
             .expect("insert arranger");
         drop(conn);
 
@@ -1241,7 +1241,7 @@ mod tests {
 
         let settings = crate::domain::models::AppSettings {
             computer_id: "server-1".to_string(),
-            computer_name: Some("Servidor".to_string()),
+            computer_name: Some("Server".to_string()),
             computer_type: crate::domain::models::ComputerType::Server,
             ..Default::default()
         };
@@ -1259,7 +1259,7 @@ mod tests {
                 entity_id: "song-1".to_string(),
                 data: Some(vec![EventDataMessagePack {
                     field: "name".to_string(),
-                    value: Some("Musica Antiga".to_string()),
+                    value: Some("Old Music".to_string()),
                 }]),
             }],
         };
@@ -1267,7 +1267,7 @@ mod tests {
 
         let song = Song {
             id: "song-1".to_string(),
-            name: "Musica Teste".to_string(),
+            name: "Test Music".to_string(),
             composer: None,
             arranger: None,
             path: dir
@@ -1331,7 +1331,7 @@ mod tests {
 
         let settings = crate::domain::models::AppSettings {
             computer_id: "server-1".to_string(),
-            computer_name: Some("Servidor".to_string()),
+            computer_name: Some("Server".to_string()),
             computer_type: crate::domain::models::ComputerType::Server,
             ..Default::default()
         };

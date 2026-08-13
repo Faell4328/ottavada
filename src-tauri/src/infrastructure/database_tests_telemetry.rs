@@ -10,13 +10,13 @@ mod tests {
     fn records_telemetry_errors_in_the_local_queue() {
         let db = make_db();
 
-        db.record_telemetry_error("server-1", "Falha ao enviar telemetria", 1_710_684_000)
+        db.record_telemetry_error("server-1", "Failed to send telemetry", 1_710_684_000)
             .expect("record telemetry error");
 
         let errors = db.list_telemetry_errors().expect("list telemetry errors");
         assert_eq!(errors.len(), 1);
         assert_eq!(errors[0].id.len(), 36);
-        assert_eq!(errors[0].message, "Falha ao enviar telemetria");
+        assert_eq!(errors[0].message, "Failed to send telemetry");
         assert_eq!(errors[0].timestamp, 1_710_684_000);
     }
 

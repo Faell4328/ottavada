@@ -19,7 +19,7 @@ fn read_string(store: &serde_json::Value, keys: &[&str]) -> Option<String> {
     })
 }
 
-/// Gerencia o armazenamento de configurações do sistema usando um arquivo JSON
+/// Manages the storage of system settings using a JSON file
 pub struct SystemStore {
     app_data_dir: PathBuf,
     store_path: PathBuf,
@@ -34,33 +34,33 @@ impl SystemStore {
         }
     }
 
-    /// Retorna o diretório de dados da aplicação
+    /// Returns the application data directory
     pub fn app_data_dir(&self) -> &PathBuf {
         &self.app_data_dir
     }
 
-    /// Carrega as configurações do arquivo JSON
+    /// Loads the settings from the JSON file
     fn load_store(&self) -> Result<serde_json::Value, AppError> {
         if self.store_path.exists() {
             let content = fs::read_to_string(&self.store_path)
-                .map_err(|e| AppError::Generic(format!("Erro ao ler store: {}", e)))?;
+                .map_err(|e| AppError::Generic(format!("Error reading store: {}", e)))?;
             serde_json::from_str(&content)
-                .map_err(|e| AppError::Generic(format!("Erro ao parsear store JSON: {}", e)))
+                .map_err(|e| AppError::Generic(format!("Error parsing store JSON: {}", e)))
         } else {
             Ok(serde_json::json!({}))
         }
     }
 
-    /// Salva as configurações no arquivo JSON com gravação atômica (temp + rename)
+    /// Saves the settings to the JSON file with atomic write (temp + rename)
     fn save_store(&self, data: &serde_json::Value) -> Result<(), AppError> {
         let json_str = serde_json::to_string_pretty(data)
-            .map_err(|e| AppError::Generic(format!("Erro ao serializar store: {}", e)))?;
+            .map_err(|e| AppError::Generic(format!("Error serializing store: {}", e)))?;
 
         let temp_path = self.store_path.with_extension("tmp");
         fs::write(&temp_path, json_str)
-            .map_err(|e| AppError::Generic(format!("Erro ao escrever store: {}", e)))?;
+            .map_err(|e| AppError::Generic(format!("Error writing store: {}", e)))?;
         fs::rename(&temp_path, &self.store_path)
-            .map_err(|e| AppError::Generic(format!("Erro ao finalizar gravação do store: {}", e)))?;
+            .map_err(|e| AppError::Generic(format!("Error finalizing store write: {}", e)))?;
         Ok(())
     }
 
@@ -97,7 +97,7 @@ impl SystemStore {
         })
     }
 
-    /// Obtém as configurações do sistema
+    /// Gets the system settings
     pub fn get_app_settings(&self) -> Result<AppSettings, AppError> {
         let store = self.load_store()?;
 
@@ -210,7 +210,7 @@ impl SystemStore {
         Ok(settings)
     }
 
-    /// Salva as configurações do sistema
+    /// Saves the system settings
     pub fn save_app_settings(&self, settings: &AppSettings) -> Result<(), AppError> {
         let mut store = self.load_store()?;
 
@@ -251,7 +251,7 @@ impl SystemStore {
 
         if let Some(ref rclone_cfg) = settings.rclone_config {
             let rclone_json = serde_json::to_value(rclone_cfg).map_err(|e| {
-                AppError::Generic(format!("Erro ao serializar rclone config: {}", e))
+                AppError::Generic(format!("Error serializing rclone config: {}", e))
             })?;
             store["rclone"] = rclone_json;
         } else {
@@ -274,7 +274,7 @@ impl SystemStore {
 
         if let Some(ref account) = settings.google_service_account {
             let account_json = serde_json::to_value(account).map_err(|e| {
-                AppError::Generic(format!("Erro ao serializar service account: {}", e))
+                AppError::Generic(format!("Error serializing service account: {}", e))
             })?;
             store["google_service_account"] = account_json;
         } else {
@@ -345,23 +345,23 @@ impl SystemStore {
         self.save_store(&store)?;
 
         info!(
-            "Configurações salvas com sucesso no store em: {:?}",
+            "Settings saved successfully to store at: {:?}",
             self.store_path
         );
         Ok(())
     }
 
-    /// Salva as configurações do sistema e atualiza o backup_database_step.updated_at
-    /// com o timestamp da última alteração em qualquer música (efeito em cascata)
+    /// Saves the system settings and updates the backup_database_step.updated_at
+    /// with the timestamp of the latest change in any song (cascade effect)
     #[allow(dead_code)]
     pub fn save_app_settings_with_db(
         &self,
         settings: &mut AppSettings,
         db: &crate::infrastructure::database::Database,
     ) -> Result<(), AppError> {
-        // Obter o updated_at mais recente das songs
+        // Get the most recent updated_at from songs
         if let Some(latest_timestamp) = db.get_latest_songs_update_timestamp()? {
-            // Atualizar ou criar o backup_database_step com o timestamp mais recente
+            // Update or create the backup_database_step with the most recent timestamp
             match settings.backup_database_step {
                 Some(ref mut backup_step) => {
                     backup_step.updated_at = latest_timestamp;
@@ -379,7 +379,7 @@ impl SystemStore {
         self.save_app_settings(settings)
     }
 
-    /// Salva um valor genérico no store
+    /// Saves a generic value in the store
     #[allow(dead_code)]
     pub fn set(&self, key: &str, value: serde_json::Value) -> Result<(), AppError> {
         let mut store = self.load_store()?;
@@ -388,14 +388,14 @@ impl SystemStore {
         Ok(())
     }
 
-    /// Obtém um valor genérico do store
+    /// Gets a generic value from the store
     #[allow(dead_code)]
     pub fn get(&self, key: &str) -> Result<Option<serde_json::Value>, AppError> {
         let store = self.load_store()?;
         Ok(store.get(key).cloned())
     }
 
-    /// Obtém o diretório de dados da aplicação (onde o store é armazenado)
+    /// Gets the application data directory (where the store is stored)
     #[allow(dead_code)]
     pub fn get_app_data_dir(&self) -> PathBuf {
         self.store_path
@@ -418,7 +418,7 @@ mod tests {
 
         let settings = AppSettings {
             computer_id: "server-1".to_string(),
-            computer_name: Some("Servidor".to_string()),
+            computer_name: Some("Server".to_string()),
             organization_name: Some("Orquestra".to_string()),
             computer_type: ComputerType::Server,
             first_run_completed: true,
@@ -451,7 +451,7 @@ mod tests {
 
         let settings = AppSettings {
             computer_id: "server-2".to_string(),
-            computer_name: Some("Servidor".to_string()),
+            computer_name: Some("Server".to_string()),
             organization_name: Some("Orquestra".to_string()),
             computer_type: ComputerType::Server,
             rclone_config: Some(crate::domain::models::RcloneConfig {
@@ -470,7 +470,7 @@ mod tests {
         );
         assert_eq!(
             raw_store.get("computerName").and_then(|v| v.as_str()),
-            Some("Servidor")
+            Some("Server")
         );
         assert_eq!(
             raw_store.get("organizationName").and_then(|v| v.as_str()),
@@ -490,7 +490,7 @@ mod tests {
 
         let loaded = store.get_app_settings().expect("reload settings");
         assert_eq!(loaded.computer_id, "server-2");
-        assert_eq!(loaded.computer_name.as_deref(), Some("Servidor"));
+        assert_eq!(loaded.computer_name.as_deref(), Some("Server"));
         assert_eq!(loaded.organization_name.as_deref(), Some("Orquestra"));
         assert_eq!(loaded.computer_type, ComputerType::Server);
         assert!(loaded.rclone_config.is_some());

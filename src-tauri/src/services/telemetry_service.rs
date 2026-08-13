@@ -114,12 +114,12 @@ pub fn send_telemetry_once(db: &Database, store: &SystemStore) -> Result<(), App
         })?;
 
     let endpoint = telemetry_endpoint().ok_or_else(|| {
-        let error = AppError::Generic("TELEMETRY_ENDPOINT não configurado".to_string());
+        let error = AppError::Generic("TELEMETRY_ENDPOINT not configured".to_string());
         record_telemetry_failure(db, &settings.computer_id, now, &error);
         error
     })?;
     let token = telemetry_token().ok_or_else(|| {
-        let error = AppError::Generic("TELEMETRY_API_TOKEN não configurado".to_string());
+        let error = AppError::Generic("TELEMETRY_API_TOKEN not configured".to_string());
         record_telemetry_failure(db, &settings.computer_id, now, &error);
         error
     })?;
@@ -144,7 +144,7 @@ pub fn send_telemetry_once(db: &Database, store: &SystemStore) -> Result<(), App
     let response = match response {
         Ok(response) => response,
         Err(error) => {
-            let error = AppError::Generic(format!("Erro ao enviar telemetria: {}", error));
+            let error = AppError::Generic(format!("Error sending telemetry: {}", error));
             record_telemetry_failure(db, &settings.computer_id, now, &error);
             return Err(error);
         }
@@ -152,7 +152,7 @@ pub fn send_telemetry_once(db: &Database, store: &SystemStore) -> Result<(), App
 
     if !response.status().is_success() {
         let error = AppError::Generic(format!(
-            "Servidor de telemetria respondeu com status {}",
+            "Telemetry server responded with status {}",
             response.status()
         ));
         record_telemetry_failure(db, &settings.computer_id, now, &error);
@@ -160,7 +160,7 @@ pub fn send_telemetry_once(db: &Database, store: &SystemStore) -> Result<(), App
     }
 
     db.clear_telemetry_errors()?;
-    info!("Telemetria enviada com sucesso");
+    info!("Telemetry sent successfully");
     Ok(())
 }
 
@@ -182,7 +182,7 @@ pub fn spawn_telemetry_worker(db: Database, store_path: std::path::PathBuf) -> A
         let store = SystemStore::new(store_path.clone());
 
         if let Err(error) = send_telemetry_once(&db, &store) {
-            error!("Falha ao enviar telemetria: {}", error);
+            error!("Failed to send telemetry: {}", error);
         }
     });
 
@@ -219,7 +219,7 @@ mod tests {
             vec![TelemetryErrorPayload {
                 id: "err-1".to_string(),
                 date: "2026-04-15".to_string(),
-                message: "falha".to_string(),
+                message: "failure".to_string(),
                 timestamp: 1_710_684_000,
             }],
         );

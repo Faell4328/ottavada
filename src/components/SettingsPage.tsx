@@ -110,7 +110,7 @@ export default function SettingsPage() {
     };
   }, []);
 
-  // Carregar dados do rclone da store quando o componente monta ou settings muda
+  // Load rclone data from the store when the component mounts or settings change
   useEffect(() => {
     if (state.settings?.rclone_config) {
       setRcloneProvider(state.settings.rclone_config.provider);
@@ -283,7 +283,7 @@ export default function SettingsPage() {
       return;
     }
 
-    // Atualizar os dados de rclone no objeto settings antes de salvar
+    // Update rclone data in the settings object before saving
     const updatedSettings: AppSettings = {
       ...settings,
       rclone_config: {
@@ -654,7 +654,7 @@ export default function SettingsPage() {
           </div>
         )}
 
-        {/* Computador */}
+        {/* Computer */}
         <Section title={t("settings.computerSection")}>
           <p className="mb-1.5 block text-sm font-semibold text-[#34485d]">
             {t("settings.computerNameLabel")}
@@ -867,7 +867,7 @@ export default function SettingsPage() {
           </p>
         </Section>
 
-        {/* Backup automático */}
+        {/* Automatic backup */}
         <Section title={t("settings.autoBackupSection")}>
           <p className="text-xs text-[#8b9db2] mt-1">
             {t("settings.autoBackupHint")}
