@@ -24,13 +24,15 @@ O usuário deve poder:
 
 O sistema deve exibir o progresso de todas as etapas executadas.
 
-## 3.1. Etapas download da nuvem
+## 3.1. Etapas download da nuvem (consultar alterações)
 
 Etapas:
 
 1. Identificar alterações;
 2. Aplicar eventos e/ou snapshot;
 3. Baixar arquivos novos ou modificados.
+
+Só deve passar para a etapa 2 e 3 se for identificado algo na etapa 1.
 
 ---
 
@@ -40,8 +42,10 @@ O usuário deve poder:
 
 - alterar o nome do computador;
 - alterar o nome da organização;
+- alterar o modo do Ottavada;
 - alterar o provedor de nuvem;
-- consultar atualização.
+- consultar atualização;
+- alterar idioma;
 
 ---
 

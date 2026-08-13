@@ -1,4 +1,4 @@
-# composers
+# composer
 
 Tabela responsável por armazenar todos os compositores.
 
@@ -7,15 +7,15 @@ Tabela responsável por armazenar todos os compositores.
 | id    | text (`uuid`) | Sim | Não | Não        | Sim          | Cliente / Servidor |
 | name  | text          | Não | Não | Não        | Sim          | Cliente / Servidor |
 
-# composersSongs
+# composerSongs
 
 | Campo       | Tipo          | PK  | FK  | Referência  | Obrigatório? | Onde?              |
 | ----------- | ------------- | --- | --- | ----------- | ------------ | ------------------ |
 | id          | text (`uuid`) | Sim | Não | Não         | Sim          | Cliente / Servidor |
-| composer_id | text (`uuid`) | Não | Sim | composer.id | Sim          | Cliente / Servidor |
-| song_id     | text (`uuid`) | Não | Sim | songs.id    | Sim          | Cliente / Servidor |
+| composerId | text (`uuid`) | Não | Sim | composer.id | Sim          | Cliente / Servidor |
+| songId     | text (`uuid`) | Não | Sim | songs.id    | Sim          | Cliente / Servidor |
 
-# arrangers
+# arranger
 
 Tabela responsável por armazenar todos os arranjadores.
 
@@ -24,13 +24,13 @@ Tabela responsável por armazenar todos os arranjadores.
 | id    | text (`uuid`) | Sim | Não | Não        | Sim          | Cliente / Servidor |
 | name  | text          | Não | Não | Não        | Sim          | Cliente / Servidor |
 
-# arrangersSongs
+# arrangerSongs
 
 | Campo       | Tipo          | PK  | FK  | Referência  | Obrigatório? | Onde?              |
 | ----------- | ------------- | --- | --- | ----------- | ------------ | ------------------ |
 | id          | text (`uuid`) | Sim | Não | Não         | Sim          | Cliente / Servidor |
-| arranger_id | text (`uuid`) | Não | Sim | arranger.id | Sim          | Cliente / Servidor |
-| song_id     | text (`uuid`) | Não | Sim | songs.id    | Sim          | Cliente / Servidor |
+| arrangerId | text (`uuid`) | Não | Sim | arranger.id | Sim          | Cliente / Servidor |
+| songId     | text (`uuid`) | Não | Sim | songs.id    | Sim          | Cliente / Servidor |
 
 # categories
 
@@ -48,8 +48,8 @@ Tabela responsável por armazenar todas as relações entre categorias e música
 | Campo       | Tipo          | PK  | FK  | Referência    | Obrigatório? | Onde?              |
 | ----------- | ------------- | --- | --- | ------------- | ------------ | ------------------ |
 | id          | text (`uuid`) | Sim | Não | Não           | Sim          | Cliente / Servidor |
-| category_id | text (`uuid`) | Não | Sim | categories.id | Sim          | Cliente / Servidor |
-| song_id     | text (`uuid`) | Não | Sim | songs.id      | Sim          | Cliente / Servidor |
+| categoryId | text (`uuid`) | Não | Sim | categories.id | Sim          | Cliente / Servidor |
+| songId     | text (`uuid`) | Não | Sim | songs.id      | Sim          | Cliente / Servidor |
 
 # songs
 
@@ -62,7 +62,7 @@ Tabela responsável por armazenar as informações das músicas.
 | is_favorite                 | bool              | Não | Não | Não        | Não          | Cliente / Servidor |
 | path                        | text              | Não | Não | Não        | Sim          | Servidor           |
 | last_score_file_modified_at | integer           | Não | Não | Não        | Sim          | Servidor           |
-| status                      | (`main`  `draft`) | Não | Não | Não        | Sim          | Servidor           |
+| status                      | (`main`, `draft` ou `not_found`) | Não | Não | Não        | Sim          | Servidor           |
 
 - `path` - diretório onde as partituras estão sendo indexadas.
 
@@ -74,10 +74,10 @@ Tabela responsável por armazenar as informações das partituras.
 | ---------------- | ------------------------------ | --- | --- | ---------- | ------------ | ------------------ |
 | id               | text (`uuid`)                  | Sim | Não | Não        | Sim          | Cliente / Servidor |
 | song_id          | text (`uuid`)                  | Não | Sim | songs.id   | Sim          | Cliente / Servidor |
-| name             | text                           | Não | Não | Não        | Sim          | Cliente / Servidor |
+| name             | text                           | Não | Não | Não        | Não          | Cliente / Servidor |
 | file_name        | text                           | Não | Não | Não        | Sim          | Servidor           |
 | file_extension   | text                           | Não | Não | Não        | Sim          | Cliente / Servidor |
-| file_modified_at | integer                        | Não | Não | Não        | Sim          | Servidor           |
+| file_modified_at | text                           | Não | Não | Não        | Sim          | Servidor           |
 | file_size        | integer                        | Não | Não | Não        | Sim          | Servidor           |
 | status           | (`main`, `draft` ou `ignored`) | Não | Não | Não        | Sim          | Servidor           |
 
@@ -87,16 +87,16 @@ Tabela responsável por armazenar as informações das partituras.
 
 - `file_size` - tamanho do arquivo.
 
-# changes
+# changedField
 
-Tabela responsável por armazenar todas as alterações até gerar o arquivo `events.msgpack`.
+Tabela responsável por armazenar todas as alterações até gerar o arquivo `events.msgpack.zst`.
 
 | Campo     | Tipo                                                                                                               | PK  | FK  | Referência | Obrigatório? | Onde?    |
 | --------- | ------------------------------------------------------------------------------------------------------------------ | --- | --- | ---------- | ------------ | -------- |
 | id        | text (`uuid`)                                                                                                      | Sim | Não | Não        | Sim          | Servidor |
 | type      | (`insert`, `update` ou `delete`)                                                                                   | Não | Não | Não        | Sim          | Servidor |
-| entity    | (`categories`, `categoriesSongs`, `composers`, `composerSongs`, `arrangers`, `arrangerSongs`, `songs` ou `scores`) | Não | Não | Não        | Sim          | Servidor |
-| entity_id | text (`uuid`)                                                                                                      | Não | Sim | entity.id  | Sim          | Servidor |
+| entity    | (`categories`, `categoriesSongs`, `composer`, `composerSongs`, `arranger`, `arrangerSongs`, `songs` ou `scores`) | Não | Não | Não        | Sim          | Servidor |
+| entityId  | text (`uuid`)                                                                                                      | Não | Sim | entity.id  | Sim          | Servidor |
 | field     | text                                                                                                               | Não | Não | Não        | Não          | Servidor |
 | value     | text                                                                                                               | Não | Não | Não        | Não          | Servidor |
 | timestamp | integer                                                                                                            | Não | Não | Não        | Sim          | Servidor |
@@ -105,19 +105,19 @@ Tabela responsável por armazenar todas as alterações até gerar o arquivo `ev
 
 - `entity` - é o nome da tabela que foi alterada.
 
-- `entity_id` - é o id do elemento da tabela que foi alterado.
+- `entityId` - é o id do elemento da tabela que foi alterado.
 
 - `field` - é o nome do campo que foi alterado na tabela.
 
 - `value` - é o valor que foi inserido ou atualizado.
 
-# backupQueue
+# songsBackup
 
 Essa tabela responsável por controlar a geração dos `{songId}.tar.zst` e que todos tenha sido feito o upload para a nuvem.
 
 | Campo   | Tipo                             | PK  | FK  | Referência | Obrigatório? | Onde?    |
 | ------- | -------------------------------- | --- | --- | ---------- | ------------ | -------- |
-| song_id | text (`uuid`)                    | Sim | Não | Não        | Sim          | Servidor |
+| songId  | text (`uuid`)                    | Sim | Sim | songs.id   | Sim          | Servidor |
 | status  | (`pending`, `processing` e `ok`) | Não | Não | Não        | Sim          | Servidor |
 
 - `status`:

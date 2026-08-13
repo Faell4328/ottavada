@@ -3,28 +3,23 @@
 O aplicativo deve dar suporte aos idiomas:
 
 - Português;
-
-- Inglês
-
+- Inglês;
 - Espanhol;
-
-- Frances;
-
+- Francês;
 - Italiano;
-
 - Alemão.
 
-# 1. Categorias
+# 2. Categorias
 
-## 1.1. Associação
+## 2.1. Associação
 
 Uma música pode possuir entre **0 e N categorias**.
 
 Quando nenhuma categoria for definida, a categoria **Sem categoria** deve ser atribuída automaticamente.
 
-## 1.2. Categoria “Sem categoria”
+## 2.2. Categoria "sem categoria"
 
-A categoria **Sem categoria**:
+A categoria **sem categoria**:
 
 - não pode ser editada;
 - não pode ser removida;
@@ -32,44 +27,23 @@ A categoria **Sem categoria**:
 
 ---
 
-# 2. Extensões suportadas
+# 3. Extensões suportadas
 
-O sistema deve aceitar os seguintes formatos: `.pdf`, `.mus`, `.musx`, `.mscz`, `.xml`, `.musicxml`, `.sib`, `.enc`, `.mid` e `.midi`.
+O sistema deve aceitar os seguintes formatos: `.pdf`, `.mus`, `.musx`, `.mscx`, `.mscz`, `.xml`, `.musicxml`, `.sib`, `.enc`, `.dorico`, `.mid` e `.midi`.
 
 ---
 
-# 3. Sistemas operacionais suportados
+# 4. Sistemas operacionais suportados
 
 O sistema deve suportar o sistema operacionais:
 
-- Windows 10;
-- Windows 11;
-- Linux <mark>(Não implementado)</mark>;
-- Mac <mark>(Não implementado)</mark>.
-
-Arquiteturas:
-
-- arquiteturas x32;
-- arquiteturas x64.
+- Windows 10 e 11 (`EXE`, x32 e x64);
+- Linux (`AppImage`, x64);
+- Mac (`DMG`, x64 e xARM).
 
 ---
 
-# 4. Unicidade
-
-Não deve existir duplicidade entre músicas, partituras, categorias, compositores e arranjadores. Todos os nomes devem ser únicos, caso o usuário tente adicionar, ele deve ser barrado pelo sistema.
-
-**Exemplo**:
-
-| **Errado**                                                                                                                    | **Correto**                                                                                                                              |
-| ----------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| **Música 1**: `Eis o Nosso Deus`<br/>**Música 2**: `Eis o Nosso Deus`                                                         | **Música 1**: `Eis o Nosso Deus`<br/>**Música 2**: `Eis o Nosso Deus (Com Coral)`                                                        |
-| **Partitura 1**: `Violino I`<br/>**Partitura 2**: `Violino I`<br/>**Partitura 3**: `Trompete`<br/>**Partitura 4**: `Trompete` | **Partitura 1**: `Violino I`<br/>**Partitura 2**: `Violino I (Solo)`<br/>**Partitura 3**: `Trompete 1`<br/>**Partitura 4**: `Trompete 2` |
-
->  Isso evita redundância e dúvidas no repertório.
-
----
-
-# 5. Computador de Ensaio - Cliente
+# 5. Modo Consultar
 
 ## 5.1. Armazenamento de partituras localmente
 
@@ -103,7 +77,7 @@ O sistema deve:
 
 - Os logs devem ser mantidos por **30 dias**.
 
-- Os logs devem ser armazenados no diretório raiz do projeto.
+- Os logs devem ser armazenados no diretório de dados do usuário do Ottavada, descrito em `Diretórios usado pelo Ottavada.md`, e nunca no diretório do projeto ou da instalação.
 
 ## 7.2. Exclusão
 

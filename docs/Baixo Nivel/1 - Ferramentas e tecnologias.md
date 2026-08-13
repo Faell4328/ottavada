@@ -43,7 +43,7 @@ O sistema utiliza `Tauri` por baixo de tudo. A interface fica no frontend e as r
 - `tauri-plugin-notification` - dispara notificações nativas em resposta a eventos do app.
 - `rusqlite` - acesso ao SQLite com suporte compilado localmente.
 - `chrono` - manipula datas e horários do domínio e do banco.
-- `serde` e `rmp-serde` - serializam e desserializam os arquivos `MessagePack`.
+- `serde`, `serde_json` e `rmp-serde` - serializam e desserializam dados e os arquivos `MessagePack`.
 - `reqwest` - faz requisições HTTP, por exemplo para checagem de atualização e integrações de rede.
 - `notify` - observa mudanças no sistema de arquivos.
 - `walkdir` - percorre diretórios de forma segura e previsível.
@@ -56,6 +56,7 @@ O sistema utiliza `Tauri` por baixo de tudo. A interface fica no frontend e as r
 - `tracing` e `tracing-subscriber` - registram e organizam logs da aplicação.
 - `tracing-appender` - grava logs em arquivo.
 - `windows-sys` - expõe APIs específicas do Windows quando necessário.
+- `trash` - move arquivos para a lixeira do sistema.
 
 # 3. Banco de Dados e Arquivos
 

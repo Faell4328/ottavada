@@ -101,8 +101,19 @@ fn boost_current_process_priority() {
 #[cfg(not(target_os = "windows"))]
 fn boost_current_process_priority() {}
 
+fn rclone_bundled_relative_path() -> &'static str {
+    if cfg!(target_os = "windows") {
+        "rclone/rclone.exe"
+    } else {
+        "rclone/rclone"
+    }
+}
+
 fn resolve_rclone_executable(app: &tauri::App) -> Option<PathBuf> {
-    match app.path().resolve("rclone/rclone", BaseDirectory::Resource) {
+    match app
+        .path()
+        .resolve(rclone_bundled_relative_path(), BaseDirectory::Resource)
+    {
         Ok(path) if path.exists() => return Some(path),
         Ok(path) => warn!("Binário do rclone empacotado não encontrado em {}", path.display()),
         Err(err) => warn!("Falha ao resolver o binário do rclone empacotado: {}", err),
@@ -145,7 +156,7 @@ fn first_path_line(output: &str) -> Option<&str> {
 
 #[cfg(test)]
 mod rclone_resolution_tests {
-    use super::{first_path_line, rclone_path_command};
+    use super::{first_path_line, rclone_bundled_relative_path, rclone_path_command};
 
     #[test]
     fn selects_platform_path_command() {
@@ -158,6 +169,19 @@ mod rclone_resolution_tests {
             }
         );
     }
+
+    #[test]
+    fn uses_exe_extension_on_windows() {
+        assert_eq!(
+            rclone_bundled_relative_path(),
+            if cfg!(target_os = "windows") {
+                "rclone/rclone.exe"
+            } else {
+                "rclone/rclone"
+            }
+        );
+    }
+
 
     #[test]
     fn parses_first_non_empty_path_line() {

@@ -1,77 +1,77 @@
-# 1. Servidor Ottavada
+# 1. Telemetria
 
-## 1.1. Telemetria
+## 1.1. Quando a telemetria é enviada
 
 O sistema deve enviar dados de telemetria:
 
 - ao ser aberto;
 - a cada 5 minutos.
 
+## 1.2. Informações enviadas pela telemetria
+
 Os dados enviados devem ser:
 
 - ID do computador (gerado aleatoriamente na instalação);
 - Nome do computador;
 - Nome da organização;
-- Tipo de computador;
+- Modo de uso;
+- Idioma;
 - Versão do aplicativo;
-- Sistema operacional;
-- Arquitetura (x32 ou x64);
-- Quantidade de músicas;
-- Quantidade de músicas em status `main`;
-- Quantidade de músicas em status `draft`;
-- Quantidade de músicas em status `not_found`;
-- Quantidade de partituras em status `main`;
-- Quantidade de partituras em status `draft`;
-- Quantidade de partituras em status `ignored`;
-- Erros que aconteceram.
+- Sistema operacional (Windows, Linux e MacOS);
+- Arquitetura (x32, x64 ou xARM);
+- Quantidade total de músicas;
+- Quantidade de músicas em status **envio permitido** (`main`);
+- Quantidade de músicas em status **envio não permitido** (`draft`);
+- Quantidade de partituras em status **envio permitido** (`main`);
+- Quantidade de partituras em status **envio não permitido** (`draft`);
+- Conteúdo da tabela `errors`.
 
->  Não é feito coleta de dados sensíveis, o único objetivo da telemetria é saber se o aplicativo está sendo realmente usado, por quem e quais problemas está ocorrendo no Ottavada.
+> Não é feita coleta de dados sensíveis; o único objetivo da telemetria é saber se o aplicativo está sendo realmente usado, por quem e quais problemas estão ocorrendo no Ottavada.
 
-## 1.2. Atualizações
+# 2. Atualizações
 
-O sistema deve suportar atualização de versão, utilizando o próprio mecanismo do Tauri.
+O sistema deve suportar atualização de versão, utilizando o próprio mecanismo do Tauri (plugin), com as configurações em `update.json` no site do [Ottavada](https://ottavada.com/update.json).
 
-O usuário deve poder recusar atualizar o aplicativo, ficando um botão, que ao clicar pergunta se ele gostaria de iniciar a atualização.
+O usuário deve poder recusar a atualização, ficando um botão no cabeçalho para atualizar; ao clicar nele, o sistema pergunta se ele deseja iniciar a atualização.
 
 ---
 
-# 2. Filtros
+# 3. Filtros
 
 Os filtros devem operar de forma acumulativa.
 
-## 2.1. Seções
+## 3.1. Seções
 
 Deve ter as seções:
 
 - **Todas as músicas** - Lista todas as músicas;
-
 - **Favoritos** - Lista todas as músicas favoritas;
+- **Não permitidas**:
+  - Lista todas as músicas com status **envio não permitido** (`draft`);
+  - Lista todas as músicas com status **envio permitido** (`main`), mas que tenham ao menos uma partitura com status **envio não permitido**;
+- **Sem partituras** - Lista todas as músicas em status **sem partitura** (`not_found`).
 
-- **Não permitidas** - Lista todas as músicas que tenham alguma partitura com status **Envio não permitido**;
+## 3.2. Categoria
 
-- **Sem partituras** - Lista todas as músicas que não têm partitura.
+Quando o usuário selecionar uma categoria, deve mostrar as músicas, compositores e arranjadores que pertençam àquela categoria.
 
-## 2.2. Categoria
+A categoria deve ter os valores padrão: **Sem categoria** (contém todas as músicas sem categoria), que não pode ser alterada nem removida.
 
-Quando o usuário selecionar uma categoria, deve mostrar as músicas, compositores e arranjadores que tenham naquela categoria.
-
-A categoria deve ter por padrão a opção: **Sem categoria**.
-
-## 2.3. Compositor e arranjador
+## 3.3. Compositor e arranjador
 
 Quando o usuário selecionar um compositor, só deve mostrar as músicas e os arranjadores que tenham relação com o compositor. O mesmo vale caso seja selecionado o arranjador.
 
-O compositor deve ter por padrão as opções: **Todos** e **Sem compositor**.
+O compositor deve ter por padrão as opções: **Todos** e **Sem compositor** (contém todas as músicas sem compositor), que não podem ser alteradas nem removidas.
 
-O arranjador deve ter por padrão as opções: **Todos** e **Sem arranjador**.
+O arranjador deve ter por padrão as opções: **Todos** e **Sem arranjador** (contém todas as músicas sem arranjador), que não podem ser alteradas nem removidas.
 
-## 2.4. Barra de pesquisa
+## 3.4. Barra de pesquisa
 
-A pesquisa por música deve se feita com base no(s) filtro(s) que o usuário aplicou.
+A pesquisa por música deve ser feita com base no(s) filtro(s) que o usuário aplicou.
 
-A busca deve ser simples, utilizando o método de procurar por substrings no nome da música.
+A busca deve ser simples, procurando por substrings no nome da música.
 
-## 2.5. Valores selecionados por padrão
+## 3.5. Valores selecionados por padrão
 
 Os filtros devem iniciar com os seguintes valores:
 
@@ -82,9 +82,9 @@ Os filtros devem iniciar com os seguintes valores:
 
 ---
 
-# 3. Nuvem
+# 4. Nuvem
 
-## 3.1. Provedores suportados
+## 4.1. Provedores suportados
 
 O Ottavada deve suportar:
 
@@ -96,7 +96,7 @@ Opções avançadas: <mark>(Não implementado)</mark>
 - WebDAV;
 - SFTP.
 
-## 3.2. Engine para envio e recebimento com a nuvem
+## 4.2. Engine para envio e recebimento com a nuvem
 
 O Ottavada deve utilizar internamente o `rclone`.
 
@@ -106,13 +106,13 @@ Toda configuração relacionada ao `rclone`, incluindo criação de remotes, aut
 
 ---
 
-# 4. Transparência operacional
+# 5. Transparência operacional
 
-## 4.1. Barra de progresso
+## 5.1. Barra de progresso
 
 O sistema deve mostrar o progresso das ações: "aplicar alterações" e "consultar alterações".
 
-## 4.2. Restrições durante sincronização
+## 5.2. Restrições durante sincronização
 
 Durante sincronizações, o usuário poderá apenas:
 
@@ -125,19 +125,19 @@ Demais operações devem permanecer bloqueadas, por questão de segurança e int
 
 ---
 
-# 5. Instrumentos e ordenação
+# 6. Instrumentos e ordenação
 
-## 5.1. Ordem de listagem na música
+## 6.1. Ordem de listagem na música
 
-Os instrumentos suportados e ordem deles é baseado na ordem interna do Finale e Sibelius, que utiliza o padrão da convenção da *New German School* (Wagner, Strauss, Mahler) que é o padrão internacional.
+Os instrumentos suportados e a ordem deles são baseados na ordem interna do Finale e Sibelius, que segue o padrão da convenção da *New German School* (Wagner, Strauss, Mahler), que é o padrão internacional.
 
-1° Deve vir os instrumentos sem nome;
+1° Devem vir os instrumentos sem nome;
 
-2° Deve ser os instrumentos identificados (em ordem que está na lista em **5.2**);
+2° Devem vir os instrumentos identificados (na ordem da lista em **6.2**);
 
-3° Deve ser os instrumentos que foram identificados, mas está fora da lista (em ordem alfabética).
+3° Devem vir os instrumentos identificados, mas que estão fora da lista (em ordem alfabética).
 
-## 5.2. Instrumentos suportados e a ordem
+## 6.2. Instrumentos suportados e a ordem
 
 **Madeira**
 

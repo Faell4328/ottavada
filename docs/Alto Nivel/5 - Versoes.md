@@ -40,7 +40,7 @@
 
 - bloqueio de cliques repetidos em "verificar alterações";
 - bloqueio de ações indevidas no cliente;
-- reforço da troca de tipo do computador com modal e contagem regressiva.
+- reforço da troca de modo de uso com modal e contagem regressiva.
 
 # Versão 0.3
 
@@ -87,7 +87,7 @@
 
 - geração de `{songId}.tar.zst`;
 - registro de `changedField` em todos os fluxos;
-- geração de `events.msgpack`, `snapshot.msgpack` e `backup.msgpack`;
+- geração de `events.msgpack.zst`, `snapshot.msgpack.zst` e `backup.msgpack.zst`;
 - exportação e importação do backup.
 
 ## Melhorias
@@ -251,7 +251,7 @@
 - consolidação da refatoração do front e do back;
 - atualização do `tauri-plugin-store` de acordo com a documentação;
 - inclusão de telemetria e banco de dados do cliente;
-- reorganização do primeiro acesso para mostrar o tipo do computador.
+- reorganização do primeiro acesso para mostrar o modo de uso.
 
 ## Melhorias
 
@@ -374,14 +374,20 @@
 ## Funcionalidades
 
 - adição de idioma: inglês, espanhol, francês, italiano e alemão;
+- suporte a Linux e MacOS;
 
 ## Melhorias
 
 - nova versão do rclone;
+- textos e avisos;
+- adicionando confirmação ao clicar em "importar backup";
+- verificação de duplicação de música, antes era apenas o "nome", agora é "nome" + "compositor" + "arranjador";
+- nome dos modos do Ottavada;
 
 ## Correções
 
 - removendo código legado;
+- corrigindo inconsistência no label de quantidade de música e partitura nas configurações;
 
 ## Ajuste
 
@@ -390,10 +396,6 @@
 # Desenvolvimento
 
 ## Correção de inconsistências
-
-**Adicionar todas as tags que faltam**
-
-**Adicionar o .exe para todas as versões**
 
 **Atualizar nome das linhas nas tabelas**
 
@@ -410,8 +412,6 @@
 - [ ] Remover a linha `last_score_file_modified_at` em `songs`(é usado)
 
 - [ ] Remover a linha `host_id` de `scores` (é usado)
-
-**Adicionar migração para não quebrar quem já tem o aplicativo instalado**
 
 **Corrigir código que usa nome antigo**
 

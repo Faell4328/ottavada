@@ -36,7 +36,7 @@ Componentes React da interface gráfica.
 
 **AddFilesModal.tsx** - Modal de adição e revisão de arquivos de partituras.
 
-**ChangeComputerTypeModal.tsx** - Modal para alternar entre tipo servidor e cliente.
+**ChangeComputerTypeModal.tsx** - Modal para alternar entre o modo Gerir e o modo Consultar.
 
 **DeleteFileConfirmationModal.tsx** - Modal de confirmação para exclusão de arquivos.
 
@@ -50,11 +50,17 @@ Componentes React da interface gráfica.
 
 **EditScoreModal.tsx** - Modal de criação e edição de partituras.
 
+**ImportBackupModal.tsx** - Modal para importar um backup existente.
+
+**OrganizationNameField.tsx** - Campo de nome da organização reutilizável em formulários.
+
 **RcloneLicenseModal.tsx** - Modal de aceite de licença do rclone.
 
 **RcloneProviderModal.tsx** - Modal de configuração do provedor rclone.
 
 **ScanReportModal.tsx** - Modal com relatório detalhado do scan de arquivos.
+
+**SupportContactsCard.tsx** - Cartão com contatos de suporte.
 
 **UseAsBaseScoreModal.tsx** - Modal para usar partitura existente como base.
 
@@ -96,6 +102,10 @@ Estado global via React Context + useReducer.
 
 **useAppScanFlow.ts** - Fluxo de verificação e aplicação de alterações de arquivos.
 
+**backupImportFlow.ts** - Fluxo de importação de backup.
+
+**clientSyncFlow.ts** - Fluxo de sincronização do lado cliente.
+
 ---
 
 ### Pasta hooks/
@@ -124,9 +134,13 @@ Funções utilitárias e lógicas auxiliares.
 
 **addFilesReview.ts** - Lógica de revisão de arquivos adicionados.
 
+**categoryDisplay.ts** - Exibição/rotulagem de categorias.
+
 **categorySelection.ts** - Filtro e seleção por categoria.
 
-**computer.ts** - Detecção do tipo de computador (servidor/cliente).
+**computer.ts** - Detecção do modo de uso (servidor/cliente).
+
+**errors.ts** - Tratamento e normalização de erros.
 
 **formatters.ts** - Formatação de data, tamanho de arquivo, etc.
 
@@ -136,13 +150,17 @@ Funções utilitárias e lógicas auxiliares.
 
 **libraryDuplicates.ts** - Detecção de partituras duplicadas.
 
-**nameFormat.ts** - Padronização de nomes (maiúsculo inicial).
+**nameFormat.ts** - Padronização de nomes de músicas em letras maiúsculas e de nomes de partituras.
 
 **paths.ts** - Manipulação e normalização de caminhos de arquivo.
+
+**preloadImages.ts** - Pré-carregamento de imagens de partituras.
 
 **rcloneErrors.ts** - Interpretação de mensagens de erro do rclone.
 
 **rcloneProgress.ts** - Parsing do progresso de operações rclone.
+
+**rcloneProviderChange.ts** - Lógica de alteração do provedor rclone.
 
 **scanReport.ts** - Geração e formatação do relatório de scan.
 
@@ -155,6 +173,8 @@ Funções utilitárias e lógicas auxiliares.
 **songSearch.ts** - Busca de músicas por substrings.
 
 **startupUpdate.ts** - Verificação de atualização na inicialização.
+
+**updateBody.tsx** - Conteúdo/estrutura do corpo de atualização.
 
 **updateLock.ts** - Bloqueio de ações durante instalação de update.
 
@@ -269,7 +289,7 @@ Lógica de negócio e orquestração. Depende de domain e infrastructure.
 
 **backup_draft_ignored_service.rs** - Upload de arquivos rascunho/ignorados para nuvem.
 
-**backup_msgpack_service.rs** - Geração do arquivo backup.msgpack (exportação do banco).
+**backup_msgpack_service.rs** - Geração do arquivo backup.msgpack.zst (exportação do banco).
 
 **backup_songs_service.rs** - Geração de arquivos {songId}.tar.zst por música.
 
@@ -277,7 +297,7 @@ Lógica de negócio e orquestração. Depende de domain e infrastructure.
 
 **cloud_paths.rs** - Gerenciamento e construção de paths no provedor de nuvem.
 
-**events_service.rs** - Geração do arquivo events.msgpack (alterações incrementais).
+**events_service.rs** - Geração do arquivo events.msgpack.zst (alterações incrementais).
 
 **indexer.rs** - Indexação de diretórios de partituras em arquivos.
 
@@ -287,7 +307,7 @@ Lógica de negócio e orquestração. Depende de domain e infrastructure.
 
 **path_normalizer.rs** - Normalização de caminhos de arquivos do sistema.
 
-**snapshot_service.rs** - Geração do arquivo snapshot.msgpack (estado consolidado).
+**snapshot_service.rs** - Geração do arquivo snapshot.msgpack.zst (estado consolidado).
 
 **telemetry_service.rs** - Envio periódico de dados de telemetria anonimizados.
 

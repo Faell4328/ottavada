@@ -1,6 +1,6 @@
 **Por questão de simplicidade, a documentação usa JSON nos exemplos, mas o arquivo real é um MessagePack.**
 
-# 1. snapshot.msgpack
+# 1. snapshot.msgpack.zst
 
 Um exemplo simplificado da estrutura.
 
@@ -65,9 +65,13 @@ Um exemplo simplificado da estrutura.
 
 ---
 
-# 2. events.msgpack
+# 2. events.msgpack.zst
 
-Os eventos são armazenados em ordem crescente de `timestamp`, com os novos registros adicionados ao final.
+Os eventos são armazenados em ordem crescente de `timestamp`. Quando dois eventos possuem o mesmo timestamp, eles são ordenados pelo `id` do evento. Novos registros são adicionados ao final.
+
+Cada evento possui um `id` próprio, mas o cliente atualmente persiste e utiliza `last_change_timestamp` como cursor de sincronização. Portanto, todos os eventos com timestamp maior que o último timestamp aplicado são processados em conjunto. A ordenação por `timestamp` e `id` deve ser preservada no arquivo para garantir aplicação determinística dentro desse conjunto.
+
+O `id` do evento não substitui o cursor de timestamp no estado local do cliente.
 
 ---
 

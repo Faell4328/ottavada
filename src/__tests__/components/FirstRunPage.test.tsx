@@ -42,7 +42,7 @@ describe("FirstRunPage", () => {
     fireEvent.click(screen.getByText("Próximo"));
 
     await waitFor(() => {
-      expect(screen.getByText("Qual tipo de computador você está configurando?")).toBeInTheDocument();
+      expect(screen.getByText("Qual modo de uso você está configurando?")).toBeInTheDocument();
     });
   });
 
@@ -50,7 +50,7 @@ describe("FirstRunPage", () => {
     renderWithAppProvider(<FirstRunPage />);
 
     fireEvent.click(screen.getByText("Próximo"));
-    fireEvent.click(screen.getByText("Ottavada Gestor"));
+    fireEvent.click(screen.getByText("Modo Gerir"));
     fireEvent.click(screen.getByText("Próximo"));
 
     await waitFor(() => {
@@ -66,7 +66,7 @@ describe("FirstRunPage", () => {
     renderWithAppProvider(<FirstRunPage />);
 
     fireEvent.click(screen.getByText("Próximo"));
-    fireEvent.click(screen.getByText("Ottavada Consulta"));
+    fireEvent.click(screen.getByText("Modo Consultar"));
     fireEvent.click(screen.getByText("Próximo"));
 
     await waitFor(() => {
