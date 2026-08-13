@@ -53,8 +53,6 @@ It must send the `Token` parameter in the `header`, so the server accepts the te
 // Example of telemetry sent
 {
     "computerId": "computer id", // Unique computer ID (persisted in tauri-plugin-store)
-    "organizationName": "organization name", // Organization/license name linked to the software usage
-    "computerName": "computer name", // Friendly name defined by the user
     "type": "server", // Usage mode: "server" (Manage mode) or "client" (Consult mode)
     "language": "en", // Language used in the system
     "appVersion": "0.9.1", // Running application version

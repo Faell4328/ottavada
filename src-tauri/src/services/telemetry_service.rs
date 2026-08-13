@@ -35,8 +35,6 @@ pub struct TelemetryErrorPayload {
 #[allow(non_snake_case)]
 pub struct TelemetryPayload {
     pub computerId: String,
-    pub organizationName: String,
-    pub computerName: String,
     #[serde(rename = "type")]
     pub r#type: String,
     pub language: Option<String>,
@@ -83,8 +81,6 @@ fn build_payload(
 ) -> TelemetryPayload {
     TelemetryPayload {
         computerId: settings.computer_id.clone(),
-        organizationName: settings.organization_name.clone().unwrap_or_default(),
-        computerName: settings.computer_name.clone().unwrap_or_default(),
         language: settings.language.clone(),
         r#type: settings.computer_type.as_store_str().to_string(),
         appVersion: env!("CARGO_PKG_VERSION").to_string(),
@@ -199,8 +195,6 @@ mod tests {
 
         let settings = AppSettings {
             computer_id: "comp-1".to_string(),
-            computer_name: Some("Maestro".to_string()),
-            organization_name: Some("Orquestra".to_string()),
             language: Some("en".to_string()),
             computer_type: crate::domain::models::ComputerType::Server,
             ..AppSettings::default()
@@ -228,8 +222,8 @@ mod tests {
 
         assert_eq!(json["computerId"], Value::String("comp-1".to_string()));
         assert!(json.get("uuid").is_none());
-        assert_eq!(payload.computerName, "Maestro");
-        assert_eq!(payload.organizationName, "Orquestra");
+        assert!(json.get("computerName").is_none());
+        assert!(json.get("organizationName").is_none());
         assert_eq!(payload.r#type, "server");
         assert_eq!(payload.scoresDraft, 5);
         assert_eq!(payload.errors.len(), 1);

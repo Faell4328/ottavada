@@ -12,8 +12,6 @@ The system must send telemetry data:
 The data sent must be:
 
 - Computer ID (generated randomly at installation);
-- Computer name;
-- Organization name;
 - Usage mode;
 - Language;
 - Application version;
@@ -26,7 +24,7 @@ The data sent must be:
 - Number of scores in **send not allowed** (`draft`) status;
 - Content of the local telemetry error queue (`errors`).
 
-> Telemetry sends computer identifiers, names configured by the user and the organization name. This data should not be described as completely anonymous; the privacy policy must explain the purpose, retention and opt-out.
+> Telemetry sends a computer identifier generated at installation. It is not linked to the user's identity; the privacy policy must explain the purpose, retention and opt-out.
 
 # 2. Updates
 
