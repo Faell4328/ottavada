@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import i18next from "i18next";
 import { CheckCircle, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
+import i18n, { changeLanguage } from "../i18n";
 
 import * as api from "../api/commands";
 import { useAppState } from "../context/AppContext";
@@ -174,7 +174,7 @@ export default function FirstRunPage() {
         computerId,
         computerName.trim(),
         organizationName.trim() || null,
-        i18next.language || null,
+        i18n.language || null,
         computerType,
         JSON.stringify({ provider: rcloneProvider }),
       );
@@ -220,9 +220,9 @@ export default function FirstRunPage() {
                 <button
                   key={code}
                   type="button"
-                  onClick={() => i18next.changeLanguage(code)}
+                  onClick={() => void changeLanguage(code)}
                   className={`h-14 rounded-lg border-2 text-sm font-semibold transition-all cursor-pointer ${
-                    i18next.language === code
+                    i18n.language === code
                       ? "border-[#4f84d7] bg-[#f0f3f8] text-[#4f84d7]"
                       : "border-[#c5cfdb] bg-white text-[#4d6075] hover:border-[#7ba0d4] hover:text-[#4f84d7]"
                   }`}

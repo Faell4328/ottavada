@@ -1,4 +1,5 @@
 import "@testing-library/jest-dom/vitest";
-import i18n from "../i18n";
+import { initI18n } from "../i18n";
 
-i18n.changeLanguage("pt");
+localStorage.setItem("ottavada-lang", "pt");
+await initI18n();

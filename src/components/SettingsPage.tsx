@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import { ArrowLeft, LoaderCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import i18next from "i18next";
+import i18n, { changeLanguage } from "../i18n";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import toast from "react-hot-toast";
 import { useAppState } from "../context/AppContext";
@@ -612,7 +612,7 @@ export default function SettingsPage() {
   };
 
   const lastSnapshotLabel = settings.last_snapshot_timestamp
-    ? new Date(settings.last_snapshot_timestamp * 1000).toLocaleString(localeMap[i18next.language] || "en-US")
+    ? new Date(settings.last_snapshot_timestamp * 1000).toLocaleString(localeMap[i18n.language] || "en-US")
     : t("settings.neverGenerated");
 
   const lastBackupLabel = settings.last_backup_timestamp
@@ -938,43 +938,43 @@ export default function SettingsPage() {
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={() => i18next.changeLanguage("pt")}
-              className={`h-9 px-4 rounded border cursor-pointer text-sm font-medium transition-colors ${i18next.language === "pt" ? "border-[#4f84d7] bg-[#4f84d7] text-white" : "border-[#c5cfdb] bg-white text-[#344b61] hover:bg-[#f2f5fa]"}`}
+              onClick={() => void changeLanguage("pt")}
+              className={`h-9 px-4 rounded border cursor-pointer text-sm font-medium transition-colors ${i18n.language === "pt" ? "border-[#4f84d7] bg-[#4f84d7] text-white" : "border-[#c5cfdb] bg-white text-[#344b61] hover:bg-[#f2f5fa]"}`}
             >
               Português
             </button>
             <button
               type="button"
-              onClick={() => i18next.changeLanguage("en")}
-              className={`h-9 px-4 rounded border cursor-pointer text-sm font-medium transition-colors ${i18next.language === "en" ? "border-[#4f84d7] bg-[#4f84d7] text-white" : "border-[#c5cfdb] bg-white text-[#344b61] hover:bg-[#f2f5fa]"}`}
+              onClick={() => void changeLanguage("en")}
+              className={`h-9 px-4 rounded border cursor-pointer text-sm font-medium transition-colors ${i18n.language === "en" ? "border-[#4f84d7] bg-[#4f84d7] text-white" : "border-[#c5cfdb] bg-white text-[#344b61] hover:bg-[#f2f5fa]"}`}
             >
               English
             </button>
             <button
               type="button"
-              onClick={() => i18next.changeLanguage("es")}
-              className={`h-9 px-4 rounded border cursor-pointer text-sm font-medium transition-colors ${i18next.language === "es" ? "border-[#4f84d7] bg-[#4f84d7] text-white" : "border-[#c5cfdb] bg-white text-[#344b61] hover:bg-[#f2f5fa]"}`}
+              onClick={() => void changeLanguage("es")}
+              className={`h-9 px-4 rounded border cursor-pointer text-sm font-medium transition-colors ${i18n.language === "es" ? "border-[#4f84d7] bg-[#4f84d7] text-white" : "border-[#c5cfdb] bg-white text-[#344b61] hover:bg-[#f2f5fa]"}`}
             >
               Español
             </button>
             <button
               type="button"
-              onClick={() => i18next.changeLanguage("fr")}
-              className={`h-9 px-4 rounded border cursor-pointer text-sm font-medium transition-colors ${i18next.language === "fr" ? "border-[#4f84d7] bg-[#4f84d7] text-white" : "border-[#c5cfdb] bg-white text-[#344b61] hover:bg-[#f2f5fa]"}`}
+              onClick={() => void changeLanguage("fr")}
+              className={`h-9 px-4 rounded border cursor-pointer text-sm font-medium transition-colors ${i18n.language === "fr" ? "border-[#4f84d7] bg-[#4f84d7] text-white" : "border-[#c5cfdb] bg-white text-[#344b61] hover:bg-[#f2f5fa]"}`}
             >
               Français
             </button>
             <button
               type="button"
-              onClick={() => i18next.changeLanguage("it")}
-              className={`h-9 px-4 rounded border cursor-pointer text-sm font-medium transition-colors ${i18next.language === "it" ? "border-[#4f84d7] bg-[#4f84d7] text-white" : "border-[#c5cfdb] bg-white text-[#344b61] hover:bg-[#f2f5fa]"}`}
+              onClick={() => void changeLanguage("it")}
+              className={`h-9 px-4 rounded border cursor-pointer text-sm font-medium transition-colors ${i18n.language === "it" ? "border-[#4f84d7] bg-[#4f84d7] text-white" : "border-[#c5cfdb] bg-white text-[#344b61] hover:bg-[#f2f5fa]"}`}
             >
               Italiano
             </button>
             <button
               type="button"
-              onClick={() => i18next.changeLanguage("de")}
-              className={`h-9 px-4 rounded border cursor-pointer text-sm font-medium transition-colors ${i18next.language === "de" ? "border-[#4f84d7] bg-[#4f84d7] text-white" : "border-[#c5cfdb] bg-white text-[#344b61] hover:bg-[#f2f5fa]"}`}
+              onClick={() => void changeLanguage("de")}
+              className={`h-9 px-4 rounded border cursor-pointer text-sm font-medium transition-colors ${i18n.language === "de" ? "border-[#4f84d7] bg-[#4f84d7] text-white" : "border-[#c5cfdb] bg-white text-[#344b61] hover:bg-[#f2f5fa]"}`}
             >
               Deutsch
             </button>

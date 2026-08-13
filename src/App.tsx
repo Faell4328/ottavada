@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router";
 import { Toaster } from "react-hot-toast";
 import toast from "react-hot-toast";
@@ -9,8 +9,6 @@ import {
   Sidebar,
   SongsList,
   StatusBar,
-  SettingsPage,
-  FirstRunPage,
   UpdateModal,
   ScanReportModal,
 } from "./components";
@@ -22,6 +20,9 @@ import { restoreMainWindow } from "./utils/window";
 import type { UpdateInfo } from "./types";
 import type { UpdateCheckResult } from "./types";
 import { resolveStartupUpdateState } from "./utils/startupUpdate";
+
+const FirstRunPage = lazy(() => import("./components/FirstRunPage"));
+const SettingsPage = lazy(() => import("./components/SettingsPage"));
 
 const STARTUP_UPDATE_TIMEOUT_MS = 2000;
 const STARTUP_UPDATE_TIMEOUT = Symbol("startup-update-timeout");
@@ -367,26 +368,28 @@ function AppContent({ startupUpdate }: AppContentProps) {
   return (
     <>
       <BrowserRouter>
-        <Routes>
-          {state.isFirstRun ? (
-            <Route path="*" element={<FirstRunPage />} />
-          ) : (
-            <>
-              <Route
-                path="/"
-                element={(
-                  <MainPage
-                    onUpdateClick={handleUpdateButtonClick}
-                    isUpdateBusy={isUpdateBusy}
-                    hasAvailableUpdate={availableUpdate !== null}
-                    isUpdateActionLocked={isUpdateActionLocked}
-                  />
-                )}
-              />
-              <Route path="/settings" element={<SettingsPage />} />
-            </>
-          )}
-        </Routes>
+        <Suspense fallback={<LoadingScreen />}>
+          <Routes>
+            {state.isFirstRun ? (
+              <Route path="*" element={<FirstRunPage />} />
+            ) : (
+              <>
+                <Route
+                  path="/"
+                  element={(
+                    <MainPage
+                      onUpdateClick={handleUpdateButtonClick}
+                      isUpdateBusy={isUpdateBusy}
+                      hasAvailableUpdate={availableUpdate !== null}
+                      isUpdateActionLocked={isUpdateActionLocked}
+                    />
+                  )}
+                />
+                <Route path="/settings" element={<SettingsPage />} />
+              </>
+            )}
+          </Routes>
+        </Suspense>
       </BrowserRouter>
       <UpdateModal
         isOpen={isUpdateModalOpen}
