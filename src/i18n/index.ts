@@ -9,7 +9,7 @@ import it from "./locales/it.json";
 import de from "./locales/de.json";
 
 const SUPPORTED_LANGS = ["pt", "en", "es", "fr", "it", "de"] as const;
-const FALLBACK_LANG = "pt";
+const FALLBACK_LANG = "en";
 
 function detectLanguage(): string {
   const saved = localStorage.getItem("ottavada-lang");

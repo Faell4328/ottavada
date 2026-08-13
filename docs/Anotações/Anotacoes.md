@@ -260,3 +260,7 @@ Não gosto do Mermaid: acho mais chato de fazer o diagrama e o resultado final �
 **01-07-2026** - Alteração de nome do projeto
 
 O nome do projeto foi alterado de **Ottavada** para **Ottavada**. Ottavada é um excelente nome, mas tinhas grandes problemas: 1° O domínio **.com** já estava sendo usado; 2° LLMs se embolava para explicar, já que é a junção de **Score** + **Maestro**; 3° **Score** pode significar VÁRIAS coisas além de partitura; 4° É um nome genérico extremamente fácil de copiar. **Ottavada** vem de *oitarvar* ou *ottava*, e o *da* veio da ideia de "oitavada", a partitura está "oitavada", trocando o "i" pelo "t" fica **ottavada**. Eu precisava de um nome que fosse bom para o Brasil e para Fora, cheguei nesse nome.
+
+**2026-08-13** - Change language to English
+
+From now on, all project text must be written in English, and we will adopt the ISO 8601 date/time standard (YYYY-MM-DD and 24-hour time) for all internal records, logs, and APIs. I should have done this a long time ago, when the project added support for multiple languages.
