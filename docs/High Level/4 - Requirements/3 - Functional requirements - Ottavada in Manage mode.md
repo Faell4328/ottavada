@@ -6,7 +6,7 @@ The system must allow indexing folders that contain score files in [supported fo
 
 During the indexing process, the system must use the directory name as a suggestion for the song name.
 
-**Example:** `Hino Nacional/` - suggestion: **HINO NACIONAL**.
+**Example:** `National Anthem/` - suggestion: **NATIONAL ANTHEM**.
 
 ## 1.2. Instrument suggestion
 
@@ -15,7 +15,7 @@ During the indexing process, the system must use the file name to suggest the in
 **Examples:**
 
 - `Tuba.mus` - suggestion: **Tuba**
-- `Hino Nacional - Tuba.mus` - suggestion: **Tuba**
+- `National Anthem - Tuba.mus` - suggestion: **Tuba**
 
 If it is not possible to identify the instrument from the file name, the suggestion field must remain empty for manual completion by the user.
 
@@ -31,7 +31,7 @@ It must be the same order as in **Functional requirements - both** under **Listi
 
 The song name must always be written with all letters in uppercase.
 
-Example: `Hino Nacional` must be stored and displayed as `HINO NACIONAL`.
+Example: `National Anthem` must be stored and displayed as `NATIONAL ANTHEM`.
 
 ## 2.2. Available operations
 
@@ -303,7 +303,7 @@ Comparisons must ignore differences between uppercase and lowercase letters. The
 
 | **Wrong**                                                                                                                                     | **Correct**                                                                                                                              |
 | --------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| **Song 1**: `Eis o Nosso Deus` with the same composer and arranger<br/>**Song 2**: `Eis o Nosso Deus` with the same composer and arranger      | **Song 1**: `Eis o Nosso Deus` with composer `A`<br/>**Song 2**: `Eis o Nosso Deus` with composer `B`                                    |
+| **Song 1**: `Behold Our God` with the same composer and arranger<br/>**Song 2**: `Behold Our God` with the same composer and arranger      | **Song 1**: `Behold Our God` with composer `A`<br/>**Song 2**: `Behold Our God` with composer `B`                                    |
 | **Score 1**: `Violino I`<br/>**Score 2**: `Violino I`<br/>**Score 3**: `Trompete`<br/>**Score 4**: `Trompete`                                 | **Score 1**: `Violino I`<br/>**Score 2**: `Violino I (Solo)`<br/>**Score 3**: `Trompete 1`<br/>**Score 4**: `Trompete 2`                  |
 
 > This avoids redundancy and doubts in the repertoire.
@@ -314,7 +314,7 @@ The system must issue a warning and not let the user proceed.
 
 ## 12.3. Possible duplicate songs (<mark>Not implemented</mark>)
 
-The system must identify similar song names, e.g.: `"Hino Nacional"` and `"O Hino Nacional"`, the system must identify and report them to the user.
+The system must identify similar song names, e.g.: `"National Anthem"` and `"The National Anthem"`, the system must identify and report them to the user.
 
 **Trigram / N-gram Similarity** must be used to identify possible duplicate songs, being executed in the **index directory**.
 
@@ -322,8 +322,8 @@ The system must identify similar song names, e.g.: `"Hino Nacional"` and `"O Hin
 
 The user may accidentally add a new file with a name, but with a different extension or a slightly different name, for example:
 
-- `Hino Nacional - Oboe.mus` and `Hino Nacional - Oboe.musx`;
+- `National Anthem - Oboe.mus` and `National Anthem - Oboe.musx`;
 
-- `Hino Nacional - Score.musx` and `Hino Nacional - Score.pdf`;
+- `National Anthem - Score.musx` and `National Anthem - Score.pdf`;
 
-- `Hino Nacional - Oboe.mscz` and `Hino Nacional - Oboe.mscz`.
+- `National Anthem - Oboe.mscz` and `National Anthem - Oboe.mscz`.

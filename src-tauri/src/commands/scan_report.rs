@@ -972,7 +972,7 @@ mod tests {
         db.insert_song(
             &Song {
                 id: "song-1".to_string(),
-                name: "Eis o Nosso Deus".to_string(),
+                name: "Behold Our God".to_string(),
                 composer: None,
                 arranger: None,
                 path: "/music/song-1".to_string(),
@@ -1007,11 +1007,11 @@ mod tests {
 
         assert_eq!(
             describe_song_change(&db, &composer_added),
-            Some("The composer Neusom was added to the song Eis o Nosso Deus.".to_string())
+            Some("The composer Neusom was added to the song Behold Our God.".to_string())
         );
         assert_eq!(
             describe_song_change(&db, &arranger_added),
-            Some("The arranger Maria was added to the song Eis o Nosso Deus.".to_string())
+            Some("The arranger Maria was added to the song Behold Our God.".to_string())
         );
     }
 
@@ -1022,7 +1022,7 @@ mod tests {
         db.insert_song(
             &Song {
                 id: "song-1".to_string(),
-                name: "Eis o Nosso Deus".to_string(),
+                name: "Behold Our God".to_string(),
                 composer: None,
                 arranger: None,
                 path: "/music/song-1".to_string(),
@@ -1047,7 +1047,7 @@ mod tests {
 
         assert_eq!(
             describe_song_change(&db, &status_changed),
-            Some("The song Eis o Nosso Deus went from draft and returned to main.".to_string())
+            Some("The song Behold Our God went from draft and returned to main.".to_string())
         );
     }
 

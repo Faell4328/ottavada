@@ -428,7 +428,7 @@ fn sanitize_file_name_component(value: &str) -> String {
 
     let trimmed = sanitized.trim().trim_matches('.').trim_matches(' ');
     if trimmed.is_empty() {
-        "sem_nome".to_string()
+        "no_name".to_string()
     } else {
         trimmed.to_string()
     }
@@ -436,7 +436,7 @@ fn sanitize_file_name_component(value: &str) -> String {
 
 fn build_client_extracted_score_name(song_name: &str, score_name: Option<&str>) -> String {
     let song = sanitize_file_name_component(song_name);
-    let score = sanitize_file_name_component(score_name.unwrap_or("Sem instrumento"));
+    let score = sanitize_file_name_component(score_name.unwrap_or("No instrument"));
     format!("{} - {}", song, score)
 }
 
@@ -869,39 +869,39 @@ mod tests {
         let extracted_a = extract_score_file_from_archive(
             &archive_path,
             "score-a",
-            "HINO NACIONAL - Flauta",
+            "NATIONAL ANTHEM - Flauta",
             &output_dir,
         )
         .expect("extract score-a");
         assert_eq!(
             extracted_a.file_name().and_then(|n| n.to_str()),
-            Some("HINO NACIONAL - Flauta.musx")
+            Some("NATIONAL ANTHEM - Flauta.musx")
         );
         assert_eq!(fs::read_to_string(&extracted_a).expect("read"), "content A");
 
         let extracted_b = extract_score_file_from_archive(
             &archive_path,
             "score-b",
-            "HINO NACIONAL - Trompete",
+            "NATIONAL ANTHEM - Trompete",
             &output_dir,
         )
         .expect("extract score-b");
         assert_eq!(
             extracted_b.file_name().and_then(|n| n.to_str()),
-            Some("HINO NACIONAL - Trompete.pdf")
+            Some("NATIONAL ANTHEM - Trompete.pdf")
         );
         assert_eq!(fs::read_to_string(&extracted_b).expect("read"), "content B");
 
         let extracted_c = extract_score_file_from_archive(
             &archive_path,
             "score-c",
-            "HINO NACIONAL - Violino",
+            "NATIONAL ANTHEM - Violino",
             &output_dir,
         )
         .expect("extract score-c");
         assert_eq!(
             extracted_c.file_name().and_then(|n| n.to_str()),
-            Some("HINO NACIONAL - Violino.mid")
+            Some("NATIONAL ANTHEM - Violino.mid")
         );
         assert_eq!(fs::read_to_string(&extracted_c).expect("read"), "content C");
 
@@ -915,16 +915,16 @@ mod tests {
     #[test]
     fn sanitizes_file_name_component_for_cross_platform_open() {
         assert_eq!(
-            sanitize_file_name_component(" HINO: NACIONAL/TESTE?* "),
-            "HINO_ NACIONAL_TESTE__"
+            sanitize_file_name_component(" NATIONAL: ANTHEM/TEST?* "),
+            "NATIONAL_ ANTHEM_TEST__"
         );
-        assert_eq!(sanitize_file_name_component("..."), "sem_nome");
+        assert_eq!(sanitize_file_name_component("..."), "no_name");
     }
 
     #[test]
     fn builds_friendly_name_with_default_score_when_missing() {
-        let name = build_client_extracted_score_name("HINO NACIONAL", None);
-        assert_eq!(name, "HINO NACIONAL - Sem instrumento");
+        let name = build_client_extracted_score_name("NATIONAL ANTHEM", None);
+        assert_eq!(name, "NATIONAL ANTHEM - No instrument");
     }
 
     #[test]
@@ -1018,7 +1018,7 @@ mod tests {
         db.insert_song(
             &crate::domain::models::Song {
                 id: "song-1".to_string(),
-                name: "HINO NACIONAL".to_string(),
+                name: "NATIONAL ANTHEM".to_string(),
                 composer: None,
                 arranger: None,
                 path: dir
@@ -1084,7 +1084,7 @@ mod tests {
         db.insert_song(
             &crate::domain::models::Song {
                 id: "song-1".to_string(),
-                name: "HINO NACIONAL".to_string(),
+                name: "NATIONAL ANTHEM".to_string(),
                 composer: None,
                 arranger: None,
                 path: dir

@@ -1219,7 +1219,7 @@ mod tests {
         db.insert_song(
             &Song {
                 id: "song-1".to_string(),
-                name: "HINO NOVO".to_string(),
+                name: "NEW HYMN".to_string(),
                 composer: None,
                 arranger: None,
                 path: song_dir.to_string_lossy().to_string(),
@@ -1238,7 +1238,7 @@ mod tests {
             name: Some("Flute".to_string()),
             host_id: "server-1".to_string(),
             file_path: song_dir.to_string_lossy().to_string(),
-            file_name: "HINO NOVO - Flute.musx".to_string(),
+            file_name: "NEW HYMN - Flute.musx".to_string(),
             file_size: 1024,
             file_modified_at: now(),
             updated_at: now(),
@@ -1251,7 +1251,7 @@ mod tests {
             .expect("update score status");
 
         let added_files = vec![song_dir
-            .join("HINO NOVO - Flute.musx")
+            .join("NEW HYMN - Flute.musx")
             .to_string_lossy()
             .to_string()];
         let changed_fields = db.get_changed_fields_ordered().expect("changed fields");
@@ -1261,25 +1261,25 @@ mod tests {
 
         assert!(report_items
             .iter()
-            .any(|item| item.contains("Song created: HINO NOVO")));
+            .any(|item| item.contains("Song created: NEW HYMN")));
         assert!(report_items
             .iter()
             .any(|item| item.contains("went to draft")));
         assert!(report_items
             .iter()
             .any(|item| item.contains("Score added:")
-                && item.contains("HINO NOVO - Flute.musx")));
+                && item.contains("NEW HYMN - Flute.musx")));
     }
 
     #[test]
-    fn describe_score_added_uses_sem_instrumento_when_file_matches_song_name() {
+    fn describe_score_added_uses_no_instrument_when_file_matches_song_name() {
         let db = Database::new_in_memory().expect("db");
         let song_dir = Path::new("/music/song-1").to_path_buf();
 
         db.insert_song(
             &Song {
                 id: "song-1".to_string(),
-                name: "03 VEZES SANTO".to_string(),
+                name: "03 HOLY TIMES".to_string(),
                 composer: None,
                 arranger: None,
                 path: song_dir.to_string_lossy().to_string(),
@@ -1298,7 +1298,7 @@ mod tests {
             name: None,
             host_id: "server-1".to_string(),
             file_path: song_dir.to_string_lossy().to_string(),
-            file_name: "VEZES SANTO.MUS".to_string(),
+            file_name: "HOLY TIMES.MUS".to_string(),
             file_size: 1024,
             file_modified_at: now(),
             updated_at: now(),
@@ -1321,7 +1321,7 @@ mod tests {
 
         assert_eq!(
             description,
-            "Score added: No Instrument.MUS in the song 03 VEZES SANTO."
+            "Score added: No Instrument.MUS in the song 03 HOLY TIMES."
         );
     }
 }

@@ -15,11 +15,11 @@ It is important to note that **Ottavada** is not a tool for creating, editing or
 - **Correct** examples of songs:
 
   - Song name, with no composer and no arranger:
-    - "Va pensieiro";
-    - "Va pensieiro com coral".
+    - "Fly, thought";
+    - "Fly, thought with choir".
   - Song name - composer - arranger:
-    - "Serenata" - "Schubert" - "Ana";
-    - "Serenata" - "Schubert" - "Carlos".
+    - "Serenade" - "Schubert" - "Anna";
+    - "Serenade" - "Schubert" - "Charles".
 
 - **Correct** examples of instruments:
 
