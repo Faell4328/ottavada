@@ -75,7 +75,7 @@ O sistema deve:
 
 ## 7.1. Logs
 
-- Os logs devem ser mantidos por **30 dias**.
+- Os logs devem ser mantidos por **30 dias**. A fila de erros de telemetria possui retenção própria e não deve ser confundida com os arquivos de log.
 
 - Os logs devem ser armazenados no diretório de dados do usuário do Ottavada, descrito em `Diretórios usado pelo Ottavada.md`, e nunca no diretório do projeto ou da instalação.
 
@@ -114,4 +114,4 @@ A compactação `zst` deve utilizar:
 
 ## 9.2. Upload e Download para a nuvem
 
-Todos os arquivos devem ser compactados com `zst` antes de ser enviado para a nuvem.
+Todos os arquivos das partituras com status **envio permitido** devem ser compactados com `zst` antes de ser enviado para a nuvem.

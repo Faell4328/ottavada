@@ -6,7 +6,7 @@
 
 Contém as alterações incrementais do sistema (inserções, atualizações e remoções).
 
-É utilizado para sincronização contínua entre servidor e cliente, aplicando apenas as mudanças ocorridas desde a última sincronização.
+É utilizado para sincronização contínua entre servidor e cliente, acumulando alterações até que sejam consolidadas em um snapshot. O cliente usa `last_change_timestamp` como cursor; o `id` desempata eventos com o mesmo timestamp.
 
 **Fluxo atual:** servidor → cliente
 

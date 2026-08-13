@@ -24,9 +24,9 @@ Os dados enviados devem ser:
 - Quantidade de músicas em status **envio não permitido** (`draft`);
 - Quantidade de partituras em status **envio permitido** (`main`);
 - Quantidade de partituras em status **envio não permitido** (`draft`);
-- Conteúdo da tabela `errors`.
+- Conteúdo da fila local de erros de telemetria (`errors`).
 
-> Não é feita coleta de dados sensíveis; o único objetivo da telemetria é saber se o aplicativo está sendo realmente usado, por quem e quais problemas estão ocorrendo no Ottavada.
+> A telemetria envia identificadores do computador, nomes configurados pelo usuário e nome da organização. Esses dados não devem ser descritos como completamente anônimos; a política de privacidade deve explicar finalidade, retenção e opt-out.
 
 # 2. Atualizações
 

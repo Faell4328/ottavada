@@ -332,7 +332,7 @@
 
 - substituição da exclusão permanente por envio para lixeira;
 
-- geração de snapshot automático com 1MB.
+- geração de snapshot automático quando o payload de eventos atinge 1 MiB.
 
 ## Correções
 

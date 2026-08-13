@@ -1,6 +1,8 @@
-O projeto foi desenvolvido com foco em Windows, por isso a explicação será apenas no Windows.
+O projeto pode ser desenvolvido em Windows, Linux e macOS. Os passos abaixo cobrem o ambiente Windows; os comandos de build disponíveis para outras plataformas estão no `package.json`.
 
 # Instalação e Configuração no Windows
+
+> Este guia ainda precisa de uma revisão completa para Linux e macOS. Os comandos abaixo foram conferidos contra os scripts atuais do `package.json`.
 
 1° Baixe o Git: https://git-scm.com/install/windows
 
@@ -12,7 +14,7 @@ O projeto foi desenvolvido com foco em Windows, por isso a explicação será ap
 
 - Você deve baixar de acordo com sua arquitetura de CPU.
 
-4° Depois de baixar e extrair o rclone: renomeie para `rclone.exe` e coloque no diretório: `src-tauri/rclone/rclone.exe`.
+4° Depois de baixar e extrair o rclone, coloque o executável correspondente em `src-tauri/rclone/`. No Windows, o nome esperado é `rclone.exe`.
 
 5° No diretório raiz do projeto, rode: `npm install` ou `npm i`.
 

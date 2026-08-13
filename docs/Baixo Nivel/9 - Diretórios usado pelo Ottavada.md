@@ -18,6 +18,8 @@ Diretório para os **arquivos temporários**:
 - `/home/<user>/.local/share/ottavada/temp` (Linux).
 - `/Users/<user>/Library/Application Support/ottavada/temp` (macOS).
 
+O backend também utiliza `tmp/` para restauração de arquivos de backup e limpa seu conteúdo durante a inicialização ou após a restauração. `temp/` e `tmp/` são diretórios distintos no código atual.
+
 ---
 
 Diretório raiz da **nuvem**:

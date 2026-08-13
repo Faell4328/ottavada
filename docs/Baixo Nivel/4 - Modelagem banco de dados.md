@@ -1,3 +1,7 @@
+# Modelo atual do SQLite
+
+Este documento descreve o schema criado em `src-tauri/src/infrastructure/database.rs`. Os nomes das tabelas são preservados por compatibilidade histórica. Campos e tabelas legados ainda não devem ser removidos sem uma migração.
+
 # composer
 
 Tabela responsável por armazenar todos os compositores.
@@ -66,6 +70,8 @@ Tabela responsável por armazenar as informações das músicas.
 
 - `path` - diretório onde as partituras estão sendo indexadas.
 
+- `last_score_file_modified_at` - timestamp auxiliar usado pelo processamento de backup e ainda presente no schema atual.
+
 # scores
 
 Tabela responsável por armazenar as informações das partituras.
@@ -127,6 +133,8 @@ Essa tabela responsável por controlar a geração dos `{songId}.tar.zst` e que 
   - `processing` - a música foi agrupada e compactada, pronta para ser enviada a nuvem.
   
   - `ok` - a música já foi enviada para nuvem.
+
+O schema atual também contém `host_id` em `scores`, além das tabelas `computerInformation` e `usage`, usadas no fluxo de telemetria. Qualquer migração deve considerar esses elementos.
 
 # errors
 

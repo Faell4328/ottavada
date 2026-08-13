@@ -4,7 +4,7 @@ O Ottavada utiliza um provedor por vez, você pode escolher entre **Koofr** ou *
 
 No **Koofr** é criado um `remote` chamado "koofr" e no **Google Drive** é "gdrive".
 
-A instância do rclone é sempre encerrada (`taskkill`) quando o upload ou download é finalizado 
+A instância do rclone é encerrada quando a operação termina. No Windows, processos residuais também são finalizados na inicialização; não se deve assumir `taskkill` como mecanismo universal, pois Linux e macOS usam outro processo de encerramento.
 
 ---
 
@@ -19,7 +19,7 @@ O rclone está configurado com:
 
 ---
 
-Para acompanhar o progresso é usado o parâmetro: `--rc-addr=127.0.0.1:5572`. A cada segundo é consultado (pelo front) ao servidor que o rclone cria, o progresso do upload/download.
+Para acompanhar o progresso é usado o parâmetro `--rc --rc-addr=127.0.0.1:5572`. O frontend consulta periodicamente a API RC do processo para obter bytes, porcentagem, velocidade e ETA. A porta é local e não deve ser exposta à rede.
 
 
 

@@ -1,4 +1,6 @@
-**Por questão de simplicidade, a documentação usa JSON nos exemplos, mas o arquivo real é um MessagePack.**
+**Por questão de simplicidade, a documentação usa JSON nos exemplos, mas o arquivo real é um MessagePack comprimido com Zstandard (`.msgpack.zst`).**
+
+Os nomes abaixo são a representação serializada atual. O backup completo possui schema próprio e não deve ser inferido apenas pelos exemplos de snapshot e eventos.
 
 # 1. snapshot.msgpack.zst
 

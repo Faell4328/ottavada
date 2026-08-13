@@ -221,7 +221,7 @@ As partituras com status **envio permitido**, devem ser agrupadas em um `tar` e 
 
 ## 8.2. Snapshot
 
-Um snapshot deve ser gerado quando o arquivo de eventos ultrapassar **1 MB**.
+Um snapshot deve ser gerado quando o arquivo de eventos ultrapassar **1 MB**, antes da compressão.
 
 O snapshot é destinado exclusivamente ao Ottavada no modo **Consultar**. Deve conter somente músicas com status `main` e partituras com status `main`.
 
@@ -256,7 +256,7 @@ O usuário deve poder:
 
 # 10. Backup
 
-O backup deve ser **gerado automaticamente** a cada 1 hora.
+O backup deve ser **gerado automaticamente** a cada 1 hora, com base no timestamp do último backup.
 
 Um backup **não deve substituir** o outro. O sistema deve manter os 10 backups mais recentes no diretório de backup. Após a geração de um novo backup, os arquivos mais antigos que excederem esse limite devem ser removidos.
 

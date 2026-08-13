@@ -1,3 +1,7 @@
+# Arquitetura atual
+
+Este documento descreve a estrutura existente no repositório. Itens planejados ou removidos devem ser registrados na documentação de versões, não como se fossem módulos ativos.
+
 # Comunicação entre o Front e Back
 
 A comunicação ocorre por meio de `invoke()` do **@tauri-apps/api/core**, com wrappers tipados em `api/commands.ts`.
@@ -10,7 +14,7 @@ A comunicação ocorre por meio de `invoke()` do **@tauri-apps/api/core**, com w
 
 Wrappers tipados para chamadas `invoke()` do Tauri, organizados por domínio.
 
-**commands.ts** - Expõe funções assíncronas para Songs, Scores, Categories, Settings, Updates, Scan, Rclone e Backup.
+**commands.ts** - Expõe funções assíncronas para músicas, partituras, categorias, configurações, atualizações, scan, rclone e backup.
 
 ---
 
@@ -66,23 +70,23 @@ Componentes React da interface gráfica.
 
 **UpdateModal.tsx** - Modal de progresso e status de atualização do app.
 
-#### Subpasta ui/
+#### Subpasta components/ui/
 
-**ui/index.ts** - Barrel file que reexporta todos os componentes da pasta ui/.
+**components/ui/index.ts** - Barrel file que reexporta os componentes reutilizáveis da pasta `components/ui/`.
 
-**ui/CategoryCheckboxList.tsx** - Lista de checkboxes para seleção de categorias.
+**components/ui/CategoryCheckboxList.tsx** - Lista de checkboxes para seleção de categorias.
 
-**ui/ConfirmationModal.tsx** - Modal genérico de confirmação com título, mensagem e ações.
+**components/ui/ConfirmationModal.tsx** - Modal genérico de confirmação com título, mensagem e ações.
 
-**ui/ContextMenu.tsx** - Menu de contexto (clique direito) para ações em músicas e partituras.
+**components/ui/ContextMenu.tsx** - Menu de contexto para ações em músicas e partituras.
 
-**ui/FormField.tsx** - Campo de formulário padronizado com label, input e erro.
+**components/ui/FormField.tsx** - Campo de formulário padronizado com label, input e erro.
 
-**ui/Metronome.tsx** - Metrônomo visual e sonoro para referência de andamento.
+**components/ui/Metronome.tsx** - Metrônomo visual e sonoro para referência de andamento.
 
-**ui/metronome.css** - Estilos do componente Metronome.
+**components/ui/metronome.css** - Estilos do componente Metronome.
 
-**ui/Modal.tsx** - Componente base de modal com overlay, fechamento e animação.
+**components/ui/Modal.tsx** - Componente base de modal com overlay, fechamento e animação.
 
 ---
 
@@ -194,10 +198,10 @@ Funções utilitárias e lógicas auxiliares.
 
 ---
 
-## Rotas
+## Rotas e telas
 
 ```
-/            → MainPage (SongsList + Sidebar + TopBar + StatusBar)
+/            → tela principal (SongsList + Sidebar + TopBar + StatusBar)
 /settings    → SettingsPage
 *            → FirstRunPage (quando isFirstRun === true)
 ```
@@ -309,7 +313,7 @@ Lógica de negócio e orquestração. Depende de domain e infrastructure.
 
 **snapshot_service.rs** - Geração do arquivo snapshot.msgpack.zst (estado consolidado).
 
-**telemetry_service.rs** - Envio periódico de dados de telemetria anonimizados.
+**telemetry_service.rs** - Envio periódico de dados de telemetria.
 
 ---
 
