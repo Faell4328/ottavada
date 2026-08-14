@@ -82,7 +82,7 @@ fn upsert_processing_status(db: &Database, song_id: &str) -> Result<(), AppError
     let conn = db.lock_conn();
 
     conn.execute(
-        "INSERT INTO songsBackup (songId, status)
+        "INSERT INTO backupQueue (songId, status)
          VALUES (?1, ?2)
          ON CONFLICT(songId) DO UPDATE SET
             status = excluded.status",
@@ -95,7 +95,7 @@ fn upsert_processing_status(db: &Database, song_id: &str) -> Result<(), AppError
 fn update_backup_status(db: &Database, song_id: &str, status: &str) -> Result<(), AppError> {
     let conn = db.lock_conn();
     conn.execute(
-        "UPDATE songsBackup
+        "UPDATE backupQueue
          SET status = ?1
          WHERE songId = ?2",
         params![status, song_id],
@@ -126,7 +126,7 @@ fn list_song_backup_rows(db: &Database, songs_dir: &Path) -> Result<Vec<SongBack
                 sc.song_id AS song_id,
                 MAX(cf.timestamp) AS last_status_change_at
             FROM scores sc
-            JOIN changedField cf
+            JOIN changes cf
               ON cf.entity = 'scores'
              AND cf.entityId = sc.id
              AND cf.field = 'status'
@@ -1071,7 +1071,6 @@ mod tests {
             id: "score-1".to_string(),
             song_id: "song-1".to_string(),
             name: Some("Violino".to_string()),
-            host_id: "server-1".to_string(),
             file_path: song_dir.to_string_lossy().to_string(),
             file_name: "score-a.musx".to_string(),
             file_size: 14,
@@ -1164,7 +1163,6 @@ mod tests {
             id: "score-1".to_string(),
             song_id: "song-1".to_string(),
             name: Some("Piano".to_string()),
-            host_id: "server-1".to_string(),
             file_path: song_dir.to_string_lossy().to_string(),
             file_name: "draft-score.musx".to_string(),
             file_size: 13,
@@ -1224,7 +1222,6 @@ mod tests {
             id: "score-main".to_string(),
             song_id: "song-1".to_string(),
             name: Some("Piano".to_string()),
-            host_id: "server-1".to_string(),
             file_path: song_dir.to_string_lossy().to_string(),
             file_name: "main-score.musx".to_string(),
             file_size: 12,
@@ -1239,7 +1236,6 @@ mod tests {
             id: "score-draft".to_string(),
             song_id: "song-1".to_string(),
             name: Some("Flute".to_string()),
-            host_id: "server-1".to_string(),
             file_path: song_dir.to_string_lossy().to_string(),
             file_name: "draft-score.musx".to_string(),
             file_size: 13,

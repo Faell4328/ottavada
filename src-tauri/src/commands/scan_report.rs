@@ -587,7 +587,6 @@ mod tests {
             id: "score-1".to_string(),
             song_id: "song-1".to_string(),
             name: None,
-            host_id: "server-1".to_string(),
             file_path: dir
                 .path()
                 .join("songs")
@@ -649,7 +648,6 @@ mod tests {
             id: "score-1".to_string(),
             song_id: "song-1".to_string(),
             name: Some("Flute2".to_string()),
-            host_id: "server-1".to_string(),
             file_path: dir
                 .path()
                 .join("songs")
@@ -668,7 +666,7 @@ mod tests {
         {
             let conn = db.conn.lock().expect("lock db");
             conn.execute(
-                "INSERT INTO changedField (id, type, entity, entityId, field, value, timestamp)
+                "INSERT INTO changes (id, type, entity, entityId, field, value, timestamp)
                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
                 params![
                     "prev-status",
@@ -758,7 +756,6 @@ mod tests {
             id: "score-1".to_string(),
             song_id: "song-1".to_string(),
             name: Some("Flute2".to_string()),
-            host_id: "server-1".to_string(),
             file_path: dir
                 .path()
                 .join("songs")
@@ -777,7 +774,7 @@ mod tests {
         {
             let conn = db.conn.lock().expect("lock db");
             conn.execute(
-                "INSERT INTO changedField (id, type, entity, entityId, field, value, timestamp)
+                "INSERT INTO changes (id, type, entity, entityId, field, value, timestamp)
                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
                 params![
                     "prev-status",
@@ -832,7 +829,6 @@ mod tests {
             id: "score-1".to_string(),
             song_id: "song-1".to_string(),
             name: Some("Flute2".to_string()),
-            host_id: "server-1".to_string(),
             file_path: song_dir.to_string_lossy().to_string(),
             file_name: "08 H.C. CRISTO, O FIEL AMIGO - Flute2.musx".to_string(),
             file_size: 1024,
@@ -885,7 +881,6 @@ mod tests {
             id: "score-1".to_string(),
             song_id: "song-1".to_string(),
             name: Some("Score".to_string()),
-            host_id: "server-1".to_string(),
             file_path: "/music/song-1".to_string(),
             file_name: "H.C. SAVED YOU ARE CLEAN YOU ARE.musx".to_string(),
             file_size: 1024,
@@ -941,7 +936,6 @@ mod tests {
             id: "score-ignored".to_string(),
             song_id: "song-1".to_string(),
             name: Some("Flute2".to_string()),
-            host_id: "server-1".to_string(),
             file_path: song_dir.to_string_lossy().to_string(),
             file_name: "08 H.C. CRISTO, O FIEL AMIGO - Flute2.musx".to_string(),
             file_size: 1024,

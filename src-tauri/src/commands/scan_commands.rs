@@ -73,9 +73,8 @@ fn scan_files_for_changes_impl(
     let settings = store.get_app_settings()?;
     settings.require_server_only()?;
     let updated_by = settings.computer_id.clone();
-    let host_id = &settings.computer_id;
 
-    let scores = db.get_all_scores_with_metadata_by_host(host_id)?;
+    let scores = db.get_all_scores_for_scan()?;
     let songs = db.get_all_songs()?;
     let mut changed_files = Vec::new();
     let mut added_files = Vec::new();
@@ -332,10 +331,9 @@ fn preview_scan_files_for_changes_impl(
 
     let settings = store.get_app_settings()?;
     settings.require_server_only()?;
-    let host_id = &settings.computer_id;
     let updated_by = settings.computer_id.clone();
 
-    let scores = db.get_all_scores_with_metadata_by_host(host_id)?;
+    let scores = db.get_all_scores_for_scan()?;
     let songs = db.get_all_songs()?;
     let mut changed_files = Vec::new();
     let mut added_files = Vec::new();
@@ -623,7 +621,6 @@ mod tests {
             id: "score-1".to_string(),
             song_id: "song-1".to_string(),
             name: Some("flute".to_string()),
-            host_id: "server-1".to_string(),
             file_path: score_dir.to_string_lossy().to_string(),
             file_name: "score-1.musx".to_string(),
             file_size,
@@ -685,7 +682,6 @@ mod tests {
             id: "score-ignored".to_string(),
             song_id: "song-1".to_string(),
             name: Some("flute".to_string()),
-            host_id: "server-1".to_string(),
             file_path: score_dir.to_string_lossy().to_string(),
             file_name: "score-ignored.musx".to_string(),
             file_size,
@@ -746,7 +742,6 @@ mod tests {
             id: "score-1".to_string(),
             song_id: "song-1".to_string(),
             name: Some("Score".to_string()),
-            host_id: "server-1".to_string(),
             file_path: song_dir.to_string_lossy().to_string(),
             file_name: "126.mus".to_string(),
             file_size,
@@ -859,7 +854,6 @@ mod tests {
             id: "score-1".to_string(),
             song_id: "song-1".to_string(),
             name: Some("Trumpet".to_string()),
-            host_id: "server-1".to_string(),
             file_path: song_dir.to_string_lossy().to_string(),
             file_name: "Canon - Trumpet.musx".to_string(),
             file_size,
@@ -931,7 +925,6 @@ mod tests {
             id: "score-1".to_string(),
             song_id: "song-1".to_string(),
             name: Some("Flute".to_string()),
-            host_id: "server-1".to_string(),
             file_path: song_dir.to_string_lossy().to_string(),
             file_name: "Canon - Flute.musx".to_string(),
             file_size: main_file_size,
@@ -946,7 +939,6 @@ mod tests {
             id: "score-2".to_string(),
             song_id: "song-1".to_string(),
             name: Some("Trumpet".to_string()),
-            host_id: "server-1".to_string(),
             file_path: song_dir.to_string_lossy().to_string(),
             file_name: "Canon - Trumpet.musx".to_string(),
             file_size: removed_file_size,
@@ -1024,7 +1016,6 @@ mod tests {
             id: "score-1".to_string(),
             song_id: "song-1".to_string(),
             name: Some("Flute".to_string()),
-            host_id: "server-1".to_string(),
             file_path: legacy_score_dir.to_string_lossy().to_string(),
             file_name: "Canon - Flute.musx".to_string(),
             file_size,
@@ -1095,7 +1086,6 @@ mod tests {
             id: "score-main".to_string(),
             song_id: "song-1".to_string(),
             name: Some("Flute".to_string()),
-            host_id: "server-1".to_string(),
             file_path: song_dir.to_string_lossy().to_string(),
             file_name: "08 H.C. CRISTO, O FIEL AMIGO - Flute.musx".to_string(),
             file_size: main_file_size,
@@ -1110,7 +1100,6 @@ mod tests {
             id: "score-ignored".to_string(),
             song_id: "song-1".to_string(),
             name: Some("Flute2".to_string()),
-            host_id: "server-1".to_string(),
             file_path: song_dir.to_string_lossy().to_string(),
             file_name: "08 H.C. CRISTO, O FIEL AMIGO - Flute2.musx".to_string(),
             file_size: ignored_file_size,
@@ -1173,7 +1162,6 @@ mod tests {
             id: "score-1".to_string(),
             song_id: "song-1".to_string(),
             name: Some("Flute".to_string()),
-            host_id: "server-1".to_string(),
             file_path: song_dir.to_string_lossy().to_string(),
             file_name: "A BANDA - Flute.musx".to_string(),
             file_size,
@@ -1236,7 +1224,6 @@ mod tests {
             id: "score-1".to_string(),
             song_id: "song-1".to_string(),
             name: Some("Flute".to_string()),
-            host_id: "server-1".to_string(),
             file_path: song_dir.to_string_lossy().to_string(),
             file_name: "NEW HYMN - Flute.musx".to_string(),
             file_size: 1024,
@@ -1296,7 +1283,6 @@ mod tests {
             id: "score-1".to_string(),
             song_id: "song-1".to_string(),
             name: None,
-            host_id: "server-1".to_string(),
             file_path: song_dir.to_string_lossy().to_string(),
             file_name: "HOLY TIMES.MUS".to_string(),
             file_size: 1024,

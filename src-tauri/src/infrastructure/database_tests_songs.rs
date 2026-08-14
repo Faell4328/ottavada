@@ -32,7 +32,6 @@ mod tests {
             id: id.to_string(),
             song_id: song_id.to_string(),
             name: name.map(|s| s.to_string()),
-            host_id: "test-computer".to_string(),
             file_path: base_path,
             file_name: format!("{}.pdf", name.unwrap_or("test")),
             file_size: 1024,
@@ -55,7 +54,7 @@ mod tests {
     fn count_changed_field_for_entity(db: &Database, entity: &str) -> i64 {
         let conn = db.lock_conn();
         conn.query_row(
-            "SELECT COUNT(*) FROM changedField WHERE entity = ?1",
+            "SELECT COUNT(*) FROM changes WHERE entity = ?1",
             [entity],
             |row| row.get(0),
         )
@@ -346,19 +345,19 @@ mod tests {
         let conn = db.lock_conn();
 
         conn.execute(
-            "INSERT INTO changedField (id, type, entity, entityId, field, value, timestamp)
+            "INSERT INTO changes (id, type, entity, entityId, field, value, timestamp)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             rusqlite::params!["id-100", "create", "songs", "song-1", "name", "", 100],
         )
         .unwrap();
         conn.execute(
-            "INSERT INTO changedField (id, type, entity, entityId, field, value, timestamp)
+            "INSERT INTO changes (id, type, entity, entityId, field, value, timestamp)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             rusqlite::params!["id-200", "create", "songs", "song-2", "name", "", 200],
         )
         .unwrap();
         conn.execute(
-            "INSERT INTO changedField (id, type, entity, entityId, field, value, timestamp)
+            "INSERT INTO changes (id, type, entity, entityId, field, value, timestamp)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             rusqlite::params!["id-300", "create", "songs", "song-3", "name", "", 300],
         )

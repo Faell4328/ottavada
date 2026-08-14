@@ -54,7 +54,7 @@ fn find_existing_score_by_file_path<'a>(
 
 fn build_score_from_indexed_file(
     song_id: &str,
-    host_id: &str,
+    updated_by: &str,
     file: &IndexedFile,
 ) -> Result<Score, AppError> {
     let normalized_file = IndexedFile {
@@ -68,7 +68,7 @@ fn build_score_from_indexed_file(
 
     Ok(Score::new_from_file(
         song_id.to_string(),
-        host_id.to_string(),
+        updated_by.to_string(),
         &normalized_file,
         score_file_path,
         file_name,
@@ -700,7 +700,6 @@ pub fn use_score_as_base(
         id: uuid::Uuid::new_v4().to_string(),
         song_id: song_id.clone(),
         name: Some(new_score_name.clone()),
-        host_id: settings.computer_id.clone(),
         file_path: score_file_path,
         file_name,
         file_size,
@@ -985,7 +984,6 @@ mod tests {
             id: "score-1".to_string(),
             song_id: "song-1".to_string(),
             name: Some("Flauta".to_string()),
-            host_id: "server-1".to_string(),
             file_path: song_dir.to_string_lossy().to_string(),
             file_name: "score-1.musx".to_string(),
             file_size: 13,
@@ -1040,7 +1038,6 @@ mod tests {
             id: "score-1".to_string(),
             song_id: "song-1".to_string(),
             name: Some("Flauta".to_string()),
-            host_id: "test".to_string(),
             file_path: dir.path().join("scores").to_string_lossy().to_string(),
             file_name: "flauta.musx".to_string(),
             file_size: 10,
@@ -1106,7 +1103,6 @@ mod tests {
             id: "score-1".to_string(),
             song_id: "song-1".to_string(),
             name: Some("Flauta".to_string()),
-            host_id: "test".to_string(),
             file_path: "/missing/path".to_string(),
             file_name: "flauta.musx".to_string(),
             file_size: 10,

@@ -4,8 +4,8 @@ use tracing::info;
 
 use crate::domain::errors::AppError;
 use crate::domain::models::{
-    AppSettings, BackupDatabaseStep, BackupStatus, ComputerType, GoogleDriveMode,
-    GoogleServiceAccount, RcloneConfig, RcloneProvider, SongBackupStatus,
+    AppSettings, BackupDatabaseStep, BackupStatus, ComputerType, RcloneConfig, RcloneProvider,
+    SongBackupStatus,
 };
 
 const STORE_FILENAME: &str = "app-store.json";
@@ -171,20 +171,10 @@ impl SystemStore {
             organization_name,
             language,
             computer_type,
-            google_drive_mode: match store
-                .get("google_drive_mode")
-                .and_then(|v: &serde_json::Value| v.as_str())
-            {
-                Some("api") => GoogleDriveMode::Api,
-                _ => GoogleDriveMode::Local,
-            },
             first_run_completed: store
                 .get("first_run_completed")
                 .and_then(|v: &serde_json::Value| v.as_bool())
                 .unwrap_or(false),
-            google_service_account: store
-                .get("google_service_account")
-                .and_then(|v| serde_json::from_value::<GoogleServiceAccount>(v.clone()).ok()),
             rclone_config,
             database_local: store
                 .get("database_local")
@@ -254,24 +244,7 @@ impl SystemStore {
             "lastBackupTimestamp": settings.last_backup_timestamp.unwrap_or(0),
         });
 
-        let mode_str = match settings.google_drive_mode {
-            GoogleDriveMode::Local => "local",
-            GoogleDriveMode::Api => "api",
-        };
-        store["google_drive_mode"] = serde_json::json!(mode_str);
-
         store["first_run_completed"] = serde_json::json!(settings.first_run_completed);
-
-        if let Some(ref account) = settings.google_service_account {
-            let account_json = serde_json::to_value(account).map_err(|e| {
-                AppError::Generic(format!("Error serializing service account: {}", e))
-            })?;
-            store["google_service_account"] = account_json;
-        } else {
-            store
-                .as_object_mut()
-                .map(|obj| obj.remove("google_service_account"));
-        }
 
         if let Some(database_local) = settings.database_local {
             store["database_local"] = serde_json::json!(database_local);
@@ -339,34 +312,6 @@ impl SystemStore {
             self.store_path
         );
         Ok(())
-    }
-
-    /// Saves the system settings and updates the backup_database_step.updated_at
-    /// with the timestamp of the latest change in any song (cascade effect)
-    #[allow(dead_code)]
-    pub fn save_app_settings_with_db(
-        &self,
-        settings: &mut AppSettings,
-        db: &crate::infrastructure::database::Database,
-    ) -> Result<(), AppError> {
-        // Get the most recent updated_at from songs
-        if let Some(latest_timestamp) = db.get_latest_songs_update_timestamp()? {
-            // Update or create the backup_database_step with the most recent timestamp
-            match settings.backup_database_step {
-                Some(ref mut backup_step) => {
-                    backup_step.updated_at = latest_timestamp;
-                }
-                None => {
-                    use crate::domain::models::{BackupDatabaseStep, BackupStatus};
-                    settings.backup_database_step = Some(BackupDatabaseStep {
-                        status: BackupStatus::Pending,
-                        updated_at: latest_timestamp,
-                    });
-                }
-            }
-        }
-
-        self.save_app_settings(settings)
     }
 
     /// Saves a generic value in the store

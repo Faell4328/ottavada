@@ -1,19 +1,45 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { MoreVertical } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 interface ContextMenuProps {
   isOpen: boolean;
   onToggle: (e: React.MouseEvent) => void;
+  onClose: () => void;
   children: React.ReactNode;
   disabled?: boolean;
 }
 
-export function ContextMenu({ isOpen, onToggle, children, disabled = false }: ContextMenuProps) {
+export function ContextMenu({
+  isOpen,
+  onToggle,
+  onClose,
+  children,
+  disabled = false,
+}: ContextMenuProps) {
   const { t } = useTranslation();
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
+        onClose();
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [isOpen, onClose]);
 
   return (
-    <div className="relative">
+    <div className="relative" ref={containerRef}>
       <button
         type="button"
         onClick={onToggle}

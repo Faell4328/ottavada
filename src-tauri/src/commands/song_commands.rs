@@ -389,7 +389,7 @@ pub fn reindex_song_directory(
 fn import_files_core(
     db: &Database,
     store: &SystemStore,
-    host_id: &str,
+    computer_id: &str,
     files: &[IndexedFile],
     category_ids: &[String],
     composer: Option<&str>,
@@ -506,7 +506,7 @@ fn import_files_core(
                 is_favorite: false,
                 status: new_song_status.clone(),
                 updated_at: now,
-                updated_by: host_id.to_string(),
+                updated_by: computer_id.to_string(),
             };
             db.insert_song(&song, category_ids)?;
             new_song_id
@@ -521,7 +521,7 @@ fn import_files_core(
                 .unwrap_or_else(|| new_song_status.clone());
             let score = Score::new_from_file(
                 song_id.clone(),
-                host_id.to_string(),
+                computer_id.to_string(),
                 &normalized_file,
                 score_file_path,
                 file_name,

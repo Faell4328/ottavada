@@ -96,8 +96,8 @@ fn build_payload(
     }
 }
 
-fn record_telemetry_failure(db: &Database, computer_id: &str, now: i64, error: &AppError) {
-    let _ = db.record_telemetry_error(computer_id, &error.to_string(), now);
+fn record_telemetry_failure(db: &Database, now: i64, error: &AppError) {
+    let _ = db.record_telemetry_error(&error.to_string(), now);
 }
 
 pub fn send_telemetry_once(db: &Database, store: &SystemStore) -> Result<(), AppError> {
@@ -105,27 +105,27 @@ pub fn send_telemetry_once(db: &Database, store: &SystemStore) -> Result<(), App
     let now = Utc::now().timestamp();
     db.prune_telemetry_errors_older_than_week(now)
         .map_err(|error| {
-            record_telemetry_failure(db, &settings.computer_id, now, &error);
+            record_telemetry_failure(db, now, &error);
             error
         })?;
 
     let endpoint = telemetry_endpoint().ok_or_else(|| {
         let error = AppError::Generic("TELEMETRY_ENDPOINT not configured".to_string());
-        record_telemetry_failure(db, &settings.computer_id, now, &error);
+        record_telemetry_failure(db, now, &error);
         error
     })?;
     let token = telemetry_token().ok_or_else(|| {
         let error = AppError::Generic("TELEMETRY_API_TOKEN not configured".to_string());
-        record_telemetry_failure(db, &settings.computer_id, now, &error);
+        record_telemetry_failure(db, now, &error);
         error
     })?;
 
     let counts = db.get_telemetry_summary_counts().map_err(|error| {
-        record_telemetry_failure(db, &settings.computer_id, now, &error);
+        record_telemetry_failure(db, now, &error);
         error
     })?;
     let errors = db.list_telemetry_errors().map_err(|error| {
-        record_telemetry_failure(db, &settings.computer_id, now, &error);
+        record_telemetry_failure(db, now, &error);
         error
     })?;
     let payload = build_payload(&settings, counts, errors);
@@ -141,7 +141,7 @@ pub fn send_telemetry_once(db: &Database, store: &SystemStore) -> Result<(), App
         Ok(response) => response,
         Err(error) => {
             let error = AppError::Generic(format!("Error sending telemetry: {}", error));
-            record_telemetry_failure(db, &settings.computer_id, now, &error);
+            record_telemetry_failure(db, now, &error);
             return Err(error);
         }
     };
@@ -151,7 +151,7 @@ pub fn send_telemetry_once(db: &Database, store: &SystemStore) -> Result<(), App
             "Telemetry server responded with status {}",
             response.status()
         ));
-        record_telemetry_failure(db, &settings.computer_id, now, &error);
+        record_telemetry_failure(db, now, &error);
         return Err(error);
     }
 

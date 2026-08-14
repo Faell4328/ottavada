@@ -59,33 +59,35 @@ Table responsible for storing all relations between categories and songs (N:N).
 
 Table responsible for storing song information.
 
-| Field                       | Type                             | PK  | FK  | Reference | Required? | Where?             |
-| --------------------------- | -------------------------------- | --- | --- | --------- | --------- | ------------------ |
-| id                          | text (`uuid`)                    | Yes | No  | No        | Yes       | Client / Server    |
-| name                        | text                             | No  | No  | No        | Yes       | Client / Server    |
-| is_favorite                 | bool                             | No  | No  | No        | No        | Client / Server    |
-| path                        | text                             | No  | No  | No        | Yes       | Server             |
-| last_score_file_modified_at | integer                          | No  | No  | No        | Yes       | Server             |
-| status                      | (`main`, `draft` or `not_found`) | No  | No  | No        | Yes       | Server             |
+| Field       | Type                             | PK  | FK  | Reference | Required? | Where?             |
+| ----------- | -------------------------------- | --- | --- | --------- | --------- | ------------------ |
+| id          | text (`uuid`)                    | Yes | No  | No        | Yes       | Client / Server    |
+| name        | text                             | No  | No  | No        | Yes       | Client / Server    |
+| composer    | text                             | No  | No  | No        | No        | Client / Server    |
+| arranger    | text                             | No  | No  | No        | No        | Client / Server    |
+| is_favorite | bool                             | No  | No  | No        | No        | Client / Server    |
+| path        | text                             | No  | No  | No        | Yes       | Server             |
+| status      | (`main`, `draft` or `not_found`) | No  | No  | No        | Yes       | Server             |
 
 - `path` - directory where the scores are being indexed.
-
-- `last_score_file_modified_at` - auxiliary timestamp used by the backup processing and still present in the current schema.
 
 # scores
 
 Table responsible for storing score information.
 
-| Field            | Type                          | PK  | FK  | Reference | Required? | Where?             |
-| ---------------- | ----------------------------- | --- | --- | --------- | --------- | ------------------ |
-| id               | text (`uuid`)                 | Yes | No  | No        | Yes       | Client / Server    |
-| song_id          | text (`uuid`)                 | No  | Yes | songs.id  | Yes       | Client / Server    |
-| name             | text                          | No  | No  | No        | No        | Client / Server    |
-| file_name        | text                          | No  | No  | No        | Yes       | Server             |
-| file_extension   | text                          | No  | No  | No        | Yes       | Client / Server    |
-| file_modified_at | text                          | No  | No  | No        | Yes       | Server             |
-| file_size        | integer                       | No  | No  | No        | Yes       | Server             |
-| status           | (`main`, `draft` or `ignored`)| No  | No  | No        | Yes       | Server             |
+| Field           | Type                          | PK  | FK  | Reference | Required? | Where?             |
+| --------------- | ----------------------------- | --- | --- | --------- | --------- | ------------------ |
+| id              | text (`uuid`)                 | Yes | No  | No        | Yes       | Client / Server    |
+| song_id         | text (`uuid`)                 | No  | Yes | songs.id  | Yes       | Client / Server    |
+| name            | text                          | No  | No  | No        | No        | Client / Server    |
+| file_path       | text                          | No  | No  | No        | Yes       | Server             |
+| file_name       | text                          | No  | No  | No        | Yes       | Server             |
+| file_extension  | text                          | No  | No  | No        | Yes       | Client / Server    |
+| file_size       | integer                       | No  | No  | No        | Yes       | Server             |
+| file_modified_at| text                          | No  | No  | No        | Yes       | Server             |
+| status          | (`main`, `draft` or `ignored`)| No  | No  | No        | Yes       | Server             |
+
+- `file_path` - directory where the score file is stored.
 
 - `file_name` - file name and extension, e.g.: `flauta.mus`.
 
@@ -93,7 +95,7 @@ Table responsible for storing score information.
 
 - `file_size` - file size.
 
-# changedField
+# changes
 
 Table responsible for storing all changes until the `events.msgpack.zst` file is generated.
 
@@ -117,7 +119,7 @@ Table responsible for storing all changes until the `events.msgpack.zst` file is
 
 - `value` - the value that was inserted or updated.
 
-# songsBackup
+# backupQueue
 
 This table is responsible for controlling the generation of the `{songId}.tar.zst` and ensuring that all of them have been uploaded to the cloud.
 
@@ -134,7 +136,7 @@ This table is responsible for controlling the generation of the `{songId}.tar.zs
 
   - `ok` - the song has already been sent to the cloud.
 
-The current schema also contains `host_id` in `scores`, in addition to the `computerInformation` and `usage` tables, used in the telemetry flow. Any migration must consider these elements.
+Computer information (computer name, organization, type, version, OS, architecture) is not stored in the database; it is consulted from `tauri-plugin-store` (see `6 - tauri store modeling.md`).
 
 # errors
 

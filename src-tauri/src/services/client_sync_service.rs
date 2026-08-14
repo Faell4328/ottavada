@@ -301,8 +301,8 @@ fn apply_snapshot(db: &Database, payload: &SnapshotMessagePack) -> Result<(), Ap
 
         tx.execute_batch(
             "
-            DELETE FROM changedField;
-            DELETE FROM songsBackup;
+            DELETE FROM changes;
+            DELETE FROM backupQueue;
             DELETE FROM composerSongs;
             DELETE FROM arrangerSongs;
             DELETE FROM categoriesSongs;
@@ -336,12 +336,6 @@ fn apply_snapshot(db: &Database, payload: &SnapshotMessagePack) -> Result<(), Ap
         }
 
         for song in &payload.songs {
-            let last_score_file_modified_at = song
-                .scores
-                .iter()
-                .filter_map(|score| score.updated_at)
-                .max()
-                .unwrap_or(payload.generated_at);
             let song_path = if song
                 .path
                 .as_ref()
@@ -368,15 +362,14 @@ fn apply_snapshot(db: &Database, payload: &SnapshotMessagePack) -> Result<(), Ap
             });
 
             tx.execute(
-                "INSERT INTO songs (id, name, composer, arranger, path, is_favorite, last_score_file_modified_at)
-                 VALUES (?1, ?2, ?3, ?4, ?5, 0, ?6)",
+                "INSERT INTO songs (id, name, composer, arranger, path, is_favorite)
+                 VALUES (?1, ?2, ?3, ?4, ?5, 0)",
                 params![
                     song.id,
                     song.name,
                     composer_name,
                     arranger_name,
                     song_path,
-                    last_score_file_modified_at,
                 ],
             )?;
 
@@ -410,13 +403,12 @@ fn apply_snapshot(db: &Database, payload: &SnapshotMessagePack) -> Result<(), Ap
                 let score_updated_at = score.updated_at.unwrap_or(payload.generated_at);
 
                 tx.execute(
-                    "INSERT INTO scores (id, song_id, name, host_id, file_path, file_name, file_extension, file_size, file_modified_at, status)
-                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 0, datetime(?8, 'unixepoch'), ?9)",
+                    "INSERT INTO scores (id, song_id, name, file_path, file_name, file_extension, file_size, file_modified_at, status)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, 0, datetime(?7, 'unixepoch'), ?8)",
                     params![
                         score.id,
                         score_song_id,
                         score.name,
-                        "server",
                         cloud_score_stored_path(score_song_id),
                         score_stored_file_name(&score.id, &file_extension),
                         file_extension,
@@ -592,7 +584,7 @@ fn apply_upsert_field_event(
 ) -> Result<(), AppError> {
     match event.entity.as_str() {
         "songs" => {
-            ensure_song_exists(tx, &event.entity_id, event.timestamp)?;
+            ensure_song_exists(tx, &event.entity_id)?;
 
             match item.field.as_str() {
                 "name" => {
@@ -633,7 +625,7 @@ fn apply_upsert_field_event(
                     .clone()
                     .ok_or_else(|| AppError::Generic("Score event without songId".to_string()))?;
 
-                ensure_song_exists(tx, &song_id, event.timestamp)?;
+                ensure_song_exists(tx, &song_id)?;
                 ensure_score_exists(tx, &event.entity_id, &song_id, event.timestamp)?;
 
                 tx.execute(
@@ -731,7 +723,7 @@ fn apply_upsert_field_event(
                 (entry.category_id.clone(), entry.song_id.clone())
             {
                 ensure_category_exists(tx, &category_id)?;
-                ensure_song_exists(tx, &song_id, event.timestamp)?;
+                ensure_song_exists(tx, &song_id)?;
 
                 tx.execute(
                     "INSERT OR IGNORE INTO categoriesSongs (id, categoryId, songId) VALUES (?1, ?2, ?3)",
@@ -752,7 +744,7 @@ fn apply_upsert_field_event(
             }
 
             if let (Some(composer_id), Some(song_id)) = (entry.foreign_id.clone(), entry.song_id.clone()) {
-                ensure_song_exists(tx, &song_id, event.timestamp)?;
+                ensure_song_exists(tx, &song_id)?;
                 tx.execute(
                     "INSERT OR IGNORE INTO composerSongs (id, composerId, songId) VALUES (?1, ?2, ?3)",
                     params![event.entity_id, composer_id, song_id],
@@ -772,7 +764,7 @@ fn apply_upsert_field_event(
             }
 
             if let (Some(arranger_id), Some(song_id)) = (entry.foreign_id.clone(), entry.song_id.clone()) {
-                ensure_song_exists(tx, &song_id, event.timestamp)?;
+                ensure_song_exists(tx, &song_id)?;
                 tx.execute(
                     "INSERT OR IGNORE INTO arrangerSongs (id, arrangerId, songId) VALUES (?1, ?2, ?3)",
                     params![event.entity_id, arranger_id, song_id],
@@ -788,12 +780,11 @@ fn apply_upsert_field_event(
 fn ensure_song_exists(
     tx: &rusqlite::Transaction<'_>,
     song_id: &str,
-    timestamp: i64,
 ) -> Result<(), AppError> {
     tx.execute(
-        "INSERT OR IGNORE INTO songs (id, name, composer, arranger, path, is_favorite, last_score_file_modified_at)
-         VALUES (?1, '', NULL, NULL, ?3, 0, ?2)",
-        params![song_id, timestamp, song_stored_path(song_id)],
+        "INSERT OR IGNORE INTO songs (id, name, composer, arranger, path, is_favorite)
+         VALUES (?1, '', NULL, NULL, ?2, 0)",
+        params![song_id, song_stored_path(song_id)],
     )?;
     Ok(())
 }
@@ -816,8 +807,8 @@ fn ensure_score_exists(
     timestamp: i64,
 ) -> Result<(), AppError> {
     tx.execute(
-        "INSERT OR IGNORE INTO scores (id, song_id, name, host_id, file_path, file_name, file_extension, file_size, file_modified_at, status)
-         VALUES (?1, ?2, NULL, 'server', ?3, ?4, ?5, 0, datetime(?6, 'unixepoch'), 'main')",
+        "INSERT OR IGNORE INTO scores (id, song_id, name, file_path, file_name, file_extension, file_size, file_modified_at, status)
+         VALUES (?1, ?2, NULL, ?3, ?4, ?5, 0, datetime(?6, 'unixepoch'), 'main')",
         params![
             score_id,
             song_id,
@@ -1253,8 +1244,8 @@ mod tests {
         )
         .expect("insert category");
         conn.execute(
-            "INSERT INTO songs (id, name, composer, arranger, path, is_favorite, last_score_file_modified_at)
-             VALUES (?1, ?2, NULL, NULL, ?3, 0, 0)",
+            "INSERT INTO songs (id, name, composer, arranger, path, is_favorite)
+             VALUES (?1, ?2, NULL, NULL, ?3, 0)",
             params!["song-1", "Music 1", "/songs/song-1"],
         )
         .expect("insert song");

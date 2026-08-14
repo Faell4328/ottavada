@@ -35,9 +35,7 @@ export interface AppSettings {
   organization_name: string | null;
   language: string | null;
   computer_type: "Server" | "Client";
-  google_drive_mode: "Local" | "Api";
   first_run_completed: boolean;
-  google_service_account: GoogleServiceAccount | null;
   rclone_config: RcloneConfig | null;
   database_local?: number;
   backup_database_step?: BackupDatabaseStep | null;
@@ -61,19 +59,6 @@ export interface LibraryStatusSummary {
 export interface LibrarySummary {
   main: LibraryStatusSummary;
   draft: LibraryStatusSummary;
-}
-
-export interface GoogleServiceAccount {
-  type: string;
-  project_id: string;
-  private_key_id: string;
-  private_key: string;
-  client_email: string;
-  client_id: string;
-  auth_uri: string;
-  token_uri: string;
-  auth_provider_x509_cert_url: string;
-  client_x509_cert_url: string;
 }
 
 export type RcloneProvider =

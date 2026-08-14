@@ -290,7 +290,7 @@ pub fn run() {
 
             std::thread::spawn(move || {
                 let store = SystemStore::new(app_data_dir_clone);
-                let (host_id, should_scan) = match store.get_app_settings() {
+                let (computer_id, should_scan) = match store.get_app_settings() {
                     Ok(settings) => {
                         let is_server = matches!(
                             settings.computer_type,
@@ -306,7 +306,7 @@ pub fn run() {
                 };
 
                 if should_scan {
-                    services::background_scanner::run_initial_scan(&db_clone, &host_id);
+                    services::background_scanner::run_initial_scan(&db_clone, &computer_id);
                 } else {
                     info!("Initial scan skipped: client computer");
                 }

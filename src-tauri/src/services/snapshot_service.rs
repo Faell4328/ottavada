@@ -566,13 +566,12 @@ mod tests {
     fn conn_execute_draft_score(db: &Database) {
         let conn = db.conn.lock().expect("lock db");
         conn.execute(
-            "INSERT INTO scores (id, song_id, name, host_id, file_path, file_name, file_extension, file_size, file_modified_at, status)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, datetime('now'), ?9)",
+            "INSERT INTO scores (id, song_id, name, file_path, file_name, file_extension, file_size, file_modified_at, status)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, datetime('now'), ?8)",
             rusqlite::params![
                 "score-1",
                 "song-1",
                 "flauta",
-                "server",
                 "/tmp",
                 "score-1.musx",
                 "musx",

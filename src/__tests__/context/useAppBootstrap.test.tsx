@@ -19,9 +19,7 @@ const clientSettings: AppSettings = {
   organization_name: null,
   language: null,
   computer_type: "Client",
-  google_drive_mode: "Local",
   first_run_completed: true,
-  google_service_account: null,
   rclone_config: null,
 };
 

@@ -86,9 +86,7 @@ describe("AppContext Reducer", () => {
         organization_name: "Orquestra Teste",
         language: null,
         computer_type: "Server",
-        google_drive_mode: "Local",
         first_run_completed: false,
-        google_service_account: null,
         rclone_config: null,
       };
       const state = reducer(initialState, {

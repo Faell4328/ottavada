@@ -160,8 +160,7 @@ impl Database {
                 arranger TEXT,
                 path TEXT NOT NULL,
                 is_favorite BOOLEAN NOT NULL DEFAULT 0,
-                status TEXT NOT NULL DEFAULT 'main',
-                last_score_file_modified_at INTEGER NOT NULL DEFAULT 0
+                status TEXT NOT NULL DEFAULT 'main'
             );
 
             CREATE TABLE IF NOT EXISTS composerSongs (
@@ -209,7 +208,6 @@ impl Database {
                 id TEXT PRIMARY KEY,
                 song_id TEXT NOT NULL REFERENCES songs(id) ON DELETE CASCADE,
                 name TEXT,
-                host_id TEXT NOT NULL,
                 file_path TEXT NOT NULL,
                 file_name TEXT NOT NULL,
                 file_extension TEXT NOT NULL,
@@ -223,7 +221,7 @@ impl Database {
 
         conn.execute_batch(
             "
-            CREATE TABLE IF NOT EXISTS changedField (
+            CREATE TABLE IF NOT EXISTS changes (
                 id TEXT PRIMARY KEY,
                 type TEXT NOT NULL,
                 entity TEXT NOT NULL,
@@ -233,14 +231,14 @@ impl Database {
                 timestamp INTEGER NOT NULL
             );
 
-            CREATE INDEX IF NOT EXISTS idx_changedField_entity ON changedField(entity, entityId);
-            CREATE INDEX IF NOT EXISTS idx_changedField_timestamp ON changedField(timestamp);
+            CREATE INDEX IF NOT EXISTS idx_changes_entity ON changes(entity, entityId);
+            CREATE INDEX IF NOT EXISTS idx_changes_timestamp ON changes(timestamp);
         ",
         )?;
 
         conn.execute_batch(
             "
-            CREATE TABLE IF NOT EXISTS songsBackup (
+            CREATE TABLE IF NOT EXISTS backupQueue (
                 songId TEXT PRIMARY KEY REFERENCES songs(id) ON DELETE CASCADE,
                 status TEXT NOT NULL DEFAULT 'processing'
             );
@@ -249,33 +247,6 @@ impl Database {
 
         conn.execute_batch(
             "
-            CREATE TABLE IF NOT EXISTS computerInformation (
-                computerId TEXT PRIMARY KEY,
-                organizationName TEXT NOT NULL DEFAULT '',
-                computerName TEXT NOT NULL DEFAULT '',
-                type TEXT NOT NULL CHECK(type IN ('server', 'client')),
-                appVersion TEXT NOT NULL DEFAULT '',
-                os TEXT NOT NULL DEFAULT '',
-                arch TEXT NOT NULL DEFAULT '',
-                date TEXT NOT NULL,
-                report INTEGER NOT NULL DEFAULT 0
-            );
-
-            CREATE TABLE IF NOT EXISTS usage (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                computerId TEXT NOT NULL REFERENCES computerInformation(computerId) ON DELETE CASCADE,
-                date TEXT NOT NULL,
-                musicCount INTEGER NOT NULL DEFAULT 0,
-                musicMain INTEGER NOT NULL DEFAULT 0,
-                musicDraft INTEGER NOT NULL DEFAULT 0,
-                musicNotFound INTEGER NOT NULL DEFAULT 0,
-                scoresCount INTEGER NOT NULL DEFAULT 0,
-                scoresMain INTEGER NOT NULL DEFAULT 0,
-                scoresDraft INTEGER NOT NULL DEFAULT 0,
-                scoresNotFound INTEGER NOT NULL DEFAULT 0,
-                report INTEGER NOT NULL DEFAULT 0
-            );
-
             CREATE TABLE IF NOT EXISTS errors (
                 id TEXT PRIMARY KEY,
                 message TEXT NOT NULL DEFAULT '',
@@ -290,11 +261,8 @@ impl Database {
             CREATE INDEX IF NOT EXISTS idx_categories_songs_songId ON categoriesSongs(songId);
             CREATE INDEX IF NOT EXISTS idx_categories_songs_categoryId ON categoriesSongs(categoryId);
             CREATE INDEX IF NOT EXISTS idx_songs_is_favorite ON songs(is_favorite);
-            CREATE INDEX IF NOT EXISTS idx_songsBackup_songId ON songsBackup(songId);
-            CREATE INDEX IF NOT EXISTS idx_songsBackup_status ON songsBackup(status);
-            CREATE INDEX IF NOT EXISTS idx_computerInformation_report ON computerInformation(report);
-            CREATE INDEX IF NOT EXISTS idx_usage_computerId ON usage(computerId);
-            CREATE INDEX IF NOT EXISTS idx_usage_report ON usage(report);
+            CREATE INDEX IF NOT EXISTS idx_backupQueue_songId ON backupQueue(songId);
+            CREATE INDEX IF NOT EXISTS idx_backupQueue_status ON backupQueue(status);
             CREATE INDEX IF NOT EXISTS idx_errors_timestamp ON errors(timestamp);
         ")?;
 
@@ -344,7 +312,7 @@ impl Database {
         value: Option<String>,
     ) -> Result<(), AppError> {
         conn.execute(
-            "INSERT INTO changedField (id, type, entity, entityId, field, value, timestamp)
+            "INSERT INTO changes (id, type, entity, entityId, field, value, timestamp)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             params![
                 uuid::Uuid::new_v4().to_string(),

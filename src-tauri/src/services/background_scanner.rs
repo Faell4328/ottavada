@@ -21,10 +21,10 @@ struct ScoreMetadataEntry {
 }
 
 /// Runs the initial check for changes in score files
-pub fn run_initial_scan(db: &Database, host_id: &str) {
+pub fn run_initial_scan(db: &Database, updated_by: &str) {
     info!("Running initial change check");
 
-    let scores = match db.get_all_scores_with_metadata_by_host(host_id) {
+    let scores = match db.get_all_scores_for_scan() {
         Ok(s) => s,
         Err(e) => {
             tracing::error!("Error fetching scores for initial check: {:?}", e);
@@ -114,7 +114,7 @@ pub fn run_initial_scan(db: &Database, host_id: &str) {
                         .update_score_status(
                             &score.score_id,
                             ScoreStatus::Draft,
-                            host_id,
+                            updated_by,
                             Some((current_size, current_modified_at)),
                         )
                         .is_ok()
@@ -148,7 +148,7 @@ pub fn run_initial_scan(db: &Database, host_id: &str) {
                     .update_score_status(
                         &score.score_id,
                         new_status,
-                        host_id,
+                        updated_by,
                         Some((current_size, current_modified_at)),
                     )
                     .is_ok()
@@ -173,7 +173,7 @@ pub fn run_initial_scan(db: &Database, host_id: &str) {
                     let (file_path, file_name) = split_file_path(current_path);
                     let score = Score::new_from_file(
                         song_id.clone(),
-                        host_id.to_string(),
+                        updated_by.to_string(),
                         &current_file,
                         file_path,
                         file_name,
@@ -293,7 +293,6 @@ mod tests {
             id: "score-1".to_string(),
             song_id: "song-1".to_string(),
             name: Some("Flute".to_string()),
-            host_id: "server-1".to_string(),
             file_path: song_dir.to_string_lossy().to_string(),
             file_name: "score-1.musx".to_string(),
             file_size: metadata_v1.0,

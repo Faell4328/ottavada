@@ -74,7 +74,7 @@ mod tests {
         let conn = db.lock_conn();
         let change_count: i64 = conn
             .query_row(
-                "SELECT COUNT(*) FROM changedField WHERE entity = 'categories' AND entityId = ?1 AND field = 'name' AND value = 'Choir'",
+                "SELECT COUNT(*) FROM changes WHERE entity = 'categories' AND entityId = ?1 AND field = 'name' AND value = 'Choir'",
                 ["c1"],
                 |row| row.get(0),
             )

@@ -77,27 +77,23 @@ describe("TypeScript Types", () => {
         organization_name: null,
         language: null,
         computer_type: "Server",
-        google_drive_mode: "Local",
         first_run_completed: false,
-        google_service_account: null,
         rclone_config: null,
       };
-      expect(settings.google_drive_mode).toBe("Local");
+      expect(settings.first_run_completed).toBe(false);
     });
 
-    it("should support Api mode", () => {
+    it("should hold language and organization", () => {
       const settings: AppSettings = {
         computer_id: "550e8400-e29b-41d4-a716-446655440000",
         computer_name: "Computador Teste",
         organization_name: "Orquestra Teste",
-        language: null,
+        language: "pt",
         computer_type: "Server",
-        google_drive_mode: "Api",
         first_run_completed: true,
-        google_service_account: null,
         rclone_config: null,
       };
-      expect(settings.google_drive_mode).toBe("Api");
+      expect(settings.language).toBe("pt");
       expect(settings.organization_name).toBe("Orquestra Teste");
     });
   });

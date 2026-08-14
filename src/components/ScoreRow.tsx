@@ -258,6 +258,7 @@ function ScoreRow({
                   e.stopPropagation();
                   isMenuOpen ? onMenuClose() : onMenuOpen(menuId);
                 }}
+                onClose={onMenuClose}
                 disabled={isActionLocked}
               >
                 {isClient ? (

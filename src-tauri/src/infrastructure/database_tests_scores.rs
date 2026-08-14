@@ -32,7 +32,6 @@ mod tests {
             id: id.to_string(),
             song_id: song_id.to_string(),
             name: name.map(|s| s.to_string()),
-            host_id: "test-computer".to_string(),
             file_path: base_path,
             file_name: format!("{}.pdf", name.unwrap_or("test")),
             file_size: 1024,
@@ -46,7 +45,7 @@ mod tests {
     fn count_changed_field_for_entity(db: &Database, entity: &str) -> i64 {
         let conn = db.lock_conn();
         conn.query_row(
-            "SELECT COUNT(*) FROM changedField WHERE entity = ?1",
+            "SELECT COUNT(*) FROM changes WHERE entity = ?1",
             [entity],
             |row| row.get(0),
         )
@@ -78,7 +77,6 @@ mod tests {
             id: "sc-a".to_string(),
             song_id: "s1".to_string(),
             name: Some("Viola".to_string()),
-            host_id: "test-computer".to_string(),
             file_path: "/tmp/music".to_string(),
             file_name: "viola.pdf".to_string(),
             file_size: 1024,
@@ -92,7 +90,6 @@ mod tests {
             id: "sc-b".to_string(),
             song_id: "s1".to_string(),
             name: Some("clarinete".to_string()),
-            host_id: "test-computer".to_string(),
             file_path: "/tmp/music".to_string(),
             file_name: "clarinete.pdf".to_string(),
             file_size: 1024,
@@ -106,7 +103,6 @@ mod tests {
             id: "sc-c".to_string(),
             song_id: "s1".to_string(),
             name: None,
-            host_id: "test-computer".to_string(),
             file_path: "/tmp/music".to_string(),
             file_name: "Flauta.pdf".to_string(),
             file_size: 1024,
@@ -179,7 +175,6 @@ mod tests {
             id: "sc1".to_string(),
             song_id: "s1".to_string(),
             name: Some("Violino".to_string()),
-            host_id: "test-computer".to_string(),
             file_path: dir_id,
             file_name: "Canon - Violino.musx".to_string(),
             file_size: 1024,
@@ -204,7 +199,6 @@ mod tests {
             id: "sc1".to_string(),
             song_id: "s1".to_string(),
             name: Some("Violino".to_string()),
-            host_id: "test-computer".to_string(),
             file_path: dir_id,
             file_name: "Canon - Violino.musx".to_string(),
             file_size: 1024,
@@ -245,7 +239,7 @@ mod tests {
         {
             let conn = db.lock_conn();
             conn.execute(
-                "INSERT INTO songsBackup (songId, status)
+                "INSERT INTO backupQueue (songId, status)
                  VALUES (?1, ?2)",
                 rusqlite::params!["s1", "ok"],
             )
@@ -258,7 +252,7 @@ mod tests {
         let conn = db.lock_conn();
         let backup = conn
             .query_row(
-                "SELECT status FROM songsBackup WHERE songId = ?1",
+                "SELECT status FROM backupQueue WHERE songId = ?1",
                 ["s1"],
                 |row| Ok(row.get::<_, String>(0)?),
             )
@@ -302,7 +296,7 @@ mod tests {
         let conn = db.lock_conn();
         let backup = conn
             .query_row(
-                "SELECT status FROM songsBackup WHERE songId = ?1",
+                "SELECT status FROM backupQueue WHERE songId = ?1",
                 ["s1"],
                 |row| Ok(row.get::<_, String>(0)?),
             )
@@ -321,7 +315,6 @@ mod tests {
             id: "sc1".to_string(),
             song_id: "s1".to_string(),
             name: Some("Violino".to_string()),
-            host_id: "test-computer".to_string(),
             file_path: dir_id,
             file_name: "Canon - Violino.musx".to_string(),
             file_size: 1024,
@@ -354,7 +347,6 @@ mod tests {
             id: "sc1".to_string(),
             song_id: "s1".to_string(),
             name: Some("Violino".to_string()),
-            host_id: "test-computer".to_string(),
             file_path: legacy_full_path.clone(),
             file_name: "Canon - Violino.musx".to_string(),
             file_size: 1024,
@@ -377,13 +369,12 @@ mod tests {
         let legacy_full_path = "/music/scores/Canon - Violino.musx";
         let conn = db.lock_conn();
         conn.execute(
-            "INSERT INTO scores (id, song_id, name, host_id, file_path, file_name, file_extension, file_size, file_modified_at, status)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+            "INSERT INTO scores (id, song_id, name, file_path, file_name, file_extension, file_size, file_modified_at, status)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
             rusqlite::params![
                 "sc1",
                 "s1",
                 "Violino",
-                "test-computer",
                 legacy_full_path,
                 "Canon - Violino.musx",
                 "musx",
@@ -439,7 +430,7 @@ mod tests {
         let conn = db.lock_conn();
         let status_events: i64 = conn
             .query_row(
-                "SELECT COUNT(*) FROM changedField WHERE entity = 'scores' AND field = 'status'",
+                "SELECT COUNT(*) FROM changes WHERE entity = 'scores' AND field = 'status'",
                 [],
                 |row| row.get(0),
             )
@@ -484,7 +475,7 @@ mod tests {
         let conn = db.lock_conn();
         let draft_events: i64 = conn
             .query_row(
-                "SELECT COUNT(*) FROM changedField
+                "SELECT COUNT(*) FROM changes
                  WHERE entity = 'scores' AND field = 'status' AND value = 'main' AND type = 'update'",
                 [],
                 |row| row.get(0),
@@ -511,7 +502,7 @@ mod tests {
         let conn = db.lock_conn();
         let ignored_events: i64 = conn
             .query_row(
-                "SELECT COUNT(*) FROM changedField WHERE entity = 'scores' AND field = 'status' AND value = 'ignored' AND type = 'update'",
+                "SELECT COUNT(*) FROM changes WHERE entity = 'scores' AND field = 'status' AND value = 'ignored' AND type = 'update'",
                 [],
                 |row| row.get(0),
             )
@@ -521,7 +512,7 @@ mod tests {
 
         let previous_main_events: i64 = conn
             .query_row(
-                "SELECT COUNT(*) FROM changedField WHERE entity = 'scores' AND field = 'status' AND value = 'main' AND type = 'update'",
+                "SELECT COUNT(*) FROM changes WHERE entity = 'scores' AND field = 'status' AND value = 'main' AND type = 'update'",
                 [],
                 |row| row.get(0),
             )
@@ -543,7 +534,7 @@ mod tests {
         {
             let conn = db.lock_conn();
             conn.execute(
-                "UPDATE songsBackup SET status = 'ok' WHERE songId = ?1",
+                "UPDATE backupQueue SET status = 'ok' WHERE songId = ?1",
                 ["s1"],
             )
             .unwrap();
@@ -555,7 +546,7 @@ mod tests {
         let conn = db.lock_conn();
         let status: String = conn
             .query_row(
-                "SELECT status FROM songsBackup WHERE songId = ?1",
+                "SELECT status FROM backupQueue WHERE songId = ?1",
                 ["s1"],
                 |row| row.get(0),
             )
@@ -577,7 +568,7 @@ mod tests {
             {
                 let conn = db.lock_conn();
                 conn.execute(
-                    "UPDATE songsBackup SET status = 'ok' WHERE songId = ?1",
+                    "UPDATE backupQueue SET status = 'ok' WHERE songId = ?1",
                     ["s1"],
                 )
                 .unwrap();
@@ -589,7 +580,7 @@ mod tests {
             let conn = db.lock_conn();
             let backup: String = conn
                 .query_row(
-                    "SELECT status FROM songsBackup WHERE songId = ?1",
+                    "SELECT status FROM backupQueue WHERE songId = ?1",
                     ["s1"],
                     |row| row.get(0),
                 )
@@ -686,7 +677,6 @@ mod tests {
             id: "sc1".to_string(),
             song_id: "s1".to_string(),
             name: Some("Violino".to_string()),
-            host_id: "test-computer".to_string(),
             file_path: dir1,
             file_name: "Canon - Violino.pdf".to_string(),
             file_size: 1024,
@@ -700,7 +690,6 @@ mod tests {
             id: "sc2".to_string(),
             song_id: "s1".to_string(),
             name: Some("Piano".to_string()),
-            host_id: "test-computer".to_string(),
             file_path: dir2,
             file_name: "Canon - Piano.pdf".to_string(),
             file_size: 2048,
@@ -735,7 +724,6 @@ mod tests {
             id: "sc1".to_string(),
             song_id: "s1".to_string(),
             name: Some("Violino".to_string()),
-            host_id: "test-computer".to_string(),
             file_path: dir_id.clone(),
             file_name: "Canon.pdf".to_string(),
             file_size: 1024,
@@ -749,7 +737,6 @@ mod tests {
             id: "sc2".to_string(),
             song_id: "s1".to_string(),
             name: Some("Piano".to_string()),
-            host_id: "test-computer".to_string(),
             file_path: dir_id,
             file_name: "Canon.pdf".to_string(),
             file_size: 1024,
@@ -776,7 +763,6 @@ mod tests {
             id: "sc1".to_string(),
             song_id: "s1".to_string(),
             name: Some("Violino".to_string()),
-            host_id: "test-computer".to_string(),
             file_path: dir1,
             file_name: "Canon.pdf".to_string(),
             file_size: 1024,
@@ -790,7 +776,6 @@ mod tests {
             id: "sc2".to_string(),
             song_id: "s1".to_string(),
             name: Some("Violino v2".to_string()),
-            host_id: "test-computer".to_string(),
             file_path: dir2,
             file_name: "Canon.pdf".to_string(),
             file_size: 2048,

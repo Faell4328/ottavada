@@ -698,24 +698,23 @@ mod tests {
         store.save_app_settings(&settings).expect("save settings");
 
         let conn = db.conn.lock().expect("lock db");
-        conn.execute("DELETE FROM changedField", [])
+        conn.execute("DELETE FROM changes", [])
             .expect("clear changed fields");
 
         conn.execute(
-            "INSERT INTO songs (id, name, composer, arranger, path, is_favorite, last_score_file_modified_at)
-             VALUES (?1, ?2, NULL, NULL, ?3, 0, 0)",
+            "INSERT INTO songs (id, name, composer, arranger, path, is_favorite)
+             VALUES (?1, ?2, NULL, NULL, ?3, 0)",
             params!["song-1", "TEST MUSIC", "/music/song-1"],
         )
         .expect("insert song");
 
         conn.execute(
-            "INSERT INTO scores (id, song_id, name, host_id, file_path, file_name, file_extension, file_size, file_modified_at, status)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, datetime('now'), ?9)",
+            "INSERT INTO scores (id, song_id, name, file_path, file_name, file_extension, file_size, file_modified_at, status)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, datetime('now'), ?8)",
             params![
                 "score-1",
                 "song-1",
                 "flauta",
-                "server",
                 "/tmp",
                 "score-1.musx",
                 "musx",
@@ -726,7 +725,7 @@ mod tests {
         .expect("insert score");
 
         conn.execute(
-            "INSERT INTO changedField (id, type, entity, entityId, field, value, timestamp)
+            "INSERT INTO changes (id, type, entity, entityId, field, value, timestamp)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             params![
                 "evt-draft",
@@ -796,10 +795,10 @@ mod tests {
         db.insert_song(&song, &[]).expect("insert song");
 
         let conn = db.conn.lock().expect("lock db");
-        conn.execute("DELETE FROM changedField", [])
+        conn.execute("DELETE FROM changes", [])
             .expect("clear changed fields");
         conn.execute(
-            "INSERT INTO changedField (id, type, entity, entityId, field, value, timestamp)
+            "INSERT INTO changes (id, type, entity, entityId, field, value, timestamp)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             params![
                 "evt-draft-song",
@@ -867,7 +866,7 @@ mod tests {
         db.insert_song(&song, &[]).expect("insert song");
 
         let conn = db.conn.lock().expect("lock db");
-        conn.execute("DELETE FROM changedField", [])
+        conn.execute("DELETE FROM changes", [])
             .expect("clear changed fields");
         drop(conn);
 
@@ -927,13 +926,12 @@ mod tests {
 
         let conn = db.conn.lock().expect("lock db");
         conn.execute(
-            "INSERT INTO scores (id, song_id, name, host_id, file_path, file_name, file_extension, file_size, file_modified_at, status)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, datetime('now'), ?9)",
+            "INSERT INTO scores (id, song_id, name, file_path, file_name, file_extension, file_size, file_modified_at, status)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, datetime('now'), ?8)",
             params![
                 "score-1",
                 "song-1",
                 Some("Flauta".to_string()),
-                "server-1",
                 dir.path().join("songs").join("song-1").to_string_lossy().to_string(),
                 "flauta.musx",
                 "musx",
@@ -942,10 +940,10 @@ mod tests {
             ],
         )
         .expect("insert score");
-        conn.execute("DELETE FROM changedField", [])
+        conn.execute("DELETE FROM changes", [])
             .expect("clear changed fields");
         conn.execute(
-            "INSERT INTO changedField (id, type, entity, entityId, field, value, timestamp)
+            "INSERT INTO changes (id, type, entity, entityId, field, value, timestamp)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             params![
                 "evt-not-found-song",
@@ -1015,13 +1013,12 @@ mod tests {
 
         let conn = db.conn.lock().expect("lock db");
         conn.execute(
-            "INSERT INTO scores (id, song_id, name, host_id, file_path, file_name, file_extension, file_size, file_modified_at, status)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, datetime('now'), ?9)",
+            "INSERT INTO scores (id, song_id, name, file_path, file_name, file_extension, file_size, file_modified_at, status)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, datetime('now'), ?8)",
             params![
                 "score-1",
                 "song-1",
                 Some("Flauta".to_string()),
-                "server-1",
                 dir.path().join("songs").join("song-1").to_string_lossy().to_string(),
                 "flauta.musx",
                 "musx",
@@ -1030,7 +1027,7 @@ mod tests {
             ],
         )
         .expect("insert score");
-        conn.execute("DELETE FROM changedField", [])
+        conn.execute("DELETE FROM changes", [])
             .expect("clear changed fields");
         drop(conn);
 
@@ -1110,10 +1107,10 @@ mod tests {
             .expect("insert composer relation");
         conn.execute("INSERT INTO arrangerSongs (id, arrangerId, songId) VALUES (?1, ?2, ?3)", params!["rel-arranger-1", "arranger-1", "song-1"])
             .expect("insert arranger relation");
-        conn.execute("DELETE FROM changedField", [])
+        conn.execute("DELETE FROM changes", [])
             .expect("clear changed fields");
         conn.execute(
-            "INSERT INTO changedField (id, type, entity, entityId, field, value, timestamp)
+            "INSERT INTO changes (id, type, entity, entityId, field, value, timestamp)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             params![
                 "evt-main",
@@ -1195,10 +1192,10 @@ mod tests {
             .expect("insert composer relation");
         conn.execute("INSERT INTO arrangerSongs (id, arrangerId, songId) VALUES (?1, ?2, ?3)", params!["rel-arranger-1", "arranger-1", "song-1"])
             .expect("insert arranger relation");
-        conn.execute("DELETE FROM changedField", [])
+        conn.execute("DELETE FROM changes", [])
             .expect("clear changed fields");
         conn.execute(
-            "INSERT INTO changedField (id, type, entity, entityId, field, value, timestamp)
+            "INSERT INTO changes (id, type, entity, entityId, field, value, timestamp)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             params![
                 "evt-draft",
@@ -1284,10 +1281,10 @@ mod tests {
         db.insert_song(&song, &[]).expect("insert song");
 
         let conn = db.conn.lock().expect("lock db");
-        conn.execute("DELETE FROM changedField", [])
+        conn.execute("DELETE FROM changes", [])
             .expect("clear changed fields");
         conn.execute(
-            "INSERT INTO changedField (id, type, entity, entityId, field, value, timestamp)
+            "INSERT INTO changes (id, type, entity, entityId, field, value, timestamp)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             params![
                 "evt-new",
@@ -1344,7 +1341,7 @@ mod tests {
         let before = std::fs::read(&events_file).expect("read stale events before");
 
         let conn = db.conn.lock().expect("lock db");
-        conn.execute("DELETE FROM changedField", [])
+        conn.execute("DELETE FROM changes", [])
             .expect("clear changed fields");
         drop(conn);
 

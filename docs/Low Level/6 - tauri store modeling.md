@@ -3,8 +3,9 @@
     "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     "computerName": "Faell",
     "organizationName": "Sei la",
-    "first_run_completed": false,
     "type": "client or server",
+    "language": "en",
+    "first_run_completed": false,
     "rclone": {
         "provider": "koofr, google_drive, dropbox, onedrive, pcloud, sftp or webdav"
     },
@@ -13,12 +14,10 @@
         "lastChangeTimestamp": 12903812039,
         "lastBackupTimestamp": 12903812903
     },
-    "google_drive_mode": "local or api",
-    "google_service_account": null,
     "database_local": 0,
     "backup_database_step": null,
     "backup_songs_step": null
 }
 ```
 
-The names above reflect the keys currently persisted. The backup fields are optional and may not exist in old installations.
+The names above reflect the keys currently persisted. The backup fields are optional and may not exist in old installations. The keys are written by `src-tauri/src/infrastructure/store.rs` (`save_app_settings`) and the persisted file is sorted alphabetically by `serde_json`.

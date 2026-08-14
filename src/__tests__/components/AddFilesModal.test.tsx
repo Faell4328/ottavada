@@ -47,9 +47,7 @@ vi.mock("@tauri-apps/api/core", () => ({
         return {
           computer_id: "test-id",
           computer_name: "Test",
-          google_drive_mode: "Local",
           first_run_completed: true,
-          google_service_account: null,
         };
       case "scan_files_for_changes":
         return { changed_files: [], added_files: [], failed_files: [] };

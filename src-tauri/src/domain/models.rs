@@ -53,7 +53,6 @@ pub struct Score {
     pub id: String,
     pub song_id: String,
     pub name: Option<String>,
-    pub host_id: String,
     pub file_path: String,
     pub file_name: String,
     pub file_size: u64,
@@ -67,7 +66,7 @@ impl Score {
     /// Factory method to create a new score from an indexed file
     pub fn new_from_file(
         song_id: String,
-        host_id: String,
+        updated_by: String,
         indexed_file: &IndexedFile,
         file_path: String,
         file_name: String,
@@ -77,14 +76,13 @@ impl Score {
             id: uuid::Uuid::new_v4().to_string(),
             song_id,
             name: indexed_file.instrument.clone(),
-            host_id: host_id.clone(),
             file_path,
             file_name,
             file_size: file_metadata.0,
             file_modified_at: file_metadata.1,
             updated_at: chrono::Local::now().naive_local(),
             status: ScoreStatus::Main,
-            updated_by: host_id,
+            updated_by,
         }
     }
 }
@@ -106,9 +104,7 @@ pub struct AppSettings {
     pub organization_name: Option<String>,
     pub language: Option<String>,
     pub computer_type: ComputerType,
-    pub google_drive_mode: GoogleDriveMode,
     pub first_run_completed: bool,
-    pub google_service_account: Option<GoogleServiceAccount>,
     pub rclone_config: Option<RcloneConfig>,
     pub database_local: Option<u64>,
     pub backup_database_step: Option<BackupDatabaseStep>,
@@ -147,9 +143,7 @@ impl Default for AppSettings {
             organization_name: None,
             language: None,
             computer_type: ComputerType::Server,
-            google_drive_mode: GoogleDriveMode::Local,
             first_run_completed: false,
-            google_service_account: None,
             rclone_config: None,
             database_local: None,
             backup_database_step: None,
@@ -255,47 +249,6 @@ impl ComputerType {
 impl Default for ComputerType {
     fn default() -> Self {
         ComputerType::Server
-    }
-}
-
-/// Google Drive backup mode
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub enum GoogleDriveMode {
-    Local,
-    Api,
-}
-
-/// Google Drive Service Account credentials
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GoogleServiceAccount {
-    pub r#type: String,
-    pub project_id: String,
-    pub private_key_id: String,
-    pub private_key: String,
-    pub client_email: String,
-    pub client_id: String,
-    pub auth_uri: String,
-    pub token_uri: String,
-    pub auth_provider_x509_cert_url: String,
-    pub client_x509_cert_url: String,
-}
-
-impl GoogleServiceAccount {
-    #[allow(dead_code)]
-    pub fn validate(&self) -> Result<(), String> {
-        if self.r#type != "service_account" {
-            return Err("Type must be 'service_account'".to_string());
-        }
-        if self.project_id.is_empty() {
-            return Err("project_id is required".to_string());
-        }
-        if self.private_key.is_empty() {
-            return Err("private_key is required".to_string());
-        }
-        if self.client_email.is_empty() {
-            return Err("client_email is required".to_string());
-        }
-        Ok(())
     }
 }
 

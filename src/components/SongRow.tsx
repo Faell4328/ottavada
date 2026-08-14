@@ -187,6 +187,7 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(
                   e.stopPropagation();
                   isMenuOpen ? onMenuClose() : onMenuOpen(menuId);
                 }}
+                onClose={onMenuClose}
                 disabled={false}
               >
                 {!isNotFound &&

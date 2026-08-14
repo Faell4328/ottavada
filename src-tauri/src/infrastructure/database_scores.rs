@@ -11,18 +11,16 @@ impl Database {
 
     pub fn insert_score(&self, score: &Score) -> Result<(), AppError> {
         let conn = self.lock_conn();
-        let file_modified_at_ts = score.file_modified_at.and_utc().timestamp();
         let file_extension = Self::extract_file_extension(&score.file_name).unwrap_or_default();
         let storage_file_path = to_storage_path(&score.file_path);
 
         conn.execute(
-            "INSERT INTO scores (id, song_id, name, host_id, file_path, file_name, file_extension, file_size, file_modified_at, status)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+            "INSERT INTO scores (id, song_id, name, file_path, file_name, file_extension, file_size, file_modified_at, status)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
             params![
                 score.id,
                 score.song_id,
                 score.name,
-                score.host_id,
                 storage_file_path,
                 score.file_name,
                 file_extension,
@@ -34,13 +32,9 @@ impl Database {
 
         conn.execute(
             "UPDATE songs
-             SET path = ?1,
-                 last_score_file_modified_at = CASE
-                   WHEN last_score_file_modified_at > ?2 THEN last_score_file_modified_at
-                   ELSE ?2
-                 END
-                         WHERE id = ?3",
-            params![storage_file_path, file_modified_at_ts, score.song_id],
+             SET path = ?1
+             WHERE id = ?2",
+            params![storage_file_path, score.song_id],
         )?;
 
         Self::insert_changed_field(
@@ -82,7 +76,7 @@ impl Database {
         Self::sync_song_status_from_scores(&conn, &score.song_id)?;
 
         conn.execute(
-            "INSERT INTO songsBackup (songId, status)
+            "INSERT INTO backupQueue (songId, status)
              VALUES (?1, 'processing')
              ON CONFLICT(songId) DO UPDATE SET
                 status = 'processing'",
@@ -160,7 +154,7 @@ impl Database {
         Self::sync_song_status_from_scores(&conn, &song_id)?;
 
         conn.execute(
-            "INSERT INTO songsBackup (songId, status)
+            "INSERT INTO backupQueue (songId, status)
              VALUES (?1, 'processing')
              ON CONFLICT(songId) DO UPDATE SET
                 status = 'processing'",
@@ -247,17 +241,15 @@ impl Database {
         )
     }
 
-    pub fn get_all_scores_with_metadata_by_host(
+    pub fn get_all_scores_for_scan(
         &self,
-        host_id: &str,
     ) -> Result<Vec<(String, String, String, String, Option<String>, u64, String, String)>, AppError> {
         let conn = self.lock_conn();
         Self::query_score_metadata_with_song_id(
             &conn,
             "SELECT s.song_id, s.id, s.file_path, s.file_name, s.name, s.file_size, s.file_modified_at, s.status
-             FROM scores s
-             WHERE s.host_id = ?1",
-            &[&host_id as &dyn rusqlite::ToSql],
+             FROM scores s",
+            &[],
         )
     }
 
@@ -277,10 +269,6 @@ impl Database {
                 |row| row.get::<_, String>(0),
             )
             .map_err(|e| crate::infrastructure::database::to_not_found(AppError::ScoreNotFound(score_id.to_string()))(e))?;
-
-        let file_modified_at_ts = file_metadata
-            .as_ref()
-            .map(|(_, modified)| modified.and_utc().timestamp());
 
         if let Some((file_size, file_modified_at)) = file_metadata {
             conn.execute(
@@ -305,18 +293,6 @@ impl Database {
             |row| row.get(0),
         )?;
 
-        if let Some(modified_ts) = file_modified_at_ts {
-            conn.execute(
-                "UPDATE songs
-                 SET last_score_file_modified_at = CASE
-                       WHEN last_score_file_modified_at > ?1 THEN last_score_file_modified_at
-                       ELSE ?1
-                     END
-                 WHERE id = ?2",
-                params![modified_ts, song_id],
-            )?;
-        }
-
         if old_status != status.as_str() {
             Self::insert_changed_field(
                 &conn,
@@ -330,7 +306,7 @@ impl Database {
 
         if old_status != status.as_str() {
             conn.execute(
-                "INSERT INTO songsBackup (songId, status)
+                "INSERT INTO backupQueue (songId, status)
                  VALUES (?1, 'processing')
                  ON CONFLICT(songId) DO UPDATE SET
                     status = 'processing'",
@@ -360,7 +336,7 @@ impl Database {
         let conn = self.lock_conn();
 
         conn.execute(
-            "INSERT OR IGNORE INTO songsBackup (songId, status)
+            "INSERT OR IGNORE INTO backupQueue (songId, status)
              SELECT s.id, 'processing'
              FROM songs s",
             [],
@@ -368,7 +344,7 @@ impl Database {
         .map_err(AppError::Database)?;
 
         conn.execute(
-            "UPDATE songsBackup
+            "UPDATE backupQueue
              SET status = 'processing'
              WHERE songId IN (SELECT id FROM songs)",
             [],
@@ -385,7 +361,7 @@ impl Database {
         let status_str = status.as_str();
 
         conn.execute(
-            "INSERT INTO songsBackup (songId, status)
+            "INSERT INTO backupQueue (songId, status)
              VALUES (?1, ?2)
              ON CONFLICT(songId) DO UPDATE SET
              status = excluded.status",
@@ -403,7 +379,7 @@ impl Database {
         let status_str = status.as_str();
 
         conn.execute(
-            "UPDATE songsBackup
+            "UPDATE backupQueue
              SET status = ?1
              WHERE songId = ?2",
             params![status_str, song_id],
@@ -418,7 +394,7 @@ impl Database {
         let conn = self.lock_conn();
         let mut stmt = conn.prepare(
             "SELECT songId, status
-             FROM songsBackup WHERE songId = ?1",
+             FROM backupQueue WHERE songId = ?1",
         )?;
 
         let result = stmt.query_row(params![song_id], |row| {
@@ -442,7 +418,7 @@ impl Database {
         let conn = self.lock_conn();
         let mut stmt = conn.prepare(
             "SELECT songId, status
-               FROM songsBackup ORDER BY songId ASC",
+               FROM backupQueue ORDER BY songId ASC",
         )?;
 
         let results = stmt.query_map([], |row| {
@@ -467,7 +443,7 @@ impl Database {
         let status_str = status.as_str();
         let mut stmt = conn.prepare(
             "SELECT songId, status
-               FROM songsBackup WHERE status = ?1 ORDER BY songId ASC",
+               FROM backupQueue WHERE status = ?1 ORDER BY songId ASC",
         )?;
 
         let results = stmt.query_map(params![status_str], |row| {
@@ -487,7 +463,7 @@ impl Database {
     pub fn delete_backup_song_status(&self, song_id: &str) -> Result<(), AppError> {
         let conn = self.lock_conn();
         conn.execute(
-            "DELETE FROM songsBackup WHERE songId = ?1",
+            "DELETE FROM backupQueue WHERE songId = ?1",
             params![song_id],
         )?;
         Ok(())
@@ -495,7 +471,7 @@ impl Database {
 
     pub fn clear_backup_errors(&self) -> Result<(), AppError> {
         let conn = self.lock_conn();
-        conn.execute("DELETE FROM songsBackup WHERE status = 'error'", [])?;
+        conn.execute("DELETE FROM backupQueue WHERE status = 'error'", [])?;
         Ok(())
     }
 

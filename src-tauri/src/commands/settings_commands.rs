@@ -8,7 +8,7 @@ use crate::commands::common::run_blocking_with_store;
 use crate::commands::rclone_commands::terminate_running_rclone_processes;
 use crate::domain::errors::AppError;
 use crate::domain::models::{
-    AppContacts, AppSettings, ComputerType, GoogleDriveMode, LibrarySummary, RcloneConfig,
+    AppContacts, AppSettings, ComputerType, LibrarySummary, RcloneConfig,
 };
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
@@ -155,7 +155,6 @@ pub fn complete_first_run(
         .map_err(|e| AppError::Generic(format!("Invalid rclone configuration: {}", e)))?;
 
     settings.rclone_config = Some(rclone_config);
-    settings.google_drive_mode = GoogleDriveMode::Local;
     info!("Rclone configurado");
 
     settings.first_run_completed = true;

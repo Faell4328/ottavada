@@ -76,6 +76,35 @@ describe("SongRow menu", () => {
     });
   });
 
+  it("closes the overflow menu when clicking outside", () => {
+    render(
+      <table>
+        <tbody>
+          <MemoizedSongRow
+            song={song}
+            isExpanded={true}
+            onToggle={onToggle}
+            onToggleFavorite={onToggleFavorite}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            onStatusChange={onStatusChange}
+            onReindex={onReindex}
+            menuId="song-1"
+            isMenuOpen={true}
+            onMenuOpen={onMenuOpen}
+            onMenuClose={onMenuClose}
+            computerType="Server"
+            isLocked={false}
+          />
+        </tbody>
+      </table>,
+    );
+
+    fireEvent.mouseDown(document.body);
+
+    expect(onMenuClose).toHaveBeenCalled();
+  });
+
   it("shows both delete options and deletes the directory when requested", async () => {
     const deleteSongWithFilesSpy = vi
       .spyOn(api, "deleteSongWithFiles")

@@ -157,9 +157,9 @@ struct BackupMessagePack {
     scores: Vec<BackupScore>,
     #[serde(rename = "categoriesSongs")]
     categories_songs: Vec<BackupCategorySong>,
-    #[serde(rename = "changedField")]
+    #[serde(rename = "changes")]
     changed_field: Vec<BackupChangedField>,
-    #[serde(rename = "backupSongs")]
+    #[serde(rename = "backupQueue")]
     backup_songs: Vec<BackupSongStatusRecord>,
 }
 
@@ -177,7 +177,6 @@ struct BackupSong {
     arranger: Option<String>,
     path: String,
     is_favorite: bool,
-    last_score_file_modified_at: i64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -185,7 +184,6 @@ struct BackupScore {
     id: String,
     song_id: String,
     name: Option<String>,
-    host_id: String,
     file_path: String,
     file_name: String,
     file_size: u64,
@@ -803,9 +801,9 @@ fn collect_backup_payload(
 
     let songs = {
         let mut stmt = conn.prepare(
-            "SELECT id, name, composer, arranger, path, is_favorite, last_score_file_modified_at
+            "SELECT id, name, composer, arranger, path, is_favorite
              FROM songs
-             ORDER BY last_score_file_modified_at DESC, id ASC",
+             ORDER BY id ASC",
         )?;
         let rows = stmt.query_map([], |row| {
             Ok(BackupSong {
@@ -815,7 +813,6 @@ fn collect_backup_payload(
                 arranger: row.get(3)?,
                 path: crate::services::path_normalizer::to_storage_path(&row.get::<_, String>(4)?),
                 is_favorite: row.get::<_, bool>(5)?,
-                last_score_file_modified_at: row.get(6)?,
             })
         })?;
         rows.collect::<Result<Vec<_>, _>>()?
@@ -823,7 +820,7 @@ fn collect_backup_payload(
 
     let scores = {
         let mut stmt = conn.prepare(
-            "SELECT id, song_id, name, host_id, file_path, file_name, file_size, file_modified_at, status
+            "SELECT id, song_id, name, file_path, file_name, file_size, file_modified_at, status
              FROM scores
              ORDER BY song_id ASC, id ASC",
         )?;
@@ -832,14 +829,13 @@ fn collect_backup_payload(
                 id: row.get(0)?,
                 song_id: row.get(1)?,
                 name: row.get(2)?,
-                host_id: row.get(3)?,
                 file_path: crate::services::path_normalizer::to_storage_path(
-                    &row.get::<_, String>(4)?,
+                    &row.get::<_, String>(3)?,
                 ),
-                file_name: row.get(5)?,
-                file_size: row.get(6)?,
-                file_modified_at: row.get(7)?,
-                status: row.get(8)?,
+                file_name: row.get(4)?,
+                file_size: row.get(5)?,
+                file_modified_at: row.get(6)?,
+                status: row.get(7)?,
             })
         })?;
         rows.collect::<Result<Vec<_>, _>>()?
@@ -864,7 +860,7 @@ fn collect_backup_payload(
     let changed_field = {
         let mut stmt = conn.prepare(
             "SELECT id, type, entity, entityId, field, value, timestamp
-             FROM changedField
+             FROM changes
              ORDER BY timestamp ASC, id ASC",
         )?;
         let rows = stmt.query_map([], |row| {
@@ -884,7 +880,7 @@ fn collect_backup_payload(
     let backup_songs = {
         let mut stmt = conn.prepare(
             "SELECT songId AS id, songId AS song_id, status
-             FROM songsBackup
+             FROM backupQueue
              ORDER BY songId ASC",
         )?;
         let rows = stmt.query_map([], |row| {
@@ -931,8 +927,8 @@ fn restore_backup_payload(db: &Database, payload: &BackupMessagePack) -> Result<
 
         tx.execute_batch(
             "
-            DELETE FROM changedField;
-            DELETE FROM songsBackup;
+            DELETE FROM changes;
+            DELETE FROM backupQueue;
             DELETE FROM categoriesSongs;
             DELETE FROM scores;
             DELETE FROM songs;
@@ -950,8 +946,8 @@ fn restore_backup_payload(db: &Database, payload: &BackupMessagePack) -> Result<
         for song in &payload.songs {
             let storage_path = crate::services::path_normalizer::to_storage_path(&song.path);
             tx.execute(
-                "INSERT INTO songs (id, name, composer, arranger, path, is_favorite, last_score_file_modified_at)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+                "INSERT INTO songs (id, name, composer, arranger, path, is_favorite)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
                 params![
                     song.id,
                     song.name,
@@ -959,7 +955,6 @@ fn restore_backup_payload(db: &Database, payload: &BackupMessagePack) -> Result<
                     song.arranger,
                     storage_path,
                     song.is_favorite,
-                    song.last_score_file_modified_at,
                 ],
             )?;
         }
@@ -974,13 +969,12 @@ fn restore_backup_payload(db: &Database, payload: &BackupMessagePack) -> Result<
                 crate::services::path_normalizer::to_storage_path(&score.file_path);
 
             tx.execute(
-                "INSERT INTO scores (id, song_id, name, host_id, file_path, file_name, file_extension, file_size, file_modified_at, status)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+                "INSERT INTO scores (id, song_id, name, file_path, file_name, file_extension, file_size, file_modified_at, status)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
                 params![
                     score.id,
                     score.song_id,
                     score.name,
-                    score.host_id,
                     storage_file_path,
                     score.file_name,
                     file_extension,
@@ -1000,7 +994,7 @@ fn restore_backup_payload(db: &Database, payload: &BackupMessagePack) -> Result<
 
         for backup_song in &payload.backup_songs {
             tx.execute(
-                "INSERT INTO songsBackup (songId, status)
+                "INSERT INTO backupQueue (songId, status)
                  VALUES (?1, ?2)",
                 params![backup_song.song_id, backup_song.status],
             )?;
@@ -1008,7 +1002,7 @@ fn restore_backup_payload(db: &Database, payload: &BackupMessagePack) -> Result<
 
         for change in &payload.changed_field {
             tx.execute(
-                "INSERT INTO changedField (id, type, entity, entityId, field, value, timestamp)
+                "INSERT INTO changes (id, type, entity, entityId, field, value, timestamp)
                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
                 params![
                     change.id,
@@ -1206,7 +1200,6 @@ mod tests {
             id: "score-1".to_string(),
             song_id: song.id.clone(),
             name: Some("Flauta".to_string()),
-            host_id: "server-a".to_string(),
             file_path: "/tmp".to_string(),
             file_name: "flauta.musx".to_string(),
             file_size: 1234,
@@ -1218,7 +1211,7 @@ mod tests {
         source_db.insert_score(&score).expect("insert score");
         source_db
             .upsert_backup_song_status(&song.id, &crate::domain::models::BackupStatus::Ok)
-            .expect("insert backupSongs");
+            .expect("insert backupQueue");
 
         let backup_path = source_dir.path().join("exports").join("backup.msgpack");
         let export_summary = export_backup_msgpack(

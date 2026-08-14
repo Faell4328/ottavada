@@ -375,6 +375,8 @@
 
 - addition of languages: English, Spanish, French, Italian and German;
 - support for Linux and macOS;
+- addition of cloud providers: Dropbox, OneDrive and pCloud;
+- addition of advanced mode providers: SFTP and WebDAV.
 
 ## Improvements
 
@@ -383,15 +385,16 @@
 - adding confirmation when clicking "import backup";
 - song duplicate checking, before it was only the "name", now it is "name" + "composer" + "arranger";
 - name of the Ottavada modes;
+- removal of the computer name and organization name from telemetry;
+- lazy loading to the front-end;
+- CSP security.
 
 ## Fixes
 
 - removing legacy code;
 - fixing inconsistency in the song and score count label in the settings;
-
-## Adjustment
-
-- migration from Score Maestro to Ottavada;
+- changes report;
+- migration from Score Maestro to Ottavada.
 
 # Development
 
@@ -401,17 +404,17 @@
 
 **Update the names of the tables and columns**
 
-- [ ] Table name: `changedField` -> `changes`
-
-- [ ] Table name: `songsBackup` -> `backupQueue`
-
-- [ ] Remove table: `computerInformation` (it is used)
-
-- [ ] Remove the `hash` row in `scores` (it is not used)
-
-- [ ] Remove the `last_score_file_modified_at` row in `songs` (it is used)
-
-- [ ] Remove the `host_id` row from `scores` (it is used)
+- [x] Table name: `changedField` -> `changes`
+  
+- [x] Table name: `songsBackup` -> `backupQueue`
+  
+- [x] Remove table: `computerInformation` (it is used)
+  
+- [x] Remove the `hash` row in `scores` (it is not used)
+  
+- [x] Remove the `last_score_file_modified_at` row in `songs` (it is used)
+  
+- [x] Remove the `host_id` row from `scores` (it is used)
 
 **Fix code that uses the old name**
 
@@ -419,15 +422,15 @@
 
 **Use the lock in tauri-plugin-store**, to avoid overwriting the file.
 
-**Remove `google_drive_mode` from tauri-plugin-store**
+- [x] Remove `google_drive_mode` from tauri-plugin-store
 
-**Fix the field names and order in tauri-plugin-store**
+- [x] Fix the field names and order in tauri-plugin-store
 
-**Add the option in the overflow menu: "add to favorites" on the client**
+- [x] Add the option in the overflow menu: "add to favorites" on the client
 
 **Change the button option when opening the song, in the song's overflow menu**
 
-**Close the song/score overflow menu when clicked outside**
+- [x] Close the song/score overflow menu when clicked outside
 
 ## Planning
 

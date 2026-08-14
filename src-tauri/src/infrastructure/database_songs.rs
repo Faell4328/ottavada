@@ -158,7 +158,6 @@ impl Database {
 
     pub fn insert_song(&self, song: &Song, category_ids: &[String]) -> Result<(), AppError> {
         let conn = self.lock_conn();
-        let now_ts = chrono::Local::now().timestamp();
         let category_ids = Self::normalize_category_ids(category_ids);
 
         if song.path.trim().is_empty() {
@@ -170,8 +169,8 @@ impl Database {
         let storage_path = to_storage_path(&song.path);
 
         conn.execute(
-            "INSERT INTO songs (id, name, composer, arranger, path, is_favorite, status, last_score_file_modified_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+            "INSERT INTO songs (id, name, composer, arranger, path, is_favorite, status)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             params![
                 song.id,
                 song.name,
@@ -180,7 +179,6 @@ impl Database {
                 storage_path,
                 song.is_favorite,
                 song.status.as_str(),
-                now_ts,
             ],
         )?;
 
@@ -687,7 +685,7 @@ impl Database {
 
         if score_status_changed || current_status != status.as_str() {
             tx.execute(
-                "INSERT INTO songsBackup (songId, status)
+                "INSERT INTO backupQueue (songId, status)
                  VALUES (?1, 'processing')
                  ON CONFLICT(songId) DO UPDATE SET
                     status = 'processing'",
@@ -1019,25 +1017,11 @@ impl Database {
 impl Database {
     // ===== Methods for tracking database updates =====
 
-    pub fn get_latest_songs_update_timestamp(&self) -> Result<Option<i64>, AppError> {
-        let conn = self.lock_conn();
-
-        match conn.query_row(
-            "SELECT last_score_file_modified_at FROM songs ORDER BY last_score_file_modified_at DESC LIMIT 1",
-            [],
-            |row| row.get::<_, i64>(0)
-        ) {
-            Ok(timestamp) => Ok(Some(timestamp)),
-            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
-            Err(e) => Err(AppError::Database(e)),
-        }
-    }
-
     pub fn get_changed_fields_ordered(&self) -> Result<Vec<ChangedFieldRecord>, AppError> {
         let conn = self.lock_conn();
         let mut stmt = conn.prepare(
             "SELECT id, type, entity, entityId, field, value, timestamp
-             FROM changedField
+             FROM changes
              ORDER BY timestamp ASC, id ASC",
         )?;
 
@@ -1059,14 +1043,14 @@ impl Database {
 
     pub fn clear_changed_fields(&self) -> Result<usize, AppError> {
         let conn = self.lock_conn();
-        let deleted = conn.execute("DELETE FROM changedField", [])?;
+        let deleted = conn.execute("DELETE FROM changes", [])?;
         Ok(deleted)
     }
 
     pub fn clear_changed_fields_before(&self, timestamp: i64) -> Result<usize, AppError> {
         let conn = self.lock_conn();
         let deleted = conn.execute(
-            "DELETE FROM changedField WHERE timestamp <= ?1",
+            "DELETE FROM changes WHERE timestamp <= ?1",
             params![timestamp],
         )?;
         Ok(deleted)
@@ -1079,7 +1063,7 @@ impl Database {
     ) -> Result<usize, AppError> {
         let conn = self.lock_conn();
         let deleted = conn.execute(
-            "DELETE FROM changedField WHERE entity = ?1 AND entityId = ?2",
+            "DELETE FROM changes WHERE entity = ?1 AND entityId = ?2",
             params![entity, entity_id],
         )?;
         Ok(deleted)
@@ -1088,20 +1072,20 @@ impl Database {
     pub fn has_pending_changes(&self) -> Result<bool, AppError> {
         let conn = self.lock_conn();
         let count: i64 =
-            conn.query_row("SELECT COUNT(1) FROM changedField", [], |row| row.get(0))?;
+            conn.query_row("SELECT COUNT(1) FROM changes", [], |row| row.get(0))?;
         Ok(count > 0)
     }
 
     pub fn get_pending_changes_count(&self) -> Result<usize, AppError> {
         let conn = self.lock_conn();
         let count: i64 =
-            conn.query_row("SELECT COUNT(1) FROM changedField", [], |row| row.get(0))?;
+            conn.query_row("SELECT COUNT(1) FROM changes", [], |row| row.get(0))?;
         Ok(count as usize)
     }
 
     pub fn get_latest_changed_field_timestamp(&self) -> Result<Option<i64>, AppError> {
         let conn = self.lock_conn();
-        let latest = conn.query_row("SELECT MAX(timestamp) FROM changedField", [], |row| {
+        let latest = conn.query_row("SELECT MAX(timestamp) FROM changes", [], |row| {
             row.get::<_, Option<i64>>(0)
         })?;
         Ok(latest)
@@ -1193,22 +1177,11 @@ impl Database {
 
     pub fn record_telemetry_error(
         &self,
-        computer_id: &str,
         message: &str,
         timestamp: i64,
     ) -> Result<(), AppError> {
         let conn = self.lock_conn();
         let id = uuid::Uuid::new_v4().to_string();
-        let date = chrono::DateTime::from_timestamp(timestamp, 0)
-            .map(|value| value.format("%Y-%m-%d").to_string())
-            .unwrap_or_else(|| chrono::Local::now().format("%Y-%m-%d").to_string());
-
-        conn.execute(
-            "INSERT OR IGNORE INTO computerInformation (
-                computerId, organizationName, computerName, type, appVersion, os, arch, date, report
-             ) VALUES (?1, '', '', 'server', '', '', '', ?2, 0)",
-            params![computer_id, date],
-        )?;
 
         conn.execute(
             "INSERT OR IGNORE INTO errors (id, message, timestamp)
