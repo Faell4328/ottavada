@@ -567,6 +567,15 @@ function renderCustomSongText(
     const nextStatus = statusChangeMatch[3];
     const returnsToMain = text.includes("returned to main");
 
+    if (returnsToMain && previousStatus.toLowerCase() === "main") {
+      return (
+        <Trans
+          i18nKey="scanReportModal.songChangedAndWillBeSent"
+          values={{ name: songName }}
+        />
+      );
+    }
+
     const formatStatusLabelT = (value: string) => {
       const v = value.toLowerCase();
       if (v === "ignored") return t("scoreStatus.ignored");
@@ -717,6 +726,17 @@ function renderGroupedCustomScoreStatusItem(
     return (
       <Trans
         i18nKey="scanReportModal.scoresStatusPluralDeleted"
+        count={count}
+        values={{ song: songName }}
+        components={{ scoreList: <>{scoreList}</> }}
+      />
+    );
+  }
+
+  if (previousStatus === "main" && nextStatus === "main") {
+    return (
+      <Trans
+        i18nKey="scanReportModal.scoresWillBeSent"
         count={count}
         values={{ song: songName }}
         components={{ scoreList: <>{scoreList}</> }}

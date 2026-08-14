@@ -334,4 +334,89 @@ describe("ScanReportModal", () => {
 
     expect(screen.getAllByText((_, element) => element?.textContent === "A partitura Score.mus foi alterada na música Bem aventurança do crente.").length).toBeGreaterThan(0);
   });
+
+  it("renders a no-op main to main song status change as changed and will be sent", () => {
+    render(
+      <ScanReportModal
+        isOpen={true}
+        report={{
+          changed_files: [],
+          added_files: [],
+          deleted_files: [],
+          recovered_files: [],
+          failed_files: [],
+          report_items: ["The song Eis o Nosso Deus went from main and returned to main."],
+        }}
+        isConfirming={false}
+        onClose={() => undefined}
+        onConfirm={() => undefined}
+      />
+    );
+
+    const musicSection = screen.getByText("Músicas").closest("section");
+    expect(musicSection).toHaveTextContent("A música Eis o Nosso Deus foi alterada e será enviada.");
+    expect(Array.from(musicSection?.querySelectorAll("strong") ?? []).some((element) => element.textContent === "Eis o Nosso Deus")).toBe(true);
+    expect(Array.from(musicSection?.querySelectorAll("strong") ?? []).some((element) => element.textContent === "será enviada")).toBe(true);
+  });
+
+  it("renders a no-op main to main score change as changed and will be sent", () => {
+    render(
+      <ScanReportModal
+        isOpen={true}
+        report={{
+          changed_files: [],
+          added_files: [],
+          deleted_files: [],
+          recovered_files: [],
+          failed_files: [],
+          report_items: [
+            "Score changed: /music/Eis o Nosso Deus - Flauta.musx",
+            "The score Flauta.musx went from main and returned to main in the song Eis o Nosso Deus.",
+          ],
+        }}
+        isConfirming={false}
+        onClose={() => undefined}
+        onConfirm={() => undefined}
+      />
+    );
+
+    expect(
+      screen.getAllByText((_, element) =>
+        element?.textContent === "A partitura Flauta.musx foi alterada e será enviada na música Eis o Nosso Deus."
+      ).length
+    ).toBeGreaterThan(0);
+    expect(
+      screen.queryAllByText((_, element) =>
+        element?.textContent === "A partitura Flauta.musx foi alterada na música Eis o Nosso Deus."
+      ).length
+    ).toBe(0);
+  });
+
+  it("renders grouped no-op main to main score changes as changed and will be sent", () => {
+    render(
+      <ScanReportModal
+        isOpen={true}
+        report={{
+          changed_files: [],
+          added_files: [],
+          deleted_files: [],
+          recovered_files: [],
+          failed_files: [],
+          report_items: [
+            "The score Flauta.musx went from main and returned to main in the song Eis o Nosso Deus.",
+            "The score Oboe.musx went from main and returned to main in the song Eis o Nosso Deus.",
+          ],
+        }}
+        isConfirming={false}
+        onClose={() => undefined}
+        onConfirm={() => undefined}
+      />
+    );
+
+    expect(
+      screen.getAllByText((_, element) =>
+        element?.textContent === "As partituras Flauta.musx and Oboe.musx foram alteradas e serão enviadas na música Eis o Nosso Deus."
+      ).length
+    ).toBeGreaterThan(0);
+  });
 });
