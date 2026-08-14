@@ -52,7 +52,7 @@ It must send the `Token` parameter in the `header`, so the server accepts the te
 ```json
 // Example of telemetry sent
 {
-    "computerId": "computer id", // Unique computer ID (persisted in tauri-plugin-store)
+    "computerId": "computer id", // Unique computer ID (persisted in the settings file, app-store.json)
     "type": "server", // Usage mode: "server" (Manage mode) or "client" (Consult mode)
     "language": "en", // Language used in the system
     "appVersion": "0.9.1", // Running application version

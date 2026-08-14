@@ -1,5 +1,6 @@
 use std::fs;
 use std::path::PathBuf;
+use std::sync::{Mutex, OnceLock};
 use tracing::info;
 
 use crate::domain::errors::AppError;
@@ -9,6 +10,16 @@ use crate::domain::models::{
 };
 
 const STORE_FILENAME: &str = "app-store.json";
+
+/// Process-wide lock that serializes read-modify-write operations over the store file.
+///
+/// `SystemStore` instances are created in several threads (telemetry, background scanner and
+/// `spawn_blocking` commands). Without a shared lock, two concurrent saves could each read the
+/// same file state and the last writer would silently overwrite the other's changes.
+fn store_lock() -> &'static Mutex<()> {
+    static STORE_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    STORE_LOCK.get_or_init(|| Mutex::new(()))
+}
 
 fn read_string(store: &serde_json::Value, keys: &[&str]) -> Option<String> {
     keys.iter().find_map(|key| {
@@ -192,6 +203,10 @@ impl SystemStore {
 
     /// Saves the system settings
     pub fn save_app_settings(&self, settings: &AppSettings) -> Result<(), AppError> {
+        let _guard = store_lock()
+            .lock()
+            .map_err(|_| AppError::Generic("Store lock poisoned".to_string()))?;
+
         let mut store = self.load_store()?;
 
         store["id"] = serde_json::json!(settings.computer_id);
@@ -317,6 +332,10 @@ impl SystemStore {
     /// Saves a generic value in the store
     #[allow(dead_code)]
     pub fn set(&self, key: &str, value: serde_json::Value) -> Result<(), AppError> {
+        let _guard = store_lock()
+            .lock()
+            .map_err(|_| AppError::Generic("Store lock poisoned".to_string()))?;
+
         let mut store = self.load_store()?;
         store[key] = value;
         self.save_store(&store)?;

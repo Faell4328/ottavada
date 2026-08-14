@@ -279,7 +279,7 @@ Concrete access to data and the operating system.
 
 **database_scores.rs** - SQL queries and operations for the scores table.
 
-**store.rs** - Reading and writing of tauri-plugin-store (persistent settings).
+**store.rs** - Reading and writing of the persistent settings file (`app-store.json`) via `SystemStore`.
 
 ---
 
@@ -340,5 +340,5 @@ Domain does NOT depend on Infrastructure
 
 - **commands/**: Functions `#[tauri::command]` registered in `lib.rs`. They receive calls from the front, validate permissions and delegate to `services/`.
 - **services/**: Orchestrate the business logic using `infrastructure/` and `domain/`.
-- **infrastructure/**: Concrete access to SQLite and tauri-plugin-store.
+- **infrastructure/**: Concrete access to SQLite and the persistent settings file (`SystemStore`).
 - **domain/**: Pure models (`Song`, `Score`, `Category`, `AppSettings`, enums like `ScoreStatus`, `ComputerType`, `RcloneProvider`) and errors (`AppError`).

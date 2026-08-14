@@ -136,7 +136,7 @@ This table is responsible for controlling the generation of the `{songId}.tar.zs
 
   - `ok` - the song has already been sent to the cloud.
 
-Computer information (computer name, organization, type, version, OS, architecture) is not stored in the database; it is consulted from `tauri-plugin-store` (see `6 - tauri store modeling.md`).
+Computer information (computer name, organization, type, version, OS, architecture) is not stored in the database; it is consulted from the persistent settings file (`SystemStore`, see `6 - tauri store modeling.md`).
 
 # errors
 

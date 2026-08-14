@@ -41,7 +41,6 @@ The system uses `Tauri` underneath everything. The interface lives in the fronte
 - `tauri-plugin-dialog` - displays native dialogs to the user.
 - `tauri-plugin-shell` - allows executing external commands with controlled security.
 - `tauri-plugin-fs` - accesses files and directories from the backend.
-- `tauri-plugin-store` - stores local app preferences.
 - `tauri-plugin-notification` - triggers native notifications in response to app events.
 - `rusqlite` - SQLite access with locally compiled support.
 - `chrono` - handles domain and database dates and times.

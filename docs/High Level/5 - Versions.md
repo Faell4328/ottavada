@@ -387,14 +387,16 @@
 - name of the Ottavada modes;
 - removal of the computer name and organization name from telemetry;
 - lazy loading to the front-end;
-- CSP security.
+- CSP security;
+- removal of unnecessary dependencies (such as `tauri-plugin-store`).
 
 ## Fixes
 
 - removing legacy code;
 - fixing inconsistency in the song and score count label in the settings;
 - changes report;
-- migration from Score Maestro to Ottavada.
+- migration from Score Maestro to Ottavada;
+- fixing inconsistencies between code and documentation.
 
 # Development
 
@@ -420,7 +422,7 @@
 
 **Remove code that uses or creates old tables**
 
-**Use the lock in tauri-plugin-store**, to avoid overwriting the file.
+- [x] Use the lock to avoid overwriting the store file (process-wide `Mutex` in `SystemStore`)
 
 - [x] Remove `google_drive_mode` from tauri-plugin-store
 

@@ -20,4 +20,6 @@
 }
 ```
 
-The names above reflect the keys currently persisted. The backup fields are optional and may not exist in old installations. The keys are written by `src-tauri/src/infrastructure/store.rs` (`save_app_settings`) and the persisted file is sorted alphabetically by `serde_json`.
+The names above reflect the keys currently persisted. The backup fields are optional and may not exist in old installations. The keys are written by `SystemStore` (`src-tauri/src/infrastructure/store.rs`, `save_app_settings`) and the persisted file is sorted alphabetically by `serde_json`.
+
+Writes are serialized by a process-wide `Mutex` (`store_lock`) to avoid concurrent read-modify-write operations overwriting each other.
