@@ -16,11 +16,13 @@ import { OrganizationNameField } from "./OrganizationNameField";
 import { SupportContactsCard } from "./SupportContactsCard";
 import { formatBackupTimestamp } from "../utils/formatters";
 import { shouldRunCloudBackupOnProviderChange } from "../utils/rcloneProviderChange";
+import { getProviderLabel, getProviderRemoteName } from "../utils/rcloneProviders";
 import { runBackupImportFlow } from "../context/backupImportFlow";
 import type {
   AppContacts,
   AppSettings,
   RcloneProvider,
+  RcloneSetupInput,
   UpdateInfo,
 } from "../types";
 import { isClientComputer } from "../utils/computer";
@@ -28,7 +30,7 @@ import { getFriendlyRcloneErrorMessage } from "../utils/rcloneErrors";
 import packageJson from "../../package.json";
 
 function getRcloneProviderLabel(provider: RcloneProvider) {
-  return provider === "koofr" ? "Koofr" : "Google Drive";
+  return getProviderLabel(provider);
 }
 
 export default function SettingsPage() {
@@ -142,18 +144,14 @@ export default function SettingsPage() {
     setSettings((prev) => ({ ...prev, ...partial }));
   }
 
-  async function handleGenerateRcloneConfig(setup: {
-    provider: RcloneProvider;
-    email?: string | null;
-    appPassword?: string | null;
-  }) {
+  async function handleGenerateRcloneConfig(setup: RcloneSetupInput) {
     try {
       await api.generateRcloneConfig(setup);
 
       toast.success(
-        setup.provider === "google_drive"
-          ? t("settings.googleDriveConnected")
-          : t("settings.koofrConnected"),
+        t("settings.providerConnected", {
+          provider: getProviderLabel(setup.provider),
+        }),
       );
     } catch (error) {
       toast.error(
@@ -170,17 +168,16 @@ export default function SettingsPage() {
     try {
       await api.testRcloneUpload(provider);
       toast.success(
-        provider === "google_drive"
-          ? t("settings.googleDriveValidated")
-          : t("settings.koofrValidated"),
+        t("settings.providerValidated", {
+          provider: getProviderLabel(provider),
+        }),
       );
     } catch (error) {
       toast.error(
         getFriendlyRcloneErrorMessage(
           error,
           t("settings.rcloneTestError", {
-            provider:
-              provider === "google_drive" ? "Google Drive" : "Koofr",
+            provider: getProviderLabel(provider),
           }),
         ),
       );
@@ -720,7 +717,7 @@ export default function SettingsPage() {
             <p className="mt-1 text-xs text-[#6b849e]">
               {t("settings.defaultRemote")}{" "}
               <span className="font-semibold text-[#34485d]">
-                {rcloneProvider === "koofr" ? "koofr" : "gdrive"}
+                {getProviderRemoteName(rcloneProvider)}
               </span>
             </p>
             <p className="mt-1 text-xs text-[#6b849e]">

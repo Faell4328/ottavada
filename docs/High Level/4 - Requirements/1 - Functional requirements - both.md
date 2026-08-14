@@ -87,9 +87,12 @@ The filters must start with the following values:
 Ottavada must support:
 
 - Koofr (**Recommended provider**);
-- Google Drive.
+- Google Drive;
+- Dropbox;
+- OneDrive;
+- pCloud.
 
-Advanced options: <mark>(Not implemented)</mark>
+Advanced options:
 
 - WebDAV;
 - SFTP.

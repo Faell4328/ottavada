@@ -1,8 +1,20 @@
 # Configuration
 
-Ottavada uses one provider at a time; you can choose between **Koofr** or **Google Drive**.
+Ottavada uses one provider at a time; you can choose between **Koofr**, **Google Drive**, **Dropbox**, **OneDrive** and **pCloud**. There is also an **advanced mode** with **SFTP** and **WebDAV** for those who want to use their own server.
 
-In **Koofr** a `remote` named "koofr" is created and in **Google Drive** it is "gdrive".
+The remote names created in rclone are:
+
+| Provider     | Remote name |
+| ------------ | ----------- |
+| Koofr        | `koofr`     |
+| Google Drive | `gdrive`    |
+| Dropbox      | `dropbox`   |
+| OneDrive     | `onedrive`  |
+| pCloud       | `pcloud`    |
+| SFTP         | `sftp`      |
+| WebDAV       | `webdav`    |
+
+Koofr is configured with email and app password; SFTP and WebDAV are configured with the server address and credentials. Google Drive, Dropbox, OneDrive and pCloud use browser authentication (OAuth).
 
 The rclone instance is terminated when the operation finishes. On Windows, residual processes are also terminated at startup; `taskkill` should not be assumed as a universal mechanism, because Linux and macOS use another termination process.
 

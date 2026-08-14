@@ -312,6 +312,12 @@ pub struct RcloneConfig {
 pub enum RcloneProvider {
     Koofr,
     GoogleDrive,
+    Dropbox,
+    #[serde(rename = "onedrive")]
+    OneDrive,
+    Pcloud,
+    Sftp,
+    Webdav,
 }
 
 impl Default for RcloneProvider {
@@ -325,11 +331,89 @@ impl RcloneProvider {
         match self {
             RcloneProvider::Koofr => "koofr",
             RcloneProvider::GoogleDrive => "gdrive",
+            RcloneProvider::Dropbox => "dropbox",
+            RcloneProvider::OneDrive => "onedrive",
+            RcloneProvider::Pcloud => "pcloud",
+            RcloneProvider::Sftp => "sftp",
+            RcloneProvider::Webdav => "webdav",
         }
     }
 
     pub fn default_cloud_path() -> &'static str {
         "ottavada"
+    }
+
+    pub fn from_str(value: &str) -> Self {
+        match value.to_ascii_lowercase().as_str() {
+            "google_drive" | "gdrive" | "drive" => Self::GoogleDrive,
+            "dropbox" => Self::Dropbox,
+            "onedrive" | "one_drive" => Self::OneDrive,
+            "pcloud" | "p_cloud" => Self::Pcloud,
+            "sftp" => Self::Sftp,
+            "webdav" | "web_dav" => Self::Webdav,
+            "koofr" => Self::Koofr,
+            _ => Self::default(),
+        }
+    }
+
+    /// Whether the provider is configured through browser (OAuth) authentication.
+    pub fn uses_browser_auth(&self) -> bool {
+        matches!(
+            self,
+            RcloneProvider::GoogleDrive
+                | RcloneProvider::Dropbox
+                | RcloneProvider::OneDrive
+                | RcloneProvider::Pcloud
+        )
+    }
+}
+
+#[cfg(test)]
+mod rclone_provider_tests {
+    use super::RcloneProvider;
+
+    #[test]
+    fn maps_default_remote_names() {
+        assert_eq!(RcloneProvider::Koofr.default_remote_name(), "koofr");
+        assert_eq!(RcloneProvider::GoogleDrive.default_remote_name(), "gdrive");
+        assert_eq!(RcloneProvider::Dropbox.default_remote_name(), "dropbox");
+        assert_eq!(RcloneProvider::OneDrive.default_remote_name(), "onedrive");
+        assert_eq!(RcloneProvider::Pcloud.default_remote_name(), "pcloud");
+        assert_eq!(RcloneProvider::Sftp.default_remote_name(), "sftp");
+        assert_eq!(RcloneProvider::Webdav.default_remote_name(), "webdav");
+    }
+
+    #[test]
+    fn parses_provider_from_stored_strings() {
+        assert_eq!(RcloneProvider::from_str("google_drive"), RcloneProvider::GoogleDrive);
+        assert_eq!(RcloneProvider::from_str("gdrive"), RcloneProvider::GoogleDrive);
+        assert_eq!(RcloneProvider::from_str("dropbox"), RcloneProvider::Dropbox);
+        assert_eq!(RcloneProvider::from_str("onedrive"), RcloneProvider::OneDrive);
+        assert_eq!(RcloneProvider::from_str("one_drive"), RcloneProvider::OneDrive);
+        assert_eq!(RcloneProvider::from_str("pcloud"), RcloneProvider::Pcloud);
+        assert_eq!(RcloneProvider::from_str("sftp"), RcloneProvider::Sftp);
+        assert_eq!(RcloneProvider::from_str("webdav"), RcloneProvider::Webdav);
+        assert_eq!(RcloneProvider::from_str("koofr"), RcloneProvider::Koofr);
+        assert_eq!(RcloneProvider::from_str("unknown"), RcloneProvider::Koofr);
+    }
+
+    #[test]
+    fn detects_browser_auth_providers() {
+        assert!(RcloneProvider::GoogleDrive.uses_browser_auth());
+        assert!(RcloneProvider::Dropbox.uses_browser_auth());
+        assert!(RcloneProvider::OneDrive.uses_browser_auth());
+        assert!(RcloneProvider::Pcloud.uses_browser_auth());
+        assert!(!RcloneProvider::Koofr.uses_browser_auth());
+        assert!(!RcloneProvider::Sftp.uses_browser_auth());
+        assert!(!RcloneProvider::Webdav.uses_browser_auth());
+    }
+
+    #[test]
+    fn serializes_onedrive_as_onedrive() {
+        let json = serde_json::to_value(RcloneProvider::OneDrive).expect("serialize");
+        assert_eq!(json.as_str(), Some("onedrive"));
+        let parsed: RcloneProvider = serde_json::from_str("\"onedrive\"").expect("deserialize");
+        assert_eq!(parsed, RcloneProvider::OneDrive);
     }
 }
 

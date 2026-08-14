@@ -22,6 +22,24 @@ pub struct RcloneSetupRequest {
     pub provider: crate::domain::models::RcloneProvider,
     pub email: Option<String>,
     pub app_password: Option<String>,
+    pub host: Option<String>,
+    pub port: Option<u16>,
+    pub username: Option<String>,
+    pub password: Option<String>,
+    pub url: Option<String>,
+}
+
+impl RcloneSetupRequest {
+    fn trimmed(value: Option<&str>) -> Option<String> {
+        value
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(str::to_string)
+    }
+
+    fn required(value: Option<String>, message: &str) -> Result<String, AppError> {
+        value.ok_or_else(|| AppError::Generic(message.to_string()))
+    }
 }
 
 static RCLONE_EXECUTABLE_PATH: OnceLock<PathBuf> = OnceLock::new();
@@ -325,6 +343,118 @@ fn write_rclone_config(setup: &RcloneSetupRequest) -> Result<(), AppError> {
             if !output.status.success() {
                 return Err(AppError::Generic(format!(
                     "Failed to generate Google Drive configuration: {}",
+                    String::from_utf8_lossy(&output.stderr)
+                )));
+            }
+        }
+        crate::domain::models::RcloneProvider::Dropbox => {
+            let args = ["config", "create", remote, "dropbox"];
+
+            let output = run_rclone_once(&args, "rclone-config-create-dropbox")?;
+            if !output.status.success() {
+                return Err(AppError::Generic(format!(
+                    "Failed to generate Dropbox configuration: {}",
+                    String::from_utf8_lossy(&output.stderr)
+                )));
+            }
+        }
+        crate::domain::models::RcloneProvider::OneDrive => {
+            let args = ["config", "create", remote, "onedrive"];
+
+            let output = run_rclone_once(&args, "rclone-config-create-onedrive")?;
+            if !output.status.success() {
+                return Err(AppError::Generic(format!(
+                    "Failed to generate OneDrive configuration: {}",
+                    String::from_utf8_lossy(&output.stderr)
+                )));
+            }
+        }
+        crate::domain::models::RcloneProvider::Pcloud => {
+            let args = ["config", "create", remote, "pcloud"];
+
+            let output = run_rclone_once(&args, "rclone-config-create-pcloud")?;
+            if !output.status.success() {
+                return Err(AppError::Generic(format!(
+                    "Failed to generate pCloud configuration: {}",
+                    String::from_utf8_lossy(&output.stderr)
+                )));
+            }
+        }
+        crate::domain::models::RcloneProvider::Sftp => {
+            let host = RcloneSetupRequest::required(
+                RcloneSetupRequest::trimmed(setup.host.as_deref()),
+                "Enter the SFTP host",
+            )?;
+            let user = RcloneSetupRequest::required(
+                RcloneSetupRequest::trimmed(setup.username.as_deref()),
+                "Enter the SFTP user",
+            )?;
+            let password = RcloneSetupRequest::required(
+                RcloneSetupRequest::trimmed(setup.password.as_deref()),
+                "Enter the SFTP password",
+            )?;
+
+            let host_arg = format!("host={}", host);
+            let user_arg = format!("user={}", user);
+            let pass_arg = format!("pass={}", password);
+            let port_arg = setup
+                .port
+                .map(|port| format!("port={}", port))
+                .unwrap_or_else(|| "port=22".to_string());
+
+            let args = [
+                "config",
+                "create",
+                remote,
+                "sftp",
+                host_arg.as_str(),
+                user_arg.as_str(),
+                port_arg.as_str(),
+                pass_arg.as_str(),
+            ];
+
+            let output = run_rclone_once(&args, "rclone-config-create-sftp")?;
+            if !output.status.success() {
+                return Err(AppError::Generic(format!(
+                    "Failed to generate SFTP configuration: {}",
+                    String::from_utf8_lossy(&output.stderr)
+                )));
+            }
+        }
+        crate::domain::models::RcloneProvider::Webdav => {
+            let url = RcloneSetupRequest::required(
+                RcloneSetupRequest::trimmed(setup.url.as_deref()),
+                "Enter the WebDAV URL",
+            )?;
+            let user = RcloneSetupRequest::required(
+                RcloneSetupRequest::trimmed(setup.username.as_deref()),
+                "Enter the WebDAV user",
+            )?;
+            let password = RcloneSetupRequest::required(
+                RcloneSetupRequest::trimmed(setup.password.as_deref()),
+                "Enter the WebDAV password",
+            )?;
+
+            let url_arg = format!("url={}", url);
+            let vendor_arg = "vendor=other".to_string();
+            let user_arg = format!("user={}", user);
+            let pass_arg = format!("pass={}", password);
+
+            let args = [
+                "config",
+                "create",
+                remote,
+                "webdav",
+                url_arg.as_str(),
+                vendor_arg.as_str(),
+                user_arg.as_str(),
+                pass_arg.as_str(),
+            ];
+
+            let output = run_rclone_once(&args, "rclone-config-create-webdav")?;
+            if !output.status.success() {
+                return Err(AppError::Generic(format!(
+                    "Failed to generate WebDAV configuration: {}",
                     String::from_utf8_lossy(&output.stderr)
                 )));
             }

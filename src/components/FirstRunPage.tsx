@@ -8,6 +8,16 @@ import * as api from "../api/commands";
 import { useAppState } from "../context/AppContext";
 import { useRcloneTest } from "../hooks/useRcloneTest";
 import { getFriendlyRcloneErrorMessage } from "../utils/rcloneErrors";
+import {
+  ADVANCED_PROVIDERS,
+  STANDARD_PROVIDERS,
+  getProviderLabel,
+  getProviderRemoteName,
+} from "../utils/rcloneProviders";
+import {
+  buildRcloneSetupInput,
+  isRcloneSetupValid,
+} from "../utils/rcloneSetup";
 import type { RcloneProvider } from "../types";
 
 type Step = "language" | "type" | "name" | "rclone-setup" | "confirm";
@@ -22,7 +32,7 @@ const LANGUAGES = [
 ] as const;
 
 function getRcloneProviderLabel(provider: RcloneProvider) {
-  return provider === "koofr" ? "Koofr" : "Google Drive";
+  return getProviderLabel(provider);
 }
 
 export default function FirstRunPage() {
@@ -38,6 +48,11 @@ export default function FirstRunPage() {
   const [rcloneProvider, setRcloneProvider] = useState<RcloneProvider>("koofr");
   const [rcloneEmail, setRcloneEmail] = useState("");
   const [rcloneAppPassword, setRcloneAppPassword] = useState("");
+  const [rcloneHost, setRcloneHost] = useState("");
+  const [rclonePort, setRclonePort] = useState("");
+  const [rcloneUsername, setRcloneUsername] = useState("");
+  const [rclonePassword, setRclonePassword] = useState("");
+  const [rcloneUrl, setRcloneUrl] = useState("");
   const [rcloneConfigGenerated, setRcloneConfigGenerated] = useState(false);
   const [rcloneConfigured, setRcloneConfigured] = useState(false);
   const [isGeneratingRcloneConfig, setIsGeneratingRcloneConfig] =
@@ -63,31 +78,48 @@ export default function FirstRunPage() {
     setRcloneProvider(nextProvider);
     setRcloneEmail("");
     setRcloneAppPassword("");
+    setRcloneHost("");
+    setRclonePort("");
+    setRcloneUsername("");
+    setRclonePassword("");
+    setRcloneUrl("");
     setRcloneConfigGenerated(false);
     setRcloneConfigured(false);
   }
 
+  function rcloneFormValues() {
+    return {
+      email: rcloneEmail,
+      appPassword: rcloneAppPassword,
+      host: rcloneHost,
+      port: rclonePort,
+      username: rcloneUsername,
+      password: rclonePassword,
+      url: rcloneUrl,
+    };
+  }
+
   async function handleGenerateRcloneConfig() {
-    if (rcloneProvider === "koofr") {
-      if (!rcloneEmail.trim()) {
+    const values = rcloneFormValues();
+    if (!isRcloneSetupValid(rcloneProvider, values)) {
+      if (rcloneProvider === "koofr") {
         toast.error(t("firstRun.koofrEmailRequired"));
         return;
       }
-
-      if (!rcloneAppPassword.trim()) {
-        toast.error(t("firstRun.koofrPasswordRequired"));
+      if (rcloneProvider === "sftp") {
+        toast.error(t("firstRun.sftpCredentialsRequired"));
         return;
       }
+      if (rcloneProvider === "webdav") {
+        toast.error(t("firstRun.webdavCredentialsRequired"));
+        return;
+      }
+      return;
     }
 
     setIsGeneratingRcloneConfig(true);
     try {
-      await api.generateRcloneConfig({
-        provider: rcloneProvider,
-        email: rcloneProvider === "koofr" ? rcloneEmail.trim() : null,
-        appPassword:
-          rcloneProvider === "koofr" ? rcloneAppPassword.trim() : null,
-      });
+      await api.generateRcloneConfig(buildRcloneSetupInput(rcloneProvider, values));
 
       const wasConfigured = await testRclone({ silent: true });
       if (!wasConfigured) {
@@ -98,11 +130,7 @@ export default function FirstRunPage() {
 
       setRcloneConfigGenerated(true);
       setRcloneConfigured(true);
-      toast.success(
-        rcloneProvider === "google_drive"
-          ? t("firstRun.googleDriveReady")
-          : t("firstRun.koofrReady"),
-      );
+      toast.success(t("firstRun.providerReady", { provider: getProviderLabel(rcloneProvider) }));
     } catch (error) {
       setRcloneConfigGenerated(false);
       setRcloneConfigured(false);
@@ -414,32 +442,47 @@ export default function FirstRunPage() {
                   {t("firstRun.recommended")}
                 </span>
               </div>
-              <div className="grid gap-3 md:grid-cols-2">
-                <button
-                  type="button"
-                  onClick={() => handleProviderChange("koofr")}
-                  className={`rounded-lg border p-4 text-left transition-colors cursor-pointer ${
-                    rcloneProvider === "koofr"
-                      ? "border-[#4f84d7] bg-white"
-                      : "border-[#c5cfdb] bg-white/70 hover:border-[#7ba0d4]"
-                  }`}
-                >
-                  <p className="text-sm font-semibold text-[#34485d]">Koofr</p>
-                </button>
+              <div className="grid gap-3 md:grid-cols-3">
+                {STANDARD_PROVIDERS.map((provider) => (
+                  <button
+                    key={provider.key}
+                    type="button"
+                    onClick={() => handleProviderChange(provider.key)}
+                    className={`rounded-lg border p-4 text-left transition-colors cursor-pointer ${
+                      rcloneProvider === provider.key
+                        ? "border-[#4f84d7] bg-white"
+                        : "border-[#c5cfdb] bg-white/70 hover:border-[#7ba0d4]"
+                    }`}
+                  >
+                    <p className="text-sm font-semibold text-[#34485d]">
+                      {provider.label}
+                    </p>
+                  </button>
+                ))}
+              </div>
 
-                <button
-                  type="button"
-                  onClick={() => handleProviderChange("google_drive")}
-                  className={`rounded-lg border p-4 text-left transition-colors cursor-pointer ${
-                    rcloneProvider === "google_drive"
-                      ? "border-[#4f84d7] bg-white"
-                      : "border-[#c5cfdb] bg-white/70 hover:border-[#7ba0d4]"
-                  }`}
-                >
-                  <p className="text-sm font-semibold text-[#34485d]">
-                    Google Drive
-                  </p>
-                </button>
+              <div className="mt-3 border-t border-[#c5cfdb] pt-3">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#8b9db2]">
+                  {t("firstRun.advancedMode")}
+                </p>
+                <div className="grid gap-3 md:grid-cols-3">
+                  {ADVANCED_PROVIDERS.map((provider) => (
+                    <button
+                      key={provider.key}
+                      type="button"
+                      onClick={() => handleProviderChange(provider.key)}
+                      className={`rounded-lg border p-4 text-left transition-colors cursor-pointer ${
+                        rcloneProvider === provider.key
+                          ? "border-[#4f84d7] bg-white"
+                          : "border-[#c5cfdb] bg-white/70 hover:border-[#7ba0d4]"
+                      }`}
+                    >
+                      <p className="text-sm font-semibold text-[#34485d]">
+                        {provider.label}
+                      </p>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -449,9 +492,16 @@ export default function FirstRunPage() {
                   {getRcloneProviderLabel(rcloneProvider)}
                 </p>
                 <p className="mt-2 text-xs text-[#6b849e]">
-                  {rcloneProvider === "google_drive"
-                    ? t("firstRun.googleDriveHint")
-                    : t("firstRun.koofrHint")}
+                  {rcloneProvider === "google_drive" ||
+                  rcloneProvider === "dropbox" ||
+                  rcloneProvider === "onedrive" ||
+                  rcloneProvider === "pcloud"
+                    ? t("firstRun.browserAuthHint")
+                    : rcloneProvider === "koofr"
+                      ? t("firstRun.koofrHint")
+                      : rcloneProvider === "sftp"
+                        ? t("firstRun.sftpHint")
+                        : t("firstRun.webdavHint")}
                 </p>
               </div>
               {rcloneProvider === "koofr" && (
@@ -482,6 +532,97 @@ export default function FirstRunPage() {
                   </div>
                 </div>
               )}
+
+              {rcloneProvider === "sftp" && (
+                <div className="space-y-3">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <label className="mb-2 block text-xs font-semibold text-[#34485d]">
+                        {t("firstRun.sftpHost")}
+                      </label>
+                      <input
+                        value={rcloneHost}
+                        onChange={(e) => setRcloneHost(e.target.value)}
+                        className="h-10 w-full rounded-lg border border-[#c5cfdb] bg-[#f8fafd] px-3 text-sm text-[#4d6075] outline-none focus:border-[#7ba0d4] focus:ring-2 focus:ring-[#7ba0d4]/20"
+                        placeholder={t("firstRun.sftpHostPlaceholder")}
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-2 block text-xs font-semibold text-[#34485d]">
+                        {t("firstRun.sftpPort")}
+                      </label>
+                      <input
+                        value={rclonePort}
+                        onChange={(e) => setRclonePort(e.target.value)}
+                        className="h-10 w-full rounded-lg border border-[#c5cfdb] bg-[#f8fafd] px-3 text-sm text-[#4d6075] outline-none focus:border-[#7ba0d4] focus:ring-2 focus:ring-[#7ba0d4]/20"
+                        placeholder={t("firstRun.sftpPortPlaceholder")}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-xs font-semibold text-[#34485d]">
+                      {t("firstRun.sftpUser")}
+                    </label>
+                    <input
+                      value={rcloneUsername}
+                      onChange={(e) => setRcloneUsername(e.target.value)}
+                      className="h-10 w-full rounded-lg border border-[#c5cfdb] bg-[#f8fafd] px-3 text-sm text-[#4d6075] outline-none focus:border-[#7ba0d4] focus:ring-2 focus:ring-[#7ba0d4]/20"
+                      placeholder={t("firstRun.sftpUserPlaceholder")}
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-xs font-semibold text-[#34485d]">
+                      {t("firstRun.sftpPassword")}
+                    </label>
+                    <input
+                      type="password"
+                      value={rclonePassword}
+                      onChange={(e) => setRclonePassword(e.target.value)}
+                      className="h-10 w-full rounded-lg border border-[#c5cfdb] bg-[#f8fafd] px-3 text-sm text-[#4d6075] outline-none focus:border-[#7ba0d4] focus:ring-2 focus:ring-[#7ba0d4]/20"
+                      placeholder={t("firstRun.sftpPasswordPlaceholder")}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {rcloneProvider === "webdav" && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="mb-2 block text-xs font-semibold text-[#34485d]">
+                      {t("firstRun.webdavUrl")}
+                    </label>
+                    <input
+                      value={rcloneUrl}
+                      onChange={(e) => setRcloneUrl(e.target.value)}
+                      className="h-10 w-full rounded-lg border border-[#c5cfdb] bg-[#f8fafd] px-3 text-sm text-[#4d6075] outline-none focus:border-[#7ba0d4] focus:ring-2 focus:ring-[#7ba0d4]/20"
+                      placeholder={t("firstRun.webdavUrlPlaceholder")}
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-xs font-semibold text-[#34485d]">
+                      {t("firstRun.sftpUser")}
+                    </label>
+                    <input
+                      value={rcloneUsername}
+                      onChange={(e) => setRcloneUsername(e.target.value)}
+                      className="h-10 w-full rounded-lg border border-[#c5cfdb] bg-[#f8fafd] px-3 text-sm text-[#4d6075] outline-none focus:border-[#7ba0d4] focus:ring-2 focus:ring-[#7ba0d4]/20"
+                      placeholder={t("firstRun.sftpUserPlaceholder")}
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-xs font-semibold text-[#34485d]">
+                      {t("firstRun.sftpPassword")}
+                    </label>
+                    <input
+                      type="password"
+                      value={rclonePassword}
+                      onChange={(e) => setRclonePassword(e.target.value)}
+                      className="h-10 w-full rounded-lg border border-[#c5cfdb] bg-[#f8fafd] px-3 text-sm text-[#4d6075] outline-none focus:border-[#7ba0d4] focus:ring-2 focus:ring-[#7ba0d4]/20"
+                      placeholder={t("firstRun.sftpPasswordPlaceholder")}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             <button
@@ -491,13 +632,11 @@ export default function FirstRunPage() {
               }}
               disabled={
                 isGeneratingRcloneConfig ||
-                (rcloneProvider === "koofr" &&
-                  (!rcloneEmail.trim() || !rcloneAppPassword.trim()))
+                !isRcloneSetupValid(rcloneProvider, rcloneFormValues())
               }
               className={`mb-4 flex h-10 w-full items-center justify-center gap-2 rounded-lg border-0 text-sm font-bold transition-colors cursor-pointer ${
                 isGeneratingRcloneConfig ||
-                (rcloneProvider === "koofr" &&
-                  (!rcloneEmail.trim() || !rcloneAppPassword.trim()))
+                !isRcloneSetupValid(rcloneProvider, rcloneFormValues())
                   ? "cursor-not-allowed bg-[#9db3d1] text-white"
                   : "bg-[#4f84d7] text-white hover:bg-[#3d6fb8]"
               }`}
@@ -507,9 +646,9 @@ export default function FirstRunPage() {
               )}
               {isGeneratingRcloneConfig
                 ? t("firstRun.configuring")
-                : rcloneProvider === "google_drive"
-                  ? t("firstRun.configureTestGoogleDrive")
-                  : t("firstRun.configureTestKoofr")}
+                : t("firstRun.configureTestProvider", {
+                    provider: getRcloneProviderLabel(rcloneProvider),
+                  })}
             </button>
 
             {rcloneConfigured && (
@@ -523,7 +662,7 @@ export default function FirstRunPage() {
                     <p className="mt-1 text-xs text-green-700">
                       {t("firstRun.remoteDefault")}{" "}
                       <code className="bg-green-100 px-1">
-                        {rcloneProvider === "koofr" ? "koofr" : "gdrive"}
+                        {getProviderRemoteName(rcloneProvider)}
                       </code>
                     </p>
                     <p className="text-xs text-green-700">
@@ -604,7 +743,7 @@ export default function FirstRunPage() {
                   <span className="text-green-600">{t("firstRun.confirmSyncModeValue")}</span>
                   <span className="text-xs text-[#6b849e]">
                     {" "}
-                    ({rcloneProvider === "koofr" ? "koofr" : "gdrive"}
+                    ({getProviderRemoteName(rcloneProvider)}
                     :ottavada)
                   </span>
                 </p>

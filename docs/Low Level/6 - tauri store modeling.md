@@ -6,7 +6,7 @@
     "first_run_completed": false,
     "type": "client or server",
     "rclone": {
-        "provider": "koofr or google_drive"
+        "provider": "koofr, google_drive, dropbox, onedrive, pcloud, sftp or webdav"
     },
     "cloud": {
         "lastSnapshotTimestamp": 14821049124,

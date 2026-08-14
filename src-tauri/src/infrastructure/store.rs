@@ -72,17 +72,7 @@ impl SystemStore {
             .and_then(|v| v.as_str());
 
         match raw_provider.or(raw_remote_or_name) {
-            Some(value) if value.eq_ignore_ascii_case("google_drive") => {
-                RcloneProvider::GoogleDrive
-            }
-            Some(value)
-                if value.eq_ignore_ascii_case("drive")
-                    || value.eq_ignore_ascii_case("gdrive")
-                    || value.to_lowercase().contains("drive") =>
-            {
-                RcloneProvider::GoogleDrive
-            }
-            Some(_) => RcloneProvider::Koofr,
+            Some(value) => RcloneProvider::from_str(value),
             None => RcloneProvider::default(),
         }
     }

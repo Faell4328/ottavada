@@ -4,6 +4,7 @@ import i18n from "../i18n";
 
 import * as api from "../api/commands";
 import { getFriendlyRcloneErrorMessage } from "../utils/rcloneErrors";
+import { getProviderLabel } from "../utils/rcloneProviders";
 import type { RcloneProvider } from "../types";
 
 interface UseRcloneTestParams {
@@ -35,7 +36,7 @@ export function useRcloneTest({
       onSuccess?.();
       return true;
     } catch (error) {
-      const providerLabel = provider === "google_drive" ? t("rcloneTest.googleDrive") : t("rcloneTest.koofr");
+      const providerLabel = getProviderLabel(provider);
       toast.error(
         getFriendlyRcloneErrorMessage(error, t("rcloneTest.testFailed", { provider: providerLabel }))
       );
