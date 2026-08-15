@@ -32,6 +32,7 @@
         "style-src": "'self' 'unsafe-inline'",
         "script-src": "'self'"
       },
+      "dangerousDisableAssetCspModification": ["style-src"],
       "devCsp": {
         "default-src": "'self'",
         "connect-src": "ipc: http://ipc.localhost ws://localhost:1421 http://localhost:1420",
