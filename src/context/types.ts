@@ -1,6 +1,11 @@
 import { type Dispatch } from "react";
 
-import type { ScanResult, SnapshotFileSummary, RcloneSyncSummary } from "../api/commands";
+import type {
+  ScanResult,
+  SnapshotFileSummary,
+  RcloneSyncSummary,
+  ScoreStatusOverride,
+} from "../api/commands";
 import type { AppSettings, ScoreListItem, SidebarView, SongListItem } from "../types";
 import type { Action, State } from "./reducer";
 
@@ -74,6 +79,7 @@ export interface AppContextValue {
           forceCloudSync?: boolean;
           snapshotSummary?: SnapshotFileSummary | null;
           rethrowOnError?: boolean;
+          overrides?: ScoreStatusOverride[];
         }
   ) => Promise<void>;
   previewScanFilesForChanges: () => Promise<void>;

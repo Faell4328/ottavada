@@ -18,6 +18,8 @@ pub fn build_report_items(
     let mut category_names_by_id: HashMap<String, String> = HashMap::new();
     let mut status_changes_by_score_id: HashMap<String, Vec<&ChangedFieldRecord>> = HashMap::new();
     let mut status_change_order: Vec<String> = Vec::new();
+    let mut status_changes_by_song_id: HashMap<String, Vec<&ChangedFieldRecord>> = HashMap::new();
+    let mut song_status_change_order: Vec<String> = Vec::new();
 
     for change in changed_fields {
         if change.entity == "categories" && change.change_type == "insert" {
@@ -37,6 +39,20 @@ pub fn build_report_items(
             }
 
             status_changes_by_score_id
+                .entry(change.entity_id.clone())
+                .or_default()
+                .push(change);
+        }
+
+        if change.entity == "songs"
+            && change.change_type == "update"
+            && change.field.as_deref() == Some("status")
+        {
+            if !status_changes_by_song_id.contains_key(&change.entity_id) {
+                song_status_change_order.push(change.entity_id.clone());
+            }
+
+            status_changes_by_song_id
                 .entry(change.entity_id.clone())
                 .or_default()
                 .push(change);
@@ -71,8 +87,23 @@ pub fn build_report_items(
             continue;
         }
 
+        if change.entity == "songs"
+            && change.change_type == "update"
+            && change.field.as_deref() == Some("status")
+        {
+            continue;
+        }
+
         if let Some(item) = describe_database_change(db, &category_names_by_id, change) {
             items.push(item);
+        }
+    }
+
+    for song_id in song_status_change_order {
+        if let Some(changes) = status_changes_by_song_id.get(&song_id) {
+            if let Some(item) = describe_song_status_change_summary(db, changes) {
+                items.push(item);
+            }
         }
     }
 
@@ -503,8 +534,16 @@ pub fn describe_score_status_change_summary(
     db: &Database,
     changes: &[&ChangedFieldRecord],
 ) -> Option<String> {
-    let first_change = changes.first()?;
-    describe_score_status_change(db, first_change)
+    let last_change = changes.last()?;
+    describe_score_status_change(db, last_change)
+}
+
+pub fn describe_song_status_change_summary(
+    db: &Database,
+    changes: &[&ChangedFieldRecord],
+) -> Option<String> {
+    let last_change = changes.last()?;
+    describe_song_change(db, last_change)
 }
 
 pub fn describe_score_added(db: &Database, change: &ChangedFieldRecord) -> Option<String> {
@@ -1188,5 +1227,127 @@ mod tests {
         let report_items = build_report_items(&db, &[], &[], &[], &[], &[], &changed_fields);
 
         assert!(report_items.is_empty());
+    }
+
+    #[test]
+    fn song_status_change_summary_uses_last_change_when_recovered_to_main() {
+        let db = Database::new_in_memory().expect("db");
+
+        db.insert_song(
+            &Song {
+                id: "song-1".to_string(),
+                name: "03 VEZES SANTO".to_string(),
+                composer: None,
+                arranger: None,
+                path: "/music/song-1".to_string(),
+                is_favorite: false,
+                status: ScoreStatus::Main,
+                updated_at: now(),
+                updated_by: "server-1".to_string(),
+            },
+            &[],
+        )
+        .expect("insert song");
+
+        let changed_fields = vec![
+            ChangedFieldRecord {
+                id: "change-1".to_string(),
+                change_type: "update".to_string(),
+                entity: "songs".to_string(),
+                entity_id: "song-1".to_string(),
+                field: Some("status".to_string()),
+                value: Some("main".to_string()),
+                timestamp: 1,
+            },
+            ChangedFieldRecord {
+                id: "change-2".to_string(),
+                change_type: "update".to_string(),
+                entity: "songs".to_string(),
+                entity_id: "song-1".to_string(),
+                field: Some("status".to_string()),
+                value: Some("draft".to_string()),
+                timestamp: 2,
+            },
+        ];
+
+        let report_items = build_report_items(&db, &[], &[], &[], &[], &[], &changed_fields);
+
+        assert!(
+            report_items.iter().any(|item| {
+                item.contains("went from draft and returned to main")
+                    && item.contains("03 VEZES SANTO")
+            })
+        );
+        assert!(report_items
+            .iter()
+            .all(|item| !item.contains("went from main and returned to main")));
+    }
+
+    #[test]
+    fn score_status_change_summary_uses_last_change_when_recovered_to_main() {
+        let db = Database::new_in_memory().expect("db");
+
+        db.insert_song(
+            &Song {
+                id: "song-1".to_string(),
+                name: "03 VEZES SANTO".to_string(),
+                composer: None,
+                arranger: None,
+                path: "/music/song-1".to_string(),
+                is_favorite: false,
+                status: ScoreStatus::Main,
+                updated_at: now(),
+                updated_by: "server-1".to_string(),
+            },
+            &[],
+        )
+        .expect("insert song");
+
+        db.insert_score(&Score {
+            id: "score-1".to_string(),
+            song_id: "song-1".to_string(),
+            name: Some("Flute".to_string()),
+            file_path: "/music/song-1".to_string(),
+            file_name: "03 VEZES SANTO - Flute.musx".to_string(),
+            file_size: 10,
+            file_modified_at: now(),
+            updated_at: now(),
+            status: ScoreStatus::Main,
+            updated_by: "server-1".to_string(),
+        })
+        .expect("insert score");
+
+        let changed_fields = vec![
+            ChangedFieldRecord {
+                id: "change-1".to_string(),
+                change_type: "update".to_string(),
+                entity: "scores".to_string(),
+                entity_id: "score-1".to_string(),
+                field: Some("status".to_string()),
+                value: Some("main".to_string()),
+                timestamp: 1,
+            },
+            ChangedFieldRecord {
+                id: "change-2".to_string(),
+                change_type: "update".to_string(),
+                entity: "scores".to_string(),
+                entity_id: "score-1".to_string(),
+                field: Some("status".to_string()),
+                value: Some("draft".to_string()),
+                timestamp: 2,
+            },
+        ];
+
+        let report_items = build_report_items(&db, &[], &[], &[], &[], &[], &changed_fields);
+
+        assert!(
+            report_items.iter().any(|item| {
+                item.contains("went from draft and returned to main")
+                    && item.contains("03 VEZES SANTO")
+            })
+        );
+        assert!(report_items
+            .iter()
+            .all(|item| !item.contains("went from main and returned to main")));
     }
 }

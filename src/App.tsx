@@ -261,22 +261,29 @@ function AppContent({ startupUpdate }: AppContentProps) {
     }
   }, [availableUpdate]);
 
-  const handleConfirmScanReport = useCallback(async () => {
-    if (isConfirmingScanReport) {
-      return;
-    }
+  const handleConfirmScanReport = useCallback(
+    async (overrides: api.ScoreStatusOverride[]) => {
+      if (isConfirmingScanReport) {
+        return;
+      }
 
-    setIsConfirmingScanReport(true);
+      setIsConfirmingScanReport(true);
 
-    try {
-      await scanFilesForChanges({ forceCloudSync: true, rethrowOnError: true });
-      resetScanReport();
-    } catch (error) {
-      console.error("Failed to apply confirmed scan report:", error);
-    } finally {
-      setIsConfirmingScanReport(false);
-    }
-  }, [isConfirmingScanReport, resetScanReport, scanFilesForChanges]);
+      try {
+        await scanFilesForChanges({
+          forceCloudSync: true,
+          rethrowOnError: true,
+          overrides,
+        });
+        resetScanReport();
+      } catch (error) {
+        console.error("Failed to apply confirmed scan report:", error);
+      } finally {
+        setIsConfirmingScanReport(false);
+      }
+    },
+    [isConfirmingScanReport, resetScanReport, scanFilesForChanges],
+  );
 
   useEffect(() => {
     let disposed = false;
@@ -405,9 +412,9 @@ function AppContent({ startupUpdate }: AppContentProps) {
         report={state.scanReport}
         isConfirming={isConfirmingScanReport}
         onClose={resetScanReport}
-        onConfirm={() => {
+        onConfirm={(overrides) => {
           resetScanReport();
-          void handleConfirmScanReport();
+          void handleConfirmScanReport(overrides);
         }}
       />
       <ConfirmationModal

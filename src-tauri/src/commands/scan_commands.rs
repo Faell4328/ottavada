@@ -7,6 +7,7 @@ use tracing::{info, warn};
 use crate::commands::common::run_blocking_with_store;
 use crate::commands::scan_report::build_report_items;
 use crate::commands::scan_report::build_score_change_report_item;
+use crate::commands::scan_report::resolve_score_display_name_with_extension;
 use crate::domain::errors::AppError;
 use crate::domain::models::{OperationGuard, Score, ScoreStatus};
 use crate::infrastructure::database::Database;
@@ -27,22 +28,42 @@ struct ScoreMetadataEntry {
     status: ScoreStatus,
 }
 
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
+pub struct ScoreStatusChange {
+    pub score_id: String,
+    pub song_name: String,
+    pub score_name: String,
+    pub previous_status: String,
+    pub detected_status: String,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
+pub struct ScoreStatusOverride {
+    pub score_id: String,
+    pub target_status: String,
+}
+
 /// Checks for changes in score files.
-/// Changed files move to draft and missing files only appear in the report.
+/// Changed files move to draft (or an overridden status) and missing files
+/// only appear in the report.
 #[tauri::command]
 pub async fn scan_files_for_changes(
     db: State<'_, Database>,
     store: State<'_, SystemStore>,
     apply_missing_deletions: Option<bool>,
+    overrides: Option<Vec<ScoreStatusOverride>>,
 ) -> Result<ScanResult, AppError> {
     let db = db.inner().clone();
     let app_data_dir = store.app_data_dir().clone();
     let apply_missing_deletions = apply_missing_deletions.unwrap_or(false);
+    let overrides = overrides.unwrap_or_default();
 
     run_blocking_with_store(
         app_data_dir,
         "Internal failure checking for changes",
-        move |store| scan_files_for_changes_impl(&db, &store, apply_missing_deletions),
+        move |store| {
+            scan_files_for_changes_impl(&db, &store, apply_missing_deletions, overrides)
+        },
     )
     .await
 }
@@ -67,12 +88,23 @@ fn scan_files_for_changes_impl(
     db: &Database,
     store: &SystemStore,
     apply_missing_deletions: bool,
+    overrides: Vec<ScoreStatusOverride>,
 ) -> Result<ScanResult, AppError> {
     info!("Starting score file change check");
 
     let settings = store.get_app_settings()?;
     settings.require_server_only()?;
     let updated_by = settings.computer_id.clone();
+
+    let override_target_by_score_id: HashMap<String, ScoreStatus> = overrides
+        .into_iter()
+        .map(|override_entry| {
+            (
+                override_entry.score_id,
+                ScoreStatus::from_str(&override_entry.target_status),
+            )
+        })
+        .collect();
 
     let scores = db.get_all_scores_for_scan()?;
     let songs = db.get_all_songs()?;
@@ -292,6 +324,18 @@ fn scan_files_for_changes_impl(
         }
     }
 
+    // Apply the status overrides chosen by the user in the report modal.
+    // Changed scores are normally moved to `draft`; an override keeps them at
+    // the target status (e.g. `main`) instead.
+    for (score_id, target_status) in override_target_by_score_id {
+        if let Err(e) = db.update_score_status(&score_id, target_status, &updated_by, None) {
+            warn!(
+                "Error applying status override for score {}: {:?}",
+                score_id, e
+            );
+        }
+    }
+
     info!(
         "Check completed. {} changed, {} added, {} not found, {} recovered, {} errors",
         changed_files.len(),
@@ -320,6 +364,7 @@ fn scan_files_for_changes_impl(
         failed_files,
         report_items,
         database_changes_count: db.get_pending_changes_count()?,
+        score_status_changes: Vec::new(),
     })
 }
 
@@ -331,7 +376,6 @@ fn preview_scan_files_for_changes_impl(
 
     let settings = store.get_app_settings()?;
     settings.require_server_only()?;
-    let updated_by = settings.computer_id.clone();
 
     let scores = db.get_all_scores_for_scan()?;
     let songs = db.get_all_songs()?;
@@ -340,6 +384,7 @@ fn preview_scan_files_for_changes_impl(
     let mut deleted_files = Vec::new();
     let mut recovered_files = Vec::new();
     let mut failed_files = Vec::new();
+    let mut score_status_changes = Vec::new();
 
     let mut scores_by_song: HashMap<String, Vec<ScoreMetadataEntry>> = HashMap::new();
     for (
@@ -428,22 +473,22 @@ fn preview_scan_files_for_changes_impl(
                     );
 
                     if detector.has_changed() {
-                        if let Err(e) = db.update_score_status(
-                            &score.score_id,
-                            ScoreStatus::Draft,
-                            &updated_by,
-                            Some((current_size, current_modified_at)),
-                        ) {
-                            warn!("Error updating status to draft: {:?}", e);
-                            failed_files
-                                .push((full_path.clone(), format!("Error updating: {:?}", e)));
-                        } else {
-                            changed_files.push(build_score_change_report_item(
+                        changed_files.push(build_score_change_report_item(
+                            &song.name,
+                            &score.score_name,
+                            &full_path,
+                        ));
+                        score_status_changes.push(ScoreStatusChange {
+                            score_id: score.score_id.clone(),
+                            song_name: song.name.clone(),
+                            score_name: resolve_score_display_name_with_extension(
+                                &score.file_name,
                                 &song.name,
-                                &score.score_name,
-                                &full_path,
-                            ));
-                        }
+                                score.score_name.as_deref(),
+                            ),
+                            previous_status: ScoreStatus::Main.as_str().to_string(),
+                            detected_status: ScoreStatus::Draft.as_str().to_string(),
+                        });
                     }
                 }
                 Err(e) => {
@@ -498,6 +543,7 @@ fn preview_scan_files_for_changes_impl(
         failed_files,
         report_items,
         database_changes_count: db.get_pending_changes_count()?,
+        score_status_changes,
     })
 }
 
@@ -531,6 +577,7 @@ pub struct ScanResult {
     pub failed_files: Vec<(String, String)>,
     pub report_items: Vec<String>,
     pub database_changes_count: usize,
+    pub score_status_changes: Vec<ScoreStatusChange>,
 }
 
 /// Performs a simple internet connectivity check using a TCP socket.
@@ -639,7 +686,7 @@ mod tests {
         )
         .expect("set draft");
 
-        let result = scan_files_for_changes_impl(&db, &store, false).expect("scan");
+        let result = scan_files_for_changes_impl(&db, &store, false, Vec::new()).expect("scan");
         let updated_song = db.get_song_list_item_by_id("song-1").expect("updated song");
 
         assert_eq!(updated_song.scores[0].status, ScoreStatus::Draft);
@@ -693,7 +740,7 @@ mod tests {
         .expect("insert score");
 
         let store = SystemStore::new(dir.path().to_path_buf());
-        let result = scan_files_for_changes_impl(&db, &store, false).expect("scan");
+        let result = scan_files_for_changes_impl(&db, &store, false, Vec::new()).expect("scan");
 
         assert!(result.changed_files.is_empty());
         assert!(result.added_files.is_empty());
@@ -754,13 +801,145 @@ mod tests {
 
         fs::write(&score_path, b"score-v2-modified").expect("modify score");
 
-        let result = scan_files_for_changes_impl(&db, &store, false).expect("scan");
+        let result = scan_files_for_changes_impl(&db, &store, false, Vec::new()).expect("scan");
 
         assert_eq!(result.changed_files.len(), 1);
         assert_eq!(
             result.changed_files[0],
             "Score.mus in the song Blessed is the believer"
         );
+    }
+
+    #[test]
+    fn applies_status_overrides_keeping_a_changed_score_as_main() {
+        let dir = tempdir().expect("temp dir");
+        let db = Database::new(&dir.path().join("scan.db")).expect("db");
+        let store = SystemStore::new(dir.path().to_path_buf());
+
+        store
+            .save_app_settings(&AppSettings {
+                computer_id: "server-1".to_string(),
+                computer_name: Some("Server".to_string()),
+                computer_type: ComputerType::Server,
+                first_run_completed: true,
+                ..Default::default()
+            })
+            .expect("save settings");
+
+        let song_dir = dir.path().join("songs").join("song-1");
+        fs::create_dir_all(&song_dir).expect("create song dir");
+        let score_path = song_dir.join("126.mus");
+        fs::write(&score_path, b"score-v1").expect("write score");
+
+        let (file_size, file_modified_at) = get_file_metadata(&score_path).expect("metadata");
+        db.insert_song(
+            &Song {
+                id: "song-1".to_string(),
+                name: "Blessed is the believer".to_string(),
+                composer: None,
+                arranger: None,
+                path: song_dir.to_string_lossy().to_string(),
+                is_favorite: false,
+                status: ScoreStatus::Main,
+                updated_at: now(),
+                updated_by: "server-1".to_string(),
+            },
+            &[],
+        )
+        .expect("insert song");
+
+        db.insert_score(&Score {
+            id: "score-1".to_string(),
+            song_id: "song-1".to_string(),
+            name: Some("Score".to_string()),
+            file_path: song_dir.to_string_lossy().to_string(),
+            file_name: "126.mus".to_string(),
+            file_size,
+            file_modified_at,
+            updated_at: now(),
+            status: ScoreStatus::Main,
+            updated_by: "server-1".to_string(),
+        })
+        .expect("insert score");
+
+        fs::write(&score_path, b"score-v2-modified").expect("modify score");
+
+        // Simulate the preview scan: it already moved the changed score to draft.
+        db.update_score_status("score-1", ScoreStatus::Draft, "server-1", None)
+            .expect("set draft via preview");
+
+        let overrides = vec![super::ScoreStatusOverride {
+            score_id: "score-1".to_string(),
+            target_status: "main".to_string(),
+        }];
+        let result =
+            scan_files_for_changes_impl(&db, &store, false, overrides).expect("scan");
+
+        let updated_song = db.get_song_list_item_by_id("song-1").expect("updated song");
+        assert_eq!(updated_song.scores[0].status, ScoreStatus::Main);
+        assert!(result.score_status_changes.is_empty());
+    }
+
+    #[test]
+    fn defaults_a_changed_score_to_draft_without_overrides() {
+        let dir = tempdir().expect("temp dir");
+        let db = Database::new(&dir.path().join("scan.db")).expect("db");
+        let store = SystemStore::new(dir.path().to_path_buf());
+
+        store
+            .save_app_settings(&AppSettings {
+                computer_id: "server-1".to_string(),
+                computer_name: Some("Server".to_string()),
+                computer_type: ComputerType::Server,
+                first_run_completed: true,
+                ..Default::default()
+            })
+            .expect("save settings");
+
+        let song_dir = dir.path().join("songs").join("song-1");
+        fs::create_dir_all(&song_dir).expect("create song dir");
+        let score_path = song_dir.join("126.mus");
+        fs::write(&score_path, b"score-v1").expect("write score");
+
+        let (file_size, file_modified_at) = get_file_metadata(&score_path).expect("metadata");
+        db.insert_song(
+            &Song {
+                id: "song-1".to_string(),
+                name: "Blessed is the believer".to_string(),
+                composer: None,
+                arranger: None,
+                path: song_dir.to_string_lossy().to_string(),
+                is_favorite: false,
+                status: ScoreStatus::Main,
+                updated_at: now(),
+                updated_by: "server-1".to_string(),
+            },
+            &[],
+        )
+        .expect("insert song");
+
+        db.insert_score(&Score {
+            id: "score-1".to_string(),
+            song_id: "song-1".to_string(),
+            name: Some("Score".to_string()),
+            file_path: song_dir.to_string_lossy().to_string(),
+            file_name: "126.mus".to_string(),
+            file_size,
+            file_modified_at,
+            updated_at: now(),
+            status: ScoreStatus::Main,
+            updated_by: "server-1".to_string(),
+        })
+        .expect("insert score");
+
+        fs::write(&score_path, b"score-v2-modified").expect("modify score");
+
+        let result =
+            scan_files_for_changes_impl(&db, &store, false, Vec::new()).expect("scan");
+
+        let updated_song = db.get_song_list_item_by_id("song-1").expect("updated song");
+        assert_eq!(updated_song.scores[0].status, ScoreStatus::Draft);
+        assert!(result.score_status_changes.is_empty());
     }
 
     #[test]
@@ -799,7 +978,7 @@ mod tests {
         )
         .expect("insert song");
 
-        let result = scan_files_for_changes_impl(&db, &store, false).expect("scan");
+        let result = scan_files_for_changes_impl(&db, &store, false, Vec::new()).expect("scan");
         let scores = db.get_scores_for_song("song-1").expect("scores");
         let updated_song = db.get_song_list_item_by_id("song-1").expect("song");
 
@@ -866,7 +1045,7 @@ mod tests {
 
         fs::remove_file(&score_path).expect("remove score file");
 
-        let result = scan_files_for_changes_impl(&db, &store, true).expect("scan");
+        let result = scan_files_for_changes_impl(&db, &store, true, Vec::new()).expect("scan");
         let scores = db.get_scores_for_song("song-1").expect("scores");
 
         assert_eq!(result.deleted_files.len(), 1);
@@ -952,7 +1131,7 @@ mod tests {
         fs::remove_file(&removed_score_path).expect("remove score file");
         fs::write(&new_score_path, b"new-score").expect("write new score");
 
-        let result = scan_files_for_changes_impl(&db, &store, false).expect("scan");
+        let result = scan_files_for_changes_impl(&db, &store, false, Vec::new()).expect("scan");
         let scores = db.get_scores_for_song("song-1").expect("scores");
 
         assert_eq!(result.deleted_files.len(), 1);
@@ -1120,7 +1299,7 @@ mod tests {
     }
 
     #[test]
-    fn preview_scan_marks_changed_scores_as_draft() {
+    fn preview_scan_reports_changed_scores_without_mutating_status() {
         let dir = tempdir().expect("temp dir");
         let db = Database::new(&dir.path().join("scan.db")).expect("db");
         let store = SystemStore::new(dir.path().to_path_buf());
@@ -1177,26 +1356,22 @@ mod tests {
         let result = super::preview_scan_files_for_changes_impl(&db, &store).expect("preview scan");
         let updated_song = db.get_song_list_item_by_id("song-1").expect("updated song");
 
-        assert_eq!(updated_song.scores[0].status, ScoreStatus::Draft);
+        assert_eq!(updated_song.scores[0].status, ScoreStatus::Main);
         assert!(result
             .changed_files
             .iter()
             .any(|item| item.contains("Flute") && item.contains("A BANDA")));
-        assert!(result
-            .report_items
-            .iter()
-            .any(|item| item.contains("went to draft")));
-
-        fs::write(&score_path, b"changed-version-again").expect("rewrite score again");
+        assert_eq!(result.score_status_changes.len(), 1);
+        assert_eq!(result.score_status_changes[0].detected_status, "draft");
 
         let second_result = super::preview_scan_files_for_changes_impl(&db, &store)
             .expect("second preview scan");
 
-        assert!(second_result.changed_files.is_empty());
         assert!(second_result
-            .report_items
+            .changed_files
             .iter()
-            .all(|item| !item.contains("A BANDA - Flute.musx")));
+            .any(|item| item.contains("Flute") && item.contains("A BANDA")));
+        assert_eq!(second_result.score_status_changes.len(), 1);
     }
 
     #[test]

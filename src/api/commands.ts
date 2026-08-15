@@ -343,6 +343,19 @@ export async function refreshLibrarySummaryCache(): Promise<LibrarySummary> {
 
 // ── File Scanning ──
 
+export interface ScoreStatusChange {
+  score_id: string;
+  song_name: string;
+  score_name: string;
+  previous_status: string;
+  detected_status: string;
+}
+
+export interface ScoreStatusOverride {
+  score_id: string;
+  target_status: string;
+}
+
 export interface ScanResult {
   changed_files: string[];
   added_files: string[];
@@ -351,6 +364,7 @@ export interface ScanResult {
   failed_files: Array<[string, string]>;
   report_items?: string[];
   database_changes_count?: number;
+  score_status_changes?: ScoreStatusChange[];
 }
 
 export interface ImportIndexedFilesResult {
@@ -358,8 +372,13 @@ export interface ImportIndexedFilesResult {
   added_count: number;
 }
 
-export async function scanFilesForChanges(applyMissingDeletions = false): Promise<ScanResult> {
-  return invoke("scan_files_for_changes", { applyMissingDeletions });
+export async function scanFilesForChanges(
+  options: { applyMissingDeletions?: boolean; overrides?: ScoreStatusOverride[] } = {},
+): Promise<ScanResult> {
+  return invoke("scan_files_for_changes", {
+    applyMissingDeletions: options.applyMissingDeletions ?? false,
+    overrides: options.overrides ?? [],
+  });
 }
 
 export async function previewScanFilesForChanges(): Promise<ScanResult> {

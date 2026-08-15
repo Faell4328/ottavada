@@ -153,13 +153,20 @@ It is displayed in a modal; the user must be able to choose: **continue** or **c
 ### 4.2.1. Sections
 
 - **added** - shows everything that was added.
-- **changed** - shows everything that was changed.
+- **changed** - shows everything that was changed. Changed scores are shown with a status selector, allowing the user to choose how each one should be treated (see 4.2.2).
 - **removed** - shows everything that was removed.
-- **rejected** (<mark>Not implemented</mark>) - all actions the user rejected in the report.
 
-### 4.2.2. Allowing or rejecting changes (<mark>Not implemented</mark>)
+### 4.2.2. Changing the status of changed scores
 
-The user must be able to accept (marked by default) or reject the actions in the report, e.g.: "Score xxx moved from **Send allowed** to **Send not allowed**...", rejecting this option, the score will continue with **Send allowed**.
+The user must be able to change the target status of each changed score directly in the report, without leaving the modal.
+
+When a score file is changed, its status moves to **Send not allowed** (`draft`) by default. In the **changed** section, each changed score is shown with a status selector, so the user can choose:
+
+- **Send allowed** (`main`) - the score remains allowed to be sent;
+- **Send not allowed** (`draft`) - the score will not be sent (default);
+- **Ignored** (`ignored`) - the score will be ignored.
+
+For example: a score that would move from **Send allowed** to **Send not allowed** can be kept as **Send allowed** by choosing that option in the selector, without leaving the modal.
 
 ### 4.2.3. Summary - addition/change/removal of several scores of the same song
 

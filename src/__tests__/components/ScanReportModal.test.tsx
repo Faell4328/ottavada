@@ -1,5 +1,5 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 
 import { ScanReportModal } from "../../components/ScanReportModal";
 
@@ -335,64 +335,49 @@ describe("ScanReportModal", () => {
     expect(screen.getAllByText((_, element) => element?.textContent === "A partitura Score.mus foi alterada na música Bem aventurança do crente.").length).toBeGreaterThan(0);
   });
 
-  it("renders a no-op main to main song status change as changed and will be sent", () => {
+  it("renders a status selector and confirms with overrides", () => {
+    const onConfirm = vi.fn();
     render(
       <ScanReportModal
         isOpen={true}
         report={{
-          changed_files: [],
+          changed_files: ["/music/Canon - Flauta.musx"],
           added_files: [],
           deleted_files: [],
           recovered_files: [],
           failed_files: [],
-          report_items: ["The song Eis o Nosso Deus went from main and returned to main."],
-        }}
-        isConfirming={false}
-        onClose={() => undefined}
-        onConfirm={() => undefined}
-      />
-    );
-
-    const musicSection = screen.getByText("Músicas").closest("section");
-    expect(musicSection).toHaveTextContent("A música Eis o Nosso Deus foi alterada e será enviada.");
-    expect(Array.from(musicSection?.querySelectorAll("strong") ?? []).some((element) => element.textContent === "Eis o Nosso Deus")).toBe(true);
-    expect(Array.from(musicSection?.querySelectorAll("strong") ?? []).some((element) => element.textContent === "será enviada")).toBe(true);
-  });
-
-  it("renders a no-op main to main score change as changed and will be sent", () => {
-    render(
-      <ScanReportModal
-        isOpen={true}
-        report={{
-          changed_files: [],
-          added_files: [],
-          deleted_files: [],
-          recovered_files: [],
-          failed_files: [],
-          report_items: [
-            "Score changed: /music/Eis o Nosso Deus - Flauta.musx",
-            "The score Flauta.musx went from main and returned to main in the song Eis o Nosso Deus.",
+          score_status_changes: [
+            {
+              score_id: "score-1",
+              song_name: "CANON",
+              score_name: "Flauta.musx",
+              previous_status: "main",
+              detected_status: "draft",
+            },
           ],
         }}
         isConfirming={false}
         onClose={() => undefined}
-        onConfirm={() => undefined}
+        onConfirm={onConfirm}
       />
     );
 
     expect(
       screen.getAllByText((_, element) =>
-        element?.textContent === "A partitura Flauta.musx foi alterada e será enviada na música Eis o Nosso Deus."
+        element?.textContent?.includes("Deseja definir como") ?? false
       ).length
     ).toBeGreaterThan(0);
-    expect(
-      screen.queryAllByText((_, element) =>
-        element?.textContent === "A partitura Flauta.musx foi alterada na música Eis o Nosso Deus."
-      ).length
-    ).toBe(0);
+
+    fireEvent.click(screen.getByRole("button", { name: "Envio permitido" }));
+    fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
+
+    expect(onConfirm).toHaveBeenCalledWith([
+      { score_id: "score-1", target_status: "main" },
+    ]);
   });
 
-  it("renders grouped no-op main to main score changes as changed and will be sent", () => {
+  it("confirms without overrides when the target matches the detected status", () => {
+    const onConfirm = vi.fn();
     render(
       <ScanReportModal
         isOpen={true}
@@ -402,21 +387,24 @@ describe("ScanReportModal", () => {
           deleted_files: [],
           recovered_files: [],
           failed_files: [],
-          report_items: [
-            "The score Flauta.musx went from main and returned to main in the song Eis o Nosso Deus.",
-            "The score Oboe.musx went from main and returned to main in the song Eis o Nosso Deus.",
+          score_status_changes: [
+            {
+              score_id: "score-1",
+              song_name: "CANON",
+              score_name: "Flauta.musx",
+              previous_status: "main",
+              detected_status: "draft",
+            },
           ],
         }}
         isConfirming={false}
         onClose={() => undefined}
-        onConfirm={() => undefined}
+        onConfirm={onConfirm}
       />
     );
 
-    expect(
-      screen.getAllByText((_, element) =>
-        element?.textContent === "As partituras Flauta.musx and Oboe.musx foram alteradas e serão enviadas na música Eis o Nosso Deus."
-      ).length
-    ).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
+
+    expect(onConfirm).toHaveBeenCalledWith([]);
   });
 });

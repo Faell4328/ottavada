@@ -1,8 +1,13 @@
 import { ListChecks } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { useTranslation, Trans } from "react-i18next";
 
-import type { ScanResult } from "../api/commands";
+import type {
+  ScanResult,
+  ScoreStatusChange,
+  ScoreStatusOverride,
+} from "../api/commands";
 import { compareInstrumentNames } from "../utils/instrumentOrder";
 import {
   normalizeKey,
@@ -21,12 +26,14 @@ import {
 } from "../utils/scanReport";
 import { Modal } from "./ui";
 
+const OVERRIDE_TARGETS = ["main", "draft", "ignored"] as const;
+
 interface ScanReportModalProps {
   isOpen: boolean;
   report: ScanResult | null;
   isConfirming: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: (overrides: ScoreStatusOverride[]) => void;
 }
 
 export function ScanReportModal({
@@ -37,10 +44,34 @@ export function ScanReportModal({
   onConfirm,
 }: ScanReportModalProps) {
   const { t, i18n } = useTranslation();
+  const [targetsByScoreId, setTargetsByScoreId] = useState<
+    Record<string, string>
+  >(() => ({}));
+
+  const statusChanges = useMemo(() => {
+    return report?.score_status_changes ?? [];
+  }, [report]);
+
+  useEffect(() => {
+    setTargetsByScoreId({});
+  }, [report]);
 
   if (!isOpen || !report) {
     return null;
   }
+
+  const setTarget = (scoreId: string, target: string) => {
+    setTargetsByScoreId((previous) => ({ ...previous, [scoreId]: target }));
+  };
+
+  const buildOverrides = (): ScoreStatusOverride[] => {
+    return statusChanges.flatMap((change) => {
+      const target = targetsByScoreId[change.score_id] ?? change.detected_status;
+      return target === change.detected_status
+        ? []
+        : [{ score_id: change.score_id, target_status: target }];
+    });
+  };
 
   const reportItems = report.report_items ?? [
     ...report.added_files.map((item) => t("scanReportModal.scoreAddedLegacy", { item })),
@@ -51,7 +82,14 @@ export function ScanReportModal({
       ([path, error]) => t("scanReportModal.scoreFailedLegacy", { path, error }),
     ),
   ];
-  const sections = buildReviewSections(reportItems, t, i18n);
+  const sections = buildReviewSections(
+    reportItems,
+    t,
+    i18n,
+    statusChanges,
+    targetsByScoreId,
+    setTarget,
+  );
   const hasAnyChanges = sections.some((section) => section.groups.length > 0);
 
   return (
@@ -72,7 +110,7 @@ export function ScanReportModal({
           </button>
           <button
             type="button"
-            onClick={onConfirm}
+            onClick={() => onConfirm(buildOverrides())}
             disabled={isConfirming}
             className="rounded-lg bg-[#4f84d7] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#3d6fb8] disabled:cursor-not-allowed disabled:opacity-50"
           >
@@ -126,6 +164,9 @@ function buildReviewSections(
   reportItems: string[],
   t: (key: string, options?: Record<string, unknown>) => string,
   i18n: { language: string },
+  statusChanges: ScoreStatusChange[],
+  targetsByScoreId: Record<string, string>,
+  onTargetChange: (scoreId: string, target: string) => void,
 ): ReviewSection[] {
   const parsedItems = coalesceScoreFileAndStatusChanges(
     coalesceExtensionOnlyScoreChanges(
@@ -162,7 +203,7 @@ function buildReviewSections(
         createdSongNames,
         modifiedSongNames,
         deletedSongNames,
-      }, t, i18n),
+      }, t, i18n, statusChanges, targetsByScoreId, onTargetChange),
     },
     {
       title: t("scanReportModal.modified"),
@@ -171,7 +212,7 @@ function buildReviewSections(
         createdSongNames,
         modifiedSongNames,
         deletedSongNames,
-      }, t, i18n),
+      }, t, i18n, statusChanges, targetsByScoreId, onTargetChange),
     },
     {
       title: t("scanReportModal.deleted"),
@@ -180,7 +221,7 @@ function buildReviewSections(
         createdSongNames,
         modifiedSongNames,
         deletedSongNames,
-      }, t, i18n),
+      }, t, i18n, statusChanges, targetsByScoreId, onTargetChange),
     },
   ];
 
@@ -197,6 +238,9 @@ function buildActionGroups(
   },
   t: (key: string, options?: Record<string, unknown>) => string,
   i18n: { language: string },
+  statusChanges: ScoreStatusChange[],
+  targetsByScoreId: Record<string, string>,
+  onTargetChange: (scoreId: string, target: string) => void,
 ): EntityGroup[] {
   const categoryItems: ReactNode[] = [];
   const composerItems: ReactNode[] = [];
@@ -306,6 +350,10 @@ function buildActionGroups(
         continue;
       }
 
+      if (action === "modified" && statusChanges.length > 0) {
+        continue;
+      }
+
       const songName = item.songName ?? item.scoreName ?? item.raw;
       const scoreName = item.scoreName ?? item.raw;
       const key = `${action}|${normalizeKey(songName)}`;
@@ -385,6 +433,20 @@ function buildActionGroups(
       songName: group.songName,
       content: renderGroupedScoreItem(action, group.songName, group.scoreNames),
     });
+  }
+
+  if (action === "modified") {
+    for (const change of statusChanges) {
+      scoreItems.push({
+        songName: change.song_name,
+        content: renderScoreStatusSelectorItem(
+          change,
+          targetsByScoreId,
+          onTargetChange,
+          t,
+        ),
+      });
+    }
   }
 
   const groups: EntityGroup[] = [];
@@ -567,15 +629,6 @@ function renderCustomSongText(
     const nextStatus = statusChangeMatch[3];
     const returnsToMain = text.includes("returned to main");
 
-    if (returnsToMain && previousStatus.toLowerCase() === "main") {
-      return (
-        <Trans
-          i18nKey="scanReportModal.songChangedAndWillBeSent"
-          values={{ name: songName }}
-        />
-      );
-    }
-
     const formatStatusLabelT = (value: string) => {
       const v = value.toLowerCase();
       if (v === "ignored") return t("scoreStatus.ignored");
@@ -726,17 +779,6 @@ function renderGroupedCustomScoreStatusItem(
     return (
       <Trans
         i18nKey="scanReportModal.scoresStatusPluralDeleted"
-        count={count}
-        values={{ song: songName }}
-        components={{ scoreList: <>{scoreList}</> }}
-      />
-    );
-  }
-
-  if (previousStatus === "main" && nextStatus === "main") {
-    return (
-      <Trans
-        i18nKey="scanReportModal.scoresWillBeSent"
         count={count}
         values={{ song: songName }}
         components={{ scoreList: <>{scoreList}</> }}
@@ -943,6 +985,44 @@ function renderCustomScoreText(
   }
 
   return text;
+}
+
+function renderScoreStatusSelectorItem(
+  change: ScoreStatusChange,
+  targetsByScoreId: Record<string, string>,
+  onTargetChange: (scoreId: string, target: string) => void,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): ReactNode {
+  const current = targetsByScoreId[change.score_id] ?? change.detected_status;
+  const draftLabel = t("scoreStatus.draft");
+
+  return (
+    <div>
+      <div className="text-sm text-[#4a6278]">
+        <strong className="text-[#2f4259]">{change.score_name}</strong>{" "}
+        <Trans
+          i18nKey="scanReportModal.statusSelectorPrompt"
+          values={{ status: draftLabel }}
+        />
+      </div>
+      <div className="mt-2 flex gap-2">
+        {OVERRIDE_TARGETS.map((target) => (
+          <button
+            key={target}
+            type="button"
+            onClick={() => onTargetChange(change.score_id, target)}
+            className={`rounded-md border px-3 py-1 text-xs font-medium transition-colors ${
+              current === target
+                ? "border-[#4f84d7] bg-[#4f84d7] text-white"
+                : "border-[#c5cfdb] bg-white text-[#344b61] hover:bg-[#f2f5fa]"
+            }`}
+          >
+            {t(`scoreStatus.${target}`)}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function ActionSectionCard({

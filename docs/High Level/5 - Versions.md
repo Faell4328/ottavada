@@ -376,7 +376,8 @@
 - addition of languages: English, Spanish, French, Italian and German;
 - support for Linux and macOS;
 - addition of cloud providers: Dropbox, OneDrive and pCloud;
-- addition of advanced mode providers: SFTP and WebDAV.
+- addition of advanced mode providers: SFTP and WebDAV;
+- possibility to change the status of changed scores directly in the change report.
 
 ## Improvements
 

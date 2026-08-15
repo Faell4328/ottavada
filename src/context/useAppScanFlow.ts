@@ -28,6 +28,7 @@ type ScanFilesForChangesOptions =
       forceCloudSync?: boolean;
       snapshotSummary?: api.SnapshotFileSummary | null;
       rethrowOnError?: boolean;
+      overrides?: api.ScoreStatusOverride[];
     };
 
 const SNAPSHOT_AUTO_THRESHOLD_BYTES = 1 * 1024 * 1024;
@@ -314,6 +315,10 @@ export function useAppScanFlow({
         typeof options === "boolean"
           ? false
           : (options.rethrowOnError ?? false);
+      const overrides =
+        typeof options === "boolean"
+          ? []
+          : (options.overrides ?? []);
 
       if (scanInProgressRef.current) {
         if (!isAutomatic) {
@@ -394,7 +399,10 @@ export function useAppScanFlow({
           },
         });
         updateStepProgress(0);
-        const result = await api.scanFilesForChanges(forceCloudSync);
+        const result = await api.scanFilesForChanges({
+          applyMissingDeletions: forceCloudSync,
+          overrides,
+        });
         completedSteps += 1;
 
         const changedCount = result.changed_files.length;
