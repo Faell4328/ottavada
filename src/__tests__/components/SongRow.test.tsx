@@ -32,6 +32,7 @@ describe("SongRow menu", () => {
   const onToggleFavorite = vi.fn();
   const onEdit = vi.fn();
   const onDelete = vi.fn();
+  const onDeleteWithFiles = vi.fn();
   const onStatusChange = vi.fn();
   const onReindex = vi.fn();
   const onMenuOpen = vi.fn();
@@ -56,6 +57,7 @@ describe("SongRow menu", () => {
             onToggleFavorite={onToggleFavorite}
             onEdit={onEdit}
             onDelete={onDelete}
+            onDeleteWithFiles={onDeleteWithFiles}
             onStatusChange={onStatusChange}
             onReindex={onReindex}
             menuId="song-1"
@@ -87,6 +89,7 @@ describe("SongRow menu", () => {
             onToggleFavorite={onToggleFavorite}
             onEdit={onEdit}
             onDelete={onDelete}
+            onDeleteWithFiles={onDeleteWithFiles}
             onStatusChange={onStatusChange}
             onReindex={onReindex}
             menuId="song-1"
@@ -106,10 +109,6 @@ describe("SongRow menu", () => {
   });
 
   it("shows both delete options and deletes the directory when requested", async () => {
-    const deleteSongWithFilesSpy = vi
-      .spyOn(api, "deleteSongWithFiles")
-      .mockResolvedValue(undefined);
-
     render(
       <table>
         <tbody>
@@ -120,6 +119,7 @@ describe("SongRow menu", () => {
             onToggleFavorite={onToggleFavorite}
             onEdit={onEdit}
             onDelete={onDelete}
+            onDeleteWithFiles={onDeleteWithFiles}
             onStatusChange={onStatusChange}
             onReindex={onReindex}
             menuId="song-1"
@@ -140,7 +140,7 @@ describe("SongRow menu", () => {
     fireEvent.click(screen.getByText("Mover pasta e arquivos para lixeira"));
 
     await waitFor(() => {
-      expect(deleteSongWithFilesSpy).toHaveBeenCalledWith(song.id);
+      expect(onDeleteWithFiles).toHaveBeenCalledWith(song.id);
     });
   });
 
@@ -161,6 +161,7 @@ describe("SongRow menu", () => {
             onToggleFavorite={onToggleFavorite}
             onEdit={onEdit}
             onDelete={onDelete}
+            onDeleteWithFiles={onDeleteWithFiles}
             onStatusChange={onStatusChange}
             onReindex={onReindex}
             menuId="song-1"
@@ -196,6 +197,7 @@ describe("SongRow menu", () => {
             onToggleFavorite={onToggleFavorite}
             onEdit={onEdit}
             onDelete={onDelete}
+            onDeleteWithFiles={onDeleteWithFiles}
             onStatusChange={onStatusChange}
             onReindex={onReindex}
             menuId="song-1"
@@ -229,6 +231,7 @@ describe("SongRow menu", () => {
             onToggleFavorite={onToggleFavorite}
             onEdit={onEdit}
             onDelete={onDelete}
+            onDeleteWithFiles={onDeleteWithFiles}
             onStatusChange={onStatusChange}
             onReindex={onReindex}
             menuId="song-1"
@@ -257,6 +260,7 @@ describe("SongRow menu", () => {
             onToggleFavorite={onToggleFavorite}
             onEdit={onEdit}
             onDelete={onDelete}
+            onDeleteWithFiles={onDeleteWithFiles}
             onStatusChange={onStatusChange}
             onReindex={onReindex}
             menuId="song-1"
@@ -289,6 +293,7 @@ describe("SongRow menu", () => {
             onToggleFavorite={onToggleFavorite}
             onEdit={onEdit}
             onDelete={onDelete}
+            onDeleteWithFiles={onDeleteWithFiles}
             onStatusChange={onStatusChange}
             onReindex={onReindex}
             menuId="song-1"

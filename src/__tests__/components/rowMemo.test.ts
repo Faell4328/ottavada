@@ -52,6 +52,7 @@ function buildSongRowProps(overrides: Partial<SongRowProps> = {}): SongRowProps 
     onToggleFavorite: () => undefined,
     onEdit: () => undefined,
     onDelete: async () => undefined,
+    onDeleteWithFiles: async () => undefined,
     onStatusChange: async () => undefined,
     onReindex: async () => undefined,
     menuId: "song-1",

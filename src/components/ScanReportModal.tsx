@@ -1,4 +1,4 @@
-import { ListChecks } from "lucide-react";
+import { AlertTriangle, ListChecks } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { useTranslation, Trans } from "react-i18next";
@@ -91,6 +91,7 @@ export function ScanReportModal({
     setTarget,
   );
   const hasAnyChanges = sections.some((section) => section.groups.length > 0);
+  const duplicateWarnings = report.duplicate_score_warnings ?? [];
 
   return (
     <Modal
@@ -120,6 +121,30 @@ export function ScanReportModal({
       }
     >
       <div className="space-y-4">
+        {duplicateWarnings.length > 0 && (
+          <section className="rounded-xl border border-amber-300 bg-amber-50 p-4">
+            <div className="flex items-center gap-2 text-sm font-semibold text-amber-800">
+              <span className="text-amber-600">
+                <AlertTriangle className="h-4 w-4" />
+              </span>
+              {t("scanReportModal.duplicateScoresTitle")}
+            </div>
+            <ul className="mt-3 space-y-2 text-sm text-amber-800">
+              {duplicateWarnings.map((warning) => (
+                <li
+                  key={`${warning.song_name}-${warning.score_name}`}
+                  className="break-all whitespace-normal"
+                >
+                  <Trans
+                    i18nKey="scanReportModal.duplicateScoreWarning"
+                    values={{ score: warning.score_name, song: warning.song_name }}
+                  />
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
         {hasAnyChanges ? (
           <section className="rounded-xl border border-[#dbe5f0] bg-white p-4">
             <div className="flex items-center gap-2 text-sm font-semibold text-[#2f4259]">

@@ -234,10 +234,7 @@ pub fn describe_song_change(db: &Database, change: &ChangedFieldRecord) -> Optio
                     "The song {} went from {} and went to not_found.",
                     song_name, previous_status_label
                 )),
-                _ => Some(format!(
-                    "The song {} had its status changed.",
-                    song_name
-                )),
+                _ => Some(format!("The song {} had its status changed.", song_name)),
             }
         }
         ("insert", Some("composer")) => change.value.as_ref().map(|value| {
@@ -471,11 +468,8 @@ pub fn describe_score_status_change(db: &Database, change: &ChangedFieldRecord) 
         other => other,
     };
 
-    let score_name_with_extension = resolve_score_display_name_with_extension(
-        &result.1,
-        &song_name,
-        result.2.as_deref(),
-    );
+    let score_name_with_extension =
+        resolve_score_display_name_with_extension(&result.1, &song_name, result.2.as_deref());
 
     if current_status == "main" {
         Some(format!(
@@ -505,7 +499,11 @@ pub fn resolve_score_display_name_with_extension(
     format!("{}{}", score_name, file_extension)
 }
 
-pub fn build_score_change_report_item(song_name: &str, score_name: &Option<String>, full_path: &str) -> String {
+pub fn build_score_change_report_item(
+    song_name: &str,
+    score_name: &Option<String>,
+    full_path: &str,
+) -> String {
     let file_name = Path::new(full_path)
         .file_name()
         .and_then(|value| value.to_str())
@@ -1272,12 +1270,9 @@ mod tests {
 
         let report_items = build_report_items(&db, &[], &[], &[], &[], &[], &changed_fields);
 
-        assert!(
-            report_items.iter().any(|item| {
-                item.contains("went from draft and returned to main")
-                    && item.contains("03 VEZES SANTO")
-            })
-        );
+        assert!(report_items.iter().any(|item| {
+            item.contains("went from draft and returned to main") && item.contains("03 VEZES SANTO")
+        }));
         assert!(report_items
             .iter()
             .all(|item| !item.contains("went from main and returned to main")));
@@ -1340,12 +1335,9 @@ mod tests {
 
         let report_items = build_report_items(&db, &[], &[], &[], &[], &[], &changed_fields);
 
-        assert!(
-            report_items.iter().any(|item| {
-                item.contains("went from draft and returned to main")
-                    && item.contains("03 VEZES SANTO")
-            })
-        );
+        assert!(report_items.iter().any(|item| {
+            item.contains("went from draft and returned to main") && item.contains("03 VEZES SANTO")
+        }));
         assert!(report_items
             .iter()
             .all(|item| !item.contains("went from main and returned to main")));

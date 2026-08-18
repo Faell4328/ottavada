@@ -543,7 +543,7 @@ export function AddFilesModal({
 
       {instrumentCount > 0 && (
         <FormField label={t("addFilesModal.labelInstrumentsToAdd", { count: instrumentCount })}>
-          <div className="rounded border border-[#c5cfdb] bg-white p-3 space-y-4 max-h-120 overflow-y-auto">
+          <div className="rounded border border-[#c5cfdb] bg-white p-3 space-y-4 max-h-80 overflow-y-auto">
             {reviewItems.map((item) => {
               if (item.kind === "group") {
                 return (

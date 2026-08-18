@@ -356,6 +356,11 @@ export interface ScoreStatusOverride {
   target_status: string;
 }
 
+export interface DuplicateScoreWarning {
+  song_name: string;
+  score_name: string;
+}
+
 export interface ScanResult {
   changed_files: string[];
   added_files: string[];
@@ -365,6 +370,7 @@ export interface ScanResult {
   report_items?: string[];
   database_changes_count?: number;
   score_status_changes?: ScoreStatusChange[];
+  duplicate_score_warnings?: DuplicateScoreWarning[];
 }
 
 export interface ImportIndexedFilesResult {

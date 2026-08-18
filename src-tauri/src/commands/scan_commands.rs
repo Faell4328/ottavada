@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::time::Duration;
 use tauri::State;
@@ -15,6 +15,7 @@ use crate::infrastructure::store::SystemStore;
 use crate::services::indexer::{
     get_file_metadata, paths_match, scan_directory, split_file_path, FileChangeDetector,
 };
+use crate::services::name_formatter::normalize_optional_score_name;
 use crate::services::path_normalizer::from_storage_path;
 
 #[derive(Debug, Clone)]
@@ -41,6 +42,16 @@ pub struct ScoreStatusChange {
 pub struct ScoreStatusOverride {
     pub score_id: String,
     pub target_status: String,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
+pub struct DuplicateScoreWarning {
+    pub song_name: String,
+    pub score_name: String,
+}
+
+fn normalized_instrument_key(name: Option<&str>) -> Option<String> {
+    normalize_optional_score_name(name).map(|normalized| normalized.to_lowercase())
 }
 
 /// Checks for changes in score files.
@@ -113,6 +124,7 @@ fn scan_files_for_changes_impl(
     let mut deleted_files = Vec::new();
     let mut recovered_files = Vec::new();
     let mut failed_files = Vec::new();
+    let mut duplicate_score_warnings = Vec::new();
 
     let mut scores_by_song: HashMap<String, Vec<ScoreMetadataEntry>> = HashMap::new();
     for (
@@ -273,6 +285,12 @@ fn scan_files_for_changes_impl(
             }
         }
 
+        let mut seen_instruments: HashSet<String> = song_scores
+            .iter()
+            .filter(|score| score.status != ScoreStatus::Ignored)
+            .filter_map(|score| normalized_instrument_key(score.score_name.as_deref()))
+            .collect();
+
         for current_file in current_files {
             let current_path = &current_file.path;
 
@@ -283,10 +301,16 @@ fn scan_files_for_changes_impl(
                 continue;
             }
 
+            let instrument_key = normalized_instrument_key(current_file.instrument.as_deref());
+            let is_duplicate = instrument_key
+                .as_ref()
+                .map(|key| seen_instruments.contains(key))
+                .unwrap_or(false);
+
             match get_file_metadata(Path::new(current_path)) {
                 Ok((file_size, file_modified_at)) => {
                     let (file_path, file_name) = split_file_path(current_path);
-                    let score = Score::new_from_file(
+                    let mut score = Score::new_from_file(
                             song.id.clone(),
                         updated_by.clone(),
                         &current_file,
@@ -295,14 +319,32 @@ fn scan_files_for_changes_impl(
                         (file_size, file_modified_at),
                     );
 
+                    if is_duplicate {
+                        score.status = ScoreStatus::Ignored;
+                    }
+
                     match db.insert_score(&score) {
                         Ok(()) => {
                             info!("New file indexed: {}", current_path);
-                            added_files.push(build_score_change_report_item(
-                                &song.name,
-                                &None,
-                                current_path,
-                            ));
+                            if is_duplicate {
+                                duplicate_score_warnings.push(DuplicateScoreWarning {
+                                    song_name: song.name.clone(),
+                                    score_name: current_file
+                                        .instrument
+                                        .clone()
+                                        .unwrap_or_default(),
+                                });
+                            } else {
+                                added_files.push(build_score_change_report_item(
+                                    &song.name,
+                                    &None,
+                                    current_path,
+                                ));
+
+                                if let Some(key) = instrument_key {
+                                    seen_instruments.insert(key);
+                                }
+                            }
                         }
                         Err(e) => {
                             warn!("Error inserting new file {}: {:?}", current_path, e);
@@ -365,6 +407,7 @@ fn scan_files_for_changes_impl(
         report_items,
         database_changes_count: db.get_pending_changes_count()?,
         score_status_changes: Vec::new(),
+        duplicate_score_warnings,
     })
 }
 
@@ -385,6 +428,7 @@ fn preview_scan_files_for_changes_impl(
     let mut recovered_files = Vec::new();
     let mut failed_files = Vec::new();
     let mut score_status_changes = Vec::new();
+    let mut duplicate_score_warnings = Vec::new();
 
     let mut scores_by_song: HashMap<String, Vec<ScoreMetadataEntry>> = HashMap::new();
     for (
@@ -498,6 +542,12 @@ fn preview_scan_files_for_changes_impl(
             }
         }
 
+        let mut seen_instruments: HashSet<String> = song_scores
+            .iter()
+            .filter(|score| score.status != ScoreStatus::Ignored)
+            .filter_map(|score| normalized_instrument_key(score.score_name.as_deref()))
+            .collect();
+
         for current_file in current_files {
             let current_path = &current_file.path;
             if song_scores.iter().any(|score| {
@@ -507,11 +557,29 @@ fn preview_scan_files_for_changes_impl(
                 continue;
             }
 
+            let instrument_key = normalized_instrument_key(current_file.instrument.as_deref());
+            let is_duplicate = instrument_key
+                .as_ref()
+                .map(|key| seen_instruments.contains(key))
+                .unwrap_or(false);
+
+            if is_duplicate {
+                duplicate_score_warnings.push(DuplicateScoreWarning {
+                    song_name: song.name.clone(),
+                    score_name: current_file.instrument.clone().unwrap_or_default(),
+                });
+                continue;
+            }
+
             added_files.push(build_score_change_report_item(
                 &song.name,
                 &None,
                 current_path,
             ));
+
+            if let Some(key) = instrument_key {
+                seen_instruments.insert(key);
+            }
         }
     }
 
@@ -544,6 +612,7 @@ fn preview_scan_files_for_changes_impl(
         report_items,
         database_changes_count: db.get_pending_changes_count()?,
         score_status_changes,
+        duplicate_score_warnings,
     })
 }
 
@@ -578,6 +647,7 @@ pub struct ScanResult {
     pub report_items: Vec<String>,
     pub database_changes_count: usize,
     pub score_status_changes: Vec<ScoreStatusChange>,
+    pub duplicate_score_warnings: Vec<DuplicateScoreWarning>,
 }
 
 /// Performs a simple internet connectivity check using a TCP socket.
@@ -1147,6 +1217,78 @@ mod tests {
             .iter()
             .any(|score| score.file_path.ends_with("Canon - Trumpet.musx")
                 && score.status == ScoreStatus::Main));
+    }
+
+    #[test]
+    fn adds_duplicate_instrument_file_as_ignored_with_warning() {
+        let dir = tempdir().expect("temp dir");
+        let db = Database::new(&dir.path().join("scan.db")).expect("db");
+        let store = SystemStore::new(dir.path().to_path_buf());
+
+        store
+            .save_app_settings(&AppSettings {
+                computer_id: "server-1".to_string(),
+                computer_name: Some("Server".to_string()),
+                computer_type: ComputerType::Server,
+                first_run_completed: true,
+                ..Default::default()
+            })
+            .expect("save settings");
+
+        let song_dir = dir.path().join("songs").join("song-1");
+        fs::create_dir_all(&song_dir).expect("create song dir");
+
+        let existing_score_path = song_dir.join("Canon - Flute.musx");
+        let duplicate_score_path = song_dir.join("Canon - Flute.mscz");
+        fs::write(&existing_score_path, b"score").expect("write existing score");
+        fs::write(&duplicate_score_path, b"duplicate").expect("write duplicate score");
+
+        let (file_size, file_modified_at) =
+            get_file_metadata(&existing_score_path).expect("metadata");
+
+        db.insert_song(
+            &Song {
+                id: "song-1".to_string(),
+                name: "CANON".to_string(),
+                composer: None,
+                arranger: None,
+                path: song_dir.to_string_lossy().to_string(),
+                is_favorite: false,
+                status: ScoreStatus::Main,
+                updated_at: now(),
+                updated_by: "server-1".to_string(),
+            },
+            &[],
+        )
+        .expect("insert song");
+
+        db.insert_score(&Score {
+            id: "score-1".to_string(),
+            song_id: "song-1".to_string(),
+            name: Some("Flute".to_string()),
+            file_path: song_dir.to_string_lossy().to_string(),
+            file_name: "Canon - Flute.musx".to_string(),
+            file_size,
+            file_modified_at,
+            updated_at: now(),
+            status: ScoreStatus::Main,
+            updated_by: "server-1".to_string(),
+        })
+        .expect("insert existing score");
+
+        let result = scan_files_for_changes_impl(&db, &store, false, Vec::new()).expect("scan");
+        let scores = db.get_scores_for_song("song-1").expect("scores");
+
+        let duplicate = scores
+            .iter()
+            .find(|score| score.file_path.ends_with("Canon - Flute.mscz"))
+            .expect("duplicate score should be indexed");
+        assert_eq!(duplicate.status, ScoreStatus::Ignored);
+
+        assert_eq!(result.duplicate_score_warnings.len(), 1);
+        assert_eq!(result.duplicate_score_warnings[0].score_name, "Flute");
+        assert_eq!(result.duplicate_score_warnings[0].song_name, "CANON");
+        assert!(result.added_files.is_empty());
     }
 
     #[test]

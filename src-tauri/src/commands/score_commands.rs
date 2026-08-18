@@ -14,8 +14,8 @@ use crate::domain::models::ComputerType;
 use crate::domain::models::*;
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
-use crate::services::indexer::{get_file_metadata, paths_match, split_file_path};
 use crate::services::backup_draft_ignored_service::remove_backup_file_for_draft_ignored_score;
+use crate::services::indexer::{get_file_metadata, paths_match, split_file_path};
 use crate::services::name_formatter::normalize_optional_score_name;
 use crate::services::path_normalizer::from_storage_path;
 #[cfg(target_os = "windows")]
@@ -126,16 +126,30 @@ fn resolve_manual_score_status(
             Ok(ScoreStatus::Main)
         }
         _ => {
-            warn!(
-                "Invalid manual status flow requested: {}",
-                requested_status
-            );
+            warn!("Invalid manual status flow requested: {}", requested_status);
             Err(AppError::Generic(
-                "Only changes to 'draft', 'main' or 'ignored' are allowed manually"
-                    .into(),
+                "Only changes to 'draft', 'main' or 'ignored' are allowed manually".into(),
             ))
         }
     }
+}
+
+fn score_names_match(left: Option<&str>, right: Option<&str>) -> bool {
+    match (
+        normalize_optional_score_name(left),
+        normalize_optional_score_name(right),
+    ) {
+        (Some(left), Some(right)) => left.eq_ignore_ascii_case(&right),
+        _ => false,
+    }
+}
+
+fn score_has_duplicate_instrument(song: &SongListItem, score_id: &str, name: Option<&str>) -> bool {
+    song.scores.iter().any(|other| {
+        other.id != score_id
+            && other.status != ScoreStatus::Ignored
+            && score_names_match(name, other.name.as_deref())
+    })
 }
 
 fn delete_score_core(db: &Database, score_id: &str) -> Result<(), AppError> {
@@ -258,9 +272,9 @@ fn open_file_location_on_system(file_path: &str) -> Result<(), AppError> {
             return Err(AppError::Generic("File not found".into()));
         }
 
-        let parent = path.parent().ok_or_else(|| {
-            AppError::Generic("Could not identify the file's directory".into())
-        })?;
+        let parent = path
+            .parent()
+            .ok_or_else(|| AppError::Generic("Could not identify the file's directory".into()))?;
 
         std::process::Command::new("xdg-open")
             .arg(parent)
@@ -552,10 +566,7 @@ pub fn update_score_status(
 ) -> Result<SongListItem, AppError> {
     let settings = require_server_settings(&store)?;
 
-    info!(
-        "Updating score status: {} to: {}",
-        score_id, status
-    );
+    info!("Updating score status: {} to: {}", score_id, status);
     let song_id = db.get_song_id_for_score(&score_id)?;
     let song = db.get_song_list_item_by_id(&song_id)?;
     let current_score = song
@@ -566,10 +577,19 @@ pub fn update_score_status(
 
     let next_status = resolve_manual_score_status(current_score.status.clone(), &status)?;
 
+    if matches!(current_score.status, ScoreStatus::Ignored)
+        && !matches!(next_status, ScoreStatus::Ignored)
+        && score_has_duplicate_instrument(&song, &score_id, current_score.name.as_deref())
+    {
+        return Err(AppError::ScoreDuplicateInstrument);
+    }
+
     db.update_score_status(&score_id, next_status.clone(), &settings.computer_id, None)?;
 
-    if matches!(current_score.status, ScoreStatus::Draft | ScoreStatus::Ignored)
-        && !matches!(next_status, ScoreStatus::Draft | ScoreStatus::Ignored)
+    if matches!(
+        current_score.status,
+        ScoreStatus::Draft | ScoreStatus::Ignored
+    ) && !matches!(next_status, ScoreStatus::Draft | ScoreStatus::Ignored)
     {
         let _ = remove_backup_file_for_draft_ignored_score(
             &store,
@@ -601,8 +621,11 @@ pub fn delete_score(
     let song = db.get_song_list_item_by_id(&song_id)?;
     if let Some(score) = song.scores.iter().find(|sc| sc.id == score_id) {
         if matches!(score.status, ScoreStatus::Draft | ScoreStatus::Ignored) {
-            let _ =
-                remove_backup_file_for_draft_ignored_score(&store, &score_id, &score.file_extension);
+            let _ = remove_backup_file_for_draft_ignored_score(
+                &store,
+                &score_id,
+                &score.file_extension,
+            );
         }
     }
 
@@ -641,9 +664,7 @@ pub fn use_score_as_base(
                 .find(|score| score.id == source_score_id)
                 .map(|score| (song, score))
         })
-        .ok_or_else(|| {
-            AppError::Generic(format!("Score not found: {}", source_score_id))
-        })?;
+        .ok_or_else(|| AppError::Generic(format!("Score not found: {}", source_score_id)))?;
 
     let song_id = &song.id;
 
@@ -710,10 +731,7 @@ pub fn use_score_as_base(
     };
 
     db.insert_score(&new_score).map_err(|e| {
-        error!(
-            "Error inserting new score in song_id={}: {:?}",
-            song_id, e
-        );
+        error!("Error inserting new score in song_id={}: {:?}", song_id, e);
         // Rollback: delete the copied file if database insertion fails
         let _ = fs::remove_file(&new_file_path);
         e
@@ -785,6 +803,7 @@ mod tests {
     use super::{
         build_client_extracted_score_name, delete_score_core, extract_score_file_from_archive,
         resolve_manual_score_status, resolve_openable_score_path, sanitize_file_name_component,
+        score_has_duplicate_instrument,
     };
 
     fn write_test_tar_zst(archive_path: &Path, files: &[(&str, &[u8])]) {
@@ -806,6 +825,52 @@ mod tests {
         }
 
         encoder.finish().expect("finish zstd");
+    }
+
+    #[test]
+    fn blocks_unignore_when_duplicate_instrument_exists() {
+        let now = chrono::Local::now().naive_local();
+
+        let song = crate::domain::models::SongListItem {
+            id: "song-1".to_string(),
+            name: "CANON".to_string(),
+            composer: None,
+            arranger: None,
+            path: "/music/song-1".to_string(),
+            updated_at: now,
+            is_favorite: false,
+            status: ScoreStatus::Main,
+            category_ids: vec![],
+            scores: vec![
+                crate::domain::models::ScoreListItem {
+                    id: "score-1".to_string(),
+                    name: Some("Flute".to_string()),
+                    file_path: "/music/song-1/Canon - Flute.musx".to_string(),
+                    file_extension: "musx".to_string(),
+                    updated_at: now,
+                    status: ScoreStatus::Main,
+                },
+                crate::domain::models::ScoreListItem {
+                    id: "score-2".to_string(),
+                    name: Some("flute".to_string()),
+                    file_path: "/music/song-1/Canon - Flute.mscz".to_string(),
+                    file_extension: "mscz".to_string(),
+                    updated_at: now,
+                    status: ScoreStatus::Ignored,
+                },
+            ],
+        };
+
+        assert!(score_has_duplicate_instrument(
+            &song,
+            "score-2",
+            Some("Flute")
+        ));
+        assert!(!score_has_duplicate_instrument(
+            &song,
+            "score-2",
+            Some("Violino")
+        ));
     }
 
     #[test]
@@ -1115,8 +1180,6 @@ mod tests {
 
         let err = resolve_openable_score_path(&db, "score-1").expect_err("missing file");
 
-        assert!(err
-            .to_string()
-            .contains("Score file not found"));
+        assert!(err.to_string().contains("Score file not found"));
     }
 }

@@ -347,7 +347,12 @@ export function useAppCrudActions({
       toast.success(t("crudActions.scoreStatusUpdated"));
     } catch (err) {
       console.error("Failed to update score status:", err);
-      toast.error(t("crudActions.scoreStatusError"));
+      const rawError = getErrorMessage(err, "");
+      toast.error(
+        rawError === "score_duplicate_instrument"
+          ? t("crudActions.scoreDuplicateInstrument")
+          : rawError || t("crudActions.scoreStatusError"),
+      );
       throw err;
     }
   }, [dispatch, getErrorMessage, loadSettings, refreshSelectedSong, state.songs]);
@@ -384,6 +389,26 @@ export function useAppCrudActions({
       toast.success(t("crudActions.songDeleted"));
     } catch (err) {
       console.error("Failed to delete song:", err);
+      toast.error(t("crudActions.songDeleteError"));
+      throw err;
+    }
+  }, [dispatch, getErrorMessage, loadSettings, loadSongs, refreshSelectedSong, state.selectedSong]);
+
+  const deleteSongWithFiles = useCallback(async (songId: string) => {
+    try {
+      await api.deleteSongWithFiles(songId);
+
+      if (state.selectedSong?.id === songId) {
+        dispatch({ type: "SET_SELECTED_SONG", payload: null });
+      }
+      dispatch({ type: "SET_SELECTED_SCORE", payload: null });
+
+      await loadSongs();
+      await refreshSelectedSong();
+      await loadSettings();
+      toast.success(t("crudActions.songDeletedWithFiles"));
+    } catch (err) {
+      console.error("Failed to delete song with files:", err);
       toast.error(t("crudActions.songDeleteError"));
       throw err;
     }
@@ -463,6 +488,7 @@ export function useAppCrudActions({
     updateScoreStatus,
     deleteScore,
     deleteSong,
+    deleteSongWithFiles,
     saveSettings,
     completeFirstRun,
     useScoreAsBase,

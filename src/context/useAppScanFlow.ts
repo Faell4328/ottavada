@@ -451,7 +451,6 @@ export function useAppScanFlow({
         });
         const eventsSummary = await api.generateEventsFile();
         completedSteps += 1;
-        const generatedArchives = archiveSummary.generated ?? 0;
         const failedArchives = archiveSummary.failed ?? 0;
         updateStepProgress(changedCount);
 
@@ -601,35 +600,8 @@ export function useAppScanFlow({
           toast.error(t("scanFlow.scoresNotCompressed", { count: failedArchives }));
         }
 
-        if (!isAutomatic) {
-          const summaryParts: string[] = [];
-          const reportItemsCount = result.report_items?.length ?? 0;
-          if (recoveredCount > 0) {
-            summaryParts.push(t("scanFlow.summaryRecovered", { count: recoveredCount }));
-          }
-          if (addedCount > 0) {
-            summaryParts.push(t("scanFlow.summaryAdded", { count: addedCount }));
-          }
-          if (deletedCount > 0) {
-            summaryParts.push(t("scanFlow.summaryDeleted", { count: deletedCount }));
-          }
-          if (reportItemsCount > 0) {
-            summaryParts.push(t("scanFlow.summaryReportChanges", { count: reportItemsCount }));
-          }
-          if (generatedArchives > 0) {
-            summaryParts.push(t("scanFlow.summaryArchivesCompressed", { count: generatedArchives }));
-          }
-
-          const hasFailures = failedCount > 0 || failedArchives > 0;
-          if (summaryParts.length > 0) {
-            const summaryText = t("scanFlow.scanCompleted", { summary: summaryParts.join(", ") });
-
-            if (hasFailures) {
-              toast.error(t("scanFlow.scanCompletedWithErrors", { summary: summaryParts.join(", ") }));
-            } else {
-              toast.success(summaryText);
-            }
-          }
+        if (!isAutomatic && failedCount === 0 && failedArchives === 0) {
+          toast.success(t("scanFlow.changesSent"));
         }
 
         if (

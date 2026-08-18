@@ -21,6 +21,7 @@ export interface SongRowProps {
   onToggleFavorite: () => void;
   onEdit: () => void;
   onDelete: (songId: string) => Promise<void>;
+  onDeleteWithFiles: (songId: string) => Promise<void>;
   onStatusChange: (songId: string, status: "main" | "draft") => Promise<void>;
   onReindex: () => Promise<void>;
   menuId: string;
@@ -40,6 +41,7 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(
       onToggleFavorite,
       onEdit,
       onDelete,
+      onDeleteWithFiles,
       onStatusChange,
       onReindex,
       menuId,
@@ -329,10 +331,7 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(
                   </button>
                   <button
                     onClick={() => {
-                      void runDeleteAction(
-                        () => api.deleteSongWithFiles(song.id),
-                        t("crudActions.songDeletedWithFiles"),
-                      );
+                      void runDeleteAction(() => onDeleteWithFiles(song.id));
                     }}
                     disabled={isDeleteLoading}
                     className="rounded-lg bg-[#c04b4b] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#a93b3b] disabled:opacity-50"
@@ -340,7 +339,7 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(
                     {isDeleteLoading
                       ? t("songRow.processing")
                       : t("songRow.moveToTrash")}
-                    </button>
+                  </button>
                   </div>
                 </div>
               </div>,

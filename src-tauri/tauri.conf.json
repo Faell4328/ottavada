@@ -19,7 +19,7 @@
         "backgroundColor": "#fff",
         "scrollBarStyle": "fluentOverlay",
         "zoomHotkeysEnabled": false,
-        "devtools": false,
+        "devtools": true,
         "browserExtensionsEnabled": false
       }
     ],

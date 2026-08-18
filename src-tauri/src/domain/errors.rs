@@ -21,6 +21,9 @@ pub enum AppError {
     #[error("Operation not allowed for client")]
     ClientOperationNotAllowed,
 
+    #[error("score_duplicate_instrument")]
+    ScoreDuplicateInstrument,
+
     #[error("{0}")]
     Generic(String),
 }

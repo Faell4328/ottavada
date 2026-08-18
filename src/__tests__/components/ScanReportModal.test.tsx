@@ -114,6 +114,59 @@ describe("ScanReportModal", () => {
     expect(screen.queryByText("Arquivos com erro")).not.toBeInTheDocument();
   });
 
+  it("shows duplicate score warnings", () => {
+    render(
+      <ScanReportModal
+        isOpen={true}
+        report={{
+          ...report,
+          duplicate_score_warnings: [
+            { song_name: "CANON", score_name: "flute" },
+          ],
+        }}
+        isConfirming={false}
+        onClose={() => undefined}
+        onConfirm={() => undefined}
+      />
+    );
+
+    expect(screen.getByText("Partituras duplicadas")).toBeInTheDocument();
+    expect(
+      screen.getByText(/A partitura flute já existe na música CANON/),
+    ).toBeInTheDocument();
+  });
+
+  it("groups deleted scores by song when only the file name is reported", () => {
+    render(
+      <ScanReportModal
+        isOpen={true}
+        report={{
+          changed_files: [],
+          added_files: [],
+          deleted_files: [],
+          recovered_files: [],
+          failed_files: [],
+          report_items: [
+            "The score Canon - Flute.musx was deleted.",
+            "The score Canon - Trompete.musx was deleted.",
+          ],
+          score_status_changes: [],
+        }}
+        isConfirming={false}
+        onClose={() => undefined}
+        onConfirm={() => undefined}
+      />
+    );
+
+    expect(
+      screen.getAllByText(
+        (_, element) =>
+          element?.textContent ===
+          "As partituras Flute.musx and Trompete.musx foram deletadas na música Canon.",
+      ).length,
+    ).toBeGreaterThan(0);
+  });
+
   it("uses different colors for the action containers", () => {
     render(
       <ScanReportModal

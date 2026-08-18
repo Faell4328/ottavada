@@ -38,6 +38,7 @@ export default function SongsList() {
     updateScoreStatus,
     deleteScore,
     deleteSong,
+    deleteSongWithFiles,
     useScoreAsBase,
   } = useAppState();
 
@@ -334,6 +335,7 @@ export default function SongsList() {
                           setIsEditMusicModalOpen(true);
                         }}
                         onDelete={deleteSong}
+                        onDeleteWithFiles={deleteSongWithFiles}
                         onStatusChange={updateSongStatus}
                         onReindex={async () => {
                           await loadSongs();
