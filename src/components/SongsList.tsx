@@ -363,6 +363,7 @@ export default function SongsList() {
                               key={score.id}
                               score={score}
                               displayIndex={scoreIndex}
+                              isSelected={state.selectedScore?.id === score.id}
                               onSelectScore={() => {
                                 selectScore(state.selectedScore?.id === score.id ? null : score);
                                 closeAllMenus();

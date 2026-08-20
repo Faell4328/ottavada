@@ -16,7 +16,8 @@ The user must be able to:
 
 The user must be able to:
 
-- **open**, the score will be opened using the default application associated with the file extension.
+- **open**, the score will be opened using the default application associated with the file extension;
+- **select**, clicking a score highlights it with a blue style (`bg-[#cfe4fb]`, blue border and text) to indicate the current selection.
 
 ---
 

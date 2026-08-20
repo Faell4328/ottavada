@@ -29,6 +29,7 @@ function buildScoreRowProps(overrides: Partial<ScoreRowProps> = {}): ScoreRowPro
   return {
     score: baseScore,
     displayIndex: 0,
+    isSelected: false,
     onSelectScore: () => undefined,
     menuId: "score-1",
     isMenuOpen: false,
@@ -77,6 +78,13 @@ describe("row memo comparators", () => {
   it("re-renders score rows when display index changes", () => {
     const prev = buildScoreRowProps();
     const next = buildScoreRowProps({ displayIndex: 1 });
+
+    expect(areScoreRowPropsEqual(prev, next)).toBe(false);
+  });
+
+  it("re-renders score rows when the selected state changes", () => {
+    const prev = buildScoreRowProps();
+    const next = buildScoreRowProps({ isSelected: true });
 
     expect(areScoreRowPropsEqual(prev, next)).toBe(false);
   });

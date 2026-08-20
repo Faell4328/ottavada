@@ -17,6 +17,7 @@ import {
 export interface ScoreRowProps {
   score: ScoreListItem;
   displayIndex: number;
+  isSelected: boolean;
   onSelectScore: () => void;
   menuId: string;
   isMenuOpen: boolean;
@@ -36,6 +37,7 @@ export interface ScoreRowProps {
 function ScoreRow({
   score,
   displayIndex,
+  isSelected,
   onSelectScore,
   menuId,
   isMenuOpen,
@@ -54,8 +56,11 @@ function ScoreRow({
   const isClient = isClientComputer(computerType);
   const isActionLocked = isClient || isLocked;
   const statusKey = normalizeScoreStatus(score.status);
-  const rowBackgroundClass =
-    displayIndex % 2 === 0 ? "bg-[#f4f7fb]" : "bg-[#fff]";
+  const rowBackgroundClass = isSelected
+    ? "bg-[#cfe4fb] hover:bg-[#c2dcfa]"
+    : displayIndex % 2 === 0
+      ? "bg-[#f4f7fb]"
+      : "bg-[#fff]";
 
   const openScoreFile = async () => {
     setIsOpening(true);
@@ -228,17 +233,17 @@ function ScoreRow({
           contentVisibility: "auto",
           containIntrinsicSize: "34px",
         }}
-        className={`border-b border-[#d8e0ea] text-sm text-[#4a6278] cursor-pointer transition-colors ${rowBackgroundClass} ${isOpening ? "opacity-60" : ""}`}
+        className={`border-b border-[#d8e0ea] text-sm text-[#4a6278] cursor-pointer transition-colors ${rowBackgroundClass} ${isOpening ? "opacity-60" : ""} ${isSelected ? "ring-1 ring-inset ring-[#4f84d7]/70" : ""}`}
       >
-        <td className="px-3.5 py-1.5 pl-9">
+        <td className={`px-3.5 py-1.5 pl-9 ${isSelected ? "text-[#1f4a82] font-semibold" : ""}`}>
           <span className="flex items-center gap-1.5">
             <FileMusic
-              className={`h-3.5 w-3.5 text-[#8fa3b8] ${isOpening ? "animate-pulse" : ""}`}
+              className={`h-3.5 w-3.5 ${isSelected ? "text-[#2f6fc4]" : "text-[#8fa3b8]"} ${isOpening ? "animate-pulse" : ""}`}
             />
             {score.name ?? t("statusBar.noInstrument")}
           </span>
         </td>
-        <td className="px-3.5 py-1.5 text-xs text-[#8b9db2]">
+        <td className={`px-3.5 py-1.5 text-xs ${isSelected ? "text-[#4f6b8a]" : "text-[#8b9db2]"}`}>
           .{score.file_extension}
         </td>
         <td className="px-3.5 py-1.5"></td>
@@ -351,6 +356,7 @@ export function areScoreRowPropsEqual(
     normalizeScoreStatus(prev.score.status) ===
       normalizeScoreStatus(next.score.status) &&
     prev.displayIndex === next.displayIndex &&
+    prev.isSelected === next.isSelected &&
     prev.isMenuOpen === next.isMenuOpen &&
     prev.isLocked === next.isLocked &&
     prev.computerType === next.computerType

@@ -38,6 +38,7 @@ describe("ScoreRow menu", () => {
           <MemoizedScoreRow
             score={score}
             displayIndex={0}
+            isSelected={false}
             onSelectScore={onSelectScore}
             menuId="score-1"
             isMenuOpen={true}
@@ -81,6 +82,7 @@ describe("ScoreRow menu", () => {
           <MemoizedScoreRow
             score={score}
             displayIndex={0}
+            isSelected={false}
             onSelectScore={onSelectScore}
             menuId="score-1"
             isMenuOpen={true}
@@ -102,5 +104,89 @@ describe("ScoreRow menu", () => {
     await waitFor(() => {
       expect(openFileLocationSpy).toHaveBeenCalledWith(score.file_path);
     });
+  });
+
+  it("applies the blue selection styling when isSelected is true", () => {
+    const { container, rerender } = render(
+      <table>
+        <tbody>
+          <MemoizedScoreRow
+            score={score}
+            displayIndex={0}
+            isSelected={false}
+            onSelectScore={onSelectScore}
+            menuId="score-1"
+            isMenuOpen={false}
+            onMenuOpen={onMenuOpen}
+            onMenuClose={onMenuClose}
+            onEdit={onEdit}
+            onStatusChange={onStatusChange}
+            onDelete={onDelete}
+            onUseAsBase={onUseAsBase}
+            computerType="Server"
+            isLocked={false}
+          />
+        </tbody>
+      </table>,
+    );
+
+    const unselectedRow = container.querySelector("tr");
+    expect(unselectedRow?.className).not.toContain("bg-[#cfe4fb]");
+
+    rerender(
+      <table>
+        <tbody>
+          <MemoizedScoreRow
+            score={score}
+            displayIndex={0}
+            isSelected={true}
+            onSelectScore={onSelectScore}
+            menuId="score-1"
+            isMenuOpen={false}
+            onMenuOpen={onMenuOpen}
+            onMenuClose={onMenuClose}
+            onEdit={onEdit}
+            onStatusChange={onStatusChange}
+            onDelete={onDelete}
+            onUseAsBase={onUseAsBase}
+            computerType="Server"
+            isLocked={false}
+          />
+        </tbody>
+      </table>,
+    );
+
+    const selectedRow = container.querySelector("tr");
+    expect(selectedRow?.className).toContain("bg-[#cfe4fb]");
+    expect(selectedRow?.className).toContain("ring-1");
+  });
+
+  it("invokes onSelectScore when the row is clicked", () => {
+    render(
+      <table>
+        <tbody>
+          <MemoizedScoreRow
+            score={score}
+            displayIndex={0}
+            isSelected={false}
+            onSelectScore={onSelectScore}
+            menuId="score-1"
+            isMenuOpen={false}
+            onMenuOpen={onMenuOpen}
+            onMenuClose={onMenuClose}
+            onEdit={onEdit}
+            onStatusChange={onStatusChange}
+            onDelete={onDelete}
+            onUseAsBase={onUseAsBase}
+            computerType="Server"
+            isLocked={false}
+          />
+        </tbody>
+      </table>,
+    );
+
+    fireEvent.click(screen.getByText("Flauta"));
+
+    expect(onSelectScore).toHaveBeenCalledTimes(1);
   });
 });
