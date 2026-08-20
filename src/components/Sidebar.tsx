@@ -212,7 +212,7 @@ export default function Sidebar() {
 
         <nav className="flex flex-col">
           {state.categories.map((cat) => (
-            <div key={cat.id} className="group flex items-center">
+            <div key={cat.id} className="group flex items-center border-0 border-b border-white/12">
               <SidebarItem
                 label={getCategoryDisplayName(cat.name)}
                 active={isSidebarViewActive(currentView, {
@@ -270,9 +270,10 @@ export default function Sidebar() {
 
       <div className="border-t border-white/15 pt-2">
         <div className="mb-1.5 text-sm font-bold">{t("sidebar.composer")}</div>
-        <nav className="flex flex-col overflow-auto">
+        <nav className="flex flex-col overflow-y-auto max-h-77">
           <SidebarItem
             label={t("sidebar.all")}
+            className="border-0 border-b border-white/12"
             active={state.authorFilters.composer === "all"}
             onClick={() =>
               setAuthorFilters({ ...state.authorFilters, composer: "all" })
@@ -280,13 +281,14 @@ export default function Sidebar() {
           />
           <SidebarItem
             label={t("sidebar.noComposer")}
+            className="border-0 border-b border-white/12"
             active={state.authorFilters.composer === "none"}
             onClick={() =>
               setAuthorFilters({ ...state.authorFilters, composer: "none" })
             }
           />
           {composerOptions.map((composer) => (
-            <div key={composer} className="group flex items-center">
+            <div key={composer} className="group flex items-center border-0 border-b border-white/12">
               <SidebarItem
                 label={composer}
                 active={state.authorFilters.composer === composer}
@@ -327,9 +329,10 @@ export default function Sidebar() {
         </nav>
 
         <div className="mt-2.5 mb-1.5 text-sm font-bold">{t("sidebar.arranger")}</div>
-        <nav className="flex flex-col overflow-auto">
+        <nav className="flex flex-col overflow-y-auto max-h-77">
           <SidebarItem
             label={t("sidebar.all")}
+            className="border-0 border-b border-white/12"
             active={state.authorFilters.arranger === "all"}
             onClick={() =>
               setAuthorFilters({ ...state.authorFilters, arranger: "all" })
@@ -337,13 +340,14 @@ export default function Sidebar() {
           />
           <SidebarItem
             label={t("sidebar.noArranger")}
+            className="border-0 border-b border-white/12"
             active={state.authorFilters.arranger === "none"}
             onClick={() =>
               setAuthorFilters({ ...state.authorFilters, arranger: "none" })
             }
           />
           {arrangerOptions.map((arranger) => (
-            <div key={arranger} className="group flex items-center">
+            <div key={arranger} className="group flex items-center border-0 border-b border-white/12">
               <SidebarItem
                 label={arranger}
                 active={state.authorFilters.arranger === arranger}
@@ -432,7 +436,7 @@ function SidebarItem({
     <button
       type="button"
       onClick={onClick}
-      className={`flex w-full items-center gap-2 border-0 border-b border-white/12 px-1 py-1.5 text-left text-[13px] transition-colors cursor-pointer ${
+      className={`flex w-full items-center gap-2 px-1 py-1.5 text-left text-[13px] transition-colors cursor-pointer ${
         active
           ? "text-white font-medium bg-white/10 rounded"
           : "text-[#e8f1ff]/80 hover:text-white"
