@@ -3,7 +3,6 @@ import { LoaderCircle, Database } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useScrollLock } from "../hooks/useScrollLock";
 import type { AvailableBackup } from "../api/commands";
-import { formatBytes } from "../utils/formatters";
 
 interface SelectBackupModalProps {
   isOpen: boolean;
@@ -42,7 +41,7 @@ export function SelectBackupModal({
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-[#f8fafd] rounded-lg shadow-xl border border-[#c5cfdb] w-full max-w-lg mx-4">
+      <div className="bg-[#f8fafd] rounded-lg shadow-xl border border-[#c5cfdb] w-full max-w-xl mx-4">
         <div className="flex flex-col items-center pt-6 pb-4">
           <Database className="h-12 w-12 text-[#344b61] mb-3" />
           <h2 className="text-xl font-bold text-[#2f4259]">
@@ -89,11 +88,15 @@ export function SelectBackupModal({
                         onChange={() => setSelectedFileName(backup.file_name)}
                         className="accent-[#344b61]"
                       />
-                      <span className="flex-1 text-[#2f4259]">
-                        {date.toLocaleString()}
-                      </span>
-                      <span className="text-xs text-[#4d6075]">
-                        {formatBytes(backup.file_size)}
+                      <span className="flex-1 min-w-0 text-[#2f4259]">
+                        <span className="block">{date.toLocaleString()}</span>
+                        <span className="block text-xs text-[#4d6075]">
+                          {t("selectBackupModal.songs")}: {backup.songs_count} ·{" "}
+                          {t("selectBackupModal.scores")}: {backup.scores_count} ·{" "}
+                          {t("selectBackupModal.categories")}: {backup.categories_count} ·{" "}
+                          {t("selectBackupModal.composers")}: {backup.composers_count} ·{" "}
+                          {t("selectBackupModal.arrangers")}: {backup.arrangers_count}
+                        </span>
                       </span>
                     </button>
                   </li>

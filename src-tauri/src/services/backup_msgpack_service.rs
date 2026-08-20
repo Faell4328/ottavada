@@ -132,30 +132,63 @@ pub struct BackupFileSummary {
 pub struct AvailableBackup {
     pub file_name: String,
     pub file_path: String,
-    pub file_size: u64,
     pub generated_at: i64,
+    pub songs_count: usize,
+    pub scores_count: usize,
+    pub categories_count: usize,
+    pub composers_count: usize,
+    pub arrangers_count: usize,
 }
 
 pub fn list_available_backups(backup_dir: &Path) -> Result<Vec<AvailableBackup>, AppError> {
     let backups = list_backup_files(backup_dir)?;
     let mut available: Vec<AvailableBackup> = Vec::with_capacity(backups.len());
     for (timestamp, path) in backups {
-        let file_size = fs::metadata(&path)
-            .map(|m| m.len())
-            .unwrap_or(0);
+        let payload = match read_backup_payload_from_file(&path) {
+            Ok(payload) => payload,
+            Err(e) => {
+                warn!("Skipping unreadable backup {}: {}", path.display(), e);
+                continue;
+            }
+        };
         let file_name = path
             .file_name()
             .and_then(|n| n.to_str())
             .unwrap_or("")
             .to_string();
+        let (composers_count, arrangers_count) = count_named_entities(&payload);
         available.push(AvailableBackup {
             file_name,
             file_path: path.to_string_lossy().to_string(),
-            file_size,
             generated_at: timestamp,
+            songs_count: payload.songs.len(),
+            scores_count: payload.scores.len(),
+            categories_count: payload.categories.len(),
+            composers_count,
+            arrangers_count,
         });
     }
     Ok(available)
+}
+
+fn count_named_entities(payload: &BackupMessagePack) -> (usize, usize) {
+    let composers = payload
+        .songs
+        .iter()
+        .filter_map(|song| song.composer.as_deref().map(str::trim))
+        .filter(|name| !name.is_empty())
+        .collect::<std::collections::HashSet<_>>()
+        .len();
+
+    let arrangers = payload
+        .songs
+        .iter()
+        .filter_map(|song| song.arranger.as_deref().map(str::trim))
+        .filter(|name| !name.is_empty())
+        .collect::<std::collections::HashSet<_>>()
+        .len();
+
+    (composers, arrangers)
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1104,9 +1137,61 @@ mod tests {
 
     use super::{
         backup_filename, cleanup_old_backups, export_backup_msgpack, find_latest_valid_backup,
-        import_backup_msgpack, list_available_backups, list_backup_files,
-        parse_backup_timestamp,
+        import_backup_msgpack, list_available_backups, list_backup_files, parse_backup_timestamp,
+        BackupCategory, BackupMessagePack, BackupScore, BackupSong,
     };
+
+    fn write_valid_backup(
+        dir: &std::path::Path,
+        timestamp: i64,
+        songs: usize,
+        scores: usize,
+        categories: usize,
+        composers: usize,
+        arrangers: usize,
+    ) {
+        let payload = BackupMessagePack {
+            schema_version: 1,
+            generated_at: timestamp,
+            settings: crate::domain::models::AppSettings::default(),
+            categories: (0..categories)
+                .map(|i| BackupCategory {
+                    id: format!("cat-{i}"),
+                    name: format!("Category {i}"),
+                })
+                .collect(),
+            songs: (0..songs)
+                .map(|i| BackupSong {
+                    id: format!("song-{i}"),
+                    name: format!("Song {i}"),
+                    composer: (i < composers).then(|| format!("Composer {i}")),
+                    arranger: (i < arrangers).then(|| format!("Arranger {i}")),
+                    path: format!("/music/song-{i}"),
+                    is_favorite: false,
+                })
+                .collect(),
+            scores: (0..scores)
+                .map(|i| BackupScore {
+                    id: format!("score-{i}"),
+                    song_id: "song-0".to_string(),
+                    name: None,
+                    file_path: "/tmp".to_string(),
+                    file_name: format!("score-{i}.musx"),
+                    file_size: 0,
+                    file_modified_at: "2020-01-01 00:00:00".to_string(),
+                    status: "main".to_string(),
+                })
+                .collect(),
+            categories_songs: vec![],
+            changed_field: vec![],
+            backup_songs: vec![],
+        };
+        let bytes = super::serialize_msgpack_named(&payload, "backup").expect("serialize");
+        let compressed =
+            super::compress_zstd_with_threads(&bytes, super::ZSTD_LEVEL_BALANCED, "backup")
+                .expect("compress");
+        std::fs::write(dir.join(backup_filename(timestamp)), compressed).expect("write backup");
+    }
 
     #[test]
     fn backup_filename_roundtrips() {
@@ -1148,15 +1233,13 @@ mod tests {
     }
 
     #[test]
-    fn list_available_backups_returns_metadata_sorted_desc() {
+    fn list_available_backups_returns_counts_sorted_desc() {
         let dir = tempdir().expect("temp dir");
         let backup_dir = dir.path();
 
-        let sizes: [usize; 3] = [1024, 4096, 2048];
-        for (i, size) in sizes.iter().enumerate() {
-            let name = backup_filename(2000 + i as i64);
-            std::fs::write(backup_dir.join(&name), vec![0u8; *size]).expect("write backup");
-        }
+        write_valid_backup(backup_dir, 2000, 5, 6, 3, 4, 5);
+        write_valid_backup(backup_dir, 2001, 10, 20, 30, 2, 3);
+        write_valid_backup(backup_dir, 2002, 100, 200, 300, 7, 8);
 
         let available = list_available_backups(backup_dir).expect("list");
 
@@ -1164,10 +1247,78 @@ mod tests {
         assert_eq!(available[0].generated_at, 2002);
         assert_eq!(available[1].generated_at, 2001);
         assert_eq!(available[2].generated_at, 2000);
-        assert_eq!(available[0].file_size, 2048);
-        assert_eq!(available[1].file_size, 4096);
-        assert_eq!(available[2].file_size, 1024);
         assert_eq!(available[0].file_name, backup_filename(2002));
+
+        assert_eq!(available[0].songs_count, 100);
+        assert_eq!(available[0].scores_count, 200);
+        assert_eq!(available[0].categories_count, 300);
+        assert_eq!(available[0].composers_count, 7);
+        assert_eq!(available[0].arrangers_count, 8);
+
+        assert_eq!(available[2].songs_count, 5);
+        assert_eq!(available[2].scores_count, 6);
+        assert_eq!(available[2].categories_count, 3);
+        assert_eq!(available[2].composers_count, 4);
+        assert_eq!(available[2].arrangers_count, 5);
+    }
+
+    #[test]
+    fn list_available_backups_skips_unreadable_files() {
+        let dir = tempdir().expect("temp dir");
+        let backup_dir = dir.path();
+
+        std::fs::write(backup_dir.join(backup_filename(1000)), b"not a backup").expect("write");
+        write_valid_backup(backup_dir, 2000, 3, 4, 5, 1, 2);
+
+        let available = list_available_backups(backup_dir).expect("list");
+
+        assert_eq!(available.len(), 1);
+        assert_eq!(available[0].generated_at, 2000);
+        assert_eq!(available[0].songs_count, 3);
+    }
+
+    #[test]
+    fn count_named_entities_deduplicates_and_ignores_empty() {
+        let payload = BackupMessagePack {
+            schema_version: 1,
+            generated_at: 1,
+            settings: crate::domain::models::AppSettings::default(),
+            categories: vec![],
+            songs: vec![
+                BackupSong {
+                    id: "song-1".to_string(),
+                    name: "Song 1".to_string(),
+                    composer: Some("Bach".to_string()),
+                    arranger: Some("Arranger A".to_string()),
+                    path: "/music/song-1".to_string(),
+                    is_favorite: false,
+                },
+                BackupSong {
+                    id: "song-2".to_string(),
+                    name: "Song 2".to_string(),
+                    composer: Some("Bach".to_string()),
+                    arranger: None,
+                    path: "/music/song-2".to_string(),
+                    is_favorite: false,
+                },
+                BackupSong {
+                    id: "song-3".to_string(),
+                    name: "Song 3".to_string(),
+                    composer: Some("  ".to_string()),
+                    arranger: Some("".to_string()),
+                    path: "/music/song-3".to_string(),
+                    is_favorite: false,
+                },
+            ],
+            scores: vec![],
+            categories_songs: vec![],
+            changed_field: vec![],
+            backup_songs: vec![],
+        };
+
+        let (composers, arrangers) = super::count_named_entities(&payload);
+        assert_eq!(composers, 1);
+        assert_eq!(arrangers, 1);
     }
 
     #[test]

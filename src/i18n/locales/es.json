@@ -584,7 +584,12 @@
     "loading": "Cargando copias de seguridad disponibles...",
     "empty": "No se encontraron copias de seguridad en la nube.",
     "cancel": "Cancelar",
-    "continue": "Continuar"
+    "continue": "Continuar",
+    "songs": "Canciones",
+    "scores": "Partituras",
+    "categories": "Categorías",
+    "composers": "Compositores",
+    "arrangers": "Arreglistas"
   },
   "rcloneProviderModal": {
     "title": "Configurar proveedor de nube",

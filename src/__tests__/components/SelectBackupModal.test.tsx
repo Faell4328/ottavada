@@ -7,14 +7,22 @@ const sampleBackups: AvailableBackup[] = [
   {
     file_name: "backup - 1710684000.msgpack.zst",
     file_path: "/backups/backup - 1710684000.msgpack.zst",
-    file_size: 1024 * 1024,
     generated_at: 1710684000,
+    songs_count: 10,
+    scores_count: 25,
+    categories_count: 3,
+    composers_count: 5,
+    arrangers_count: 4,
   },
   {
     file_name: "backup - 1710770400.msgpack.zst",
     file_path: "/backups/backup - 1710770400.msgpack.zst",
-    file_size: 2 * 1024 * 1024,
     generated_at: 1710770400,
+    songs_count: 42,
+    scores_count: 77,
+    categories_count: 8,
+    composers_count: 12,
+    arrangers_count: 9,
   },
 ];
 
@@ -60,7 +68,7 @@ describe("SelectBackupModal", () => {
     expect(screen.getByText(/Nenhum backup encontrado na nuvem/)).toBeInTheDocument();
   });
 
-  it("lists backups with date, time and size", () => {
+  it("lists backups with date, time and counts", () => {
     render(
       <SelectBackupModal
         isOpen
@@ -74,8 +82,9 @@ describe("SelectBackupModal", () => {
     const items = screen.getAllByTestId("select-backup-item");
     expect(items).toHaveLength(2);
 
-    expect(screen.getByText("1.0 MB")).toBeInTheDocument();
-    expect(screen.getByText("2.0 MB")).toBeInTheDocument();
+    expect(screen.getByText(/Músicas: 10 · Partituras: 25/)).toBeInTheDocument();
+    expect(screen.getByText(/Músicas: 42 · Partituras: 77/)).toBeInTheDocument();
+    expect(screen.getByText(/Compositores: 5 · Arranjadores: 4/)).toBeInTheDocument();
     expect(screen.getAllByText(/2024/).length).toBeGreaterThanOrEqual(2);
   });
 

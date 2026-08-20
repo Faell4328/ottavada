@@ -584,7 +584,12 @@
     "loading": "Chargement des sauvegardes disponibles...",
     "empty": "Aucune sauvegarde trouvée dans le cloud.",
     "cancel": "Annuler",
-    "continue": "Continuer"
+    "continue": "Continuer",
+    "songs": "Chants",
+    "scores": "Partitions",
+    "categories": "Catégories",
+    "composers": "Compositeurs",
+    "arrangers": "Arrangeurs"
   },
   "rcloneProviderModal": {
     "title": "Configurer le fournisseur cloud",

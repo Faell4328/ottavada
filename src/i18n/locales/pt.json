@@ -584,7 +584,12 @@
     "loading": "Carregando backups disponíveis...",
     "empty": "Nenhum backup encontrado na nuvem.",
     "cancel": "Cancelar",
-    "continue": "Continuar"
+    "continue": "Continuar",
+    "songs": "Músicas",
+    "scores": "Partituras",
+    "categories": "Categorias",
+    "composers": "Compositores",
+    "arrangers": "Arranjadores"
   },
   "rcloneProviderModal": {
     "title": "Configurar provedor de nuvem",

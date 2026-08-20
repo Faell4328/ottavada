@@ -556,8 +556,12 @@ export interface CloudBackupValidation {
 export interface AvailableBackup {
   file_name: string;
   file_path: string;
-  file_size: number;
   generated_at: number;
+  songs_count: number;
+  scores_count: number;
+  categories_count: number;
+  composers_count: number;
+  arrangers_count: number;
 }
 
 export interface RestoreSongsResult {

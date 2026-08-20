@@ -584,7 +584,12 @@
     "loading": "Verfügbare Backups werden geladen...",
     "empty": "Keine Backups in der Cloud gefunden.",
     "cancel": "Abbrechen",
-    "continue": "Weiter"
+    "continue": "Weiter",
+    "songs": "Lieder",
+    "scores": "Noten",
+    "categories": "Kategorien",
+    "composers": "Komponisten",
+    "arrangers": "Arrangeure"
   },
   "rcloneProviderModal": {
     "title": "Cloud-Anbieter konfigurieren",

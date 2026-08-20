@@ -584,7 +584,12 @@
     "loading": "Loading available backups...",
     "empty": "No backups found in the cloud.",
     "cancel": "Cancel",
-    "continue": "Continue"
+    "continue": "Continue",
+    "songs": "Songs",
+    "scores": "Scores",
+    "categories": "Categories",
+    "composers": "Composers",
+    "arrangers": "Arrangers"
   },
   "rcloneProviderModal": {
     "title": "Configure cloud provider",

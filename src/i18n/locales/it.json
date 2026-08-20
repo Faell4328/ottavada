@@ -584,7 +584,12 @@
     "loading": "Caricamento dei backup disponibili...",
     "empty": "Nessun backup trovato nel cloud.",
     "cancel": "Annulla",
-    "continue": "Continua"
+    "continue": "Continua",
+    "songs": "Brani",
+    "scores": "Spartiti",
+    "categories": "Categorie",
+    "composers": "Compositori",
+    "arrangers": "Arrangiatori"
   },
   "rcloneProviderModal": {
     "title": "Configura provider cloud",
