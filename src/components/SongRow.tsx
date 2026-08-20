@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useScrollLock } from "../hooks/useScrollLock";
 import { open } from "@tauri-apps/plugin-dialog";
-import toast from "react-hot-toast";
+import toast from "../utils/toast";
 import { useTranslation } from "react-i18next";
 import type { SongListItem } from "../types";
 import { ContextMenu, ContextMenuItem } from "./ui/ContextMenu";

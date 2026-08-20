@@ -1,5 +1,5 @@
 import type { Dispatch } from "react";
-import toast from "react-hot-toast";
+import toast from "../utils/toast";
 import i18next from "i18next";
 
 import * as api from "../api/commands";

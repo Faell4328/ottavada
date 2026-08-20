@@ -1,6 +1,6 @@
 import { useCallback, type Dispatch } from "react";
 import i18n from "../i18n";
-import toast from "react-hot-toast";
+import toast from "../utils/toast";
 
 import * as api from "../api/commands";
 import type { AppSettings, ScoreListItem, SidebarView, SongListItem } from "../types";

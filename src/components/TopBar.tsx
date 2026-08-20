@@ -5,7 +5,7 @@ import { useNavigate } from "react-router";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useAppState } from "../context/AppContext";
 import * as api from "../api/commands";
-import toast from "react-hot-toast";
+import toast from "../utils/toast";
 import type { IndexedFile, SongListItem } from "../types";
 import { isClientComputer } from "../utils/computer";
 import { AddFilesModal } from "./AddFilesModal.tsx";

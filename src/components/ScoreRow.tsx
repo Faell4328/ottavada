@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { FileMusic } from "lucide-react";
-import toast from "react-hot-toast";
+import toast from "../utils/toast";
 import { useTranslation } from "react-i18next";
 import * as api from "../api/commands";
 import type { ScoreListItem } from "../types";

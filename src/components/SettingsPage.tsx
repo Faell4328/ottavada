@@ -4,7 +4,7 @@ import { ArrowLeft, LoaderCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import i18n, { changeLanguage } from "../i18n";
 import { open, save } from "@tauri-apps/plugin-dialog";
-import toast from "react-hot-toast";
+import toast from "../utils/toast";
 import { useAppState } from "../context/AppContext";
 import * as api from "../api/commands";
 import { ChangeComputerTypeModal } from "./ChangeComputerTypeModal";

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CheckCircle, Loader2 } from "lucide-react";
-import toast from "react-hot-toast";
+import toast from "../utils/toast";
 import i18n, { changeLanguage } from "../i18n";
 
 import * as api from "../api/commands";

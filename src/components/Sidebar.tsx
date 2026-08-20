@@ -20,7 +20,7 @@ import { ConfirmationModal } from "./ui/ConfirmationModal";
 import { EditCategoryModal } from "./EditCategoryModal";
 import { EditAuthorModal } from "./EditAuthorModal";
 import { getCategoryDisplayName } from "../utils/categoryDisplay";
-import toast from "react-hot-toast";
+import toast from "../utils/toast";
 
 export default function Sidebar() {
   const {

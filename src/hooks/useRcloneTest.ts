@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import toast from "react-hot-toast";
+import toast from "../utils/toast";
 import i18n from "../i18n";
 
 import * as api from "../api/commands";

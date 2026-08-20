@@ -8,7 +8,7 @@ import React, {
   useTransition,
 } from "react";
 import { Search, FileMusic } from "lucide-react";
-import toast from "react-hot-toast";
+import toast from "../utils/toast";
 import { useTranslation } from "react-i18next";
 
 import * as api from "../api/commands";
