@@ -732,6 +732,7 @@
     "reloadingSongs": "Recarregando músicas e partituras",
     "cloudBackupImported": "Backup da nuvem importado com sucesso. Este backup é de {{timestamp}}; mudanças feitas depois disso não estão incluídas.{{restored}}{{drafts}}",
     "songsRestored": " {{songs}} música(s) e {{scores}} partitura(s) foram restauradas da nuvem.",
+    "scoresReplaced": " {{count}} partitura(s) foram atualizadas porque estavam desatualizadas.",
     "draftsRestored": " {{count}} partitura(s) de envio não permitido e ignoradas restauradas."
   },
   "clientSyncFlow": {

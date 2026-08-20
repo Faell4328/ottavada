@@ -200,6 +200,14 @@ pub struct BackupImportSummary {
     pub categories_count: usize,
     pub songs_restored: usize,
     pub scores_restored: usize,
+    pub scores_replaced: usize,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct SongFileRestoreStats {
+    pub songs_restored: usize,
+    pub scores_restored: usize,
+    pub scores_replaced: usize,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -410,6 +418,7 @@ fn restore_backup_from_path(
         categories_count: payload.categories.len(),
         songs_restored: 0,
         scores_restored: 0,
+        scores_replaced: 0,
     })
 }
 
@@ -485,11 +494,11 @@ pub fn import_backup_msgpack_from_cloud_by_name(
 
     let mut summary = restore_database_from_cloud_backup_by_name(db, store, backup_file_name)?;
 
-    let (songs_restored, scores_restored) =
-        restore_song_files_from_cloud_archives(db, store.app_data_dir())?;
+    let stats = restore_song_files_from_cloud_archives(db, store.app_data_dir())?;
 
-    summary.songs_restored = songs_restored;
-    summary.scores_restored = scores_restored;
+    summary.songs_restored = stats.songs_restored;
+    summary.scores_restored = stats.scores_restored;
+    summary.scores_replaced = stats.scores_replaced;
 
     let draft_count = crate::services::backup_draft_ignored_service::restore_draft_ignored_scores_from_backup(
         db, store,
@@ -578,7 +587,7 @@ pub fn restore_database_from_cloud_backup_by_name(
 pub fn restore_song_files_from_cloud_archives(
     db: &Database,
     app_data_dir: &Path,
-) -> Result<(usize, usize), AppError> {
+) -> Result<SongFileRestoreStats, AppError> {
     let result = restore_missing_songs_from_archives(db, app_data_dir)?;
 
     let tmp_dir = app_data_dir.join("tmp");
@@ -592,7 +601,7 @@ pub fn restore_song_files_from_cloud_archives(
 pub fn restore_missing_songs_from_archives(
     db: &Database,
     app_data_dir: &Path,
-) -> Result<(usize, usize), AppError> {
+) -> Result<SongFileRestoreStats, AppError> {
     let songs_cloud_dir = app_data_dir.join("cloud").join("songs");
     let temp_songs_root = app_data_dir.join("tmp").join("songs");
 
@@ -640,18 +649,30 @@ pub fn restore_missing_songs_from_archives(
 
     let mut song_dirs_created = std::collections::HashSet::new();
     let mut scores_restored = 0_usize;
+    let mut scores_replaced = 0_usize;
 
     for score_ref in &score_refs {
         if !extracted_song_ids.contains(&score_ref.song_id) {
             continue;
         }
 
+        let temp_song_dir = temp_songs_root.join(&score_ref.song_id);
+        let Some(temp_path) = find_score_in_temp_dir(&temp_song_dir, &score_ref.score_id) else {
+            warn!(
+                "Score {} not found in the temporary directory of song {}",
+                score_ref.score_id, score_ref.song_id
+            );
+            continue;
+        };
+
         let song_dir = PathBuf::from(from_storage_path(&score_ref.song_path));
         let destination = song_dir.join(&score_ref.file_name);
 
-        if destination.exists() {
+        if destination.exists() && files_are_equal(&temp_path, &destination) {
             continue;
         }
+
+        let is_replacement = destination.exists();
 
         if !song_dirs_created.contains(&score_ref.song_id) {
             fs::create_dir_all(&song_dir).map_err(|e| {
@@ -664,34 +685,38 @@ pub fn restore_missing_songs_from_archives(
             song_dirs_created.insert(score_ref.song_id.clone());
         }
 
-        let temp_song_dir = temp_songs_root.join(&score_ref.song_id);
-        match move_score_from_temp(&temp_song_dir, &score_ref.score_id, &destination) {
-            Ok(true) => {
-                info!(
-                    "Score restored: {} -> {}",
-                    score_ref.score_id,
-                    destination.display()
-                );
-                scores_restored += 1;
-            }
-            Ok(false) => {
-                warn!(
-                    "Score {} not found in the temporary directory of song {}",
-                    score_ref.score_id, score_ref.song_id
-                );
-            }
-            Err(e) => {
-                warn!(
-                    "Could not restore score {} of song {}: {}",
-                    score_ref.score_id, score_ref.song_id, e
-                );
-            }
+        if let Err(e) = copy_score_to_destination(&temp_path, &destination) {
+            warn!(
+                "Could not restore score {} of song {}: {}",
+                score_ref.score_id, score_ref.song_id, e
+            );
+            continue;
+        }
+
+        if is_replacement {
+            info!(
+                "Score replaced (outdated): {} -> {}",
+                score_ref.score_id,
+                destination.display()
+            );
+            scores_replaced += 1;
+        } else {
+            info!(
+                "Score restored: {} -> {}",
+                score_ref.score_id,
+                destination.display()
+            );
+            scores_restored += 1;
         }
     }
 
     let _ = empty_directory_contents(&temp_songs_root);
 
-    Ok((song_dirs_created.len(), scores_restored))
+    Ok(SongFileRestoreStats {
+        songs_restored: song_dirs_created.len(),
+        scores_restored,
+        scores_replaced,
+    })
 }
 
 fn query_song_score_refs(db: &Database) -> Result<Vec<SongScoreRef>, AppError> {
@@ -793,55 +818,74 @@ fn extract_full_archive(
     Ok(())
 }
 
-fn move_score_from_temp(
-    temp_song_dir: &Path,
-    score_id: &str,
-    destination: &Path,
-) -> Result<bool, AppError> {
-    for entry in fs::read_dir(temp_song_dir).map_err(|e| {
-        AppError::Generic(format!(
-            "Error reading temporary directory {}: {}",
-            temp_song_dir.display(),
-            e
-        ))
-    })? {
-        let entry = entry.map_err(|e| {
-            AppError::Generic(format!(
-                "Error reading temporary directory entry: {}",
-                e
-            ))
-        })?;
+fn find_score_in_temp_dir(temp_song_dir: &Path, score_id: &str) -> Option<PathBuf> {
+    for entry in fs::read_dir(temp_song_dir).ok()? {
+        let entry = entry.ok()?;
         let path = entry.path();
         if !path.is_file() {
             continue;
         }
-        let Some(file_name) = path.file_name().and_then(|n| n.to_str()) else {
-            continue;
-        };
+        let file_name = path.file_name().and_then(|n| n.to_str())?;
         let stem = Path::new(file_name).file_stem().and_then(|s| s.to_str());
 
         if stem == Some(score_id) || file_name == score_id {
-            if destination.exists() {
-                fs::remove_file(destination).map_err(|e| {
-                    AppError::Generic(format!(
-                        "Error removing existing file {}: {}",
-                        destination.display(),
-                        e
-                    ))
-                })?;
-            }
-            fs::copy(&path, destination).map_err(|e| {
-                AppError::Generic(format!(
-                    "Error copying score from {} to {}: {}",
-                    path.display(),
-                    destination.display(),
-                    e
-                ))
-            })?;
-            return Ok(true);
+            return Some(path);
         }
     }
-    Ok(false)
+    None
+}
+
+fn copy_score_to_destination(source: &Path, destination: &Path) -> Result<(), AppError> {
+    if destination.exists() {
+        fs::remove_file(destination).map_err(|e| {
+            AppError::Generic(format!(
+                "Error removing existing file {}: {}",
+                destination.display(),
+                e
+            ))
+        })?;
+    }
+    fs::copy(source, destination).map_err(|e| {
+        AppError::Generic(format!(
+            "Error copying score from {} to {}: {}",
+            source.display(),
+            destination.display(),
+            e
+        ))
+    })?;
+    Ok(())
+}
+
+fn files_are_equal(a: &Path, b: &Path) -> bool {
+    let (Ok(meta_a), Ok(meta_b)) = (fs::metadata(a), fs::metadata(b)) else {
+        return false;
+    };
+    if meta_a.len() != meta_b.len() {
+        return false;
+    }
+
+    let (Ok(mut file_a), Ok(mut file_b)) = (File::open(a), File::open(b)) else {
+        return false;
+    };
+
+    let mut buf_a = [0u8; 64 * 1024];
+    let mut buf_b = [0u8; 64 * 1024];
+    loop {
+        let n_a = match std::io::Read::read(&mut file_a, &mut buf_a) {
+            Ok(0) => break,
+            Ok(n) => n,
+            Err(_) => return false,
+        };
+        let n_b = match std::io::Read::read(&mut file_b, &mut buf_b) {
+            Ok(n) => n,
+            Err(_) => return false,
+        };
+        if n_a != n_b || buf_a[..n_a] != buf_b[..n_b] {
+            return false;
+        }
+    }
+
+    true
 }
 
 fn collect_backup_payload(
@@ -1136,9 +1180,10 @@ mod tests {
     use crate::infrastructure::store::SystemStore;
 
     use super::{
-        backup_filename, cleanup_old_backups, export_backup_msgpack, find_latest_valid_backup,
-        import_backup_msgpack, list_available_backups, list_backup_files, parse_backup_timestamp,
-        BackupCategory, BackupMessagePack, BackupScore, BackupSong,
+        backup_filename, cleanup_old_backups, export_backup_msgpack, files_are_equal,
+        find_latest_valid_backup, import_backup_msgpack, list_available_backups, list_backup_files,
+        parse_backup_timestamp, restore_missing_songs_from_archives, BackupCategory,
+        BackupMessagePack, BackupScore, BackupSong,
     };
 
     fn write_valid_backup(
@@ -1191,6 +1236,149 @@ mod tests {
             super::compress_zstd_with_threads(&bytes, super::ZSTD_LEVEL_BALANCED, "backup")
                 .expect("compress");
         std::fs::write(dir.join(backup_filename(timestamp)), compressed).expect("write backup");
+    }
+
+    fn write_tar_zst_from_dir(source_dir: &std::path::Path, archive_path: &std::path::Path) {
+        let file = std::fs::File::create(archive_path).expect("create archive");
+        let mut encoder = zstd::stream::Encoder::new(file, 3).expect("zstd encoder");
+        {
+            let mut builder = tar::Builder::new(&mut encoder);
+            for entry in std::fs::read_dir(source_dir).expect("read source dir") {
+                let entry = entry.expect("source entry");
+                let path = entry.path();
+                if path.is_file() {
+                    let name = path.file_name().expect("file name");
+                    builder
+                        .append_path_with_name(&path, name)
+                        .expect("append file");
+                }
+            }
+            builder.finish().expect("finish tar");
+        }
+        encoder.finish().expect("finish zstd");
+    }
+
+    fn insert_song_and_score(
+        db: &Database,
+        song_id: &str,
+        song_dir: &std::path::Path,
+        score_id: &str,
+        file_name: &str,
+    ) {
+        db.insert_song(
+            &Song {
+                id: song_id.to_string(),
+                name: "Music".to_string(),
+                composer: None,
+                arranger: None,
+                path: song_dir.to_string_lossy().to_string(),
+                is_favorite: false,
+                status: ScoreStatus::Main,
+                updated_at: chrono::Local::now().naive_local(),
+                updated_by: "server-1".to_string(),
+            },
+            &[],
+        )
+        .expect("insert song");
+
+        db.insert_score(&Score {
+            id: score_id.to_string(),
+            song_id: song_id.to_string(),
+            name: None,
+            file_path: song_dir.to_string_lossy().to_string(),
+            file_name: file_name.to_string(),
+            file_size: 0,
+            file_modified_at: chrono::Local::now().naive_local(),
+            updated_at: chrono::Local::now().naive_local(),
+            status: ScoreStatus::Main,
+            updated_by: "server-1".to_string(),
+        })
+        .expect("insert score");
+    }
+
+    fn setup_restore_scenario(
+        existing_content: Option<&[u8]>,
+    ) -> (tempfile::TempDir, std::path::PathBuf, Database, std::path::PathBuf) {
+        let temp = tempdir().expect("temp dir");
+        let app_data_dir = temp.path().join("app-data");
+        let cloud_songs_dir = app_data_dir.join("cloud").join("songs");
+        std::fs::create_dir_all(&cloud_songs_dir).expect("create cloud songs dir");
+
+        let db = Database::new(&temp.path().join("db.sqlite")).expect("create db");
+
+        let song_dir = temp.path().join("songs").join("song-1");
+        std::fs::create_dir_all(&song_dir).expect("create song dir");
+
+        insert_song_and_score(&db, "song-1", &song_dir, "score-1", "score-1.musx");
+
+        let archive_src = temp.path().join("archive-src");
+        std::fs::create_dir_all(&archive_src).expect("create archive src");
+        std::fs::write(archive_src.join("score-1.musx"), b"new version")
+            .expect("write archive score");
+        write_tar_zst_from_dir(&archive_src, &cloud_songs_dir.join("song-1.tar.zst"));
+
+        if let Some(content) = existing_content {
+            std::fs::write(song_dir.join("score-1.musx"), content).expect("write existing score");
+        }
+
+        (temp, app_data_dir, db, song_dir)
+    }
+
+    #[test]
+    fn files_are_equal_compares_content() {
+        let temp = tempdir().expect("temp dir");
+        let a = temp.path().join("a");
+        let b = temp.path().join("b");
+        let c = temp.path().join("c");
+        std::fs::write(&a, b"same content").expect("write a");
+        std::fs::write(&b, b"same content").expect("write b");
+        std::fs::write(&c, b"different content").expect("write c");
+
+        assert!(files_are_equal(&a, &b));
+        assert!(!files_are_equal(&a, &c));
+        assert!(!files_are_equal(&a, &temp.path().join("missing")));
+    }
+
+    #[test]
+    fn restores_missing_score_file() {
+        let (_temp, app_data_dir, db, song_dir) = setup_restore_scenario(None);
+
+        let stats = restore_missing_songs_from_archives(&db, &app_data_dir).expect("restore");
+
+        assert_eq!(stats.scores_restored, 1);
+        assert_eq!(stats.scores_replaced, 0);
+        assert_eq!(
+            std::fs::read(song_dir.join("score-1.musx")).expect("read score"),
+            b"new version"
+        );
+    }
+
+    #[test]
+    fn skips_when_existing_score_matches_archive() {
+        let (_temp, app_data_dir, db, song_dir) = setup_restore_scenario(Some(b"new version"));
+
+        let stats = restore_missing_songs_from_archives(&db, &app_data_dir).expect("restore");
+
+        assert_eq!(stats.scores_restored, 0);
+        assert_eq!(stats.scores_replaced, 0);
+        assert_eq!(
+            std::fs::read(song_dir.join("score-1.musx")).expect("read score"),
+            b"new version"
+        );
+    }
+
+    #[test]
+    fn replaces_outdated_score_file() {
+        let (_temp, app_data_dir, db, song_dir) = setup_restore_scenario(Some(b"old version"));
+
+        let stats = restore_missing_songs_from_archives(&db, &app_data_dir).expect("restore");
+
+        assert_eq!(stats.scores_restored, 0);
+        assert_eq!(stats.scores_replaced, 1);
+        assert_eq!(
+            std::fs::read(song_dir.join("score-1.musx")).expect("read score"),
+            b"new version"
+        );
     }
 
     #[test]

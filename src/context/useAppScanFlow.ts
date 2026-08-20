@@ -476,7 +476,7 @@ export function useAppScanFlow({
 
           if (!isAutomatic) {
             toast(t("scanFlow.snapshotGenerated"), {
-              icon: "�",
+              icon: "✔️",
             });
           }
         }

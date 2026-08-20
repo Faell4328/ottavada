@@ -543,6 +543,7 @@ export interface BackupImportSummary {
   categories_count: number;
   songs_restored: number;
   scores_restored: number;
+  scores_replaced: number;
 }
 
 export interface CloudBackupValidation {
@@ -567,6 +568,7 @@ export interface AvailableBackup {
 export interface RestoreSongsResult {
   songs_restored: number;
   scores_restored: number;
+  scores_replaced: number;
 }
 
 export async function exportBackupFile(outputPath?: string | null): Promise<BackupFileSummary> {

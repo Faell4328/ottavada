@@ -128,13 +128,18 @@ export async function runBackupImportFlow(
         ? t("backupImportFlow.songsRestored", { songs: restoreResult.songs_restored, scores: restoreResult.scores_restored })
         : "";
 
+    const replacedInfo =
+      restoreResult.scores_replaced > 0
+        ? t("backupImportFlow.scoresReplaced", { count: restoreResult.scores_replaced })
+        : "";
+
     const draftIgnoredInfo =
       draftIgnoredRestored > 0
         ? t("backupImportFlow.draftsRestored", { count: draftIgnoredRestored })
         : "";
 
     toast.success(
-      t("backupImportFlow.cloudBackupImported", { timestamp: formatTimestamp(dbSummary.generated_at), restored: restoredInfo, drafts: draftIgnoredInfo }),
+      t("backupImportFlow.cloudBackupImported", { timestamp: formatTimestamp(dbSummary.generated_at), restored: restoredInfo + replacedInfo, drafts: draftIgnoredInfo }),
       { duration: 8000 },
     );
   } finally {

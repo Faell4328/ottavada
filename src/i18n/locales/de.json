@@ -732,6 +732,7 @@
     "reloadingSongs": "Lieder und Noten werden neu geladen",
     "cloudBackupImported": "Cloud-Backup erfolgreich importiert. Es stammt vom {{timestamp}}; spätere Änderungen sind in diesem Backup nicht enthalten.{{restored}}{{drafts}}",
     "songsRestored": " {{songs}} Lied(er) und {{scores}} Note(n) wurden aus der Cloud wiederhergestellt.",
+    "scoresReplaced": " {{count}} Note(n) wurden aktualisiert, da sie veraltet waren.",
     "draftsRestored": " {{count}} Note(n) mit nicht erlaubtem Versand und ignorierte wiederhergestellt."
   },
   "clientSyncFlow": {

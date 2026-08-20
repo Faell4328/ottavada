@@ -186,6 +186,7 @@ pub async fn restore_backup_db_from_cloud(
 pub struct RestoreSongsResult {
     songs_restored: usize,
     scores_restored: usize,
+    scores_replaced: usize,
 }
 
 #[tauri::command]
@@ -200,10 +201,11 @@ pub async fn restore_songs_from_cloud_archives(
         app_data_dir,
         "Internal failure restoring scores",
         move |store| {
-            let (songs, scores) = restore_song_files_from_cloud_archives(&db, store.app_data_dir())?;
+            let stats = restore_song_files_from_cloud_archives(&db, store.app_data_dir())?;
             Ok(RestoreSongsResult {
-                songs_restored: songs,
-                scores_restored: scores,
+                songs_restored: stats.songs_restored,
+                scores_restored: stats.scores_restored,
+                scores_replaced: stats.scores_replaced,
             })
         },
     )

@@ -732,6 +732,7 @@
     "reloadingSongs": "Rechargement des chants et partitions",
     "cloudBackupImported": "Sauvegarde cloud importée avec succès. Elle date de {{timestamp}} ; les modifications effectuées après ne sont pas incluses.{{restored}}{{drafts}}",
     "songsRestored": " {{songs}} chant(s) et {{scores}} partition(s) ont été restaurés depuis le cloud.",
+    "scoresReplaced": " {{count}} partition(s) ont été mises à jour car elles étaient obsolètes.",
     "draftsRestored": " {{count}} partition(s) avec envoi non autorisé et ignorée(s) restaurée(s)."
   },
   "clientSyncFlow": {

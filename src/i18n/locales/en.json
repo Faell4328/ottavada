@@ -732,6 +732,7 @@
     "reloadingSongs": "Reloading songs and scores",
     "cloudBackupImported": "Cloud backup imported successfully. It is from {{timestamp}}; changes made after that are not included in this backup.{{restored}}{{drafts}}",
     "songsRestored": " {{songs}} song(s) and {{scores}} score(s) were restored from the cloud.",
+    "scoresReplaced": " {{count}} score(s) were updated because they were outdated.",
     "draftsRestored": " {{count}} score(s) with sending not allowed and ignored restored."
   },
   "clientSyncFlow": {

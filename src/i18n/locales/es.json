@@ -732,6 +732,7 @@
     "reloadingSongs": "Recargando canciones y partituras",
     "cloudBackupImported": "Copia de seguridad de la nube importada con éxito. Es de {{timestamp}}; los cambios hechos después no están incluidos en esta copia de seguridad.{{restored}}{{drafts}}",
     "songsRestored": " {{songs}} canción(es) y {{scores}} partitura(s) fueron restauradas de la nube.",
+    "scoresReplaced": " {{count}} partitura(s) fueron actualizadas porque estaban desactualizadas.",
     "draftsRestored": " {{count}} partitura(s) de envío no permitido e ignoradas restauradas."
   },
   "clientSyncFlow": {

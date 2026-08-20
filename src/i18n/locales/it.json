@@ -732,6 +732,7 @@
     "reloadingSongs": "Ricaricamento brani e spartiti",
     "cloudBackupImported": "Backup cloud importato con successo. Risale al {{timestamp}}; le modifiche successive non sono incluse in questo backup.{{restored}}{{drafts}}",
     "songsRestored": " {{songs}} brano/i e {{scores}} spartito/i sono stati ripristinati dal cloud.",
+    "scoresReplaced": " {{count}} spartito/i sono stati aggiornati perché obsoleti.",
     "draftsRestored": " {{count}} spartito/i con invio non consentito e ignorato ripristinato/i."
   },
   "clientSyncFlow": {
