@@ -1,5 +1,5 @@
 import { Download, FolderSearch, Settings, RefreshCw } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -49,6 +49,14 @@ export default function TopBar({
   >([]);
   const [showAddFilesModal, setShowAddFilesModal] = useState(false);
   const [addFilesModalKey, setAddFilesModalKey] = useState(0);
+  const [addFilesProgress, setAddFilesProgress] = useState<{
+    current: number;
+    total: number;
+  } | null>(null);
+  const directoryQueueRef = useRef<{
+    directories: string[];
+    index: number;
+  } | null>(null);
   const selectedCategoryIds = useMemo(
     () =>
       typeof state.sidebarView === "object" &&
@@ -72,41 +80,99 @@ export default function TopBar({
     }
 
     try {
-      const selected = await open({ directory: true, multiple: false });
-      if (selected) {
-        const directoryPath = selected as string;
-        const existingSongInfo = await api.findSongByDirectory(directoryPath);
-        if (existingSongInfo) {
-          toast.error(t("topBar.directoryAlreadyIndexed", { name: existingSongInfo.name }));
-          return;
-        }
-
-        let files = await api.scanDirectory(directoryPath);
-        if (files.length === 0) {
-          toast.error(t("topBar.noSongsFound"));
-          return;
-        }
-        const existingSongs = await api.getAllSongs();
-        setPendingFiles(files);
-        setExistingSongsForAddFiles(existingSongs);
-        setAddFilesModalKey((prev) => prev + 1);
-        setShowAddFilesModal(true);
+      const selected = await open({ directory: true, multiple: true });
+      if (!selected) {
+        return;
       }
+
+      const directories = Array.isArray(selected) ? selected : [selected];
+      if (directories.length === 0) {
+        return;
+      }
+
+      directoryQueueRef.current = { directories, index: 0 };
+      await processNextDirectory();
     } catch (err) {
       console.error("Failed to scan directory:", err);
       toast.error(t("topBar.scanFailed"));
     }
   }
 
-  function handleCloseAddFilesModal() {
+  async function processNextDirectory() {
+    const queue = directoryQueueRef.current;
+    if (!queue || queue.index >= queue.directories.length) {
+      directoryQueueRef.current = null;
+      return;
+    }
+
+    const directoryPath = queue.directories[queue.index];
+
+    try {
+      const existingSongInfo = await api.findSongByDirectory(directoryPath);
+      if (existingSongInfo) {
+        toast.error(
+          t("topBar.directoryAlreadyIndexed", { name: existingSongInfo.name }),
+        );
+        queue.index += 1;
+        await processNextDirectory();
+        return;
+      }
+
+      const files = await api.scanDirectory(directoryPath);
+      if (files.length === 0) {
+        toast.error(t("topBar.noSongsFound"));
+        queue.index += 1;
+        await processNextDirectory();
+        return;
+      }
+
+      const existingSongs = await api.getAllSongs();
+      setPendingFiles(files);
+      setExistingSongsForAddFiles(existingSongs);
+      setAddFilesProgress({
+        current: queue.index + 1,
+        total: queue.directories.length,
+      });
+      setAddFilesModalKey((prev) => prev + 1);
+      setShowAddFilesModal(true);
+    } catch (err) {
+      console.error("Failed to scan directory:", err);
+      toast.error(t("topBar.scanFailed"));
+      queue.index += 1;
+      await processNextDirectory();
+    }
+  }
+
+  function advanceToNextDirectory() {
     setShowAddFilesModal(false);
     setPendingFiles([]);
     setExistingSongsForAddFiles([]);
+    setAddFilesProgress(null);
+
+    const queue = directoryQueueRef.current;
+    if (!queue) {
+      return;
+    }
+
+    queue.index += 1;
+    void processNextDirectory();
+  }
+
+  function handleCancelAddFilesModal() {
+    advanceToNextDirectory();
+  }
+
+  function handleCloseAddFilesModal() {
+    directoryQueueRef.current = null;
+    setShowAddFilesModal(false);
+    setPendingFiles([]);
+    setExistingSongsForAddFiles([]);
+    setAddFilesProgress(null);
   }
 
   async function handleAddFilesModalSuccess(addedCount: number) {
     toast.success(t("topBar.scoresAdded", { count: addedCount }));
-    handleCloseAddFilesModal();
+    advanceToNextDirectory();
     await handleScoresChange();
   }
 
@@ -200,8 +266,10 @@ export default function TopBar({
         files={pendingFiles}
         existingSongs={existingSongsForAddFiles}
         onClose={handleCloseAddFilesModal}
+        onCancel={handleCancelAddFilesModal}
         onSuccess={handleAddFilesModalSuccess}
         defaultCategoryIds={selectedCategoryIds}
+        progress={addFilesProgress ?? undefined}
       />
     </>
   );

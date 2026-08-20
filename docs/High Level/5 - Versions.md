@@ -377,7 +377,8 @@
 - support for Linux and macOS;
 - addition of cloud providers: Dropbox, OneDrive and pCloud;
 - addition of advanced mode providers: SFTP and WebDAV;
-- possibility to change the status of changed scores directly in the change report.
+- possibility to change the status of changed scores directly in the change report;
+- identification of duplicate instruments when checking changes, adding them as ignored.
 
 ## Improvements
 
@@ -385,6 +386,7 @@
 - texts and warnings;
 - adding confirmation when clicking "import backup";
 - song duplicate checking, before it was only the "name", now it is "name" + "composer" + "arranger";
+- indexing of multiple folders at once;
 - name of the Ottavada modes;
 - removal of the computer name and organization name from telemetry;
 - lazy loading to the front-end;

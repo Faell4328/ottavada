@@ -19,6 +19,16 @@ During the indexing process, the system must use the file name to suggest the in
 
 If it is not possible to identify the instrument from the file name, the suggestion field must remain empty for manual completion by the user.
 
+## 1.3. Indexing multiple folders
+
+The system must allow selecting more than one folder at a time when indexing.
+
+The confirmation modal must open one folder at a time, in the order in which the folders were selected:
+
+- **confirming** a folder adds it and advances to the next one;
+- **canceling** a folder skips it and advances to the next one;
+- **closing (X)** cancels the current folder and all remaining ones.
+
 ## 1.4. Order of the scores
 
 It must be the same order as in **Functional requirements - both** under **Listing order in the song**.
@@ -135,7 +145,8 @@ When clicking the "apply changes" button, the system must identify changes in th
 
 - addition of new score(s);
 - modification of score(s);
-- removal of score(s).
+- removal of score(s);
+- addition of score(s) with a duplicate instrument.
 
 It is considered **modification** when:
 
@@ -155,6 +166,7 @@ It is displayed in a modal; the user must be able to choose: **continue** or **c
 - **added** - shows everything that was added.
 - **changed** - shows everything that was changed. Changed scores are shown with a status selector, allowing the user to choose how each one should be treated (see 4.2.2).
 - **removed** - shows everything that was removed.
+- **duplicate scores** - shows new files detected with an instrument name already used by another score in the same song (see 12.5).
 
 ### 4.2.2. Changing the status of changed scores
 
@@ -334,3 +346,11 @@ The user may accidentally add a new file with a name, but with a different exten
 - `National Anthem - Score.musx` and `National Anthem - Score.pdf`;
 
 - `National Anthem - Oboe.mscz` and `National Anthem - Oboe.mscz`.
+
+## 12.5. Duplicate instrument when adding a score after indexing
+
+When checking changes, if a new file is detected in an indexed folder and its instrument name already exists in another score of the same song (ignoring differences between uppercase and lowercase), the system must identify it as a duplicate:
+
+- the duplicate is reported in the **duplicate scores** section of the change report;
+- when applied, the duplicate score is added with the `ignored` status;
+- the user can only change the `ignored` status of this score after renaming its instrument.

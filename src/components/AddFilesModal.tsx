@@ -45,8 +45,10 @@ interface AddFilesModalProps {
   files: IndexedFile[];
   existingSongs?: SongListItem[];
   onClose: () => void;
+  onCancel?: () => void;
   onSuccess: (addedCount: number) => Promise<void>;
   defaultCategoryIds?: string[];
+  progress?: { current: number; total: number };
 }
 
 const EMPTY_CATEGORY_IDS: string[] = [];
@@ -56,8 +58,10 @@ export function AddFilesModal({
   files,
   existingSongs,
   onClose,
+  onCancel,
   onSuccess,
   defaultCategoryIds = EMPTY_CATEGORY_IDS,
+  progress,
 }: AddFilesModalProps) {
   const { state } = useAppState();
   const { t } = useTranslation();
@@ -344,7 +348,6 @@ export function AddFilesModal({
       );
 
       await onSuccess(importResult.added_count);
-      onClose();
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : t("addFilesModal.saveError");
       setError(errorMsg);
@@ -476,15 +479,20 @@ export function AddFilesModal({
 
   if (files.length === 0) return null;
 
+  const modalTitle =
+    progress && progress.total > 1
+      ? `${t("addFilesModal.title")} (${progress.current}/${progress.total})`
+      : t("addFilesModal.title");
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={t("addFilesModal.title")}
+      title={modalTitle}
       maxWidth="max-w-lg"
       footer={
         <ModalFooterButtons
-          onCancel={onClose}
+          onCancel={onCancel ?? onClose}
           onConfirm={handleSave}
           isSaving={isSaving}
           confirmDisabled={hasPendingIssues || !hasFilesToImport}
