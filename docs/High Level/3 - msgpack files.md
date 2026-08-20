@@ -38,6 +38,8 @@ Contains a complete export of the **Manage** mode database, including the record
 
 The `draft` and `ignored` score files are kept separately in the score backup directory and are also part of the **Manage** mode backup flow.
 
+It also serializes the pending `changes` log, which accumulates every edit until it is consolidated into a snapshot. For this reason the backup file size varies over time and does not reflect only the amount of songs, scores and categories.
+
 It is used for backup, migration and replication between servers.
 
 Unlike `snapshot.msgpack.zst`, `backup.msgpack.zst` has an administrative and persistence purpose, not operational synchronization.

@@ -554,3 +554,93 @@ Uses the `type`: `insert`, `update` and `delete`.
     ]
 }
 ```
+
+---
+
+# 3. backup.msgpack.zst
+
+Full export of the **Manage** mode database, used for backup, migration and replication between servers. Unlike the snapshot, it is not intended for client synchronization: it also includes `draft`, `ignored` and `not_found` records, as well as the server's `settings` (including the `rclone` configuration) and the pending `changes` log.
+
+A simplified example of the structure:
+
+```json
+{
+    "schema_version": 1,
+    "generated_at": 1710684000,
+    "settings": {
+        "computer_id": "uuid-server-a",
+        "computer_name": "Server A",
+        "computer_type": "server",
+        "rclone_config": null
+    },
+    "categories": [
+        {
+            "id": "uuid-category-1",
+            "name": "Classical"
+        }
+    ],
+    "songs": [
+        {
+            "id": "uuid-song-1",
+            "name": "National Anthem",
+            "composer": "Ludwig van Beethoven",
+            "arranger": "Nikolai Rimsky-Korsakov",
+            "path": "C:/Repertoire/National Anthem",
+            "is_favorite": true
+        }
+    ],
+    "scores": [
+        {
+            "id": "uuid-score-1",
+            "song_id": "uuid-song-1",
+            "name": "Flute 1",
+            "file_path": "C:/Repertoire/National Anthem",
+            "file_name": "flute1.musx",
+            "file_size": 1234,
+            "file_modified_at": "2026-01-01 12:00:00",
+            "status": "main"
+        }
+    ],
+    "categoriesSongs": [
+        {
+            "id": "uuid-relation-1",
+            "category_id": "uuid-category-1",
+            "song_id": "uuid-song-1"
+        }
+    ],
+    "changes": [
+        {
+            "id": "uuid-change-1",
+            "type": "update",
+            "entity": "scores",
+            "entityId": "uuid-score-1",
+            "field": "status",
+            "value": "main",
+            "timestamp": 1710685000
+        }
+    ],
+    "backupQueue": [
+        {
+            "id": "uuid-song-1",
+            "song_id": "uuid-song-1",
+            "status": "ok",
+            "last_backup_at": null,
+            "error_message": null
+        }
+    ]
+}
+```
+
+## 3.1. Fields
+
+- `schema_version` - schema version of the backup (currently `1`).
+- `generated_at` - timestamp of the generation.
+- `settings` - the server's `AppSettings`, including the `rclone` configuration.
+- `categories` - all categories (`id`, `name`).
+- `songs` - all songs (`id`, `name`, `composer`, `arranger`, `path`, `is_favorite`). Composers and arrangers are stored denormalized as names on each song; there are no separate `composer`/`arranger` entities in the backup.
+- `scores` - all scores (`id`, `song_id`, `name`, `file_path`, `file_name`, `file_size`, `file_modified_at`, `status`).
+- `categoriesSongs` - relations between categories and songs.
+- `changes` - the pending change log (the `changes` table) captured at the moment of generation.
+- `backupQueue` - the state of the song backup queue.
+
+> **Note about `changes`:** because the backup includes the `changes` table, which accumulates every edit until it is consolidated into a snapshot, the backup file size varies over time — it is larger just before a snapshot and smaller just after — and does not reflect only the amount of songs, scores and categories.

@@ -97,7 +97,7 @@ Table responsible for storing score information.
 
 # changes
 
-Table responsible for storing all changes until the `events.msgpack.zst` file is generated.
+Table responsible for storing all changes (insertions, updates and removals) until they are consolidated into a snapshot. The `events.msgpack.zst` file is generated *from* this table, but its generation does not clear the records; only the snapshot consolidation (`clear_changed_fields_before`) removes the entries already covered by the snapshot.
 
 | Field     | Type                                                                                                              | PK  | FK  | Reference | Required? | Where?  |
 | --------- | ----------------------------------------------------------------------------------------------------------------- | --- | --- | --------- | --------- | ------- |
