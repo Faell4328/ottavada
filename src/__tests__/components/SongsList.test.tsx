@@ -5,10 +5,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import SongsList from "../../components/SongsList";
 import { useAppState } from "../../context/AppContext";
 import { renderWithAppProvider } from "../utils/renderWithAppProvider";
-import type { ScoreListItem, SongListItem } from "../../types";
+import type { Category, ScoreListItem, SongListItem } from "../../types";
 
 let resolveScores: ((scores: ScoreListItem[]) => void) | null = null;
 let nextSongSummaries: SongListItem[][] = [];
+let nextCategories: Category[][] = [];
 let triggerUpdateScore:
   | ((
       scoreId: string,
@@ -25,6 +26,8 @@ vi.mock("@tauri-apps/api/core", () => ({
     switch (command) {
       case "get_all_song_summaries":
         return nextSongSummaries.shift() ?? [sampleSong, sampleSong2];
+      case "get_categories":
+        return nextCategories.shift() ?? sampleCategories;
       case "get_scores_for_song":
         return new Promise<ScoreListItem[]>((resolve) => {
           resolveScores = resolve;
@@ -61,9 +64,14 @@ const sampleSong: SongListItem = {
   updated_at: "2026-04-16T00:00:00.000Z",
   is_favorite: false,
   status: "main",
-  category_ids: [],
+  category_ids: ["cat-1"],
   scores: [],
 };
+
+const sampleCategories: Category[] = [
+  { id: "cat-1", name: "Hinos", updated_at: "", updated_by: "" },
+  { id: "cat-2", name: "Avulsos", updated_at: "", updated_by: "" },
+];
 
 const updatedSampleSong: SongListItem = {
   ...sampleSong,
@@ -109,14 +117,15 @@ const sampleScores: ScoreListItem[] = [
 ];
 
 function SongsListHarness() {
-  const { loadSongs, updateScore, updateSongStatus } = useAppState();
+  const { loadSongs, loadCategories, updateScore, updateSongStatus } = useAppState();
 
   triggerUpdateScore = updateScore;
   triggerUpdateSongStatus = updateSongStatus;
 
   useEffect(() => {
     void loadSongs();
-  }, [loadSongs]);
+    void loadCategories();
+  }, [loadSongs, loadCategories]);
 
   return <SongsList />;
 }
@@ -132,6 +141,7 @@ describe("SongsList", () => {
       [sampleSong, sampleSong2],
       [updatedSampleSong, sampleSong2],
     ];
+    nextCategories = [sampleCategories, sampleCategories];
     nextSelectedSong = updatedSampleSong;
     triggerUpdateScore = null;
     requestAnimationFrameCallbacks.length = 0;
@@ -251,5 +261,15 @@ describe("SongsList", () => {
 
     expect(await screen.findByText("AMAZING GRACE")).toBeInTheDocument();
     expect(screen.queryByText("CANON")).not.toBeInTheDocument();
+  });
+
+  it("renders the resolved category name for each song row", async () => {
+    renderWithAppProvider(<SongsListHarness />);
+
+    expect(await screen.findByText("CANON")).toBeInTheDocument();
+    expect(await screen.findByText("Hinos")).toBeInTheDocument();
+    expect(screen.getByText("Hinos").closest("tr")).toContainElement(
+      screen.getByText("CANON"),
+    );
   });
 });

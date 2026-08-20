@@ -292,15 +292,16 @@ export default function SongsList() {
           <table className="w-full border-collapse">
             <thead>
               <tr className="border-b border-[#ced7e3] bg-[#eef2f6] text-xs font-bold text-[#34485d] sticky top-0">
-                <th className="text-left px-3.5 py-2.5 font-bold w-1/2">{t("songsList.headerTitle")}</th>
-                <th className="text-left px-3.5 py-2.5 font-bold w-1/4">{t("songsList.headerAuthor")}</th>
-                <th className="text-left px-3.5 py-2.5 font-bold w-1/4"></th>
+                <th className="text-left px-3.5 py-2.5 font-bold">{t("songsList.headerTitle")}</th>
+                <th className="text-left px-3.5 py-2.5 font-bold">{t("songsList.headerAuthor")}</th>
+                <th className="text-left px-3.5 py-2.5 font-bold">{t("songsList.headerCategory")}</th>
+                <th className="text-left px-3.5 py-2.5 font-bold"></th>
               </tr>
             </thead>
             <tbody>
               {displayedSongs.length === 0 ? (
                 <tr>
-                  <td colSpan={3} className="text-center py-12">
+                  <td colSpan={4} className="text-center py-12">
                     <div className="flex flex-col items-center justify-center text-[#8b9db2]">
                       <FileMusic className="h-12 w-12 mb-3 opacity-40" />
                       <p className="text-sm">{t("songsList.noSongs")}</p>
@@ -347,11 +348,12 @@ export default function SongsList() {
                         onMenuClose={closeAllMenus}
                         computerType={state.settings?.computer_type}
                         isLocked={isSyncLocked}
+                        categories={state.categories}
                       />
                       {state.selectedSong?.id === song.id &&
                         (shouldShowLoadingRow ? (
                           <tr>
-                            <td colSpan={3} className="px-3.5 py-3 text-sm text-[#7b8da1] bg-[#f7f9fc]">
+                            <td colSpan={4} className="px-3.5 py-3 text-sm text-[#7b8da1] bg-[#f7f9fc]">
                               {t("songsList.loadingScores")}
                             </td>
                           </tr>

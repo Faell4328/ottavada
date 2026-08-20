@@ -35,6 +35,7 @@
     "filtering": "filtering",
     "headerTitle": "Title",
     "headerAuthor": "Composer / Arranger",
+    "headerCategory": "Category",
     "noSongs": "No songs found",
     "noSongsHint": "Index a directory to get started",
     "loadingScores": "Loading scores...",

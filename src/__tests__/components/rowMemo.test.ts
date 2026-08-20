@@ -61,6 +61,7 @@ function buildSongRowProps(overrides: Partial<SongRowProps> = {}): SongRowProps 
     onMenuClose: () => undefined,
     computerType: "Server",
     isLocked: false,
+    categories: [],
     ...overrides,
   };
 }

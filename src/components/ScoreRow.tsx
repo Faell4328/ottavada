@@ -241,6 +241,7 @@ function ScoreRow({
         <td className="px-3.5 py-1.5 text-xs text-[#8b9db2]">
           .{score.file_extension}
         </td>
+        <td className="px-3.5 py-1.5"></td>
         <td className="px-2 py-1.5">
           <div className="flex items-center justify-between">
             {isClient ? (

@@ -270,7 +270,7 @@ export default function Sidebar() {
 
       <div className="border-t border-white/15 pt-2">
         <div className="mb-1.5 text-sm font-bold">{t("sidebar.composer")}</div>
-        <nav className="flex flex-col">
+        <nav className="flex flex-col overflow-auto">
           <SidebarItem
             label={t("sidebar.all")}
             active={state.authorFilters.composer === "all"}
@@ -327,7 +327,7 @@ export default function Sidebar() {
         </nav>
 
         <div className="mt-2.5 mb-1.5 text-sm font-bold">{t("sidebar.arranger")}</div>
-        <nav className="flex flex-col">
+        <nav className="flex flex-col overflow-auto">
           <SidebarItem
             label={t("sidebar.all")}
             active={state.authorFilters.arranger === "all"}

@@ -44,21 +44,30 @@ impl Database {
             })?
             .collect::<Result<Vec<_>, _>>()?;
 
-        if songs.is_empty() || !include_scores {
+        if songs.is_empty() {
             return Ok(songs);
         }
 
         let song_ids: Vec<String> = songs.iter().map(|song| song.id.clone()).collect();
-        let mut scores_by_song = Self::get_scores_for_songs(conn, &song_ids)?;
         let mut category_ids_by_song = Self::get_category_ids_for_songs(conn, &song_ids)?;
 
-        for song in &mut songs {
-            if let Some(scores) = scores_by_song.remove(&song.id) {
-                song.scores = scores;
-            }
+        if include_scores {
+            let mut scores_by_song = Self::get_scores_for_songs(conn, &song_ids)?;
 
-            if let Some(category_ids) = category_ids_by_song.remove(&song.id) {
-                song.category_ids = category_ids;
+            for song in &mut songs {
+                if let Some(scores) = scores_by_song.remove(&song.id) {
+                    song.scores = scores;
+                }
+
+                if let Some(category_ids) = category_ids_by_song.remove(&song.id) {
+                    song.category_ids = category_ids;
+                }
+            }
+        } else {
+            for song in &mut songs {
+                if let Some(category_ids) = category_ids_by_song.remove(&song.id) {
+                    song.category_ids = category_ids;
+                }
             }
         }
 

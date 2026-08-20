@@ -35,6 +35,7 @@
     "filtering": "filtrando",
     "headerTitle": "Título",
     "headerAuthor": "Compositor / Arreglista",
+    "headerCategory": "Categoría",
     "noSongs": "Ninguna canción encontrada",
     "noSongsHint": "Indexa un directorio para comenzar",
     "loadingScores": "Cargando partituras...",

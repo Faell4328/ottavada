@@ -35,6 +35,7 @@
     "filtering": "wird gefiltert",
     "headerTitle": "Titel",
     "headerAuthor": "Komponist / Arrangeur",
+    "headerCategory": "Kategorie",
     "noSongs": "Keine Lieder gefunden",
     "noSongsHint": "Indizieren Sie einen Ordner, um zu beginnen",
     "loadingScores": "Noten werden geladen...",

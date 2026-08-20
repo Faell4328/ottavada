@@ -66,6 +66,7 @@ describe("SongRow menu", () => {
             onMenuClose={onMenuClose}
             computerType="Server"
             isLocked={false}
+            categories={[]}
           />
         </tbody>
       </table>,
@@ -98,6 +99,7 @@ describe("SongRow menu", () => {
             onMenuClose={onMenuClose}
             computerType="Server"
             isLocked={false}
+            categories={[]}
           />
         </tbody>
       </table>,
@@ -128,6 +130,7 @@ describe("SongRow menu", () => {
             onMenuClose={onMenuClose}
             computerType="Server"
             isLocked={false}
+            categories={[]}
           />
         </tbody>
       </table>,
@@ -170,6 +173,7 @@ describe("SongRow menu", () => {
             onMenuClose={onMenuClose}
             computerType="Server"
             isLocked={false}
+            categories={[]}
           />
         </tbody>
       </table>,
@@ -206,6 +210,7 @@ describe("SongRow menu", () => {
             onMenuClose={onMenuClose}
             computerType="Server"
             isLocked={false}
+            categories={[]}
           />
         </tbody>
       </table>,
@@ -240,6 +245,7 @@ describe("SongRow menu", () => {
             onMenuClose={onMenuClose}
             computerType="Server"
             isLocked={false}
+            categories={[]}
           />
         </tbody>
       </table>,
@@ -269,6 +275,7 @@ describe("SongRow menu", () => {
             onMenuClose={onMenuClose}
             computerType="Server"
             isLocked={false}
+            categories={[]}
           />
         </tbody>
       </table>,
@@ -302,6 +309,7 @@ describe("SongRow menu", () => {
             onMenuClose={onMenuClose}
             computerType="Server"
             isLocked={false}
+            categories={[]}
           />
         </tbody>
       </table>,
@@ -313,5 +321,67 @@ describe("SongRow menu", () => {
     );
     expect(screen.getByText("Reindexar pasta")).toBeInTheDocument();
     expect(screen.getByText("Parar de indexar pasta")).toBeInTheDocument();
+  });
+
+  it("renders the resolved category names joined by comma", () => {
+    render(
+      <table>
+        <tbody>
+          <MemoizedSongRow
+            song={{ ...song, category_ids: ["cat-1", "cat-2", "missing"] }}
+            isExpanded={false}
+            onToggle={onToggle}
+            onToggleFavorite={onToggleFavorite}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            onDeleteWithFiles={onDeleteWithFiles}
+            onStatusChange={onStatusChange}
+            onReindex={onReindex}
+            menuId="song-1"
+            isMenuOpen={false}
+            onMenuOpen={onMenuOpen}
+            onMenuClose={onMenuClose}
+            computerType="Server"
+            isLocked={false}
+            categories={[
+              { id: "cat-1", name: "Hinos", updated_at: "", updated_by: "" },
+              { id: "cat-2", name: "Avulsos", updated_at: "", updated_by: "" },
+            ]}
+          />
+        </tbody>
+      </table>,
+    );
+
+    expect(screen.getByText("Hinos, Avulsos")).toBeInTheDocument();
+  });
+
+  it("renders a dash when the song has no resolvable categories", () => {
+    render(
+      <table>
+        <tbody>
+          <MemoizedSongRow
+            song={song}
+            isExpanded={false}
+            onToggle={onToggle}
+            onToggleFavorite={onToggleFavorite}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            onDeleteWithFiles={onDeleteWithFiles}
+            onStatusChange={onStatusChange}
+            onReindex={onReindex}
+            menuId="song-1"
+            isMenuOpen={false}
+            onMenuOpen={onMenuOpen}
+            onMenuClose={onMenuClose}
+            computerType="Server"
+            isLocked={false}
+            categories={[]}
+          />
+        </tbody>
+      </table>,
+    );
+
+    const dashes = screen.getAllByText("—");
+    expect(dashes.length).toBeGreaterThanOrEqual(1);
   });
 });

@@ -12,6 +12,8 @@ import {
   getScoreStatusBadgeClass,
   getScoreStatusLabel,
 } from "../utils/scoreStatus";
+import { getCategoryNames } from "../utils/songCategories";
+import type { Category } from "../types";
 import * as api from "../api/commands";
 
 export interface SongRowProps {
@@ -30,6 +32,7 @@ export interface SongRowProps {
   onMenuClose: () => void;
   computerType?: string;
   isLocked: boolean;
+  categories: Category[];
 }
 
 const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(
@@ -50,6 +53,7 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(
       onMenuClose,
       computerType,
       isLocked,
+      categories,
     }: SongRowProps,
     ref,
   ) {
@@ -58,6 +62,8 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(
     const { t } = useTranslation();
     useScrollLock(isDeleteModalOpen);
     const author = [song.composer, song.arranger].filter(Boolean).join(" / ");
+    const categoryNames = getCategoryNames(song.category_ids, categories);
+    const categoryLabel = categoryNames.join(", ");
     const isClient = isClientComputer(computerType);
     const isActionLocked = isClient || isLocked;
     const openLocalTarget = song.path.trim();
@@ -173,6 +179,12 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(
             className={`px-3.5 py-2 ${isHighlighted ? "text-[#965050]" : "text-[#5c7089]"}`}
           >
             {author || "—"}
+          </td>
+          <td
+            className={`px-3.5 py-2 truncate ${isHighlighted ? "text-[#965050]" : "text-[#5c7089]"}`}
+            title={categoryLabel || undefined}
+          >
+            {categoryLabel || "—"}
           </td>
           <td className="px-3.5 py-2">
             <div className="flex items-center justify-between">
@@ -364,6 +376,8 @@ export function areSongRowPropsEqual(prev: SongRowProps, next: SongRowProps) {
     prev.song.status === next.song.status &&
     prev.song.scores.length === next.song.scores.length &&
     prev.song.category_ids.length === next.song.category_ids.length &&
+    prev.song.category_ids.every((id, index) => next.song.category_ids[index] === id) &&
+    prev.categories === next.categories &&
     prev.isExpanded === next.isExpanded &&
     prev.isMenuOpen === next.isMenuOpen &&
     prev.isLocked === next.isLocked &&

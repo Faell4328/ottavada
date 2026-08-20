@@ -381,4 +381,84 @@ mod tests {
         db.clear_changed_fields_before(400).unwrap();
         assert_eq!(db.get_pending_changes_count().unwrap(), 0);
     }
+
+    #[test]
+    fn test_get_all_song_summaries_includes_category_ids() {
+        let db = make_db();
+        db.insert_category(&make_category("c1", "Hinos")).unwrap();
+        db.insert_song(&make_song("s1", "Canon"), &["c1".to_string()])
+            .unwrap();
+
+        let summaries = db.get_all_song_summaries().unwrap();
+        assert_eq!(summaries.len(), 1);
+        assert_eq!(summaries[0].category_ids, vec!["c1".to_string()]);
+        assert!(summaries[0].scores.is_empty());
+    }
+
+    #[test]
+    fn test_get_favorited_song_summaries_includes_category_ids() {
+        let db = make_db();
+        db.insert_category(&make_category("c1", "Hinos")).unwrap();
+        db.insert_song(
+            &Song {
+                is_favorite: true,
+                ..make_song("s1", "Canon")
+            },
+            &["c1".to_string()],
+        )
+        .unwrap();
+
+        let summaries = db.get_favorited_song_summaries().unwrap();
+        assert_eq!(summaries.len(), 1);
+        assert_eq!(summaries[0].category_ids, vec!["c1".to_string()]);
+    }
+
+    #[test]
+    fn test_get_song_summaries_by_category_includes_category_ids() {
+        let db = make_db();
+        db.insert_category(&make_category("c1", "Hinos")).unwrap();
+        db.insert_song(&make_song("s1", "Canon"), &["c1".to_string()])
+            .unwrap();
+
+        let summaries = db.get_song_summaries_by_category("c1").unwrap();
+        assert_eq!(summaries.len(), 1);
+        assert_eq!(summaries[0].category_ids, vec!["c1".to_string()]);
+    }
+
+    #[test]
+    fn test_get_song_summaries_with_drafts_includes_category_ids() {
+        let db = make_db();
+        db.insert_category(&make_category("c1", "Hinos")).unwrap();
+        db.insert_song(&make_song("s1", "Canon"), &["c1".to_string()])
+            .unwrap();
+        db.insert_score(&make_score(&db, "sc1", "s1", Some("Violino")))
+            .unwrap();
+        let draft_score = Score {
+            status: ScoreStatus::Draft,
+            ..make_score(&db, "sc2", "s1", Some("Flauta"))
+        };
+        db.insert_score(&draft_score).unwrap();
+
+        let summaries = db.get_song_summaries_with_drafts().unwrap();
+        assert_eq!(summaries.len(), 1);
+        assert_eq!(summaries[0].category_ids, vec!["c1".to_string()]);
+    }
+
+    #[test]
+    fn test_get_song_summaries_with_not_found_includes_category_ids() {
+        let db = make_db();
+        db.insert_category(&make_category("c1", "Hinos")).unwrap();
+        db.insert_song(
+            &Song {
+                status: ScoreStatus::NotFound,
+                ..make_song("s1", "Canon")
+            },
+            &["c1".to_string()],
+        )
+        .unwrap();
+
+        let summaries = db.get_song_summaries_with_not_found().unwrap();
+        assert_eq!(summaries.len(), 1);
+        assert_eq!(summaries[0].category_ids, vec!["c1".to_string()]);
+    }
 }
