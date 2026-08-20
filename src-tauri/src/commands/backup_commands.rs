@@ -7,9 +7,8 @@ use crate::infrastructure::store::SystemStore;
 use crate::services::backup_msgpack_service::{
     export_backup_msgpack, generate_backup_msgpack_in_cloud, import_backup_msgpack,
     import_backup_msgpack_from_cloud, import_backup_msgpack_from_cloud_by_name,
-    list_available_backups, restore_database_from_cloud_backup,
-    restore_song_files_from_cloud_archives, validate_cloud_backup, AvailableBackup,
-    BackupFileSummary, BackupImportSummary, CloudBackupValidation,
+    restore_database_from_cloud_backup, restore_song_files_from_cloud_archives,
+    validate_cloud_backup, BackupFileSummary, BackupImportSummary, CloudBackupValidation,
 };
 use crate::services::backup_songs_service::{
     generate_song_archives, regenerate_all_song_archives, SongArchiveSummary,
@@ -226,35 +225,6 @@ pub async fn restore_draft_ignored_from_cloud(
         move |store| {
             require_server_settings(&store)?;
             restore_draft_ignored_scores_from_backup(&db, &store)
-        },
-    )
-    .await
-}
-
-#[tauri::command]
-pub async fn list_available_cloud_backups(
-    store: State<'_, SystemStore>,
-) -> Result<Vec<AvailableBackup>, AppError> {
-    let app_data_dir = store.app_data_dir().clone();
-
-    run_blocking_with_store(
-        app_data_dir,
-        "Internal failure listing cloud backups",
-        move |store| {
-            require_server_settings(&store)?;
-
-            let backup_dir = crate::services::cloud_paths::ensure_backup_cloud_dir(store.app_data_dir())?;
-
-            crate::commands::rclone_commands::copy_cloud_directory_with_rclone_impl(
-                &store,
-                "download",
-                Some("backup"),
-            )
-            .map_err(|e| {
-                AppError::Generic(format!("Could not download backups from the cloud: {}", e))
-            })?;
-
-            list_available_backups(&backup_dir)
         },
     )
     .await

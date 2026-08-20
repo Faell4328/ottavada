@@ -491,6 +491,7 @@
     "importCloudError": "Não foi possível importar o backup da nuvem.",
     "importCloudRequired": "Configure a conexão com a nuvem antes de importar o backup.",
     "importCloudLoading": "Importando o backup da nuvem...",
+    "noCloudBackup": "Nenhum backup válido encontrado na nuvem.",
     "generateCloudStep": "Gerando backup na nuvem",
     "generateCloudDetail": "Compactando e enviando o arquivo de backup",
     "generateCloudSuccess": "Backup da nuvem pronto em {{timestamp}}.",
@@ -568,7 +569,9 @@
   },
   "importBackupModal": {
     "title": "Importar backup",
-    "description": "Você está prestes a importar um backup da nuvem. Esta ação substituirá os dados atuais deste computador.",
+    "description": "Você está prestes a importar o backup mais recente da nuvem. Esta ação substituirá os dados atuais deste computador.",
+    "loading": "Validando o backup da nuvem...",
+    "summaryLine": "Você irá importar o backup do dia {{date}}, com {{songs}} músicas, {{scores}} partituras, {{categories}} categorias, {{composers}} compositores e {{arrangers}} arranjadores.",
     "impactTitle": "⚠️ Impacto:",
     "overwriteData": "Substituirá todas as músicas, partituras e configurações atuais",
     "replacesLocal": "Substitui os dados locais pelo conteúdo do backup",
@@ -577,19 +580,6 @@
     "confirmButton": "Importar",
     "confirming": "Importando...",
     "cancel": "Cancelar"
-  },
-  "selectBackupModal": {
-    "title": "Selecionar backup",
-    "description": "Escolha qual backup você deseja importar. Os mais recentes são listados primeiro.",
-    "loading": "Carregando backups disponíveis...",
-    "empty": "Nenhum backup encontrado na nuvem.",
-    "cancel": "Cancelar",
-    "continue": "Continuar",
-    "songs": "Músicas",
-    "scores": "Partituras",
-    "categories": "Categorias",
-    "composers": "Compositores",
-    "arrangers": "Arranjadores"
   },
   "rcloneProviderModal": {
     "title": "Configurar provedor de nuvem",

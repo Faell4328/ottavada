@@ -552,15 +552,6 @@ export interface CloudBackupValidation {
   songs_count: number;
   scores_count: number;
   categories_count: number;
-}
-
-export interface AvailableBackup {
-  file_name: string;
-  file_path: string;
-  generated_at: number;
-  songs_count: number;
-  scores_count: number;
-  categories_count: number;
   composers_count: number;
   arrangers_count: number;
 }
@@ -589,10 +580,6 @@ export async function importBackupCloudFile(
   return invoke("import_backup_cloud_file", {
     backupFileName: backupFileName ?? null,
   });
-}
-
-export async function listAvailableCloudBackups(): Promise<AvailableBackup[]> {
-  return invoke("list_available_cloud_backups");
 }
 
 export async function validateCloudBackup(): Promise<CloudBackupValidation> {

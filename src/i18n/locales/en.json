@@ -491,6 +491,7 @@
     "importCloudError": "Could not import cloud backup.",
     "importCloudRequired": "Configure the cloud connection before importing the backup.",
     "importCloudLoading": "Importing cloud backup...",
+    "noCloudBackup": "No valid backup found in the cloud.",
     "generateCloudStep": "Generating cloud backup",
     "generateCloudDetail": "Compressing and sending the backup file",
     "generateCloudSuccess": "Cloud backup ready on {{timestamp}}.",
@@ -568,7 +569,9 @@
   },
   "importBackupModal": {
     "title": "Import backup",
-    "description": "You are about to import a cloud backup. This action will replace the current data on this computer.",
+    "description": "You are about to import the most recent cloud backup. This action will replace the current data on this computer.",
+    "loading": "Validating the cloud backup...",
+    "summaryLine": "You are about to import the backup from {{date}}, with {{songs}} songs, {{scores}} scores, {{categories}} categories, {{composers}} composers and {{arrangers}} arrangers.",
     "impactTitle": "⚠️ Impact:",
     "overwriteData": "Will replace all current songs, scores and settings",
     "replacesLocal": "Replaces the local data with the backup contents",
@@ -577,19 +580,6 @@
     "confirmButton": "Import",
     "confirming": "Importing...",
     "cancel": "Cancel"
-  },
-  "selectBackupModal": {
-    "title": "Select backup",
-    "description": "Choose which backup you want to import. The most recent ones are listed first.",
-    "loading": "Loading available backups...",
-    "empty": "No backups found in the cloud.",
-    "cancel": "Cancel",
-    "continue": "Continue",
-    "songs": "Songs",
-    "scores": "Scores",
-    "categories": "Categories",
-    "composers": "Composers",
-    "arrangers": "Arrangers"
   },
   "rcloneProviderModal": {
     "title": "Configure cloud provider",

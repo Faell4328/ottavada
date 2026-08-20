@@ -280,7 +280,7 @@ The user must be able to:
 
 The backup must be **generated every time** the user clicks **apply changes**.
 
-One backup **must not replace** another. The system must keep the 20 most recent backups in the backup directory. After generating a new backup, the older files that exceed this limit must be removed.
+One backup **must not replace** another. The system must keep only the most recent backup in the backup directory. After generating a new backup, the older files that exceed this limit must be removed.
 
 Each backup must be saved with a name based on the generation timestamp, in the format `backup - {timestamp}.msgpack.zst`, without replacing previous backups.
 
@@ -290,7 +290,7 @@ The backup generation is performed during step 3 of the upload to cloud flow (se
 
 ## 10.1. Import backup
 
-When clicking the "import backup" button (cloud), the system must open a modal listing the available backups in the cloud, showing for each one: **date**, **time** and **file size**. The user must choose which backup to import. After selection, the confirmation modal must be displayed before the import is executed.
+When clicking the "import backup" button (cloud), the system must download and validate the most recent backup in the cloud, verifying that it is not corrupted and was sent correctly. Before importing, the confirmation modal must be displayed showing the backup **date**, and the counts of **songs**, **scores**, **categories**, **composers** and **arrangers** contained in that backup.
 
 In "import backup", if the score files already exist, Ottavada must check whether the files it has are more recent than those on the computer; if so, it must replace the local file with the one Ottavada downloaded; if not or if equal, it must keep the original file (<mark>Not implemented</mark>).
 

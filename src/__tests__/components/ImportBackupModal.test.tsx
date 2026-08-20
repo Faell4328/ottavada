@@ -1,6 +1,17 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { ImportBackupModal } from "../../components/ImportBackupModal";
+import type { CloudBackupValidation } from "../../api/commands";
+
+const sampleSummary: CloudBackupValidation = {
+  found: true,
+  generated_at: 1710684000,
+  songs_count: 12,
+  scores_count: 34,
+  categories_count: 5,
+  composers_count: 6,
+  arrangers_count: 7,
+};
 
 describe("ImportBackupModal", () => {
   it("should render the modal when isOpen is true", () => {
@@ -10,6 +21,7 @@ describe("ImportBackupModal", () => {
     render(
       <ImportBackupModal
         isOpen={true}
+        summary={sampleSummary}
         onClose={mockOnClose}
         onConfirm={mockOnConfirm}
       />,
@@ -17,7 +29,7 @@ describe("ImportBackupModal", () => {
 
     expect(screen.getByText("Importar backup")).toBeInTheDocument();
     expect(
-      screen.getByText(/Você está prestes a importar um backup da nuvem/),
+      screen.getByText(/Você está prestes a importar o backup mais recente da nuvem/),
     ).toBeInTheDocument();
   });
 
@@ -28,6 +40,7 @@ describe("ImportBackupModal", () => {
     const { container } = render(
       <ImportBackupModal
         isOpen={false}
+        summary={sampleSummary}
         onClose={mockOnClose}
         onConfirm={mockOnConfirm}
       />,
@@ -36,20 +49,53 @@ describe("ImportBackupModal", () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it("should show cancel button enabled", () => {
+  it("should show the backup summary with date and counts", () => {
     const mockOnClose = vi.fn();
     const mockOnConfirm = vi.fn();
 
     render(
       <ImportBackupModal
         isOpen={true}
+        summary={sampleSummary}
         onClose={mockOnClose}
         onConfirm={mockOnConfirm}
       />,
     );
 
-    const cancelButton = screen.getByText("Cancelar");
-    expect(cancelButton).not.toBeDisabled();
+    expect(
+      screen.getByText(/12 músicas/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/34 partituras/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/5 categorias/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/6 compositores/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/7 arranjadores/),
+    ).toBeInTheDocument();
+  });
+
+  it("should show a loading state while the backup is being validated", () => {
+    const mockOnClose = vi.fn();
+    const mockOnConfirm = vi.fn();
+
+    render(
+      <ImportBackupModal
+        isOpen={true}
+        isLoading={true}
+        summary={null}
+        onClose={mockOnClose}
+        onConfirm={mockOnConfirm}
+      />,
+    );
+
+    expect(
+      screen.getByText(/Validando o backup da nuvem/),
+    ).toBeInTheDocument();
   });
 
   it("should call onClose when cancel button is clicked", () => {
@@ -59,6 +105,7 @@ describe("ImportBackupModal", () => {
     render(
       <ImportBackupModal
         isOpen={true}
+        summary={sampleSummary}
         onClose={mockOnClose}
         onConfirm={mockOnConfirm}
       />,
@@ -75,33 +122,13 @@ describe("ImportBackupModal", () => {
     render(
       <ImportBackupModal
         isOpen={true}
+        summary={sampleSummary}
         onClose={mockOnClose}
         onConfirm={mockOnConfirm}
       />,
     );
 
     expect(screen.getByText(/\(5s\)/)).toBeInTheDocument();
-  });
-
-  it("should disable confirm button initially", () => {
-    const mockOnClose = vi.fn();
-    const mockOnConfirm = vi.fn();
-
-    render(
-      <ImportBackupModal
-        isOpen={true}
-        onClose={mockOnClose}
-        onConfirm={mockOnConfirm}
-      />,
-    );
-
-    const confirmButton = screen
-      .getAllByText(/Importar/)
-      .find(
-        (el) => (el as HTMLButtonElement).type === "button",
-      ) as HTMLButtonElement;
-
-    expect(confirmButton).toBeDisabled();
   });
 
   it("should show impact items", () => {
@@ -111,6 +138,7 @@ describe("ImportBackupModal", () => {
     render(
       <ImportBackupModal
         isOpen={true}
+        summary={sampleSummary}
         onClose={mockOnClose}
         onConfirm={mockOnConfirm}
       />,

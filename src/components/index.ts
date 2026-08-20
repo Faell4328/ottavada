@@ -10,7 +10,6 @@ export { EditInstrumentModal } from "./EditInstrumentModal";
 export { AddFilesModal } from "./AddFilesModal";
 export { ChangeComputerTypeModal } from "./ChangeComputerTypeModal";
 export { ImportBackupModal } from "./ImportBackupModal";
-export { SelectBackupModal } from "./SelectBackupModal";
 export { RcloneProviderModal } from "./RcloneProviderModal";
 export { RcloneLicenseModal } from "./RcloneLicenseModal";
 export { UpdateModal } from "./UpdateModal";

@@ -491,6 +491,7 @@
     "importCloudError": "No se pudo importar la copia de seguridad de la nube.",
     "importCloudRequired": "Configura la conexión con la nube antes de importar la copia de seguridad.",
     "importCloudLoading": "Importando copia de seguridad de la nube...",
+    "noCloudBackup": "No se encontró ninguna copia de seguridad válida en la nube.",
     "generateCloudStep": "Generando copia de seguridad en la nube",
     "generateCloudDetail": "Comprimiendo y enviando el archivo de copia de seguridad",
     "generateCloudSuccess": "Copia de seguridad en la nube lista el {{timestamp}}.",
@@ -568,7 +569,9 @@
   },
   "importBackupModal": {
     "title": "Importar copia de seguridad",
-    "description": "Está a punto de importar una copia de seguridad de la nube. Esta acción reemplazará los datos actuales de este ordenador.",
+    "description": "Está a punto de importar la copia de seguridad más reciente de la nube. Esta acción reemplazará los datos actuales de este ordenador.",
+    "loading": "Validando la copia de seguridad de la nube...",
+    "summaryLine": "Importará la copia de seguridad del día {{date}}, con {{songs}} canciones, {{scores}} partituras, {{categories}} categorías, {{composers}} compositores y {{arrangers}} arreglistas.",
     "impactTitle": "⚠️ Impacto:",
     "overwriteData": "Reemplazará todas las canciones, partituras y ajustes actuales",
     "replacesLocal": "Reemplaza los datos locales con el contenido de la copia de seguridad",
@@ -577,19 +580,6 @@
     "confirmButton": "Importar",
     "confirming": "Importando...",
     "cancel": "Cancelar"
-  },
-  "selectBackupModal": {
-    "title": "Seleccionar copia de seguridad",
-    "description": "Elija qué copia de seguridad desea importar. Las más recientes se muestran primero.",
-    "loading": "Cargando copias de seguridad disponibles...",
-    "empty": "No se encontraron copias de seguridad en la nube.",
-    "cancel": "Cancelar",
-    "continue": "Continuar",
-    "songs": "Canciones",
-    "scores": "Partituras",
-    "categories": "Categorías",
-    "composers": "Compositores",
-    "arrangers": "Arreglistas"
   },
   "rcloneProviderModal": {
     "title": "Configurar proveedor de nube",

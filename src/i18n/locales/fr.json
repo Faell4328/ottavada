@@ -491,6 +491,7 @@
     "importCloudError": "Impossible d'importer la sauvegarde cloud.",
     "importCloudRequired": "Configurez la connexion au cloud avant d'importer la sauvegarde.",
     "importCloudLoading": "Importation de la sauvegarde cloud...",
+    "noCloudBackup": "Aucune sauvegarde valide trouvée dans le cloud.",
     "generateCloudStep": "Génération de la sauvegarde cloud",
     "generateCloudDetail": "Compression et envoi du fichier de sauvegarde",
     "generateCloudSuccess": "Sauvegarde cloud prête le {{timestamp}}.",
@@ -568,7 +569,9 @@
   },
   "importBackupModal": {
     "title": "Importer la sauvegarde",
-    "description": "Vous êtes sur le point d'importer une sauvegarde depuis le cloud. Cette action remplacera les données actuelles de cet ordinateur.",
+    "description": "Vous êtes sur le point d'importer la sauvegarde la plus récente depuis le cloud. Cette action remplacera les données actuelles de cet ordinateur.",
+    "loading": "Validation de la sauvegarde cloud...",
+    "summaryLine": "Vous allez importer la sauvegarde du {{date}}, avec {{songs}} chants, {{scores}} partitions, {{categories}} catégories, {{composers}} compositeurs et {{arrangers}} arrangeurs.",
     "impactTitle": "⚠️ Impact :",
     "overwriteData": "Remplacera toutes les chansons, partitions et paramètres actuels",
     "replacesLocal": "Remplace les données locales par le contenu de la sauvegarde",
@@ -577,19 +580,6 @@
     "confirmButton": "Importer",
     "confirming": "Importation...",
     "cancel": "Annuler"
-  },
-  "selectBackupModal": {
-    "title": "Sélectionner une sauvegarde",
-    "description": "Choisissez quelle sauvegarde vous souhaitez importer. Les plus récentes sont listées en premier.",
-    "loading": "Chargement des sauvegardes disponibles...",
-    "empty": "Aucune sauvegarde trouvée dans le cloud.",
-    "cancel": "Annuler",
-    "continue": "Continuer",
-    "songs": "Chants",
-    "scores": "Partitions",
-    "categories": "Catégories",
-    "composers": "Compositeurs",
-    "arrangers": "Arrangeurs"
   },
   "rcloneProviderModal": {
     "title": "Configurer le fournisseur cloud",

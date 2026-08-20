@@ -9,7 +9,6 @@ import { useAppState } from "../context/AppContext";
 import * as api from "../api/commands";
 import { ChangeComputerTypeModal } from "./ChangeComputerTypeModal";
 import { ImportBackupModal } from "./ImportBackupModal";
-import { SelectBackupModal } from "./SelectBackupModal";
 import { RcloneProviderModal } from "./RcloneProviderModal.tsx";
 import { RcloneLicenseModal } from "./RcloneLicenseModal";
 import { UpdateModal } from "./UpdateModal";
@@ -70,10 +69,9 @@ export default function SettingsPage() {
   const [isChangeComputerTypeModalOpen, setIsChangeComputerTypeModalOpen] =
     useState(false);
   const [isImportBackupModalOpen, setIsImportBackupModalOpen] = useState(false);
-  const [isSelectBackupModalOpen, setIsSelectBackupModalOpen] = useState(false);
-  const [isLoadingAvailableBackups, setIsLoadingAvailableBackups] = useState(false);
-  const [availableBackups, setAvailableBackups] = useState<api.AvailableBackup[]>([]);
-  const [pendingBackupFileName, setPendingBackupFileName] = useState<string | null>(null);
+  const [isValidatingCloudBackup, setIsValidatingCloudBackup] = useState(false);
+  const [pendingBackupSummary, setPendingBackupSummary] =
+    useState<api.CloudBackupValidation | null>(null);
   const [isGeneratingSnapshot, setIsGeneratingSnapshot] = useState(false);
   const [isExportingBackup, setIsExportingBackup] = useState(false);
   const [isImportingBackup, setIsImportingBackup] = useState(false);
@@ -468,25 +466,24 @@ export default function SettingsPage() {
       return;
     }
 
-    setAvailableBackups([]);
-    setIsSelectBackupModalOpen(true);
-    setIsLoadingAvailableBackups(true);
+    setPendingBackupSummary(null);
+    setIsImportBackupModalOpen(true);
+    setIsValidatingCloudBackup(true);
 
     try {
-      const backups = await api.listAvailableCloudBackups();
-      setAvailableBackups(backups);
+      const validation = await api.validateCloudBackup();
+      if (!validation.found) {
+        toast.error(t("settings.noCloudBackup"));
+        setIsImportBackupModalOpen(false);
+        return;
+      }
+      setPendingBackupSummary(validation);
     } catch (error) {
       toast.error(t("settings.importCloudError"));
-      setIsSelectBackupModalOpen(false);
+      setIsImportBackupModalOpen(false);
     } finally {
-      setIsLoadingAvailableBackups(false);
+      setIsValidatingCloudBackup(false);
     }
-  }
-
-  function handleSelectBackup(backup: api.AvailableBackup) {
-    setPendingBackupFileName(backup.file_name);
-    setIsSelectBackupModalOpen(false);
-    setIsImportBackupModalOpen(true);
   }
 
   async function performImportBackupCloud() {
@@ -506,16 +503,13 @@ export default function SettingsPage() {
 
     void (async () => {
       try {
-        await runBackupImportFlow(
-          {
-            dispatch,
-            runSyncWithProgress,
-            loadSongs,
-            loadCategories,
-            loadSettings,
-          },
-          { backupFileName: pendingBackupFileName },
-        );
+        await runBackupImportFlow({
+          dispatch,
+          runSyncWithProgress,
+          loadSongs,
+          loadCategories,
+          loadSettings,
+        });
         const refreshedSettings = await api.getSettings();
         setSettings(refreshedSettings);
       } catch (error) {
@@ -523,7 +517,7 @@ export default function SettingsPage() {
       } finally {
         toast.dismiss(loadingToastId);
         setIsImportingBackupCloud(false);
-        setPendingBackupFileName(null);
+        setPendingBackupSummary(null);
       }
     })();
   }
@@ -1037,22 +1031,13 @@ export default function SettingsPage() {
 
       <ImportBackupModal
         isOpen={isImportBackupModalOpen}
+        isLoading={isValidatingCloudBackup}
+        summary={pendingBackupSummary}
         onClose={() => {
           setIsImportBackupModalOpen(false);
-          setPendingBackupFileName(null);
+          setPendingBackupSummary(null);
         }}
         onConfirm={performImportBackupCloud}
-      />
-
-      <SelectBackupModal
-        isOpen={isSelectBackupModalOpen}
-        isLoading={isLoadingAvailableBackups}
-        backups={availableBackups}
-        onClose={() => {
-          setIsSelectBackupModalOpen(false);
-          setAvailableBackups([]);
-        }}
-        onSelect={handleSelectBackup}
       />
 
       <RcloneLicenseModal

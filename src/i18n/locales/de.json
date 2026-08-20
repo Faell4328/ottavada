@@ -491,6 +491,7 @@
     "importCloudError": "Das Cloud-Backup konnte nicht importiert werden.",
     "importCloudRequired": "Konfigurieren Sie die Cloud-Verbindung, bevor Sie das Backup importieren.",
     "importCloudLoading": "Cloud-Backup wird importiert...",
+    "noCloudBackup": "Kein gültiges Backup in der Cloud gefunden.",
     "generateCloudStep": "Cloud-Backup wird generiert",
     "generateCloudDetail": "Die Backup-Datei wird komprimiert und gesendet",
     "generateCloudSuccess": "Cloud-Backup bereit am {{timestamp}}.",
@@ -568,7 +569,9 @@
   },
   "importBackupModal": {
     "title": "Backup importieren",
-    "description": "Sie sind dabei, ein Backup aus der Cloud zu importieren. Diese Aktion ersetzt die aktuellen Daten auf diesem Computer.",
+    "description": "Sie sind dabei, das neueste Backup aus der Cloud zu importieren. Diese Aktion ersetzt die aktuellen Daten auf diesem Computer.",
+    "loading": "Cloud-Backup wird validiert...",
+    "summaryLine": "Sie werden das Backup vom {{date}} importieren, mit {{songs}} Liedern, {{scores}} Partituren, {{categories}} Kategorien, {{composers}} Komponisten und {{arrangers}} Arrangeuren.",
     "impactTitle": "⚠️ Auswirkung:",
     "overwriteData": "Ersetzt alle aktuellen Lieder, Partituren und Einstellungen",
     "replacesLocal": "Ersetzt die lokalen Daten durch den Inhalt des Backups",
@@ -577,19 +580,6 @@
     "confirmButton": "Importieren",
     "confirming": "Importieren...",
     "cancel": "Abbrechen"
-  },
-  "selectBackupModal": {
-    "title": "Backup auswählen",
-    "description": "Wählen Sie, welches Backup Sie importieren möchten. Die neuesten werden zuerst aufgelistet.",
-    "loading": "Verfügbare Backups werden geladen...",
-    "empty": "Keine Backups in der Cloud gefunden.",
-    "cancel": "Abbrechen",
-    "continue": "Weiter",
-    "songs": "Lieder",
-    "scores": "Noten",
-    "categories": "Kategorien",
-    "composers": "Komponisten",
-    "arrangers": "Arrangeure"
   },
   "rcloneProviderModal": {
     "title": "Cloud-Anbieter konfigurieren",
