@@ -9,6 +9,7 @@ import { useAppState } from "../context/AppContext";
 import * as api from "../api/commands";
 import { ChangeComputerTypeModal } from "./ChangeComputerTypeModal";
 import { ImportBackupModal } from "./ImportBackupModal";
+import { SelectBackupModal } from "./SelectBackupModal";
 import { RcloneProviderModal } from "./RcloneProviderModal.tsx";
 import { RcloneLicenseModal } from "./RcloneLicenseModal";
 import { UpdateModal } from "./UpdateModal";
@@ -69,6 +70,10 @@ export default function SettingsPage() {
   const [isChangeComputerTypeModalOpen, setIsChangeComputerTypeModalOpen] =
     useState(false);
   const [isImportBackupModalOpen, setIsImportBackupModalOpen] = useState(false);
+  const [isSelectBackupModalOpen, setIsSelectBackupModalOpen] = useState(false);
+  const [isLoadingAvailableBackups, setIsLoadingAvailableBackups] = useState(false);
+  const [availableBackups, setAvailableBackups] = useState<api.AvailableBackup[]>([]);
+  const [pendingBackupFileName, setPendingBackupFileName] = useState<string | null>(null);
   const [isGeneratingSnapshot, setIsGeneratingSnapshot] = useState(false);
   const [isExportingBackup, setIsExportingBackup] = useState(false);
   const [isImportingBackup, setIsImportingBackup] = useState(false);
@@ -463,6 +468,24 @@ export default function SettingsPage() {
       return;
     }
 
+    setAvailableBackups([]);
+    setIsSelectBackupModalOpen(true);
+    setIsLoadingAvailableBackups(true);
+
+    try {
+      const backups = await api.listAvailableCloudBackups();
+      setAvailableBackups(backups);
+    } catch (error) {
+      toast.error(t("settings.importCloudError"));
+      setIsSelectBackupModalOpen(false);
+    } finally {
+      setIsLoadingAvailableBackups(false);
+    }
+  }
+
+  function handleSelectBackup(backup: api.AvailableBackup) {
+    setPendingBackupFileName(backup.file_name);
+    setIsSelectBackupModalOpen(false);
     setIsImportBackupModalOpen(true);
   }
 
@@ -483,13 +506,16 @@ export default function SettingsPage() {
 
     void (async () => {
       try {
-        await runBackupImportFlow({
-          dispatch,
-          runSyncWithProgress,
-          loadSongs,
-          loadCategories,
-          loadSettings,
-        });
+        await runBackupImportFlow(
+          {
+            dispatch,
+            runSyncWithProgress,
+            loadSongs,
+            loadCategories,
+            loadSettings,
+          },
+          { backupFileName: pendingBackupFileName },
+        );
         const refreshedSettings = await api.getSettings();
         setSettings(refreshedSettings);
       } catch (error) {
@@ -497,6 +523,7 @@ export default function SettingsPage() {
       } finally {
         toast.dismiss(loadingToastId);
         setIsImportingBackupCloud(false);
+        setPendingBackupFileName(null);
       }
     })();
   }
@@ -1010,8 +1037,22 @@ export default function SettingsPage() {
 
       <ImportBackupModal
         isOpen={isImportBackupModalOpen}
-        onClose={() => setIsImportBackupModalOpen(false)}
+        onClose={() => {
+          setIsImportBackupModalOpen(false);
+          setPendingBackupFileName(null);
+        }}
         onConfirm={performImportBackupCloud}
+      />
+
+      <SelectBackupModal
+        isOpen={isSelectBackupModalOpen}
+        isLoading={isLoadingAvailableBackups}
+        backups={availableBackups}
+        onClose={() => {
+          setIsSelectBackupModalOpen(false);
+          setAvailableBackups([]);
+        }}
+        onSelect={handleSelectBackup}
       />
 
       <RcloneLicenseModal

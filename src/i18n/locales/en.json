@@ -449,7 +449,7 @@
     "importingBackup": "Importing...",
     "backupHint": "Generates and sends the backup to the cloud immediately, or downloads the backup from the cloud to the computer.",
     "autoBackupSection": "Automatic backup",
-    "autoBackupHint": "The Manage Mode generates a backup automatically every 1 hour, keeping the last 10 in the cloud.",
+    "autoBackupHint": "The Manage Mode generates a backup every time the user applies changes, keeping the last 20 in the cloud.",
     "lastAutoBackup": "Last automatic backup:",
     "aboutSection": "About",
     "versionLabel": "Software version",
@@ -578,6 +578,14 @@
     "confirming": "Importing...",
     "cancel": "Cancel"
   },
+  "selectBackupModal": {
+    "title": "Select backup",
+    "description": "Choose which backup you want to import. The most recent ones are listed first.",
+    "loading": "Loading available backups...",
+    "empty": "No backups found in the cloud.",
+    "cancel": "Cancel",
+    "continue": "Continue"
+  },
   "rcloneProviderModal": {
     "title": "Configure cloud provider",
     "browserAuth": "Browser authentication.",
@@ -680,6 +688,8 @@
     "updatingEvents": "Saving change history",
     "step4GeneratingSnapshot": "Step 4 - Generating backup copy",
     "eventsReached2MB": "The change history is large. Generating a compact backup copy.",
+    "stepGeneratingBackup": "Step {{step}} - Generating automatic backup",
+    "generatingAutomaticBackup": "Generating automatic backup",
     "stepUploadToCloud": "Step {{step}} - Uploading to cloud",
     "uploadingDatabaseChanges": "Uploading repertoire changes to the cloud",
     "uploadingChangedFiles": "Uploading changed files to the cloud",

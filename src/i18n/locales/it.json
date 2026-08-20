@@ -449,7 +449,7 @@
     "importingBackup": "Importazione...",
     "backupHint": "Genera e invia il backup al cloud immediatamente, oppure scarica il backup dal cloud al computer.",
     "autoBackupSection": "Backup automatico",
-    "autoBackupHint": "Il Modalità Gestione genera un backup automatico ogni 1 ora, conservando gli ultimi 10 nel cloud.",
+    "autoBackupHint": "Il Modalità Gestione genera un backup ogni volta che vengono applicate le modifiche, conservando gli ultimi 20 nel cloud.",
     "lastAutoBackup": "Ultimo backup automatico:",
     "aboutSection": "Informazioni",
     "versionLabel": "Versione del software",
@@ -568,15 +568,23 @@
   },
   "importBackupModal": {
     "title": "Importa backup",
-    "description": "Stai per importare un backup dal cloud. Questa azione sostituirà i dati attuali di questo computer.",
+    "description": "Stai per importare un backup dal cloud. Questa azione sostituirà i dati attuali su questo computer.",
     "impactTitle": "⚠️ Impatto:",
-    "overwriteData": "Sostituirà tutti i brani, gli spartiti e le impostazioni attuali",
+    "overwriteData": "Sostituirà tutti i brani, le partiture e le impostazioni attuali",
     "replacesLocal": "Sostituisce i dati locali con il contenuto del backup",
     "cannotUndo": "Non può essere annullato dopo la fine del conto alla rovescia",
     "confirmCountdown": "Conferma entro {{countdown}} secondi per procedere.",
     "confirmButton": "Importa",
     "confirming": "Importazione...",
     "cancel": "Annulla"
+  },
+  "selectBackupModal": {
+    "title": "Seleziona backup",
+    "description": "Scegli quale backup desideri importare. I più recenti sono elencati per primi.",
+    "loading": "Caricamento dei backup disponibili...",
+    "empty": "Nessun backup trovato nel cloud.",
+    "cancel": "Annulla",
+    "continue": "Continua"
   },
   "rcloneProviderModal": {
     "title": "Configura provider cloud",
@@ -680,6 +688,8 @@
     "updatingEvents": "Salvataggio della cronologia delle modifiche",
     "step4GeneratingSnapshot": "Passo 4 - Generazione della copia di backup",
     "eventsReached2MB": "La cronologia delle modifiche è grande. Generazione di una copia di backup compatta.",
+    "stepGeneratingBackup": "Passo {{step}} - Generazione del backup automatico",
+    "generatingAutomaticBackup": "Generazione del backup automatico",
     "stepUploadToCloud": "Passo {{step}} - Caricamento nel cloud",
     "uploadingDatabaseChanges": "Caricamento delle modifiche del repertorio nel cloud",
     "uploadingChangedFiles": "Caricamento dei file modificati nel cloud",

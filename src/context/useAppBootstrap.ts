@@ -1,10 +1,7 @@
 import { useEffect, useRef, type Dispatch } from "react";
-import toast from "react-hot-toast";
-import { useTranslation } from "react-i18next";
 
 import * as api from "../api/commands";
 import type { Action, State } from "./reducer";
-import { formatBackupTimestamp } from "../utils/formatters";
 import { shouldRunStartupClientScan } from "./useAppScanFlow";
 
 interface UseAppBootstrapParams {
@@ -26,9 +23,7 @@ export function useAppBootstrap({
   startupScan,
   enabled = true,
 }: UseAppBootstrapParams) {
-  const { t } = useTranslation();
   const skipNextAutoSongReloadRef = useRef(false);
-  const automaticBackupStartedRef = useRef(false);
 
   useEffect(() => {
     if (!enabled) {
@@ -53,38 +48,6 @@ export function useAppBootstrap({
             void startupScan().catch((error) => {
               console.error("Failed to run startup scan:", error);
             });
-          }
-
-          if (
-            !automaticBackupStartedRef.current &&
-            currentSettings.computer_type === "Server" &&
-            currentSettings.rclone_config
-          ) {
-            automaticBackupStartedRef.current = true;
-
-            void (async () => {
-              try {
-                  const backupSummary = await api.generateAutomaticBackupFile();
-                  if (backupSummary) {
-                    try {
-                      await loadSettings();
-                    } catch (loadSettingsError) {
-                      console.error(
-                        "Failed to refresh settings after automatic backup:",
-                        loadSettingsError
-                      );
-                    }
-                    toast.success(
-                      t("autoBackup.generated", { timestamp: formatBackupTimestamp(backupSummary.generated_at) }),
-                      {
-                        duration: 8000,
-                      }
-                    );
-                  }
-              } catch (backupError) {
-                console.error("Failed to generate automatic backup:", backupError);
-              }
-            })();
           }
         }
       } catch (err) {

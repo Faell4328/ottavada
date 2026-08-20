@@ -449,7 +449,7 @@
     "importingBackup": "Importation en cours...",
     "backupHint": "Génère et envoie la sauvegarde vers le cloud immédiatement, ou télécharge la sauvegarde du cloud vers l'ordinateur.",
     "autoBackupSection": "Sauvegarde automatique",
-    "autoBackupHint": "L'Mode Gestion génère automatiquement une sauvegarde toutes les heures, en conservant les 10 dernières dans le cloud.",
+    "autoBackupHint": "L'Mode Gestion génère une sauvegarde à chaque application des modifications, en conservant les 20 dernières dans le cloud.",
     "lastAutoBackup": "Dernière sauvegarde automatique :",
     "aboutSection": "À propos",
     "versionLabel": "Version du logiciel",
@@ -568,15 +568,23 @@
   },
   "importBackupModal": {
     "title": "Importer la sauvegarde",
-    "description": "Vous allez importer une sauvegarde cloud. Cette action remplacera les données actuelles de cet ordinateur.",
+    "description": "Vous êtes sur le point d'importer une sauvegarde depuis le cloud. Cette action remplacera les données actuelles de cet ordinateur.",
     "impactTitle": "⚠️ Impact :",
-    "overwriteData": "Remplacera tous les chants, partitions et paramètres actuels",
+    "overwriteData": "Remplacera toutes les chansons, partitions et paramètres actuels",
     "replacesLocal": "Remplace les données locales par le contenu de la sauvegarde",
     "cannotUndo": "Ne peut pas être annulé après la fin du compte à rebours",
     "confirmCountdown": "Confirmez dans les {{countdown}} secondes pour continuer.",
     "confirmButton": "Importer",
     "confirming": "Importation...",
     "cancel": "Annuler"
+  },
+  "selectBackupModal": {
+    "title": "Sélectionner une sauvegarde",
+    "description": "Choisissez quelle sauvegarde vous souhaitez importer. Les plus récentes sont listées en premier.",
+    "loading": "Chargement des sauvegardes disponibles...",
+    "empty": "Aucune sauvegarde trouvée dans le cloud.",
+    "cancel": "Annuler",
+    "continue": "Continuer"
   },
   "rcloneProviderModal": {
     "title": "Configurer le fournisseur cloud",
@@ -680,6 +688,8 @@
     "updatingEvents": "Enregistrement de l'historique des modifications",
     "step4GeneratingSnapshot": "Étape 4 - Génération de la sauvegarde",
     "eventsReached2MB": "L'historique des modifications est volumineux. Génération d'une sauvegarde compacte.",
+    "stepGeneratingBackup": "Étape {{step}} - Génération de la sauvegarde automatique",
+    "generatingAutomaticBackup": "Génération de la sauvegarde automatique",
     "stepUploadToCloud": "Étape {{step}} - Envoi vers le cloud",
     "uploadingDatabaseChanges": "Envoi des modifications du répertoire vers le cloud",
     "uploadingChangedFiles": "Envoi des fichiers modifiés vers le cloud",

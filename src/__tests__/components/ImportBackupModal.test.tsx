@@ -117,13 +117,13 @@ describe("ImportBackupModal", () => {
     );
 
     expect(
-      screen.getByText(/Irá substituir todas as músicas, partituras e configurações atuais/),
+      screen.getByText(/Substituirá todas as músicas, partituras e configurações atuais/),
     ).toBeInTheDocument();
     expect(
       screen.getByText(/Substitui os dados locais pelo conteúdo do backup/),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/Não pode ser desfeito após o fim da contagem/),
+      screen.getByText(/Não pode ser desfeito após o fim da contagem regressiva/),
     ).toBeInTheDocument();
   });
 });

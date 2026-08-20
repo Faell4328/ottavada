@@ -227,8 +227,11 @@ Steps:
 
 1. Identify changes;
 2. Generate events and/or snapshot;
-3. Group and compress changed files;
-4. Send new or modified files.
+3. Generate automatic backup (same as the "Backup now" action);
+4. Group and compress changed files;
+5. Send new or modified files.
+
+The backup step (3) uses `rclone copy` so that older backups already stored in the cloud are preserved. The other steps (2, 4 and 5) use `rclone sync`, so that files removed locally are also removed from the cloud.
 
 ---
 
@@ -275,17 +278,19 @@ The user must be able to:
 
 # 10. Backup
 
-The backup must be **generated automatically** every 1 hour, based on the timestamp of the last backup.
+The backup must be **generated every time** the user clicks **apply changes**.
 
-One backup **must not replace** another. The system must keep the 10 most recent backups in the backup directory. After generating a new backup, the older files that exceed this limit must be removed.
+One backup **must not replace** another. The system must keep the 20 most recent backups in the backup directory. After generating a new backup, the older files that exceed this limit must be removed.
 
 Each backup must be saved with a name based on the generation timestamp, in the format `backup - {timestamp}.msgpack.zst`, without replacing previous backups.
 
 The full backup must contain the **Manage** mode database.
 
-It must have a 1-hour loop timer to generate backups in long sessions (<mark>Not implemented</mark>).
+The backup generation is performed during step 3 of the upload to cloud flow (see 7.1), following the same steps as the "Backup now" action in the settings.
 
 ## 10.1. Import backup
+
+When clicking the "import backup" button (cloud), the system must open a modal listing the available backups in the cloud, showing for each one: **date**, **time** and **file size**. The user must choose which backup to import. After selection, the confirmation modal must be displayed before the import is executed.
 
 In "import backup", if the score files already exist, Ottavada must check whether the files it has are more recent than those on the computer; if so, it must replace the local file with the one Ottavada downloaded; if not or if equal, it must keep the original file (<mark>Not implemented</mark>).
 
@@ -297,9 +302,7 @@ During application startup, the system must:
 
 1. Check if there is an update;
 
-2. Send telemetry;
-
-3. Generate backup (if it's time) and start the backup timer (<mark>Not implemented</mark>).
+2. Send telemetry.
 
 ---
 

@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use tracing::{info, warn};
 
-use crate::commands::rclone_commands::sync_cloud_directory_with_rclone_impl;
+use crate::commands::rclone_commands::copy_cloud_directory_with_rclone_impl;
 use crate::domain::errors::AppError;
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
@@ -26,7 +26,7 @@ pub fn backup_draft_ignored_scores(
         .is_some();
 
     if has_rclone {
-        sync_cloud_directory_with_rclone_impl(
+        copy_cloud_directory_with_rclone_impl(
             store,
             "download",
             Some(BACKUP_DRAFT_IGNORED_RELATIVE_PATH),
@@ -44,7 +44,7 @@ pub fn backup_draft_ignored_scores(
     let backed_up = backup_draft_ignored_scores_to_dir(db, &backup_dir)?;
 
     if has_rclone && backed_up > 0 {
-        sync_cloud_directory_with_rclone_impl(
+        copy_cloud_directory_with_rclone_impl(
             store,
             "upload",
             Some(BACKUP_DRAFT_IGNORED_RELATIVE_PATH),
@@ -58,7 +58,7 @@ pub fn restore_draft_ignored_scores_from_backup(
     db: &Database,
     store: &SystemStore,
 ) -> Result<usize, AppError> {
-    if let Err(err) = sync_cloud_directory_with_rclone_impl(
+    if let Err(err) = copy_cloud_directory_with_rclone_impl(
         store,
         "download",
         Some(BACKUP_DRAFT_IGNORED_RELATIVE_PATH),

@@ -553,6 +553,13 @@ export interface CloudBackupValidation {
   categories_count: number;
 }
 
+export interface AvailableBackup {
+  file_name: string;
+  file_path: string;
+  file_size: number;
+  generated_at: number;
+}
+
 export interface RestoreSongsResult {
   songs_restored: number;
   scores_restored: number;
@@ -566,16 +573,20 @@ export async function importBackupFile(backupPath: string): Promise<BackupImport
   return invoke("import_backup_file", { backupPath });
 }
 
-export async function generateAutomaticBackupFile(): Promise<BackupFileSummary | null> {
-  return invoke("generate_automatic_backup_file");
-}
-
 export async function forceGenerateBackupCloudFile(): Promise<BackupFileSummary> {
   return invoke("force_generate_backup_cloud_file");
 }
 
-export async function importBackupCloudFile(): Promise<BackupImportSummary> {
-  return invoke("import_backup_cloud_file");
+export async function importBackupCloudFile(
+  backupFileName?: string | null,
+): Promise<BackupImportSummary> {
+  return invoke("import_backup_cloud_file", {
+    backupFileName: backupFileName ?? null,
+  });
+}
+
+export async function listAvailableCloudBackups(): Promise<AvailableBackup[]> {
+  return invoke("list_available_cloud_backups");
 }
 
 export async function validateCloudBackup(): Promise<CloudBackupValidation> {

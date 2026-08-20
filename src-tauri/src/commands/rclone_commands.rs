@@ -1428,6 +1428,84 @@ pub fn sync_cloud_directory_with_rclone_impl(
     })
 }
 
+/// Copies files between the local `/cloud` folder and the remote configured in rclone using
+/// `rclone copy`. Unlike `rclone sync`, `rclone copy` never deletes files in the destination,
+/// so existing backups on the cloud are preserved even when the local copy no longer has them.
+///
+/// Reserved for the backup flow, where the retention rule (keep the most recent N backups) must
+/// not erase older backups stored on the cloud.
+pub fn copy_cloud_directory_with_rclone_impl(
+    store: &SystemStore,
+    direction: &str,
+    relative_path: Option<&str>,
+) -> Result<RcloneSyncSummary, AppError> {
+    let _ = reset_rclone_rc_stats();
+
+    let sync_direction = RcloneSyncDirection::from_str(direction.trim())?;
+
+    let (local_target, remote_target) = resolve_sync_targets(store, relative_path)?;
+
+    let (source, destination, direction_label) = match sync_direction {
+        RcloneSyncDirection::Upload => (
+            local_target.clone(),
+            remote_target.clone(),
+            "upload".to_string(),
+        ),
+        RcloneSyncDirection::Download => {
+            if !remote_directory_exists(&remote_target) {
+                info!(
+                    "Remote directory '{}' does not exist, skipping download",
+                    remote_target
+                );
+                return Ok(RcloneSyncSummary {
+                    direction: "download".to_string(),
+                    source: remote_target.clone(),
+                    destination: local_target.clone(),
+                    duration_ms: 0,
+                });
+            }
+            (
+                remote_target.clone(),
+                local_target.clone(),
+                "download".to_string(),
+            )
+        }
+    };
+
+    info!(
+        "Starting rclone copy [{}]: {} -> {}",
+        direction_label, source, destination
+    );
+
+    let started_at = Instant::now();
+
+    let mut args = vec!["copy", source.as_str(), destination.as_str()];
+    append_common_copy_flags(&mut args);
+    let output = run_rclone_with_retry(&args, &format!("copy:{}", direction_label))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        error!("Failed rclone copy [{}]: {}", direction_label, stderr);
+        return Err(AppError::Generic(format!(
+            "Failed rclone copy ({}): {}",
+            direction_label, stderr
+        )));
+    }
+
+    let duration_ms = started_at.elapsed().as_millis();
+    info!(
+        "✓ rclone copy [{}] completed in {}ms",
+        direction_label, duration_ms
+    );
+
+    Ok(RcloneSyncSummary {
+        direction: direction_label,
+        source,
+        destination,
+        duration_ms,
+    })
+}
+
 /// Runs a full upload test with rclone
 ///
 /// Creates a local test file, uploads via rclone and removes the local file after success

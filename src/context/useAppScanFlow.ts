@@ -458,7 +458,7 @@ export function useAppScanFlow({
         let snapshotSummary: api.SnapshotFileSummary | null = null;
 
         if (eventsSummary.payload_size >= SNAPSHOT_AUTO_THRESHOLD_BYTES) {
-          currentTotalSteps = 5;
+          currentTotalSteps = 6;
           updateStepProgress(changedCount);
           dispatch({
             type: "SET_OPERATION_STATUS",
@@ -476,12 +476,39 @@ export function useAppScanFlow({
 
           if (!isAutomatic) {
             toast(t("scanFlow.snapshotGenerated"), {
-              icon: "📦",
+              icon: "�",
             });
           }
         }
 
-        const uploadStep = snapshotGenerated ? 5 : 4;
+        const backupStep = snapshotGenerated ? 5 : 4;
+        currentTotalSteps = snapshotGenerated ? 6 : 5;
+        dispatch({
+          type: "SET_OPERATION_STATUS",
+          payload: {
+            title: t("scanFlow.stepGeneratingBackup", { step: backupStep }),
+            detail: t("scanFlow.generatingAutomaticBackup"),
+            stepCurrent: backupStep,
+            stepTotal: currentTotalSteps,
+          },
+        });
+        updateStepProgress(changedCount);
+        const backupSummary = await api.forceGenerateBackupCloudFile();
+        completedSteps += 1;
+        updateStepProgress(changedCount);
+
+        if (backupSummary && !isAutomatic) {
+          try {
+            await loadSettings();
+          } catch (loadSettingsError) {
+            console.error(
+              "Failed to refresh settings after automatic backup:",
+              loadSettingsError,
+            );
+          }
+        }
+
+        const uploadStep = snapshotGenerated ? 6 : 5;
         const hasDatabaseChanges = eventsSummary.events_count > 0;
 
         dispatch({
