@@ -359,7 +359,15 @@ export function areScoreRowPropsEqual(
     prev.isSelected === next.isSelected &&
     prev.isMenuOpen === next.isMenuOpen &&
     prev.isLocked === next.isLocked &&
-    prev.computerType === next.computerType
+    prev.computerType === next.computerType &&
+    prev.onSelectScore === next.onSelectScore &&
+    prev.menuId === next.menuId &&
+    prev.onMenuOpen === next.onMenuOpen &&
+    prev.onMenuClose === next.onMenuClose &&
+    prev.onEdit === next.onEdit &&
+    prev.onStatusChange === next.onStatusChange &&
+    prev.onDelete === next.onDelete &&
+    prev.onUseAsBase === next.onUseAsBase
   );
 }
 

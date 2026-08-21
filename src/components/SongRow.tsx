@@ -394,7 +394,18 @@ export function areSongRowPropsEqual(prev: SongRowProps, next: SongRowProps) {
     prev.isSelected === next.isSelected &&
     prev.isMenuOpen === next.isMenuOpen &&
     prev.isLocked === next.isLocked &&
-    prev.computerType === next.computerType
+    prev.computerType === next.computerType &&
+    prev.onToggleSelect === next.onToggleSelect &&
+    prev.onToggle === next.onToggle &&
+    prev.onToggleFavorite === next.onToggleFavorite &&
+    prev.onEdit === next.onEdit &&
+    prev.onDelete === next.onDelete &&
+    prev.onDeleteWithFiles === next.onDeleteWithFiles &&
+    prev.onStatusChange === next.onStatusChange &&
+    prev.onReindex === next.onReindex &&
+    prev.menuId === next.menuId &&
+    prev.onMenuOpen === next.onMenuOpen &&
+    prev.onMenuClose === next.onMenuClose
   );
 }
 
