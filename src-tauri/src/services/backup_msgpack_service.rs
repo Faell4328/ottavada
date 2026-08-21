@@ -16,7 +16,7 @@ use crate::infrastructure::store::SystemStore;
 use crate::services::backup_draft_ignored_service::backup_draft_ignored_scores;
 use crate::services::cloud_paths::ensure_backup_cloud_dir;
 use crate::services::msgpack_zstd::{
-    compress_zstd_with_threads, serialize_msgpack_named, write_atomic, ZSTD_LEVEL_BALANCED,
+    compress_zstd_with_threads, serialize_msgpack_named, write_atomic,
 };
 use crate::services::path_normalizer::from_storage_path;
 
@@ -284,9 +284,7 @@ pub fn export_backup_msgpack(
     write_atomic(&output_path, &bytes, "backup.msgpack")?;
 
     let file_size = fs::metadata(&output_path)
-        .map_err(|e| {
-            AppError::Generic(format!("Error getting backup.msgpack metadata: {}", e))
-        })?
+        .map_err(|e| AppError::Generic(format!("Error getting backup.msgpack metadata: {}", e)))?
         .len();
 
     Ok(BackupFileSummary {
@@ -391,8 +389,7 @@ pub fn generate_backup_msgpack_in_cloud(
     let payload = collect_backup_payload(db, settings)?;
 
     let msgpack_bytes = serialize_msgpack_named(&payload, "backup.msgpack")?;
-    let compressed =
-        compress_zstd_with_threads(&msgpack_bytes, ZSTD_LEVEL_BALANCED, "backup.msgpack.zst")?;
+    let compressed = compress_zstd_with_threads(&msgpack_bytes, "backup.msgpack.zst")?;
 
     let backup_dir = ensure_backup_cloud_dir(store.app_data_dir())?;
 
@@ -459,9 +456,10 @@ pub fn import_backup_msgpack_from_cloud_by_name(
     summary.scores_restored = stats.scores_restored;
     summary.scores_replaced = stats.scores_replaced;
 
-    let draft_count = crate::services::backup_draft_ignored_service::restore_draft_ignored_scores_from_backup(
-        db, store,
-    )?;
+    let draft_count =
+        crate::services::backup_draft_ignored_service::restore_draft_ignored_scores_from_backup(
+            db, store,
+        )?;
     if draft_count > 0 {
         info!("{} draft/ignored scores restored from backup", draft_count);
     }
@@ -574,14 +572,11 @@ pub fn restore_missing_songs_from_archives(
     let mut extracted_song_ids = std::collections::HashSet::new();
 
     if songs_cloud_dir.is_dir() {
-        for entry in fs::read_dir(&songs_cloud_dir).map_err(|e| {
-            AppError::Generic(format!("Error reading cloud songs directory: {}", e))
-        })? {
+        for entry in fs::read_dir(&songs_cloud_dir)
+            .map_err(|e| AppError::Generic(format!("Error reading cloud songs directory: {}", e)))?
+        {
             let entry = entry.map_err(|e| {
-                AppError::Generic(format!(
-                    "Error reading songs directory entry: {}",
-                    e
-                ))
+                AppError::Generic(format!("Error reading songs directory entry: {}", e))
             })?;
             let path = entry.path();
             if !path.is_file() {
@@ -1143,9 +1138,9 @@ mod tests {
 
     use super::{
         backup_filename, cleanup_old_backups, export_backup_msgpack, files_are_equal,
-        find_latest_valid_backup, import_backup_msgpack, list_backup_files,
-        parse_backup_timestamp, restore_missing_songs_from_archives, BackupCategory,
-        BackupMessagePack, BackupScore, BackupSong,
+        find_latest_valid_backup, import_backup_msgpack, list_backup_files, parse_backup_timestamp,
+        restore_missing_songs_from_archives, BackupCategory, BackupMessagePack, BackupScore,
+        BackupSong,
     };
 
     fn write_tar_zst_from_dir(source_dir: &std::path::Path, archive_path: &std::path::Path) {
@@ -1208,7 +1203,12 @@ mod tests {
 
     fn setup_restore_scenario(
         existing_content: Option<&[u8]>,
-    ) -> (tempfile::TempDir, std::path::PathBuf, Database, std::path::PathBuf) {
+    ) -> (
+        tempfile::TempDir,
+        std::path::PathBuf,
+        Database,
+        std::path::PathBuf,
+    ) {
         let temp = tempdir().expect("temp dir");
         let app_data_dir = temp.path().join("app-data");
         let cloud_songs_dir = app_data_dir.join("cloud").join("songs");
@@ -1516,10 +1516,7 @@ mod tests {
             .get_app_settings()
             .expect("read target settings");
         assert_eq!(imported_settings.computer_id, "server-a");
-        assert_eq!(
-            imported_settings.computer_name.as_deref(),
-            Some("Server A")
-        );
+        assert_eq!(imported_settings.computer_name.as_deref(), Some("Server A"));
         assert_eq!(
             imported_settings.last_backup_timestamp,
             Some(export_summary.generated_at)
@@ -1574,8 +1571,7 @@ mod tests {
             super::serialize_msgpack_named(&payload, "backup").expect("serialize")
         };
         let compressed =
-            super::compress_zstd_with_threads(&msgpack_bytes, super::ZSTD_LEVEL_BALANCED, "backup")
-                .expect("compress");
+            super::compress_zstd_with_threads(&msgpack_bytes, "backup").expect("compress");
 
         let compressed_path = source_dir.path().join("backup - 1710684000.msgpack.zst");
         std::fs::write(&compressed_path, &compressed).expect("write compressed");

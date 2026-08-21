@@ -87,11 +87,7 @@ pub fn generate_events_msgpack(
         if !output_path.exists() {
             let payload = EventsMessagePack { events: Vec::new() };
             let msgpack_bytes = serialize_msgpack_named(&payload, "events.msgpack")?;
-            let compressed_bytes = compress_zstd_with_threads(
-                &msgpack_bytes,
-                ZSTD_LEVEL_BALANCED,
-                "events.msgpack",
-            )?;
+            let compressed_bytes = compress_zstd_with_threads(&msgpack_bytes, "events.msgpack")?;
 
             write_atomic(&output_path, &compressed_bytes, "events.msgpack")?;
 
@@ -135,8 +131,7 @@ pub fn generate_events_msgpack(
 
     let payload_size = msgpack_bytes.len() as u64;
 
-    let compressed_bytes =
-        compress_zstd_with_threads(&msgpack_bytes, ZSTD_LEVEL_BALANCED, "events.msgpack")?;
+    let compressed_bytes = compress_zstd_with_threads(&msgpack_bytes, "events.msgpack")?;
 
     if output_path.exists() {
         let existing_bytes = fs::read(&output_path).map_err(|e| {
@@ -160,9 +155,7 @@ pub fn generate_events_msgpack(
     write_atomic(&output_path, &compressed_bytes, "events.msgpack")?;
 
     let file_size = fs::metadata(&output_path)
-        .map_err(|e| {
-            AppError::Generic(format!("Error getting events.msgpack metadata: {}", e))
-        })?
+        .map_err(|e| AppError::Generic(format!("Error getting events.msgpack metadata: {}", e)))?
         .len();
 
     Ok(EventsFileSummary {
@@ -276,8 +269,10 @@ fn build_song_status_events(
     let song = db.get_song_by_id(&change.entity_id)?;
     let scores = db.get_scores_for_song(&change.entity_id)?;
     let category_relations = get_song_category_relations(db, &change.entity_id)?;
-    let composer_relations = get_song_named_relations(db, &change.entity_id, "composerSongs", "composerId")?;
-    let arranger_relations = get_song_named_relations(db, &change.entity_id, "arrangerSongs", "arrangerId")?;
+    let composer_relations =
+        get_song_named_relations(db, &change.entity_id, "composerSongs", "composerId")?;
+    let arranger_relations =
+        get_song_named_relations(db, &change.entity_id, "arrangerSongs", "arrangerId")?;
 
     match song.status {
         ScoreStatus::Main => {
@@ -301,7 +296,10 @@ fn build_song_status_events(
                     &change.id,
                     "categoriesSongs",
                     &relation.id,
-                    &[("categoryId", relation.foreign_id), ("songId", change.entity_id.clone())],
+                    &[
+                        ("categoryId", relation.foreign_id),
+                        ("songId", change.entity_id.clone()),
+                    ],
                 ));
             }
 
@@ -311,7 +309,10 @@ fn build_song_status_events(
                     &change.id,
                     "composerSongs",
                     &relation.id,
-                    &[("composerId", relation.foreign_id), ("songId", change.entity_id.clone())],
+                    &[
+                        ("composerId", relation.foreign_id),
+                        ("songId", change.entity_id.clone()),
+                    ],
                 ));
             }
 
@@ -321,7 +322,10 @@ fn build_song_status_events(
                     &change.id,
                     "arrangerSongs",
                     &relation.id,
-                    &[("arrangerId", relation.foreign_id), ("songId", change.entity_id.clone())],
+                    &[
+                        ("arrangerId", relation.foreign_id),
+                        ("songId", change.entity_id.clone()),
+                    ],
                 ));
             }
 
@@ -607,24 +611,29 @@ fn build_score_event(
 
 #[cfg(test)]
 mod tests {
-    use std::path::Path;
     use std::fs;
+    use std::path::Path;
 
-    use serde::Serialize;
     use rusqlite::params;
+    use serde::Serialize;
     use tempfile::tempdir;
 
     use crate::domain::models::ScoreStatus;
     use crate::domain::models::{Category, Song};
     use crate::infrastructure::database::Database;
     use crate::infrastructure::store::SystemStore;
-    use crate::services::msgpack_zstd::{compress_zstd_with_threads, serialize_msgpack_named, write_atomic, ZSTD_LEVEL_BALANCED};
+    use crate::services::msgpack_zstd::{
+        compress_zstd_with_threads, serialize_msgpack_named, write_atomic, ZSTD_LEVEL_BALANCED,
+    };
 
-    use super::{EventDataMessagePack, EventMessagePack, EventsMessagePack, generate_events_msgpack};
+    use super::{
+        generate_events_msgpack, EventDataMessagePack, EventMessagePack, EventsMessagePack,
+    };
 
     fn write_zstd_msgpack<T: Serialize>(path: &Path, payload: &T) {
-        let serialized = serialize_msgpack_named(payload, "events test payload").expect("serialize payload");
-        let compressed = compress_zstd_with_threads(&serialized, ZSTD_LEVEL_BALANCED, "events test payload")
+        let serialized =
+            serialize_msgpack_named(payload, "events test payload").expect("serialize payload");
+        let compressed = compress_zstd_with_threads(&serialized, "events test payload")
             .expect("compress payload");
         write_atomic(path, &compressed, "events test payload").expect("write payload");
     }
@@ -1090,23 +1099,41 @@ mod tests {
         };
 
         let conn = db.conn.lock().expect("lock db");
-        conn.execute("INSERT INTO categories (id, name) VALUES (?1, ?2)", params!["cat-1", "Choir"])
-            .expect("insert category");
-        conn.execute("INSERT INTO composer (id, name) VALUES (?1, ?2)", params!["composer-1", "Composer"])
-            .expect("insert composer");
-        conn.execute("INSERT INTO arranger (id, name) VALUES (?1, ?2)", params!["arranger-1", "Arranger"])
-            .expect("insert arranger");
+        conn.execute(
+            "INSERT INTO categories (id, name) VALUES (?1, ?2)",
+            params!["cat-1", "Choir"],
+        )
+        .expect("insert category");
+        conn.execute(
+            "INSERT INTO composer (id, name) VALUES (?1, ?2)",
+            params!["composer-1", "Composer"],
+        )
+        .expect("insert composer");
+        conn.execute(
+            "INSERT INTO arranger (id, name) VALUES (?1, ?2)",
+            params!["arranger-1", "Arranger"],
+        )
+        .expect("insert arranger");
         drop(conn);
 
         db.insert_song(&song, &[]).expect("insert song");
 
         let conn = db.conn.lock().expect("lock db");
-        conn.execute("INSERT INTO categoriesSongs (id, categoryId, songId) VALUES (?1, ?2, ?3)", params!["rel-cat-1", "cat-1", "song-1"])
-            .expect("insert category relation");
-        conn.execute("INSERT INTO composerSongs (id, composerId, songId) VALUES (?1, ?2, ?3)", params!["rel-composer-1", "composer-1", "song-1"])
-            .expect("insert composer relation");
-        conn.execute("INSERT INTO arrangerSongs (id, arrangerId, songId) VALUES (?1, ?2, ?3)", params!["rel-arranger-1", "arranger-1", "song-1"])
-            .expect("insert arranger relation");
+        conn.execute(
+            "INSERT INTO categoriesSongs (id, categoryId, songId) VALUES (?1, ?2, ?3)",
+            params!["rel-cat-1", "cat-1", "song-1"],
+        )
+        .expect("insert category relation");
+        conn.execute(
+            "INSERT INTO composerSongs (id, composerId, songId) VALUES (?1, ?2, ?3)",
+            params!["rel-composer-1", "composer-1", "song-1"],
+        )
+        .expect("insert composer relation");
+        conn.execute(
+            "INSERT INTO arrangerSongs (id, arrangerId, songId) VALUES (?1, ?2, ?3)",
+            params!["rel-arranger-1", "arranger-1", "song-1"],
+        )
+        .expect("insert arranger relation");
         conn.execute("DELETE FROM changes", [])
             .expect("clear changed fields");
         conn.execute(
@@ -1175,23 +1202,41 @@ mod tests {
         };
 
         let conn = db.conn.lock().expect("lock db");
-        conn.execute("INSERT INTO categories (id, name) VALUES (?1, ?2)", params!["cat-1", "Choir"])
-            .expect("insert category");
-        conn.execute("INSERT INTO composer (id, name) VALUES (?1, ?2)", params!["composer-1", "Composer"])
-            .expect("insert composer");
-        conn.execute("INSERT INTO arranger (id, name) VALUES (?1, ?2)", params!["arranger-1", "Arranger"])
-            .expect("insert arranger");
+        conn.execute(
+            "INSERT INTO categories (id, name) VALUES (?1, ?2)",
+            params!["cat-1", "Choir"],
+        )
+        .expect("insert category");
+        conn.execute(
+            "INSERT INTO composer (id, name) VALUES (?1, ?2)",
+            params!["composer-1", "Composer"],
+        )
+        .expect("insert composer");
+        conn.execute(
+            "INSERT INTO arranger (id, name) VALUES (?1, ?2)",
+            params!["arranger-1", "Arranger"],
+        )
+        .expect("insert arranger");
         drop(conn);
 
         db.insert_song(&song, &[]).expect("insert song");
 
         let conn = db.conn.lock().expect("lock db");
-        conn.execute("INSERT INTO categoriesSongs (id, categoryId, songId) VALUES (?1, ?2, ?3)", params!["rel-cat-1", "cat-1", "song-1"])
-            .expect("insert category relation");
-        conn.execute("INSERT INTO composerSongs (id, composerId, songId) VALUES (?1, ?2, ?3)", params!["rel-composer-1", "composer-1", "song-1"])
-            .expect("insert composer relation");
-        conn.execute("INSERT INTO arrangerSongs (id, arrangerId, songId) VALUES (?1, ?2, ?3)", params!["rel-arranger-1", "arranger-1", "song-1"])
-            .expect("insert arranger relation");
+        conn.execute(
+            "INSERT INTO categoriesSongs (id, categoryId, songId) VALUES (?1, ?2, ?3)",
+            params!["rel-cat-1", "cat-1", "song-1"],
+        )
+        .expect("insert category relation");
+        conn.execute(
+            "INSERT INTO composerSongs (id, composerId, songId) VALUES (?1, ?2, ?3)",
+            params!["rel-composer-1", "composer-1", "song-1"],
+        )
+        .expect("insert composer relation");
+        conn.execute(
+            "INSERT INTO arrangerSongs (id, arrangerId, songId) VALUES (?1, ?2, ?3)",
+            params!["rel-arranger-1", "arranger-1", "song-1"],
+        )
+        .expect("insert arranger relation");
         conn.execute("DELETE FROM changes", [])
             .expect("clear changed fields");
         conn.execute(
@@ -1350,6 +1395,9 @@ mod tests {
         assert_eq!(summary.events_count, 0);
         assert_eq!(summary.payload_size, 0);
         assert!(events_file.exists());
-        assert_eq!(std::fs::read(&events_file).expect("read stale events after"), before);
+        assert_eq!(
+            std::fs::read(&events_file).expect("read stale events after"),
+            before
+        );
     }
 }

@@ -5,7 +5,7 @@ use serde::Serialize;
 
 use crate::domain::errors::AppError;
 
-pub const ZSTD_LEVEL_BALANCED: i32 = 10;
+pub const ZSTD_LEVEL_BALANCED: i32 = 5;
 
 pub fn serialize_msgpack_named<T: Serialize>(
     payload: &T,
@@ -15,12 +15,8 @@ pub fn serialize_msgpack_named<T: Serialize>(
         .map_err(|e| AppError::Generic(format!("Error serializing {}: {}", file_label, e)))
 }
 
-pub fn compress_zstd_with_threads(
-    data: &[u8],
-    level: i32,
-    file_label: &str,
-) -> Result<Vec<u8>, AppError> {
-    let mut encoder = zstd::stream::Encoder::new(Vec::new(), 5).map_err(|e| {
+pub fn compress_zstd_with_threads(data: &[u8], file_label: &str) -> Result<Vec<u8>, AppError> {
+    let mut encoder = zstd::stream::Encoder::new(Vec::new(), ZSTD_LEVEL_BALANCED).map_err(|e| {
         AppError::Generic(format!(
             "Error starting zstd compression of {}: {}",
             file_label, e

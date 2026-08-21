@@ -12,7 +12,7 @@ use crate::infrastructure::store::SystemStore;
 use crate::services::cloud_paths::ensure_actions_cloud_dir;
 use crate::services::cloud_paths::ensure_cloud_root_dir;
 use crate::services::msgpack_zstd::{
-    compress_zstd_with_threads, serialize_msgpack_named, write_atomic, ZSTD_LEVEL_BALANCED,
+    compress_zstd_with_threads, serialize_msgpack_named, write_atomic,
 };
 
 const SNAPSHOT_FILE_NAME: &str = "snapshot.msgpack.zst";
@@ -256,15 +256,11 @@ pub fn generate_snapshot_msgpack(
     write_atomic(&output_path, &compressed_bytes, "snapshot.msgpack")?;
 
     let file_size = fs::metadata(&output_path)
-        .map_err(|e| {
-            AppError::Generic(format!(
-                "Error getting snapshot.msgpack metadata: {}",
-                e
-            ))
-        })?
+        .map_err(|e| AppError::Generic(format!("Error getting snapshot.msgpack metadata: {}", e)))?
         .len();
 
-    let cleared_changed_fields = db.clear_changed_fields_before(last_change_timestamp.unwrap_or(0))?;
+    let cleared_changed_fields =
+        db.clear_changed_fields_before(last_change_timestamp.unwrap_or(0))?;
 
     clear_events_artifacts(&cloud_dir)?;
 
@@ -284,7 +280,7 @@ fn compress_snapshot_with_retry(msgpack_bytes: &[u8]) -> Result<Vec<u8>, AppErro
     let mut last_error: Option<AppError> = None;
 
     for attempt in 1..=2 {
-        match compress_zstd_with_threads(msgpack_bytes, ZSTD_LEVEL_BALANCED, "snapshot.msgpack") {
+        match compress_zstd_with_threads(msgpack_bytes, "snapshot.msgpack") {
             Ok(compressed) => return Ok(compressed),
             Err(err) => {
                 warn!(
@@ -312,7 +308,10 @@ fn clear_events_artifacts(cloud_dir: &std::path::Path) -> Result<(), AppError> {
         ))
     })? {
         let entry = entry.map_err(|e| {
-            AppError::Generic(format!("Error reading actions directory entry after snapshot: {}", e))
+            AppError::Generic(format!(
+                "Error reading actions directory entry after snapshot: {}",
+                e
+            ))
         })?;
 
         let path = entry.path();
@@ -322,10 +321,7 @@ fn clear_events_artifacts(cloud_dir: &std::path::Path) -> Result<(), AppError> {
 
         if path.is_file() {
             fs::remove_file(&path).map_err(|e| {
-                AppError::Generic(format!(
-                    "Error removing actions file after snapshot: {}",
-                    e
-                ))
+                AppError::Generic(format!("Error removing actions file after snapshot: {}", e))
             })?;
         } else if path.is_dir() {
             fs::remove_dir_all(&path).map_err(|e| {
