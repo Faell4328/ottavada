@@ -43,11 +43,6 @@ const sampleInstrument: ScoreListItem = {
   status: "main",
 };
 
-const folderInstrument: ScoreListItem = {
-  ...sampleInstrument,
-  file_path: "/music/scores",
-};
-
 describe("EditScoreModal", () => {
   const mockOnClose = vi.fn();
   const mockOnSave = vi.fn();
@@ -101,15 +96,17 @@ describe("EditScoreModal", () => {
     });
   });
 
-  it("should fall back to the score id when the stored path is not a file", async () => {
-    const openFileSpy = vi.spyOn(api, "openFile").mockResolvedValue(undefined);
-    const openFileLocationSpy = vi.spyOn(api, "openFileLocation").mockResolvedValue(undefined);
+  it("should open the stored file path directly when present", async () => {
+    const openFilePathSpy = vi.spyOn(api, "openFilePath").mockResolvedValue(undefined);
+    const openFileLocationSpy = vi
+      .spyOn(api, "openFileLocation")
+      .mockResolvedValue(undefined);
 
     render(
       <EditScoreModal
         isOpen={true}
         score={sampleSong}
-        instrument={folderInstrument}
+        instrument={sampleInstrument}
         onClose={mockOnClose}
         onSave={mockOnSave}
       />
@@ -118,13 +115,49 @@ describe("EditScoreModal", () => {
     fireEvent.click(screen.getByTitle("Abrir partitura"));
 
     await waitFor(() => {
-      expect(openFileSpy).toHaveBeenCalledWith(folderInstrument.id);
+      expect(openFilePathSpy).toHaveBeenCalledWith(sampleInstrument.file_path);
     });
 
     fireEvent.click(screen.getByTitle("Abrir local"));
 
     await waitFor(() => {
-      expect(openFileLocationSpy).toHaveBeenCalledWith(folderInstrument.id);
+      expect(openFileLocationSpy).toHaveBeenCalledWith(sampleInstrument.file_path);
+    });
+  });
+
+  it("should fall back to the score id when no file path is stored", async () => {
+    const openFileSpy = vi.spyOn(api, "openFile").mockResolvedValue(undefined);
+    const openFilePathSpy = vi.spyOn(api, "openFilePath").mockResolvedValue(undefined);
+    const openFileLocationSpy = vi
+      .spyOn(api, "openFileLocation")
+      .mockResolvedValue(undefined);
+
+    const noPathInstrument: ScoreListItem = {
+      ...sampleInstrument,
+      file_path: "",
+    };
+
+    render(
+      <EditScoreModal
+        isOpen={true}
+        score={sampleSong}
+        instrument={noPathInstrument}
+        onClose={mockOnClose}
+        onSave={mockOnSave}
+      />
+    );
+
+    fireEvent.click(screen.getByTitle("Abrir partitura"));
+
+    await waitFor(() => {
+      expect(openFileSpy).toHaveBeenCalledWith(noPathInstrument.id);
+    });
+    expect(openFilePathSpy).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByTitle("Abrir local"));
+
+    await waitFor(() => {
+      expect(openFileLocationSpy).toHaveBeenCalledWith(noPathInstrument.id);
     });
   });
 });

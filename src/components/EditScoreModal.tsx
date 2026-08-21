@@ -15,7 +15,6 @@ import {
   normalizeScoreNameInput,
 } from "../utils/nameFormat";
 import { findScoreNameConflictInSong } from "../utils/libraryDuplicates";
-import { isSupportedScoreFilePath } from "../utils/paths";
 
 interface EditScoreModalProps {
   isOpen: boolean;
@@ -75,7 +74,7 @@ export function EditScoreModal({
     setError("");
 
     try {
-      if (selectedPath && isSupportedScoreFilePath(selectedPath)) {
+      if (selectedPath) {
         await api.openFilePath(selectedPath);
       } else {
         await api.openFile(instrument?.id ?? "");
@@ -99,7 +98,7 @@ export function EditScoreModal({
     setError("");
 
     try {
-      if (selectedPath && isSupportedScoreFilePath(selectedPath)) {
+      if (selectedPath) {
         await api.openFileLocation(selectedPath);
       } else {
         await api.openFileLocation(instrument?.id ?? "");
