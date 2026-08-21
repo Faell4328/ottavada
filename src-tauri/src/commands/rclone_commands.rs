@@ -1100,7 +1100,7 @@ pub async fn sync_cloud_with_rclone(
 mod tests {
     use serde_json::json;
 
-    use super::parse_rclone_rc_stats;
+    use super::{parse_backup_timestamp_from_name, parse_rclone_rc_stats};
 
     #[test]
     fn parses_multiple_transferring_items_when_root_bytes_are_stale() {
@@ -1149,6 +1149,47 @@ mod tests {
 
         assert_eq!(stats.bytes, 40);
         assert_eq!(stats.percentage, Some(40.0));
+    }
+
+    #[test]
+    fn parses_cloud_backup_timestamp_from_name() {
+        assert_eq!(
+            parse_backup_timestamp_from_name("backup - 1710684000.msgpack.zst"),
+            Some(1710684000)
+        );
+        assert_eq!(parse_backup_timestamp_from_name("backup.msgpack"), None);
+        assert_eq!(
+            parse_backup_timestamp_from_name("backup - abc.msgpack.zst"),
+            None
+        );
+    }
+
+    #[test]
+    fn cloud_backup_retention_keeps_newest() {
+        let mut entries: Vec<(i64, String)> = vec![
+            (1000, "backup - 1000.msgpack.zst".to_string()),
+            (3000, "backup - 3000.msgpack.zst".to_string()),
+            (2000, "backup - 2000.msgpack.zst".to_string()),
+        ];
+        entries.sort_by(|a, b| b.0.cmp(&a.0));
+
+        let keep = 1;
+        let to_remove: Vec<&String> = entries.iter().skip(keep).map(|(_, name)| name).collect();
+
+        assert_eq!(to_remove.len(), 2);
+        assert!(to_remove.contains(&&"backup - 1000.msgpack.zst".to_string()));
+        assert!(to_remove.contains(&&"backup - 2000.msgpack.zst".to_string()));
+    }
+
+    #[test]
+    fn cloud_backup_retention_skips_when_within_limit() {
+        let entries: Vec<(i64, String)> = vec![
+            (2000, "backup - 2000.msgpack.zst".to_string()),
+            (1000, "backup - 1000.msgpack.zst".to_string()),
+        ];
+        let keep = 1;
+        let to_remove: Vec<&String> = entries.iter().skip(keep).map(|(_, name)| name).collect();
+        assert_eq!(to_remove.len(), 1);
     }
 }
 
@@ -1415,10 +1456,11 @@ pub fn sync_cloud_directory_with_rclone_impl(
 
 /// Copies files between the local `/cloud` folder and the remote configured in rclone using
 /// `rclone copy`. Unlike `rclone sync`, `rclone copy` never deletes files in the destination,
-/// so existing backups on the cloud are preserved even when the local copy no longer has them.
+/// so older backups on the cloud are preserved during the transfer.
 ///
-/// Reserved for the backup flow, where the retention rule (keep the most recent N backups) must
-/// not erase older backups stored on the cloud.
+/// Reserved for the backup flow. The `MAX_BACKUP_FILES` retention on the cloud is enforced
+/// separately by `cleanup_old_cloud_backups_impl`, which deletes the oldest remote backups
+/// after the copy completes.
 pub fn copy_cloud_directory_with_rclone_impl(
     store: &SystemStore,
     direction: &str,
@@ -1489,6 +1531,91 @@ pub fn copy_cloud_directory_with_rclone_impl(
         destination,
         duration_ms,
     })
+}
+
+/// Lists backup files stored on the cloud and deletes the oldest ones so that only
+/// `keep_latest` files remain in the remote directory.
+///
+/// This is used by the msgpack backup flow, which pushes via `rclone copy` (that never
+/// deletes the destination) to honor the `MAX_BACKUP_FILES` retention rule on the cloud
+/// without switching to a destructive `sync`.
+pub fn cleanup_old_cloud_backups_impl(
+    store: &SystemStore,
+    relative_path: Option<&str>,
+    keep_latest: usize,
+) -> Result<usize, AppError> {
+    let settings = store.get_app_settings()?;
+    let rclone_config = settings
+        .rclone_config
+        .ok_or_else(|| AppError::Generic("rclone configuration not found".to_string()))?;
+    let remote_target = build_rclone_remote_target(&rclone_config.provider, relative_path);
+
+    let listed = list_remote_files(&remote_target)?;
+    let mut entries: Vec<(i64, String)> = listed
+        .into_iter()
+        .filter_map(|(name, timestamp)| timestamp.map(|ts| (ts, name)))
+        .collect();
+    entries.sort_by(|a, b| b.0.cmp(&a.0));
+
+    let mut removed = 0;
+    for (_timestamp, name) in entries.iter().skip(keep_latest) {
+        let mut remote_file = remote_target.clone();
+        if !remote_file.ends_with('/') {
+            remote_file.push('/');
+        }
+        remote_file.push_str(name);
+
+        let args = vec!["deletefile", remote_file.as_str()];
+        let output = run_rclone_once(&args, "deletefile:cloud-backup")?;
+        if !output.status.success() {
+            warn!(
+                "Failed to delete old cloud backup {}: {}",
+                name,
+                String::from_utf8_lossy(&output.stderr)
+            );
+        } else {
+            removed += 1;
+        }
+    }
+
+    if removed > 0 {
+        info!("Removed {} old cloud backups", removed);
+    }
+    Ok(removed)
+}
+
+fn list_remote_files(remote_target: &str) -> Result<Vec<(String, Option<i64>)>, AppError> {
+    let mut cmd = new_rclone_command();
+    let output = cmd.args(["lsl", remote_target]).output().map_err(|e| {
+        AppError::Generic(format!("Failed to list remote backups: {}", e))
+    })?;
+
+    if !output.status.success() {
+        return Err(AppError::Generic(format!(
+            "Failed to list remote backups: {}",
+            String::from_utf8_lossy(&output.stderr)
+        )));
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let mut files: Vec<(String, Option<i64>)> = Vec::new();
+    for line in stdout.lines() {
+        let raw_name = match line.split_whitespace().last() {
+            Some(value) => value.to_string(),
+            None => continue,
+        };
+        let timestamp = parse_backup_timestamp_from_name(&raw_name);
+        files.push((raw_name, timestamp));
+    }
+    Ok(files)
+}
+
+fn parse_backup_timestamp_from_name(name: &str) -> Option<i64> {
+    let prefix = "backup - ";
+    let extension = ".msgpack.zst";
+    let without_prefix = name.strip_prefix(prefix)?;
+    let without_extension = without_prefix.strip_suffix(extension)?;
+    without_extension.parse::<i64>().ok()
 }
 
 /// Runs a full upload test with rclone

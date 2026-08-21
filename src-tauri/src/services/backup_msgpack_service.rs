@@ -7,7 +7,8 @@ use serde::{Deserialize, Serialize};
 use tracing::{info, warn};
 
 use crate::commands::rclone_commands::{
-    copy_cloud_directory_with_rclone_impl, sync_cloud_directory_with_rclone_impl,
+    cleanup_old_cloud_backups_impl, copy_cloud_directory_with_rclone_impl,
+    sync_cloud_directory_with_rclone_impl,
 };
 use crate::domain::errors::AppError;
 use crate::domain::models::{AppSettings, LibraryStatusSummary, LibrarySummary, OperationGuard};
@@ -407,6 +408,8 @@ pub fn generate_backup_msgpack_in_cloud(
     cleanup_old_backups(&backup_dir)?;
 
     copy_cloud_directory_with_rclone_impl(store, "upload", Some("backup"))?;
+
+    cleanup_old_cloud_backups_impl(store, Some("backup"), MAX_BACKUP_FILES)?;
 
     let draft_count = backup_draft_ignored_scores(db, store)?;
     if draft_count > 0 {
