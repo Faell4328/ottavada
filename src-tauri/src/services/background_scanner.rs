@@ -86,6 +86,9 @@ pub fn run_initial_scan(db: &Database, updated_by: &str) {
             if !path.exists() || !path.is_file() {
                 deleted_count += 1;
                 info!("✓ File not found: {}", full_path);
+                if db.delete_score(&score.score_id).is_ok() {
+                    info!("✓ Score removed from catalog: {}", full_path);
+                }
                 continue;
             }
 
@@ -124,6 +127,10 @@ pub fn run_initial_scan(db: &Database, updated_by: &str) {
             let path = Path::new(&full_path);
 
             if !path.exists() || !path.is_file() {
+                deleted_count += 1;
+                if db.delete_score(&score.score_id).is_ok() {
+                    info!("✓ Score removed from catalog: {}", full_path);
+                }
                 continue;
             }
 
@@ -242,6 +249,7 @@ fn resolve_recovered_score_status(
 #[cfg(test)]
 mod tests {
     use super::run_initial_scan;
+    use crate::domain::errors::AppError;
     use crate::domain::models::{Score, ScoreStatus, Song};
     use crate::infrastructure::database::Database;
     use std::fs;
@@ -301,5 +309,108 @@ mod tests {
             .expect("song after second scan");
 
         assert_eq!(after_second_scan.scores[0].status, ScoreStatus::Draft);
+    }
+
+    #[test]
+    fn removes_main_score_from_catalog_when_file_disappears() {
+        let dir = tempdir().expect("temp dir");
+        let db = Database::new_in_memory().expect("db");
+
+        let song_dir = dir.path().join("song-1");
+        fs::create_dir_all(&song_dir).expect("create song dir");
+        let score_path = song_dir.join("score-1.musx");
+        fs::write(&score_path, b"main-v1").expect("write score v1");
+
+        let metadata_v1 = super::get_file_metadata(&score_path).expect("metadata v1");
+
+        db.insert_song(
+            &Song {
+                id: "song-1".to_string(),
+                name: "CANON".to_string(),
+                composer: None,
+                arranger: None,
+                path: song_dir.to_string_lossy().to_string(),
+                is_favorite: false,
+                status: ScoreStatus::Main,
+            },
+            &[],
+        )
+        .expect("insert song");
+
+        db.insert_score(&Score {
+            id: "score-1".to_string(),
+            song_id: "song-1".to_string(),
+            name: Some("Flute".to_string()),
+            file_path: song_dir.to_string_lossy().to_string(),
+            file_name: "score-1.musx".to_string(),
+            file_size: metadata_v1.0,
+            file_modified_at: metadata_v1.1,
+            status: ScoreStatus::Main,
+        })
+        .expect("insert score");
+
+        fs::remove_file(&score_path).expect("remove score file");
+
+        run_initial_scan(&db, "server-1");
+
+        let score_lookup = db.get_score_file_path("score-1");
+        assert!(
+            matches!(score_lookup, Err(AppError::ScoreNotFound(_))),
+            "score should have been removed from the catalog"
+        );
+
+        let song = db
+            .get_song_list_item_by_id("song-1")
+            .expect("song still exists");
+        assert_eq!(song.status, ScoreStatus::NotFound);
+    }
+
+    #[test]
+    fn removes_draft_score_from_catalog_when_file_disappears() {
+        let dir = tempdir().expect("temp dir");
+        let db = Database::new_in_memory().expect("db");
+
+        let song_dir = dir.path().join("song-1");
+        fs::create_dir_all(&song_dir).expect("create song dir");
+        let score_path = song_dir.join("score-1.musx");
+        fs::write(&score_path, b"draft-v1").expect("write score v1");
+
+        let metadata_v1 = super::get_file_metadata(&score_path).expect("metadata v1");
+
+        db.insert_song(
+            &Song {
+                id: "song-1".to_string(),
+                name: "CANON".to_string(),
+                composer: None,
+                arranger: None,
+                path: song_dir.to_string_lossy().to_string(),
+                is_favorite: false,
+                status: ScoreStatus::Draft,
+            },
+            &[],
+        )
+        .expect("insert song");
+
+        db.insert_score(&Score {
+            id: "score-1".to_string(),
+            song_id: "song-1".to_string(),
+            name: Some("Flute".to_string()),
+            file_path: song_dir.to_string_lossy().to_string(),
+            file_name: "score-1.musx".to_string(),
+            file_size: metadata_v1.0,
+            file_modified_at: metadata_v1.1,
+            status: ScoreStatus::Draft,
+        })
+        .expect("insert score");
+
+        fs::remove_file(&score_path).expect("remove score file");
+
+        run_initial_scan(&db, "server-1");
+
+        let score_lookup = db.get_score_file_path("score-1");
+        assert!(
+            matches!(score_lookup, Err(AppError::ScoreNotFound(_))),
+            "draft score should have been removed from the catalog"
+        );
     }
 }
