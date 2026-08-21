@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getDirectoryPath, getFileName, isSamePath } from "../../utils/paths";
+import { getDirectoryPath, getFileName } from "../../utils/paths";
 
 describe("getDirectoryPath", () => {
   it("should extract directory from Unix path", () => {
@@ -50,53 +50,5 @@ describe("getFileName", () => {
 
   it("should handle mixed separators", () => {
     expect(getFileName("C:\\Users/music\\score.pdf")).toBe("score.pdf");
-  });
-});
-
-describe("isSamePath", () => {
-  it("should match identical Unix paths", () => {
-    expect(isSamePath("/home/user/music/score.pdf", "/home/user/music/score.pdf")).toBe(true);
-  });
-
-  it("should match Windows paths with different separators", () => {
-    expect(isSamePath("C:\\Users\\user\\music\\score.pdf", "C:/Users/user/music/score.pdf")).toBe(
-      true
-    );
-  });
-
-  it("should match Windows paths with different drive letter casing", () => {
-    expect(isSamePath("C:\\Users\\user\\music\\score.pdf", "c:/Users/user/music/score.pdf")).toBe(
-      true
-    );
-  });
-
-  it("should not match different files", () => {
-    expect(isSamePath("C:\\Users\\user\\music\\score.pdf", "C:/Users/user/music/other.pdf")).toBe(
-      false
-    );
-  });
-});
-
-describe("isSamePath on case-insensitive filesystems (macOS/Windows)", () => {
-  const macUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)";
-
-  it("should match macOS paths with different casing", () => {
-    Object.defineProperty(navigator, "userAgent", {
-      value: macUserAgent,
-      configurable: true,
-    });
-    expect(
-      isSamePath("/Users/Foo/Music/Canon.musx", "/Users/foo/music/canon.musx")
-    ).toBe(true);
-  });
-
-  it("should still not match different files on macOS", () => {
-    Object.defineProperty(navigator, "userAgent", {
-      value: macUserAgent,
-      configurable: true,
-    });
-    expect(
-      isSamePath("/Users/Foo/Music/Canon.musx", "/Users/Foo/Music/Other.musx")
-    ).toBe(false);
   });
 });

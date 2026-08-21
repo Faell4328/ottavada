@@ -1,30 +1,11 @@
 import type { IndexedFile, ScoreListItem, SongListItem } from "../types";
-import { isSamePath } from "./paths";
 import { normalizeScoreNameForSave, normalizeSongNameForSave } from "./nameFormat";
 import i18n from "../i18n";
 
 export interface ScoreConflict {
   song: SongListItem;
   score: ScoreListItem;
-  kind: "path" | "instrument";
-}
-
-export function findSongByName(
-  songs: SongListItem[] | null | undefined,
-  songName: string
-): SongListItem | null {
-  if (!songs) {
-    return null;
-  }
-
-  const normalizedSongName = normalizeSongNameForSave(songName);
-  if (!normalizedSongName) {
-    return null;
-  }
-
-  return (
-    songs.find((song) => normalizeSongNameForSave(song.name) === normalizedSongName) ?? null
-  );
+  kind: "instrument";
 }
 
 export function findSongByNameComposerArranger(
@@ -101,44 +82,6 @@ export function findExistingScoreConflict(
   return null;
 }
 
-export function findExistingScoreConflictInSong(
-  song: SongListItem | null | undefined,
-  file: IndexedFile
-): ScoreConflict | null {
-  if (!song) {
-    return null;
-  }
-
-  const matchedScoreByPath = song.scores.find((score) => isSamePath(score.file_path, file.path));
-  if (matchedScoreByPath) {
-    return {
-      song,
-      score: matchedScoreByPath,
-      kind: "path",
-    };
-  }
-
-  const normalizedInstrument = normalizeScoreNameForSave(file.instrument ?? "");
-  if (!normalizedInstrument) {
-    return null;
-  }
-
-  const matchingScore = song.scores.find((score) => {
-    const existingInstrument = normalizeScoreNameForSave(score.name ?? "");
-    return existingInstrument === normalizedInstrument;
-  });
-
-  if (!matchingScore) {
-    return null;
-  }
-
-  return {
-    song,
-    score: matchingScore,
-    kind: "instrument",
-  };
-}
-
 export function findScoreNameConflictInSong(
   song: SongListItem | null | undefined,
   scoreName: string,
@@ -209,8 +152,4 @@ export function formatScoreConflictSummary(summary: ScoreConflictSummary): strin
   return summary.count === 1
     ? i18n.t("libraryDuplicates.oneScoreInSong", { name: summary.songName })
     : i18n.t("libraryDuplicates.multipleScoresInSong", { count: summary.count, name: summary.songName });
-}
-
-export function describeExistingSongWarning(): string {
-  return i18n.t("libraryDuplicates.existingSongWarning");
 }

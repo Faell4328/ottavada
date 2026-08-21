@@ -5,8 +5,6 @@ import {
   STANDARD_PROVIDERS,
   getProviderLabel,
   getProviderRemoteName,
-  isAdvancedProvider,
-  usesBrowserAuth,
 } from "../../utils/rcloneProviders";
 
 describe("rcloneProviders", () => {
@@ -40,21 +38,5 @@ describe("rcloneProviders", () => {
     expect(standardKeys).toContain("pcloud");
     expect(advancedKeys).toEqual(["sftp", "webdav"]);
     expect(advancedKeys).not.toContain("koofr");
-  });
-
-  it("detects advanced providers", () => {
-    expect(isAdvancedProvider("sftp")).toBe(true);
-    expect(isAdvancedProvider("webdav")).toBe(true);
-    expect(isAdvancedProvider("dropbox")).toBe(false);
-    expect(isAdvancedProvider("koofr")).toBe(false);
-  });
-
-  it("detects browser auth providers", () => {
-    expect(usesBrowserAuth("google_drive")).toBe(true);
-    expect(usesBrowserAuth("dropbox")).toBe(true);
-    expect(usesBrowserAuth("onedrive")).toBe(true);
-    expect(usesBrowserAuth("pcloud")).toBe(true);
-    expect(usesBrowserAuth("koofr")).toBe(false);
-    expect(usesBrowserAuth("sftp")).toBe(false);
   });
 });

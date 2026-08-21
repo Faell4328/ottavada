@@ -5,7 +5,6 @@ import type {
   Category,
   AppSettings,
   AppContacts,
-  LibrarySummary,
   IndexedFile,
   RcloneSetupInput,
   RcloneProvider,
@@ -22,10 +21,6 @@ export async function getAllSongSummaries(): Promise<SongListItem[]> {
   return invoke("get_all_song_summaries");
 }
 
-export async function getFavoritedSongs(): Promise<SongListItem[]> {
-  return invoke("get_favorited_songs");
-}
-
 export async function getFavoritedSongSummaries(): Promise<SongListItem[]> {
   return invoke("get_favorited_song_summaries");
 }
@@ -34,28 +29,12 @@ export async function getSongListItemById(songId: string): Promise<SongListItem>
   return invoke("get_song_list_item_by_id", { songId });
 }
 
-export async function getSongsWithDrafts(): Promise<SongListItem[]> {
-  return invoke("get_songs_with_drafts");
-}
-
 export async function getSongSummariesWithDrafts(): Promise<SongListItem[]> {
   return invoke("get_song_summaries_with_drafts");
 }
 
-export async function getSongsWithNotFound(): Promise<SongListItem[]> {
-  return invoke("get_songs_with_not_found");
-}
-
 export async function getSongSummariesWithNotFound(): Promise<SongListItem[]> {
   return invoke("get_song_summaries_with_not_found");
-}
-
-export async function searchSongs(query: string): Promise<SongListItem[]> {
-  return invoke("search_songs", { query });
-}
-
-export async function searchSongSummaries(query: string): Promise<SongListItem[]> {
-  return invoke("search_song_summaries", { query });
 }
 
 export async function toggleFavorite(songId: string): Promise<boolean> {
@@ -68,13 +47,6 @@ export async function scanDirectory(directory: string): Promise<IndexedFile[]> {
 
 export async function reindexSongDirectory(songId: string, directory: string): Promise<SongListItem> {
   return invoke("reindex_song_directory", { songId, directory });
-}
-
-export async function importIndexedFiles(
-  files: IndexedFile[],
-  categoryIds: string[] = []
-): Promise<SongListItem[]> {
-  return invoke("import_indexed_files", { files, categoryIds });
 }
 
 export async function importIndexedFilesWithMetadata(
@@ -91,44 +63,10 @@ export async function importIndexedFilesWithMetadata(
   });
 }
 
-export async function getSongsByCategory(
-  categoryId: string
-): Promise<SongListItem[]> {
-  return invoke("get_songs_by_category", { categoryId });
-}
-
 export async function getSongSummariesByCategory(
   categoryId: string
 ): Promise<SongListItem[]> {
   return invoke("get_song_summaries_by_category", { categoryId });
-}
-
-export async function createSong(name: string, path: string): Promise<SongListItem> {
-  return invoke("create_song", { name, path });
-}
-
-export async function createSongWithCategories(
-  name: string,
-  path: string,
-  categoryIds: string[]
-): Promise<SongListItem> {
-  return invoke("create_song_with_categories", { name, path, categoryIds });
-}
-
-export async function createSongWithMetadata(
-  name: string,
-  path: string,
-  composer: string | null,
-  arranger: string | null,
-  categoryIds: string[]
-): Promise<SongListItem> {
-  return invoke("create_song_with_metadata", {
-    name,
-    path,
-    composer,
-    arranger,
-    categoryIds,
-  });
 }
 
 export async function deleteFilePath(filePath: string): Promise<void> {
@@ -228,10 +166,6 @@ export async function getScoresForSong(songId: string): Promise<ScoreListItem[]>
   return invoke("get_scores_for_song", { songId });
 }
 
-export async function getSearchSuggestions(query: string, limit?: number): Promise<SongListItem[]> {
-  return invoke("get_search_suggestions", { query, limit });
-}
-
 export async function findSongByDirectory(directoryPath: string): Promise<{ name: string } | null> {
   return invoke("find_song_by_directory", { directoryPath });
 }
@@ -310,16 +244,8 @@ export async function toggleComputerType(): Promise<string> {
   return invoke("toggle_computer_type");
 }
 
-export async function isInitialScanCompleted(): Promise<boolean> {
-  return invoke("is_initial_scan_completed");
-}
-
 export async function hasPendingChanges(): Promise<boolean> {
   return invoke("has_pending_changes");
-}
-
-export async function hasServerApplyChangesInProgress(): Promise<boolean> {
-  return invoke("has_server_apply_changes_in_progress");
 }
 
 export async function markServerApplyChangesInProgress(): Promise<void> {
@@ -354,10 +280,6 @@ export async function checkForUpdates(): Promise<UpdateCheckResult> {
 
 export async function installUpdate(): Promise<void> {
   return invoke("install_update");
-}
-
-export async function refreshLibrarySummaryCache(): Promise<LibrarySummary> {
-  return invoke("refresh_library_summary_cache");
 }
 
 // ── File Scanning ──
@@ -424,20 +346,8 @@ export async function generateRcloneConfig(setup: RcloneSetupInput): Promise<voi
   return invoke("generate_rclone_config", { setup });
 }
 
-export async function testRcloneConnection(remote: string, path: string): Promise<boolean> {
-  return invoke("test_rclone_connection", { remote, path });
-}
-
 export async function testRcloneUpload(provider: RcloneProvider): Promise<void> {
   return invoke("test_rclone_upload", { provider });
-}
-
-export async function uploadWithRclone(
-  remote: string,
-  path: string,
-  filePath: string
-): Promise<string> {
-  return invoke("upload_with_rclone", { remote, path, filePath });
 }
 
 export async function deleteRcloneTestFile(): Promise<void> {
@@ -603,10 +513,6 @@ export async function importBackupCloudFile(
 
 export async function validateCloudBackup(): Promise<CloudBackupValidation> {
   return invoke("validate_cloud_backup_cmd");
-}
-
-export async function restoreBackupDbFromCloud(): Promise<BackupImportSummary> {
-  return invoke("restore_backup_db_from_cloud");
 }
 
 export async function restoreSongsFromCloudArchives(): Promise<RestoreSongsResult> {

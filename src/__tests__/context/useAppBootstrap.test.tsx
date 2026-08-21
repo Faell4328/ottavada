@@ -10,7 +10,6 @@ vi.mock("../../api/commands", () => ({
   getSettings: vi.fn(),
   isFirstRun: vi.fn(),
   hasPendingChanges: vi.fn(),
-  hasServerApplyChangesInProgress: vi.fn(),
 }));
 
 const clientSettings: AppSettings = {
@@ -55,7 +54,6 @@ describe("useAppBootstrap", () => {
     vi.mocked(api.isFirstRun).mockResolvedValue(false);
     vi.mocked(api.getSettings).mockResolvedValue(clientSettings);
     vi.mocked(api.hasPendingChanges).mockResolvedValue(false);
-    vi.mocked(api.hasServerApplyChangesInProgress).mockResolvedValue(false);
   });
 
   afterEach(() => {

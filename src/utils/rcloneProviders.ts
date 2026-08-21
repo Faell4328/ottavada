@@ -38,11 +38,3 @@ export function getProviderLabel(provider: RcloneProvider): string {
 export function getProviderRemoteName(provider: RcloneProvider): string {
   return getProviderInfo(provider).remoteName;
 }
-
-export function isAdvancedProvider(provider: RcloneProvider): boolean {
-  return getProviderInfo(provider).group === "advanced";
-}
-
-export function usesBrowserAuth(provider: RcloneProvider): boolean {
-  return getProviderInfo(provider).group === "browser";
-}

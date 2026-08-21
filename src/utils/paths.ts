@@ -24,34 +24,4 @@ export function getFileName(path: string): string {
   return normalized.slice(lastSlash + 1);
 }
 
-/**
- * Compares two paths across platforms.
- * On Windows and macOS (case-insensitive filesystems), comparison is case-insensitive.
- * On Linux (case-sensitive ext4), comparison is case-sensitive.
- */
-export function isCaseInsensitiveFilesystem(): boolean {
-  const platform =
-    typeof navigator !== "undefined" && navigator.userAgent
-      ? (navigator as unknown as { userAgentData?: { platform?: string } })
-          .userAgentData?.platform ||
-        (/Mac/i.test(navigator.userAgent) ? "macOS" : "")
-      : "";
-  return (
-    platform.toLowerCase().includes("win") ||
-    platform.toLowerCase().includes("mac")
-  );
-}
 
-export function isSamePath(pathA: string, pathB: string): boolean {
-  const normalizedA = pathA.replace(/\\/g, "/");
-  const normalizedB = pathB.replace(/\\/g, "/");
-
-  const isWindowsStylePath =
-    /^[a-zA-Z]:\//.test(normalizedA) || /^[a-zA-Z]:\//.test(normalizedB);
-
-  if (isWindowsStylePath || isCaseInsensitiveFilesystem()) {
-    return normalizedA.toLowerCase() === normalizedB.toLowerCase();
-  }
-
-  return normalizedA === normalizedB;
-}
