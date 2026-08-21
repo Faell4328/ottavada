@@ -119,13 +119,41 @@ fn open_path_on_system(file_path: &str) -> Result<(), AppError> {
 
     #[cfg(target_os = "linux")]
     {
-        std::process::Command::new("xdg-open")
-            .arg(file_path)
-            .spawn()
+        open_with_default_handler(file_path)
             .map_err(|e| AppError::Generic(format!("Error opening file: {}", e)))?;
     }
 
     Ok(())
+}
+
+/// Opens a path using the system default handler on Linux.
+///
+/// Tries `xdg-open` first, then common desktop-environment alternatives.
+/// Returns a clear error if no handler is available (e.g. minimal systems
+/// without `xdg-utils` installed).
+#[cfg(target_os = "linux")]
+fn open_with_default_handler(target: &str) -> Result<(), String> {
+    let handlers = ["xdg-open", "gio", "kde-open", "gnome-open"];
+    let mut last_error = String::from("no file handler available");
+
+    for handler in handlers {
+        let arg = if handler == "gio" { "open" } else { target };
+        match std::process::Command::new(handler).arg(arg).spawn() {
+            Ok(_) => return Ok(()),
+            Err(e) => {
+                if e.kind() == std::io::ErrorKind::NotFound {
+                    last_error = format!("'{}' not found", handler);
+                    continue;
+                }
+                last_error = format!("'{}' failed: {}", handler, e);
+            }
+        }
+    }
+
+    Err(format!(
+        "Could not open '{}': no system file handler available. Install xdg-utils (or a desktop environment providing gio/kde-open/gnome-open). Last error: {}",
+        target, last_error
+    ))
 }
 
 fn open_file_location_on_system(file_path: &str) -> Result<(), AppError> {
@@ -182,9 +210,8 @@ fn open_file_location_on_system(file_path: &str) -> Result<(), AppError> {
             .parent()
             .ok_or_else(|| AppError::Generic("Could not identify the file's directory".into()))?;
 
-        std::process::Command::new("xdg-open")
-            .arg(parent)
-            .spawn()
+        let parent_str = parent.to_string_lossy().to_string();
+        open_with_default_handler(&parent_str)
             .map_err(|e| AppError::Generic(format!("Error opening file location: {}", e)))?;
     }
 
@@ -1064,5 +1091,16 @@ mod tests {
         let err = resolve_openable_score_path(&db, "score-1").expect_err("missing file");
 
         assert!(err.to_string().contains("Score file not found"));
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn open_with_default_handler_reports_clear_error_when_no_handler() {
+        // On a minimal Linux system with no xdg-utils/gio/kde-open/gnome-open,
+        // the error must clearly tell the user what is missing.
+        let err = open_with_default_handler("/tmp/does-not-matter.pdf")
+            .expect_err("no handler available");
+        assert!(err.contains("no system file handler available"));
+        assert!(err.contains("xdg-utils"));
     }
 }
