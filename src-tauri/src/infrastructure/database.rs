@@ -392,7 +392,7 @@ impl Database {
 
 pub(crate) fn parse_datetime(s: &str) -> chrono::NaiveDateTime {
     chrono::NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S")
-        .unwrap_or_else(|_| chrono::Local::now().naive_local())
+        .unwrap_or_else(|_| chrono::Utc::now().naive_utc())
 }
 
 #[cfg(test)]

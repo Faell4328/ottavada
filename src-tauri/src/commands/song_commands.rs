@@ -1,4 +1,3 @@
-use chrono::Local;
 use serde::Serialize;
 use std::path::Path;
 use tauri::State;
@@ -377,7 +376,7 @@ fn import_files_core(
     arranger: Option<&str>,
     new_song_status: ScoreStatus,
 ) -> Result<ImportIndexedFilesResult, AppError> {
-    let now = Local::now().naive_local();
+    let now = chrono::Utc::now().naive_utc();
 
     // Group files by song name
     let mut groups: std::collections::HashMap<String, Vec<&IndexedFile>> =

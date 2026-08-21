@@ -591,7 +591,7 @@ mod tests {
     use crate::infrastructure::database::{ChangedFieldRecord, Database};
 
     fn now() -> chrono::NaiveDateTime {
-        chrono::Local::now().naive_local()
+        chrono::Utc::now().naive_utc()
     }
 
     #[test]

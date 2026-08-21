@@ -627,7 +627,7 @@ fn build_score_full_path(file_path: &str, file_name: &str) -> String {
 
 fn parse_stored_modified_at(stored_modified_at_str: &str) -> chrono::NaiveDateTime {
     chrono::NaiveDateTime::parse_from_str(stored_modified_at_str, "%Y-%m-%d %H:%M:%S")
-        .unwrap_or_else(|_| chrono::Local::now().naive_local())
+        .unwrap_or_else(|_| chrono::Utc::now().naive_utc())
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
@@ -681,7 +681,7 @@ mod tests {
     use crate::services::indexer::get_file_metadata;
 
     fn now() -> chrono::NaiveDateTime {
-        chrono::Local::now().naive_local()
+        chrono::Utc::now().naive_utc()
     }
 
     #[test]

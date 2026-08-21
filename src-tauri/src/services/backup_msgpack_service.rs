@@ -1190,7 +1190,7 @@ mod tests {
             file_path: song_dir.to_string_lossy().to_string(),
             file_name: file_name.to_string(),
             file_size: 0,
-            file_modified_at: chrono::Local::now().naive_local(),
+            file_modified_at: chrono::Utc::now().naive_utc(),
             status: ScoreStatus::Main,
         })
         .expect("insert score");
@@ -1432,7 +1432,7 @@ mod tests {
             .insert_song(&song, std::slice::from_ref(&category.id))
             .expect("insert song");
 
-        let now = chrono::Local::now().naive_local();
+        let now = chrono::Utc::now().naive_utc();
         let score = Score {
             id: "score-1".to_string(),
             song_id: song.id.clone(),

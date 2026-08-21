@@ -2,14 +2,14 @@
 mod tests {
     use crate::domain::models::*;
     use crate::infrastructure::database::Database;
-    use chrono::Local;
+    use chrono::Utc;
 
     fn make_db() -> Database {
         Database::new_in_memory().expect("failed to create in-memory db")
     }
 
     fn now() -> chrono::NaiveDateTime {
-        Local::now().naive_local()
+        chrono::Utc::now().naive_utc()
     }
 
     fn make_song(id: &str, name: &str) -> Song {

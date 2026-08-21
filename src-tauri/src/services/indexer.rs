@@ -258,9 +258,9 @@ pub fn get_file_metadata(file_path: &Path) -> Result<(u64, NaiveDateTime), std::
             let timestamp = d.as_secs() as i64;
             chrono::DateTime::from_timestamp(timestamp, 0)
                 .map(|dt| dt.naive_utc())
-                .unwrap_or_else(|| chrono::Local::now().naive_local())
+                .unwrap_or_else(|| chrono::Utc::now().naive_utc())
         })
-        .unwrap_or_else(|_| chrono::Local::now().naive_local());
+        .unwrap_or_else(|_| chrono::Utc::now().naive_utc());
 
     Ok((file_size, modified_at))
 }

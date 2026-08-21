@@ -227,7 +227,7 @@ fn score_directory(file_path: &str, file_name: &str) -> Option<String> {
 
 fn parse_stored_modified_at(stored_modified_at_str: &str) -> chrono::NaiveDateTime {
     chrono::NaiveDateTime::parse_from_str(stored_modified_at_str, "%Y-%m-%d %H:%M:%S")
-        .unwrap_or_else(|_| chrono::Local::now().naive_local())
+        .unwrap_or_else(|_| chrono::Utc::now().naive_utc())
 }
 
 fn resolve_recovered_score_status(
