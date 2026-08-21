@@ -88,8 +88,8 @@ fn score_has_duplicate_instrument(song: &SongListItem, score_id: &str, name: Opt
 
 fn delete_score_core(db: &Database, score_id: &str) -> Result<(), AppError> {
     let score_path = db.get_score_file_path(score_id)?;
-    remove_path_if_exists(Path::new(&score_path))?;
-    db.delete_score(score_id)
+    db.delete_score(score_id)?;
+    remove_path_if_exists(Path::new(&score_path))
 }
 
 fn read_score_file_metadata(path: &Path) -> Result<(u64, chrono::NaiveDateTime), AppError> {
