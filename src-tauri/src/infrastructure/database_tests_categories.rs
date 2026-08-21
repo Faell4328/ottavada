@@ -21,8 +21,6 @@ mod tests {
             path: format!("/music/{}", id),
             is_favorite: false,
             status: ScoreStatus::Main,
-            updated_at: now(),
-            updated_by: "test-computer".to_string(),
         }
     }
 
@@ -30,8 +28,6 @@ mod tests {
         Category {
             id: id.to_string(),
             name: name.to_string(),
-            updated_at: now(),
-            updated_by: "test-computer".to_string(),
         }
     }
 

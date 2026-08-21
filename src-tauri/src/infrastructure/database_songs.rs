@@ -3,12 +3,16 @@ use rusqlite::params;
 use crate::domain::errors::AppError;
 use crate::domain::models::*;
 use crate::infrastructure::database::{
-    to_not_found, ChangedFieldRecord, Database, DEFAULT_CATEGORY_ID, SONGS_SELECT_FIELDS, parse_datetime,
+    parse_datetime, to_not_found, ChangedFieldRecord, Database, DEFAULT_CATEGORY_ID,
+    SONGS_SELECT_FIELDS,
 };
 use crate::services::path_normalizer::to_storage_path;
 
 impl Database {
-    fn get_category_ids(conn: &rusqlite::Connection, song_id: &str) -> Result<Vec<String>, AppError> {
+    fn get_category_ids(
+        conn: &rusqlite::Connection,
+        song_id: &str,
+    ) -> Result<Vec<String>, AppError> {
         let mut stmt = conn.prepare("SELECT categoryId FROM categoriesSongs WHERE songId = ?1")?;
 
         let category_ids: Vec<String> = stmt
@@ -35,9 +39,8 @@ impl Database {
                     composer: row.get(2)?,
                     arranger: row.get(3)?,
                     path: row.get(4)?,
-                    updated_at: parse_datetime(&row.get::<_, String>(5)?),
-                    is_favorite: row.get::<_, i32>(6)? != 0,
-                    status: ScoreStatus::from_str(&row.get::<_, String>(7)?),
+                    is_favorite: row.get::<_, i32>(5)? != 0,
+                    status: ScoreStatus::from_str(&row.get::<_, String>(6)?),
                     category_ids: Vec::new(),
                     scores: Vec::new(),
                 })
@@ -170,9 +173,7 @@ impl Database {
         let category_ids = Self::normalize_category_ids(category_ids);
 
         if song.path.trim().is_empty() {
-            return Err(AppError::Generic(
-                "Song path cannot be empty".to_string(),
-            ));
+            return Err(AppError::Generic("Song path cannot be empty".to_string()));
         }
 
         let storage_path = to_storage_path(&song.path);
@@ -383,8 +384,6 @@ impl Database {
                     path: row.get(4)?,
                     is_favorite: row.get::<_, bool>(5)?,
                     status: ScoreStatus::from_str(&row.get::<_, String>(6)?),
-                    updated_at: chrono::Local::now().naive_local(),
-                    updated_by: String::new(),
                 })
             },
         )
@@ -444,7 +443,9 @@ impl Database {
         let conn = self.lock_conn();
         Self::query_song_list_items(
             &conn,
-            &format!("SELECT {SONGS_SELECT_FIELDS} FROM songs ORDER BY name COLLATE NOCASE ASC, id ASC"),
+            &format!(
+                "SELECT {SONGS_SELECT_FIELDS} FROM songs ORDER BY name COLLATE NOCASE ASC, id ASC"
+            ),
             &[],
             true,
         )
@@ -454,7 +455,9 @@ impl Database {
         let conn = self.lock_conn();
         Self::query_song_list_items(
             &conn,
-            &format!("SELECT {SONGS_SELECT_FIELDS} FROM songs ORDER BY name COLLATE NOCASE ASC, id ASC"),
+            &format!(
+                "SELECT {SONGS_SELECT_FIELDS} FROM songs ORDER BY name COLLATE NOCASE ASC, id ASC"
+            ),
             &[],
             false,
         )
@@ -502,7 +505,7 @@ impl Database {
         let like_query = format!("%{}%", query.trim());
         Self::query_song_list_items(
             &conn,
-            r#"SELECT s.id, s.name, s.composer, s.arranger, s.path, datetime('now') AS updated_at, s.is_favorite, s.status
+            r#"SELECT s.id, s.name, s.composer, s.arranger, s.path, s.is_favorite, s.status
              FROM songs s
              WHERE s.name LIKE ?1
                 OR COALESCE(s.composer, '') LIKE ?1
@@ -519,7 +522,7 @@ impl Database {
         let like_query = format!("%{}%", query.trim());
         Self::query_song_list_items(
             &conn,
-            r#"SELECT s.id, s.name, s.composer, s.arranger, s.path, datetime('now') AS updated_at, s.is_favorite, s.status
+            r#"SELECT s.id, s.name, s.composer, s.arranger, s.path, s.is_favorite, s.status
              FROM songs s
              WHERE s.name LIKE ?1
                 OR COALESCE(s.composer, '') LIKE ?1
@@ -534,7 +537,7 @@ impl Database {
         let conn = self.lock_conn();
         Self::query_song_list_items(
             &conn,
-            "SELECT s.id, s.name, s.composer, s.arranger, s.path, datetime('now') AS updated_at, s.is_favorite, s.status
+            "SELECT s.id, s.name, s.composer, s.arranger, s.path, s.is_favorite, s.status
              FROM songs s
              INNER JOIN categoriesSongs cs ON cs.songId = s.id
              WHERE cs.categoryId = ?1
@@ -551,7 +554,7 @@ impl Database {
         let conn = self.lock_conn();
         Self::query_song_list_items(
             &conn,
-            "SELECT s.id, s.name, s.composer, s.arranger, s.path, datetime('now') AS updated_at, s.is_favorite, s.status
+            "SELECT s.id, s.name, s.composer, s.arranger, s.path, s.is_favorite, s.status
              FROM songs s
              INNER JOIN categoriesSongs cs ON cs.songId = s.id
              WHERE cs.categoryId = ?1
@@ -565,7 +568,7 @@ impl Database {
         let conn = self.lock_conn();
         Self::query_song_list_items(
             &conn,
-            "SELECT DISTINCT s.id, s.name, s.composer, s.arranger, s.path, datetime('now') AS updated_at, s.is_favorite, s.status
+            "SELECT DISTINCT s.id, s.name, s.composer, s.arranger, s.path, s.is_favorite, s.status
              FROM songs s
              INNER JOIN scores sc ON sc.song_id = s.id
              WHERE sc.status = 'draft'
@@ -579,7 +582,7 @@ impl Database {
         let conn = self.lock_conn();
         Self::query_song_list_items(
             &conn,
-            "SELECT DISTINCT s.id, s.name, s.composer, s.arranger, s.path, datetime('now') AS updated_at, s.is_favorite, s.status
+            "SELECT DISTINCT s.id, s.name, s.composer, s.arranger, s.path, s.is_favorite, s.status
              FROM songs s
              INNER JOIN scores sc ON sc.song_id = s.id
              WHERE sc.status = 'draft'
@@ -593,7 +596,7 @@ impl Database {
         let conn = self.lock_conn();
         Self::query_song_list_items(
             &conn,
-            "SELECT s.id, s.name, s.composer, s.arranger, s.path, datetime('now') AS updated_at, s.is_favorite, s.status
+            "SELECT s.id, s.name, s.composer, s.arranger, s.path, s.is_favorite, s.status
              FROM songs s
              WHERE s.status = 'not_found'
              ORDER BY s.name COLLATE NOCASE ASC, s.id ASC",
@@ -606,7 +609,7 @@ impl Database {
         let conn = self.lock_conn();
         Self::query_song_list_items(
             &conn,
-            "SELECT s.id, s.name, s.composer, s.arranger, s.path, datetime('now') AS updated_at, s.is_favorite, s.status
+            "SELECT s.id, s.name, s.composer, s.arranger, s.path, s.is_favorite, s.status
              FROM songs s
              WHERE s.status = 'not_found'
              ORDER BY s.name COLLATE NOCASE ASC, s.id ASC",
@@ -727,11 +730,7 @@ impl Database {
         Ok(())
     }
 
-    pub fn update_category(
-        &self,
-        category_id: &str,
-        name: &str,
-    ) -> Result<(), AppError> {
+    pub fn update_category(&self, category_id: &str, name: &str) -> Result<(), AppError> {
         let conn = self.lock_conn();
 
         if category_id == DEFAULT_CATEGORY_ID {
@@ -798,9 +797,7 @@ impl Database {
         let trimmed_old_name = old_name.trim();
 
         if trimmed_old_name.is_empty() {
-            return Err(AppError::Generic(
-                "Name cannot be empty".to_string(),
-            ));
+            return Err(AppError::Generic("Name cannot be empty".to_string()));
         }
 
         let normalized_new_name = new_name.map(str::trim).filter(|value| !value.is_empty());
@@ -888,8 +885,6 @@ impl Database {
                 Ok(Category {
                     id: row.get(0)?,
                     name: row.get(1)?,
-                    updated_at: chrono::Local::now().naive_local(),
-                    updated_by: String::new(),
                 })
             })?
             .filter_map(|r| r.ok())
@@ -1080,15 +1075,13 @@ impl Database {
 
     pub fn has_pending_changes(&self) -> Result<bool, AppError> {
         let conn = self.lock_conn();
-        let count: i64 =
-            conn.query_row("SELECT COUNT(1) FROM changes", [], |row| row.get(0))?;
+        let count: i64 = conn.query_row("SELECT COUNT(1) FROM changes", [], |row| row.get(0))?;
         Ok(count > 0)
     }
 
     pub fn get_pending_changes_count(&self) -> Result<usize, AppError> {
         let conn = self.lock_conn();
-        let count: i64 =
-            conn.query_row("SELECT COUNT(1) FROM changes", [], |row| row.get(0))?;
+        let count: i64 = conn.query_row("SELECT COUNT(1) FROM changes", [], |row| row.get(0))?;
         Ok(count as usize)
     }
 
@@ -1184,11 +1177,7 @@ impl Database {
         Ok(())
     }
 
-    pub fn record_telemetry_error(
-        &self,
-        message: &str,
-        timestamp: i64,
-    ) -> Result<(), AppError> {
+    pub fn record_telemetry_error(&self, message: &str, timestamp: i64) -> Result<(), AppError> {
         let conn = self.lock_conn();
         let id = uuid::Uuid::new_v4().to_string();
 

@@ -68,7 +68,6 @@ fn build_score_from_indexed_file(
 
     Ok(Score::new_from_file(
         song_id.to_string(),
-        updated_by.to_string(),
         &normalized_file,
         score_file_path,
         file_name,
@@ -725,9 +724,7 @@ pub fn use_score_as_base(
         file_name,
         file_size,
         file_modified_at,
-        updated_at: now,
         status: ScoreStatus::Main,
-        updated_by: settings.computer_id.clone(),
     };
 
     db.insert_score(&new_score).map_err(|e| {
@@ -837,7 +834,6 @@ mod tests {
             composer: None,
             arranger: None,
             path: "/music/song-1".to_string(),
-            updated_at: now,
             is_favorite: false,
             status: ScoreStatus::Main,
             category_ids: vec![],
@@ -1038,8 +1034,6 @@ mod tests {
                 path: song_dir.to_string_lossy().to_string(),
                 is_favorite: false,
                 status: ScoreStatus::Main,
-                updated_at: chrono::Local::now().naive_local(),
-                updated_by: "server-1".to_string(),
             },
             &[],
         )
@@ -1053,9 +1047,7 @@ mod tests {
             file_name: "score-1.musx".to_string(),
             file_size: 13,
             file_modified_at: chrono::Local::now().naive_local(),
-            updated_at: chrono::Local::now().naive_local(),
             status: ScoreStatus::Main,
-            updated_by: "server-1".to_string(),
         })
         .expect("insert score");
 
@@ -1092,8 +1084,6 @@ mod tests {
                     .to_string(),
                 is_favorite: false,
                 status: ScoreStatus::Main,
-                updated_at: chrono::Local::now().naive_local(),
-                updated_by: "test".to_string(),
             },
             &[],
         )
@@ -1107,9 +1097,7 @@ mod tests {
             file_name: "flauta.musx".to_string(),
             file_size: 10,
             file_modified_at: chrono::Local::now().naive_local(),
-            updated_at: chrono::Local::now().naive_local(),
             status: ScoreStatus::Main,
-            updated_by: "test".to_string(),
         })
         .expect("insert score");
 
@@ -1157,8 +1145,6 @@ mod tests {
                     .to_string(),
                 is_favorite: false,
                 status: ScoreStatus::Main,
-                updated_at: chrono::Local::now().naive_local(),
-                updated_by: "test".to_string(),
             },
             &[],
         )
@@ -1172,9 +1158,7 @@ mod tests {
             file_name: "flauta.musx".to_string(),
             file_size: 10,
             file_modified_at: chrono::Local::now().naive_local(),
-            updated_at: chrono::Local::now().naive_local(),
             status: ScoreStatus::Main,
-            updated_by: "test".to_string(),
         })
         .expect("insert score");
 

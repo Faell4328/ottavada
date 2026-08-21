@@ -21,8 +21,6 @@ mod tests {
             path: format!("/music/{}", id),
             is_favorite: false,
             status: ScoreStatus::Main,
-            updated_at: now(),
-            updated_by: "test-computer".to_string(),
         }
     }
 
@@ -36,9 +34,7 @@ mod tests {
             file_name: format!("{}.pdf", name.unwrap_or("test")),
             file_size: 1024,
             file_modified_at: now(),
-            updated_at: now(),
             status: ScoreStatus::Main,
-            updated_by: "test-computer".to_string(),
         }
     }
 
@@ -46,8 +42,6 @@ mod tests {
         Category {
             id: id.to_string(),
             name: name.to_string(),
-            updated_at: now(),
-            updated_by: "test-computer".to_string(),
         }
     }
 

@@ -72,9 +72,7 @@ pub async fn scan_files_for_changes(
     run_blocking_with_store(
         app_data_dir,
         "Internal failure checking for changes",
-        move |store| {
-            scan_files_for_changes_impl(&db, &store, apply_missing_deletions, overrides)
-        },
+        move |store| scan_files_for_changes_impl(&db, &store, apply_missing_deletions, overrides),
     )
     .await
 }
@@ -169,7 +167,6 @@ fn scan_files_for_changes_impl(
                         let (file_path, file_name) = split_file_path(current_path);
                         let score = Score::new_from_file(
                             song.id.clone(),
-                            updated_by.clone(),
                             &current_file,
                             file_path,
                             file_name,
@@ -311,8 +308,7 @@ fn scan_files_for_changes_impl(
                 Ok((file_size, file_modified_at)) => {
                     let (file_path, file_name) = split_file_path(current_path);
                     let mut score = Score::new_from_file(
-                            song.id.clone(),
-                        updated_by.clone(),
+                        song.id.clone(),
                         &current_file,
                         file_path,
                         file_name,
@@ -329,10 +325,7 @@ fn scan_files_for_changes_impl(
                             if is_duplicate {
                                 duplicate_score_warnings.push(DuplicateScoreWarning {
                                     song_name: song.name.clone(),
-                                    score_name: current_file
-                                        .instrument
-                                        .clone()
-                                        .unwrap_or_default(),
+                                    score_name: current_file.instrument.clone().unwrap_or_default(),
                                 });
                             } else {
                                 added_files.push(build_score_change_report_item(
@@ -721,8 +714,6 @@ mod tests {
                     .to_string(),
                 is_favorite: false,
                 status: ScoreStatus::Main,
-                updated_at: now(),
-                updated_by: "server-1".to_string(),
             },
             &[],
         )
@@ -742,9 +733,7 @@ mod tests {
             file_name: "score-1.musx".to_string(),
             file_size,
             file_modified_at,
-            updated_at: now(),
             status: ScoreStatus::Main,
-            updated_by: "server-1".to_string(),
         })
         .expect("insert score");
 
@@ -782,8 +771,6 @@ mod tests {
                     .to_string(),
                 is_favorite: false,
                 status: ScoreStatus::Main,
-                updated_at: now(),
-                updated_by: "server-1".to_string(),
             },
             &[],
         )
@@ -803,9 +790,7 @@ mod tests {
             file_name: "score-ignored.musx".to_string(),
             file_size,
             file_modified_at,
-            updated_at: now(),
             status: ScoreStatus::Ignored,
-            updated_by: "server-1".to_string(),
         })
         .expect("insert score");
 
@@ -848,8 +833,6 @@ mod tests {
                 path: song_dir.to_string_lossy().to_string(),
                 is_favorite: false,
                 status: ScoreStatus::Main,
-                updated_at: now(),
-                updated_by: "server-1".to_string(),
             },
             &[],
         )
@@ -863,9 +846,7 @@ mod tests {
             file_name: "126.mus".to_string(),
             file_size,
             file_modified_at,
-            updated_at: now(),
             status: ScoreStatus::Main,
-            updated_by: "server-1".to_string(),
         })
         .expect("insert score");
 
@@ -911,8 +892,6 @@ mod tests {
                 path: song_dir.to_string_lossy().to_string(),
                 is_favorite: false,
                 status: ScoreStatus::Main,
-                updated_at: now(),
-                updated_by: "server-1".to_string(),
             },
             &[],
         )
@@ -926,9 +905,7 @@ mod tests {
             file_name: "126.mus".to_string(),
             file_size,
             file_modified_at,
-            updated_at: now(),
             status: ScoreStatus::Main,
-            updated_by: "server-1".to_string(),
         })
         .expect("insert score");
 
@@ -942,8 +919,7 @@ mod tests {
             score_id: "score-1".to_string(),
             target_status: "main".to_string(),
         }];
-        let result =
-            scan_files_for_changes_impl(&db, &store, false, overrides).expect("scan");
+        let result = scan_files_for_changes_impl(&db, &store, false, overrides).expect("scan");
 
         let updated_song = db.get_song_list_item_by_id("song-1").expect("updated song");
         assert_eq!(updated_song.scores[0].status, ScoreStatus::Main);
@@ -981,8 +957,6 @@ mod tests {
                 path: song_dir.to_string_lossy().to_string(),
                 is_favorite: false,
                 status: ScoreStatus::Main,
-                updated_at: now(),
-                updated_by: "server-1".to_string(),
             },
             &[],
         )
@@ -996,16 +970,13 @@ mod tests {
             file_name: "126.mus".to_string(),
             file_size,
             file_modified_at,
-            updated_at: now(),
             status: ScoreStatus::Main,
-            updated_by: "server-1".to_string(),
         })
         .expect("insert score");
 
         fs::write(&score_path, b"score-v2-modified").expect("modify score");
 
-        let result =
-            scan_files_for_changes_impl(&db, &store, false, Vec::new()).expect("scan");
+        let result = scan_files_for_changes_impl(&db, &store, false, Vec::new()).expect("scan");
 
         let updated_song = db.get_song_list_item_by_id("song-1").expect("updated song");
         assert_eq!(updated_song.scores[0].status, ScoreStatus::Draft);
@@ -1041,8 +1012,6 @@ mod tests {
                 path: song_dir.to_string_lossy().to_string(),
                 is_favorite: false,
                 status: ScoreStatus::NotFound,
-                updated_at: now(),
-                updated_by: "server-1".to_string(),
             },
             &[],
         )
@@ -1092,8 +1061,6 @@ mod tests {
                 path: song_dir.to_string_lossy().to_string(),
                 is_favorite: false,
                 status: ScoreStatus::Main,
-                updated_at: now(),
-                updated_by: "server-1".to_string(),
             },
             &[],
         )
@@ -1107,9 +1074,7 @@ mod tests {
             file_name: "Canon - Trumpet.musx".to_string(),
             file_size,
             file_modified_at,
-            updated_at: now(),
             status: ScoreStatus::Main,
-            updated_by: "server-1".to_string(),
         })
         .expect("insert score");
 
@@ -1163,8 +1128,6 @@ mod tests {
                 path: song_dir.to_string_lossy().to_string(),
                 is_favorite: false,
                 status: ScoreStatus::Main,
-                updated_at: now(),
-                updated_by: "server-1".to_string(),
             },
             &[],
         )
@@ -1178,9 +1141,7 @@ mod tests {
             file_name: "Canon - Flute.musx".to_string(),
             file_size: main_file_size,
             file_modified_at: main_file_modified_at,
-            updated_at: now(),
             status: ScoreStatus::Main,
-            updated_by: "server-1".to_string(),
         })
         .expect("insert main score");
 
@@ -1192,9 +1153,7 @@ mod tests {
             file_name: "Canon - Trumpet.musx".to_string(),
             file_size: removed_file_size,
             file_modified_at: removed_file_modified_at,
-            updated_at: now(),
             status: ScoreStatus::Main,
-            updated_by: "server-1".to_string(),
         })
         .expect("insert removed score");
 
@@ -1255,8 +1214,6 @@ mod tests {
                 path: song_dir.to_string_lossy().to_string(),
                 is_favorite: false,
                 status: ScoreStatus::Main,
-                updated_at: now(),
-                updated_by: "server-1".to_string(),
             },
             &[],
         )
@@ -1270,9 +1227,7 @@ mod tests {
             file_name: "Canon - Flute.musx".to_string(),
             file_size,
             file_modified_at,
-            updated_at: now(),
             status: ScoreStatus::Main,
-            updated_by: "server-1".to_string(),
         })
         .expect("insert existing score");
 
@@ -1315,7 +1270,8 @@ mod tests {
         let existing_score_path = legacy_score_dir.join("Canon - Flute.musx");
         fs::write(&existing_score_path, b"score").expect("write score");
 
-        let (file_size, file_modified_at) = get_file_metadata(&existing_score_path).expect("metadata");
+        let (file_size, file_modified_at) =
+            get_file_metadata(&existing_score_path).expect("metadata");
 
         db.insert_song(
             &Song {
@@ -1326,8 +1282,6 @@ mod tests {
                 path: song_dir.to_string_lossy().to_string(),
                 is_favorite: false,
                 status: ScoreStatus::Main,
-                updated_at: now(),
-                updated_by: "server-1".to_string(),
             },
             &[],
         )
@@ -1341,9 +1295,7 @@ mod tests {
             file_name: "Canon - Flute.musx".to_string(),
             file_size,
             file_modified_at,
-            updated_at: now(),
             status: ScoreStatus::Main,
-            updated_by: "server-1".to_string(),
         })
         .expect("insert score");
 
@@ -1396,8 +1348,6 @@ mod tests {
                 path: song_dir.to_string_lossy().to_string(),
                 is_favorite: false,
                 status: ScoreStatus::Main,
-                updated_at: now(),
-                updated_by: "server-1".to_string(),
             },
             &[],
         )
@@ -1411,9 +1361,7 @@ mod tests {
             file_name: "08 H.C. CRISTO, O FIEL AMIGO - Flute.musx".to_string(),
             file_size: main_file_size,
             file_modified_at: main_file_modified_at,
-            updated_at: now(),
             status: ScoreStatus::Main,
-            updated_by: "server-1".to_string(),
         })
         .expect("insert main score");
 
@@ -1425,9 +1373,7 @@ mod tests {
             file_name: "08 H.C. CRISTO, O FIEL AMIGO - Flute2.musx".to_string(),
             file_size: ignored_file_size,
             file_modified_at: ignored_file_modified_at,
-            updated_at: now(),
             status: ScoreStatus::Ignored,
-            updated_by: "server-1".to_string(),
         })
         .expect("insert ignored score");
 
@@ -1472,8 +1418,6 @@ mod tests {
                 path: song_dir.to_string_lossy().to_string(),
                 is_favorite: false,
                 status: ScoreStatus::Main,
-                updated_at: now(),
-                updated_by: "server-1".to_string(),
             },
             &[],
         )
@@ -1487,9 +1431,7 @@ mod tests {
             file_name: "A BANDA - Flute.musx".to_string(),
             file_size,
             file_modified_at,
-            updated_at: now(),
             status: ScoreStatus::Main,
-            updated_by: "server-1".to_string(),
         })
         .expect("insert score");
 
@@ -1506,8 +1448,8 @@ mod tests {
         assert_eq!(result.score_status_changes.len(), 1);
         assert_eq!(result.score_status_changes[0].detected_status, "draft");
 
-        let second_result = super::preview_scan_files_for_changes_impl(&db, &store)
-            .expect("second preview scan");
+        let second_result =
+            super::preview_scan_files_for_changes_impl(&db, &store).expect("second preview scan");
 
         assert!(second_result
             .changed_files
@@ -1530,8 +1472,6 @@ mod tests {
                 path: song_dir.to_string_lossy().to_string(),
                 is_favorite: false,
                 status: ScoreStatus::Main,
-                updated_at: now(),
-                updated_by: "server-1".to_string(),
             },
             &[],
         )
@@ -1545,9 +1485,7 @@ mod tests {
             file_name: "NEW HYMN - Flute.musx".to_string(),
             file_size: 1024,
             file_modified_at: now(),
-            updated_at: now(),
             status: ScoreStatus::Main,
-            updated_by: "server-1".to_string(),
         })
         .expect("insert score");
 
@@ -1571,8 +1509,7 @@ mod tests {
             .any(|item| item.contains("went to draft")));
         assert!(report_items
             .iter()
-            .any(|item| item.contains("Score added:")
-                && item.contains("NEW HYMN - Flute.musx")));
+            .any(|item| item.contains("Score added:") && item.contains("NEW HYMN - Flute.musx")));
     }
 
     #[test]
@@ -1589,8 +1526,6 @@ mod tests {
                 path: song_dir.to_string_lossy().to_string(),
                 is_favorite: false,
                 status: ScoreStatus::Main,
-                updated_at: now(),
-                updated_by: "server-1".to_string(),
             },
             &[],
         )
@@ -1604,9 +1539,7 @@ mod tests {
             file_name: "HOLY TIMES.MUS".to_string(),
             file_size: 1024,
             file_modified_at: now(),
-            updated_at: now(),
             status: ScoreStatus::Main,
-            updated_by: "server-1".to_string(),
         })
         .expect("insert score");
 

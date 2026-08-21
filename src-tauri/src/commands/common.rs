@@ -58,11 +58,7 @@ pub fn remove_path_if_exists(path: &Path) -> Result<(), AppError> {
         return Ok(());
     }
     trash::delete(path).map_err(|e| {
-        AppError::Generic(format!(
-            "Error moving '{}' to trash: {}",
-            path.display(),
-            e
-        ))
+        AppError::Generic(format!("Error moving '{}' to trash: {}", path.display(), e))
     })
 }
 
@@ -135,8 +131,6 @@ mod tests {
                 path: source_dir.to_string_lossy().to_string(),
                 is_favorite: false,
                 status: ScoreStatus::Main,
-                updated_at: now(),
-                updated_by: "server-1".to_string(),
             },
             &[],
         )
@@ -150,9 +144,7 @@ mod tests {
             file_name: "score-1.musx".to_string(),
             file_size,
             file_modified_at,
-            updated_at: now(),
             status: ScoreStatus::Main,
-            updated_by: "server-1".to_string(),
         })
         .expect("insert score");
 

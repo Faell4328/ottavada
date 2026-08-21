@@ -21,8 +21,6 @@ mod tests {
             path: format!("/music/{}", id),
             is_favorite: false,
             status: ScoreStatus::Main,
-            updated_at: now(),
-            updated_by: "test-computer".to_string(),
         }
     }
 
@@ -36,9 +34,7 @@ mod tests {
             file_name: format!("{}.pdf", name.unwrap_or("test")),
             file_size: 1024,
             file_modified_at: now(),
-            updated_at: now(),
             status: ScoreStatus::Main,
-            updated_by: "test-computer".to_string(),
         }
     }
 
@@ -81,9 +77,7 @@ mod tests {
             file_name: "viola.pdf".to_string(),
             file_size: 1024,
             file_modified_at: now(),
-            updated_at: now(),
             status: ScoreStatus::Main,
-            updated_by: "test-computer".to_string(),
         };
 
         let score_b = Score {
@@ -94,9 +88,7 @@ mod tests {
             file_name: "clarinete.pdf".to_string(),
             file_size: 1024,
             file_modified_at: now(),
-            updated_at: now(),
             status: ScoreStatus::Main,
-            updated_by: "test-computer".to_string(),
         };
 
         let score_c = Score {
@@ -107,9 +99,7 @@ mod tests {
             file_name: "Flauta.pdf".to_string(),
             file_size: 1024,
             file_modified_at: now(),
-            updated_at: now(),
             status: ScoreStatus::Main,
-            updated_by: "test-computer".to_string(),
         };
 
         db.insert_score(&score_a).unwrap();
@@ -179,9 +169,7 @@ mod tests {
             file_name: "Canon - Violino.musx".to_string(),
             file_size: 1024,
             file_modified_at: now(),
-            updated_at: now(),
             status: ScoreStatus::Main,
-            updated_by: "test-computer".to_string(),
         };
         db.insert_score(&score).unwrap();
 
@@ -203,9 +191,7 @@ mod tests {
             file_name: "Canon - Violino.musx".to_string(),
             file_size: 1024,
             file_modified_at: now(),
-            updated_at: now(),
             status: ScoreStatus::Main,
-            updated_by: "test-computer".to_string(),
         };
         db.insert_score(&score).unwrap();
 
@@ -319,9 +305,7 @@ mod tests {
             file_name: "Canon - Violino.musx".to_string(),
             file_size: 1024,
             file_modified_at: now(),
-            updated_at: now(),
             status: ScoreStatus::Main,
-            updated_by: "test-computer".to_string(),
         };
         db.insert_score(&score).unwrap();
 
@@ -351,9 +335,7 @@ mod tests {
             file_name: "Canon - Violino.musx".to_string(),
             file_size: 1024,
             file_modified_at: now(),
-            updated_at: now(),
             status: ScoreStatus::Main,
-            updated_by: "test-computer".to_string(),
         };
         db.insert_score(&score).unwrap();
 
@@ -681,9 +663,7 @@ mod tests {
             file_name: "Canon - Violino.pdf".to_string(),
             file_size: 1024,
             file_modified_at: now(),
-            updated_at: now(),
             status: ScoreStatus::Main,
-            updated_by: "test-computer".to_string(),
         };
 
         let score2 = Score {
@@ -694,9 +674,7 @@ mod tests {
             file_name: "Canon - Piano.pdf".to_string(),
             file_size: 2048,
             file_modified_at: now(),
-            updated_at: now(),
             status: ScoreStatus::Main,
-            updated_by: "test-computer".to_string(),
         };
 
         db.insert_score(&score1).unwrap();
@@ -728,9 +706,7 @@ mod tests {
             file_name: "Canon.pdf".to_string(),
             file_size: 1024,
             file_modified_at: now(),
-            updated_at: now(),
             status: ScoreStatus::Main,
-            updated_by: "test-computer".to_string(),
         };
 
         let score2 = Score {
@@ -741,9 +717,7 @@ mod tests {
             file_name: "Canon.pdf".to_string(),
             file_size: 1024,
             file_modified_at: now(),
-            updated_at: now(),
             status: ScoreStatus::Main,
-            updated_by: "test-computer".to_string(),
         };
 
         db.insert_score(&score1).unwrap();
@@ -767,9 +741,7 @@ mod tests {
             file_name: "Canon.pdf".to_string(),
             file_size: 1024,
             file_modified_at: now(),
-            updated_at: now(),
             status: ScoreStatus::Main,
-            updated_by: "test-computer".to_string(),
         };
 
         let score2 = Score {
@@ -780,9 +752,7 @@ mod tests {
             file_name: "Canon.pdf".to_string(),
             file_size: 2048,
             file_modified_at: now(),
-            updated_at: now(),
             status: ScoreStatus::Main,
-            updated_by: "test-computer".to_string(),
         };
 
         db.insert_score(&score1).unwrap();

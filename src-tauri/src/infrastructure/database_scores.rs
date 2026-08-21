@@ -86,11 +86,7 @@ impl Database {
         Ok(())
     }
 
-    pub fn update_score_name(
-        &self,
-        score_id: &str,
-        name: Option<String>,
-    ) -> Result<(), AppError> {
+    pub fn update_score_name(&self, score_id: &str, name: Option<String>) -> Result<(), AppError> {
         let conn = self.lock_conn();
 
         let original_name: Option<String> = conn
@@ -135,7 +131,11 @@ impl Database {
                 params![score_id],
                 |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)),
             )
-            .map_err(|e| crate::infrastructure::database::to_not_found(AppError::ScoreNotFound(score_id.to_string()))(e))?;
+            .map_err(|e| {
+                crate::infrastructure::database::to_not_found(AppError::ScoreNotFound(
+                    score_id.to_string(),
+                ))(e)
+            })?;
 
         let affected = conn.execute("DELETE FROM scores WHERE id = ?1", params![score_id])?;
         if affected == 0 {
@@ -175,7 +175,11 @@ impl Database {
                 Ok(Self::build_score_full_path(&dir_path, &file_name))
             },
         )
-        .map_err(|e| crate::infrastructure::database::to_not_found(AppError::ScoreNotFound(score_id.to_string()))(e))
+        .map_err(|e| {
+            crate::infrastructure::database::to_not_found(AppError::ScoreNotFound(
+                score_id.to_string(),
+            ))(e)
+        })
     }
 
     fn query_score_metadata(
@@ -205,7 +209,19 @@ impl Database {
         conn: &Connection,
         sql: &str,
         params: &[&dyn rusqlite::ToSql],
-    ) -> Result<Vec<(String, String, String, String, Option<String>, u64, String, String)>, AppError> {
+    ) -> Result<
+        Vec<(
+            String,
+            String,
+            String,
+            String,
+            Option<String>,
+            u64,
+            String,
+            String,
+        )>,
+        AppError,
+    > {
         let mut stmt = conn.prepare(sql)?;
         let scores = stmt
             .query_map(rusqlite::params_from_iter(params), |row| {
@@ -243,7 +259,19 @@ impl Database {
 
     pub fn get_all_scores_for_scan(
         &self,
-    ) -> Result<Vec<(String, String, String, String, Option<String>, u64, String, String)>, AppError> {
+    ) -> Result<
+        Vec<(
+            String,
+            String,
+            String,
+            String,
+            Option<String>,
+            u64,
+            String,
+            String,
+        )>,
+        AppError,
+    > {
         let conn = self.lock_conn();
         Self::query_score_metadata_with_song_id(
             &conn,
@@ -268,7 +296,11 @@ impl Database {
                 params![score_id],
                 |row| row.get::<_, String>(0),
             )
-            .map_err(|e| crate::infrastructure::database::to_not_found(AppError::ScoreNotFound(score_id.to_string()))(e))?;
+            .map_err(|e| {
+                crate::infrastructure::database::to_not_found(AppError::ScoreNotFound(
+                    score_id.to_string(),
+                ))(e)
+            })?;
 
         if let Some((file_size, file_modified_at)) = file_metadata {
             conn.execute(
@@ -326,7 +358,11 @@ impl Database {
             params![score_id],
             |row| row.get(0),
         )
-        .map_err(|e| crate::infrastructure::database::to_not_found(AppError::ScoreNotFound(score_id.to_string()))(e))
+        .map_err(|e| {
+            crate::infrastructure::database::to_not_found(AppError::ScoreNotFound(
+                score_id.to_string(),
+            ))(e)
+        })
     }
 
     // ── Backup ──

@@ -613,8 +613,6 @@ mod tests {
                     .to_string(),
                 is_favorite: false,
                 status: ScoreStatus::Main,
-                updated_at: now(),
-                updated_by: "server-1".to_string(),
             },
             &[],
         )
@@ -633,9 +631,7 @@ mod tests {
             file_name: "CANON.musx".to_string(),
             file_size: 1024,
             file_modified_at: now(),
-            updated_at: now(),
             status: ScoreStatus::Draft,
-            updated_by: "server-1".to_string(),
         })
         .expect("insert score");
 
@@ -674,8 +670,6 @@ mod tests {
                     .to_string(),
                 is_favorite: false,
                 status: ScoreStatus::Main,
-                updated_at: now(),
-                updated_by: "server-1".to_string(),
             },
             &[],
         )
@@ -694,9 +688,7 @@ mod tests {
             file_name: "CANON - Flute2.musx".to_string(),
             file_size: 1024,
             file_modified_at: now(),
-            updated_at: now(),
             status: ScoreStatus::Main,
-            updated_by: "server-1".to_string(),
         })
         .expect("insert score");
 
@@ -782,8 +774,6 @@ mod tests {
                     .to_string(),
                 is_favorite: false,
                 status: ScoreStatus::Main,
-                updated_at: now(),
-                updated_by: "server-1".to_string(),
             },
             &[],
         )
@@ -802,9 +792,7 @@ mod tests {
             file_name: "CANON - Flute2.musx".to_string(),
             file_size: 1024,
             file_modified_at: now(),
-            updated_at: now(),
             status: ScoreStatus::from_str(current_status),
-            updated_by: "server-1".to_string(),
         })
         .expect("insert score");
 
@@ -855,8 +843,6 @@ mod tests {
                 path: song_dir.to_string_lossy().to_string(),
                 is_favorite: false,
                 status: ScoreStatus::Main,
-                updated_at: now(),
-                updated_by: "server-1".to_string(),
             },
             &[],
         )
@@ -870,9 +856,7 @@ mod tests {
             file_name: "08 H.C. CRISTO, O FIEL AMIGO - Flute2.musx".to_string(),
             file_size: 1024,
             file_modified_at: now(),
-            updated_at: now(),
             status: ScoreStatus::Main,
-            updated_by: "server-1".to_string(),
         })
         .expect("insert score");
 
@@ -907,8 +891,6 @@ mod tests {
                 path: "/music/song-1".to_string(),
                 is_favorite: false,
                 status: ScoreStatus::Main,
-                updated_at: now(),
-                updated_by: "server-1".to_string(),
             },
             &[],
         )
@@ -922,9 +904,7 @@ mod tests {
             file_name: "H.C. SAVED YOU ARE CLEAN YOU ARE.musx".to_string(),
             file_size: 1024,
             file_modified_at: now(),
-            updated_at: now(),
             status: ScoreStatus::Main,
-            updated_by: "server-1".to_string(),
         })
         .expect("insert score");
 
@@ -962,8 +942,6 @@ mod tests {
                 path: song_dir.to_string_lossy().to_string(),
                 is_favorite: false,
                 status: ScoreStatus::Main,
-                updated_at: now(),
-                updated_by: "server-1".to_string(),
             },
             &[],
         )
@@ -977,9 +955,7 @@ mod tests {
             file_name: "08 H.C. CRISTO, O FIEL AMIGO - Flute2.musx".to_string(),
             file_size: 1024,
             file_modified_at: now(),
-            updated_at: now(),
             status: ScoreStatus::Ignored,
-            updated_by: "server-1".to_string(),
         })
         .expect("insert score");
 
@@ -1009,8 +985,6 @@ mod tests {
                 path: "/music/song-1".to_string(),
                 is_favorite: false,
                 status: ScoreStatus::Main,
-                updated_at: now(),
-                updated_by: "server-1".to_string(),
             },
             &[],
         )
@@ -1059,8 +1033,6 @@ mod tests {
                 path: "/music/song-1".to_string(),
                 is_favorite: false,
                 status: ScoreStatus::Main,
-                updated_at: now(),
-                updated_by: "server-1".to_string(),
             },
             &[],
         )
@@ -1095,8 +1067,6 @@ mod tests {
                 path: "/music/song-1".to_string(),
                 is_favorite: false,
                 status: ScoreStatus::Main,
-                updated_at: now(),
-                updated_by: "server-1".to_string(),
             },
             &[],
         )
@@ -1137,8 +1107,6 @@ mod tests {
                     .to_string(),
                 is_favorite: false,
                 status: ScoreStatus::Main,
-                updated_at: now(),
-                updated_by: "server-1".to_string(),
             },
             &[],
         )
@@ -1191,8 +1159,6 @@ mod tests {
         db.insert_category(&crate::domain::models::Category {
             id: "category-1".to_string(),
             name: "Choir".to_string(),
-            updated_at: now(),
-            updated_by: "server-1".to_string(),
         })
         .expect("insert category");
 
@@ -1205,8 +1171,6 @@ mod tests {
                 path: "/music/song-1".to_string(),
                 is_favorite: false,
                 status: ScoreStatus::Main,
-                updated_at: now(),
-                updated_by: "server-1".to_string(),
             },
             &[],
         )
@@ -1240,8 +1204,6 @@ mod tests {
                 path: "/music/song-1".to_string(),
                 is_favorite: false,
                 status: ScoreStatus::Main,
-                updated_at: now(),
-                updated_by: "server-1".to_string(),
             },
             &[],
         )
@@ -1291,8 +1253,6 @@ mod tests {
                 path: "/music/song-1".to_string(),
                 is_favorite: false,
                 status: ScoreStatus::Main,
-                updated_at: now(),
-                updated_by: "server-1".to_string(),
             },
             &[],
         )
@@ -1306,9 +1266,7 @@ mod tests {
             file_name: "03 VEZES SANTO - Flute.musx".to_string(),
             file_size: 10,
             file_modified_at: now(),
-            updated_at: now(),
             status: ScoreStatus::Main,
-            updated_by: "server-1".to_string(),
         })
         .expect("insert score");
 

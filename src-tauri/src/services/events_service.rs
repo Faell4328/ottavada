@@ -656,8 +656,6 @@ mod tests {
         let category = Category {
             id: "cat-1".to_string(),
             name: "Teste".to_string(),
-            updated_at: chrono::Local::now().naive_local(),
-            updated_by: "server-1".to_string(),
         };
         db.insert_category(&category).expect("insert category");
 
@@ -674,8 +672,6 @@ mod tests {
                 .to_string(),
             is_favorite: false,
             status: crate::domain::models::ScoreStatus::Main,
-            updated_at: chrono::Local::now().naive_local(),
-            updated_by: "server-1".to_string(),
         };
         db.insert_song(&song, &[category.id.clone()])
             .expect("insert song");
@@ -798,8 +794,6 @@ mod tests {
                 .to_string(),
             is_favorite: false,
             status: ScoreStatus::Draft,
-            updated_at: chrono::Local::now().naive_local(),
-            updated_by: "server-1".to_string(),
         };
         db.insert_song(&song, &[]).expect("insert song");
 
@@ -869,8 +863,6 @@ mod tests {
                 .to_string(),
             is_favorite: false,
             status: ScoreStatus::Main,
-            updated_at: chrono::Local::now().naive_local(),
-            updated_by: "server-1".to_string(),
         };
         db.insert_song(&song, &[]).expect("insert song");
 
@@ -928,8 +920,6 @@ mod tests {
                 .to_string(),
             is_favorite: false,
             status: ScoreStatus::NotFound,
-            updated_at: chrono::Local::now().naive_local(),
-            updated_by: "server-1".to_string(),
         };
         db.insert_song(&song, &[]).expect("insert song");
 
@@ -1015,8 +1005,6 @@ mod tests {
                 .to_string(),
             is_favorite: false,
             status: ScoreStatus::Draft,
-            updated_at: chrono::Local::now().naive_local(),
-            updated_by: "server-1".to_string(),
         };
         db.insert_song(&song, &[]).expect("insert song");
 
@@ -1094,8 +1082,6 @@ mod tests {
                 .to_string(),
             is_favorite: false,
             status: ScoreStatus::Main,
-            updated_at: chrono::Local::now().naive_local(),
-            updated_by: "server-1".to_string(),
         };
 
         let conn = db.conn.lock().expect("lock db");
@@ -1197,8 +1183,6 @@ mod tests {
                 .to_string(),
             is_favorite: false,
             status: ScoreStatus::Draft,
-            updated_at: chrono::Local::now().naive_local(),
-            updated_by: "server-1".to_string(),
         };
 
         let conn = db.conn.lock().expect("lock db");
@@ -1320,8 +1304,6 @@ mod tests {
                 .to_string(),
             is_favorite: false,
             status: ScoreStatus::Draft,
-            updated_at: chrono::Local::now().naive_local(),
-            updated_by: "server-1".to_string(),
         };
         db.insert_song(&song, &[]).expect("insert song");
 

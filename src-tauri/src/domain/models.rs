@@ -12,8 +12,6 @@ pub struct Song {
     pub path: String,
     pub is_favorite: bool,
     pub status: ScoreStatus,
-    pub updated_at: NaiveDateTime,
-    pub updated_by: String,
 }
 
 /// Score status
@@ -57,16 +55,13 @@ pub struct Score {
     pub file_name: String,
     pub file_size: u64,
     pub file_modified_at: NaiveDateTime,
-    pub updated_at: NaiveDateTime,
     pub status: ScoreStatus,
-    pub updated_by: String,
 }
 
 impl Score {
     /// Factory method to create a new score from an indexed file
     pub fn new_from_file(
         song_id: String,
-        updated_by: String,
         indexed_file: &IndexedFile,
         file_path: String,
         file_name: String,
@@ -80,9 +75,7 @@ impl Score {
             file_name,
             file_size: file_metadata.0,
             file_modified_at: file_metadata.1,
-            updated_at: chrono::Local::now().naive_local(),
             status: ScoreStatus::Main,
-            updated_by,
         }
     }
 }
@@ -92,8 +85,6 @@ impl Score {
 pub struct Category {
     pub id: String,
     pub name: String,
-    pub updated_at: NaiveDateTime,
-    pub updated_by: String,
 }
 
 /// Application settings
@@ -437,7 +428,6 @@ pub struct SongListItem {
     pub composer: Option<String>,
     pub arranger: Option<String>,
     pub path: String,
-    pub updated_at: NaiveDateTime,
     pub is_favorite: bool,
     pub status: ScoreStatus,
     pub category_ids: Vec<String>,

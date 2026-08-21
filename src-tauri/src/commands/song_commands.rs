@@ -18,9 +18,7 @@ use crate::services::path_normalizer::from_storage_path;
 fn normalized_required_song_name(name: &str) -> Result<String, AppError> {
     let normalized = normalize_song_name(name);
     if normalized.is_empty() {
-        return Err(AppError::Generic(
-            "Song name cannot be empty".into(),
-        ));
+        return Err(AppError::Generic("Song name cannot be empty".into()));
     }
     Ok(normalized)
 }
@@ -40,9 +38,7 @@ fn normalized_optional_text_ref(value: Option<&str>) -> Option<String> {
 fn normalized_required_song_path(path: &str) -> Result<String, AppError> {
     let normalized = path.trim().to_string();
     if normalized.is_empty() {
-        return Err(AppError::Generic(
-            "Song path cannot be empty".into(),
-        ));
+        return Err(AppError::Generic("Song path cannot be empty".into()));
     }
     Ok(normalized)
 }
@@ -155,9 +151,7 @@ pub fn delete_file_path(store: State<'_, SystemStore>, file_path: String) -> Res
 #[tauri::command]
 pub fn get_all_songs(db: State<'_, Database>) -> Result<Vec<SongListItem>, AppError> {
     info!("Fetching all songs");
-    run_song_query_with_logging("Fetching all songs completed", || {
-        db.get_all_songs()
-    })
+    run_song_query_with_logging("Fetching all songs completed", || db.get_all_songs())
 }
 
 #[tauri::command]
@@ -223,10 +217,7 @@ pub fn search_songs(db: State<'_, Database>, query: String) -> Result<Vec<SongLi
 }
 
 #[tauri::command]
-pub fn toggle_favorite(
-    db: State<'_, Database>,
-    song_id: String,
-) -> Result<bool, AppError> {
+pub fn toggle_favorite(db: State<'_, Database>, song_id: String) -> Result<bool, AppError> {
     info!("Toggling favorite for song: {}", song_id);
     match db.toggle_favorite(&song_id) {
         Ok(is_now_favorite) => {
@@ -249,10 +240,8 @@ pub fn update_composer(
 ) -> Result<usize, AppError> {
     require_server_settings(&store)?;
 
-    let normalized_new_name = normalize_author_change_name(
-        &new_name,
-        "Composer name cannot be empty",
-    )?;
+    let normalized_new_name =
+        normalize_author_change_name(&new_name, "Composer name cannot be empty")?;
 
     db.update_composer(&old_name, &normalized_new_name)
 }
@@ -277,10 +266,8 @@ pub fn update_arranger(
 ) -> Result<usize, AppError> {
     require_server_settings(&store)?;
 
-    let normalized_new_name = normalize_author_change_name(
-        &new_name,
-        "Arranger name cannot be empty",
-    )?;
+    let normalized_new_name =
+        normalize_author_change_name(&new_name, "Arranger name cannot be empty")?;
 
     db.update_arranger(&old_name, &normalized_new_name)
 }
@@ -331,8 +318,6 @@ pub fn reindex_song_directory(
     }
 
     song.path = normalized_directory.clone();
-    song.updated_at = Local::now().naive_local();
-    song.updated_by = updated_by.clone();
     db.update_song(&song, &song_item.category_ids)?;
 
     let existing_score_paths: Vec<String> = db
@@ -364,7 +349,6 @@ pub fn reindex_song_directory(
         let (file_path, file_name) = indexer::split_file_path(&indexed_file.path);
         let score = Score::new_from_file(
             song_id.clone(),
-            updated_by.clone(),
             &indexed_file,
             file_path,
             file_name,
@@ -414,13 +398,11 @@ fn import_files_core(
     let mut added_count = 0;
 
     for (song_name, group_files) in &groups {
-        let existing_song = all_songs
-            .iter()
-            .find(|s| {
-                s.name.eq_ignore_ascii_case(song_name)
-                    && authors_match(&s.composer, composer)
-                    && authors_match(&s.arranger, arranger)
-            });
+        let existing_song = all_songs.iter().find(|s| {
+            s.name.eq_ignore_ascii_case(song_name)
+                && authors_match(&s.composer, composer)
+                && authors_match(&s.arranger, arranger)
+        });
 
         let existing_scores = existing_song.map(|s| s.scores.clone()).unwrap_or_default();
 
@@ -456,10 +438,7 @@ fn import_files_core(
                 match get_file_metadata(Path::new(&indexed_file.path)) {
                     Ok(metadata) => metadata,
                     Err(e) => {
-                        warn!(
-                            "Error getting file metadata {}: {:?}",
-                            indexed_file.path, e
-                        );
+                        warn!("Error getting file metadata {}: {:?}", indexed_file.path, e);
                         (0, now)
                     }
                 };
@@ -505,8 +484,6 @@ fn import_files_core(
                 path: song_path,
                 is_favorite: false,
                 status: new_song_status.clone(),
-                updated_at: now,
-                updated_by: computer_id.to_string(),
             };
             db.insert_song(&song, category_ids)?;
             new_song_id
@@ -521,7 +498,6 @@ fn import_files_core(
                 .unwrap_or_else(|| new_song_status.clone());
             let score = Score::new_from_file(
                 song_id.clone(),
-                computer_id.to_string(),
                 &normalized_file,
                 score_file_path,
                 file_name,
@@ -693,7 +669,13 @@ pub fn create_song_with_metadata(
 ) -> Result<SongListItem, AppError> {
     let normalized_name = normalized_required_song_name(&name)?;
     let normalized_path = normalized_required_song_path(&path)?;
-    let updated_by = validate_server_create_song(&db, &store, &normalized_name, composer.as_deref(), arranger.as_deref())?;
+    let updated_by = validate_server_create_song(
+        &db,
+        &store,
+        &normalized_name,
+        composer.as_deref(),
+        arranger.as_deref(),
+    )?;
     let now = Local::now().naive_local();
     let song_id = uuid::Uuid::new_v4().to_string();
 
@@ -706,8 +688,6 @@ pub fn create_song_with_metadata(
         path: normalized_path,
         is_favorite: false,
         status: ScoreStatus::NotFound,
-        updated_at: now,
-        updated_by,
     };
 
     db.insert_song(&song, &category_ids).map_err(|e| {
@@ -745,7 +725,13 @@ pub fn update_song(
     let updated_by = settings.computer_id.clone();
 
     let all_songs = db.get_all_songs()?;
-    ensure_unique_song_name(&all_songs, &normalized_name, composer.as_deref(), arranger.as_deref(), Some(&song_id))?;
+    ensure_unique_song_name(
+        &all_songs,
+        &normalized_name,
+        composer.as_deref(),
+        arranger.as_deref(),
+        Some(&song_id),
+    )?;
 
     info!("Updating song: {} -> {}", song_id, normalized_name);
     let original_song = db.get_song_by_id(&song_id)?;
@@ -759,8 +745,6 @@ pub fn update_song(
         path: original_song.path,
         is_favorite: original_song.is_favorite,
         status: original_song.status,
-        updated_at: now,
-        updated_by,
     };
 
     db.update_song(&updated_song, &category_ids)?;
@@ -868,10 +852,7 @@ fn update_songs_status_core(
     Ok(())
 }
 
-fn toggle_favorites_core(
-    db: &Database,
-    song_ids: &[String],
-) -> Result<(), AppError> {
+fn toggle_favorites_core(db: &Database, song_ids: &[String]) -> Result<(), AppError> {
     for song_id in song_ids {
         db.toggle_favorite(song_id)?;
     }
@@ -1152,8 +1133,6 @@ mod tests {
                 path: song_dir.to_string_lossy().to_string(),
                 is_favorite: false,
                 status: ScoreStatus::Main,
-                updated_at: chrono::Local::now().naive_local(),
-                updated_by: "server-1".to_string(),
             },
             &[],
         )
@@ -1193,8 +1172,6 @@ mod tests {
                 path: song_dir.to_string_lossy().to_string(),
                 is_favorite: false,
                 status: ScoreStatus::Main,
-                updated_at: chrono::Local::now().naive_local(),
-                updated_by: "server-1".to_string(),
             },
             &[],
         )
@@ -1222,8 +1199,6 @@ mod tests {
                 path: path.to_string_lossy().to_string(),
                 is_favorite: false,
                 status,
-                updated_at: chrono::Local::now().naive_local(),
-                updated_by: "server-1".to_string(),
             },
             &[],
         )
@@ -1249,7 +1224,13 @@ mod tests {
         for i in 1..=3 {
             let song_dir = dir.path().join("repertoire").join(format!("song-{}", i));
             fs::create_dir_all(&song_dir).expect("create song dir");
-            insert_test_song(&db, &format!("song-{}", i), &format!("CANON {}", i), &song_dir, ScoreStatus::Main);
+            insert_test_song(
+                &db,
+                &format!("song-{}", i),
+                &format!("CANON {}", i),
+                &song_dir,
+                ScoreStatus::Main,
+            );
         }
 
         delete_songs_core(&db, &store, &["song-1".to_string(), "song-2".to_string()])
@@ -1280,15 +1261,17 @@ mod tests {
             let song_dir = dir.path().join("repertoire").join(format!("song-{}", i));
             fs::create_dir_all(&song_dir).expect("create song dir");
             fs::write(song_dir.join("score.musx"), b"score").expect("write score");
-            insert_test_song(&db, &format!("song-{}", i), &format!("CANON {}", i), &song_dir, ScoreStatus::Main);
+            insert_test_song(
+                &db,
+                &format!("song-{}", i),
+                &format!("CANON {}", i),
+                &song_dir,
+                ScoreStatus::Main,
+            );
         }
 
-        delete_songs_with_files_core(
-            &db,
-            &store,
-            &["song-1".to_string(), "song-2".to_string()],
-        )
-        .expect("delete songs with files");
+        delete_songs_with_files_core(&db, &store, &["song-1".to_string(), "song-2".to_string()])
+            .expect("delete songs with files");
 
         assert!(db.get_song_by_id("song-1").is_err());
         assert!(db.get_song_by_id("song-2").is_err());
@@ -1314,7 +1297,13 @@ mod tests {
         for i in 1..=3 {
             let song_dir = dir.path().join("repertoire").join(format!("song-{}", i));
             fs::create_dir_all(&song_dir).expect("create song dir");
-            insert_test_song(&db, &format!("song-{}", i), &format!("CANON {}", i), &song_dir, ScoreStatus::Main);
+            insert_test_song(
+                &db,
+                &format!("song-{}", i),
+                &format!("CANON {}", i),
+                &song_dir,
+                ScoreStatus::Main,
+            );
         }
 
         update_songs_status_core(
@@ -1325,9 +1314,18 @@ mod tests {
         )
         .expect("update songs status");
 
-        assert_eq!(db.get_song_by_id("song-1").expect("song-1").status, ScoreStatus::Draft);
-        assert_eq!(db.get_song_by_id("song-2").expect("song-2").status, ScoreStatus::Main);
-        assert_eq!(db.get_song_by_id("song-3").expect("song-3").status, ScoreStatus::Draft);
+        assert_eq!(
+            db.get_song_by_id("song-1").expect("song-1").status,
+            ScoreStatus::Draft
+        );
+        assert_eq!(
+            db.get_song_by_id("song-2").expect("song-2").status,
+            ScoreStatus::Main
+        );
+        assert_eq!(
+            db.get_song_by_id("song-3").expect("song-3").status,
+            ScoreStatus::Draft
+        );
     }
 
     #[test]
@@ -1349,7 +1347,13 @@ mod tests {
         for i in 1..=3 {
             let song_dir = dir.path().join("repertoire").join(format!("song-{}", i));
             fs::create_dir_all(&song_dir).expect("create song dir");
-            insert_test_song(&db, &format!("song-{}", i), &format!("CANON {}", i), &song_dir, ScoreStatus::Main);
+            insert_test_song(
+                &db,
+                &format!("song-{}", i),
+                &format!("CANON {}", i),
+                &song_dir,
+                ScoreStatus::Main,
+            );
         }
 
         toggle_favorites_core(&db, &["song-1".to_string(), "song-3".to_string()])

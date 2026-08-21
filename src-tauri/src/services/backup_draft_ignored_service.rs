@@ -15,10 +15,7 @@ use crate::services::path_normalizer::from_storage_path;
 
 const BACKUP_DRAFT_IGNORED_RELATIVE_PATH: &str = CLOUD_BACKUP_DRAFT_IGNORED_DIR_NAME;
 
-pub fn backup_draft_ignored_scores(
-    db: &Database,
-    store: &SystemStore,
-) -> Result<usize, AppError> {
+pub fn backup_draft_ignored_scores(db: &Database, store: &SystemStore) -> Result<usize, AppError> {
     let has_rclone = store
         .get_app_settings()
         .ok()
@@ -147,10 +144,7 @@ fn restore_draft_ignored_scores_from_dir(
     Ok(restored)
 }
 
-fn backup_draft_ignored_scores_to_dir(
-    db: &Database,
-    backup_dir: &Path,
-) -> Result<usize, AppError> {
+fn backup_draft_ignored_scores_to_dir(db: &Database, backup_dir: &Path) -> Result<usize, AppError> {
     let scores = query_draft_ignored_scores(db)?;
 
     let active_ids: HashSet<String> = scores.iter().map(|s| s.id.clone()).collect();
@@ -190,10 +184,7 @@ fn backup_draft_ignored_scores_to_dir(
 
     let removed = cleanup_orphan_draft_ignored_files(backup_dir, &active_ids)?;
     if removed > 0 {
-        info!(
-            "Cleanup of orphan draft/ignored files: {} removed",
-            removed
-        );
+        info!("Cleanup of orphan draft/ignored files: {} removed", removed);
     }
 
     Ok(backed_up)
@@ -239,18 +230,12 @@ fn needs_update(source: &Path, dest: &Path) -> bool {
         return true;
     }
 
-    let source_modified = match fs::metadata(source)
-        .ok()
-        .and_then(|m| m.modified().ok())
-    {
+    let source_modified = match fs::metadata(source).ok().and_then(|m| m.modified().ok()) {
         Some(time) => time,
         None => return true,
     };
 
-    let dest_modified = match fs::metadata(dest)
-        .ok()
-        .and_then(|m| m.modified().ok())
-    {
+    let dest_modified = match fs::metadata(dest).ok().and_then(|m| m.modified().ok()) {
         Some(time) => time,
         None => return true,
     };
@@ -377,8 +362,6 @@ mod tests {
                 path: song_dir.to_string_lossy().to_string(),
                 is_favorite: false,
                 status: ScoreStatus::Draft,
-                updated_at: chrono::Local::now().naive_local(),
-                updated_by: "server-test".to_string(),
             },
             &[],
         )
@@ -393,9 +376,7 @@ mod tests {
             file_name: "draft-score.musx".to_string(),
             file_size: 5,
             file_modified_at: now,
-            updated_at: now,
             status: ScoreStatus::Draft,
-            updated_by: "server-test".to_string(),
         })
         .expect("insert draft score");
 
@@ -407,9 +388,7 @@ mod tests {
             file_name: "ignored-score.musx".to_string(),
             file_size: 7,
             file_modified_at: now,
-            updated_at: now,
             status: ScoreStatus::Ignored,
-            updated_by: "server-test".to_string(),
         })
         .expect("insert ignored score");
 
@@ -448,8 +427,6 @@ mod tests {
                 path: song_dir.to_string_lossy().to_string(),
                 is_favorite: false,
                 status: ScoreStatus::Draft,
-                updated_at: chrono::Local::now().naive_local(),
-                updated_by: "server-test".to_string(),
             },
             &[],
         )
@@ -464,9 +441,7 @@ mod tests {
             file_name: "not-exists.musx".to_string(),
             file_size: 0,
             file_modified_at: now,
-            updated_at: now,
             status: ScoreStatus::Draft,
-            updated_by: "server-test".to_string(),
         })
         .expect("insert score");
 
@@ -495,8 +470,6 @@ mod tests {
                 path: song_dir.to_string_lossy().to_string(),
                 is_favorite: false,
                 status: ScoreStatus::Draft,
-                updated_at: chrono::Local::now().naive_local(),
-                updated_by: "server-test".to_string(),
             },
             &[],
         )
@@ -511,9 +484,7 @@ mod tests {
             file_name: "score.musx".to_string(),
             file_size: 5,
             file_modified_at: now,
-            updated_at: now,
             status: ScoreStatus::Draft,
-            updated_by: "server-test".to_string(),
         })
         .expect("insert score");
 
@@ -546,7 +517,8 @@ mod tests {
         fs::create_dir_all(&song_dir).expect("create song dir");
 
         fs::write(backup_dir.join("score-draft.musx"), b"draft").expect("create draft backup");
-        fs::write(backup_dir.join("score-ignored.musx"), b"ignored").expect("create ignored backup");
+        fs::write(backup_dir.join("score-ignored.musx"), b"ignored")
+            .expect("create ignored backup");
 
         db.insert_song(
             &Song {
@@ -557,8 +529,6 @@ mod tests {
                 path: song_dir.to_string_lossy().to_string(),
                 is_favorite: false,
                 status: ScoreStatus::Draft,
-                updated_at: chrono::Local::now().naive_local(),
-                updated_by: "server-test".to_string(),
             },
             &[],
         )
@@ -573,9 +543,7 @@ mod tests {
             file_name: "draft-score.musx".to_string(),
             file_size: 5,
             file_modified_at: now,
-            updated_at: now,
             status: ScoreStatus::Draft,
-            updated_by: "server-test".to_string(),
         })
         .expect("insert draft score");
 
@@ -587,9 +555,7 @@ mod tests {
             file_name: "ignored-score.musx".to_string(),
             file_size: 7,
             file_modified_at: now,
-            updated_at: now,
             status: ScoreStatus::Ignored,
-            updated_by: "server-test".to_string(),
         })
         .expect("insert ignored score");
 
@@ -624,8 +590,6 @@ mod tests {
                 path: song_dir.to_string_lossy().to_string(),
                 is_favorite: false,
                 status: ScoreStatus::Draft,
-                updated_at: chrono::Local::now().naive_local(),
-                updated_by: "server-test".to_string(),
             },
             &[],
         )
@@ -640,9 +604,7 @@ mod tests {
             file_name: "score.musx".to_string(),
             file_size: 5,
             file_modified_at: now,
-            updated_at: now,
             status: ScoreStatus::Draft,
-            updated_by: "server-test".to_string(),
         })
         .expect("insert score");
 
@@ -673,8 +635,6 @@ mod tests {
                 path: song_dir.to_string_lossy().to_string(),
                 is_favorite: false,
                 status: ScoreStatus::Draft,
-                updated_at: chrono::Local::now().naive_local(),
-                updated_by: "server-test".to_string(),
             },
             &[],
         )
@@ -689,9 +649,7 @@ mod tests {
             file_name: "score.musx".to_string(),
             file_size: 11,
             file_modified_at: now,
-            updated_at: now,
             status: ScoreStatus::Draft,
-            updated_by: "server-test".to_string(),
         })
         .expect("insert score");
 
@@ -699,9 +657,6 @@ mod tests {
             restore_draft_ignored_scores_from_dir(&db, &backup_dir).expect("restore scores");
 
         assert_eq!(restored, 1);
-        assert_eq!(
-            fs::read(existing_file).expect("read file"),
-            b"new content"
-        );
+        assert_eq!(fs::read(existing_file).expect("read file"), b"new content");
     }
 }

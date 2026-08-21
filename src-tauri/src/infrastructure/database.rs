@@ -10,7 +10,7 @@ pub(crate) const DEFAULT_CATEGORY_ID: &str = "default-category";
 pub(crate) const DEFAULT_CATEGORY_NAME: &str = "Uncategorized";
 
 pub(crate) const SONGS_SELECT_FIELDS: &str =
-    "id, name, composer, arranger, path, datetime('now') AS updated_at, is_favorite, status";
+    "id, name, composer, arranger, path, is_favorite, status";
 
 pub(crate) fn to_not_found(not_found: AppError) -> impl FnOnce(rusqlite::Error) -> AppError {
     move |e| match e {
@@ -120,7 +120,9 @@ impl Database {
 
     /// Lock the DB connection, recovering from poison if a previous thread panicked.
     pub fn lock_conn(&self) -> MutexGuard<'_, Connection> {
-        self.conn.lock().unwrap_or_else(|poison| poison.into_inner())
+        self.conn
+            .lock()
+            .unwrap_or_else(|poison| poison.into_inner())
     }
 
     fn initialize_schema(&self) -> Result<(), AppError> {
@@ -203,7 +205,7 @@ impl Database {
         }
 
         conn.execute_batch(
-            " 
+            "
             CREATE TABLE IF NOT EXISTS scores (
                 id TEXT PRIMARY KEY,
                 song_id TEXT NOT NULL REFERENCES songs(id) ON DELETE CASCADE,
@@ -328,7 +330,10 @@ impl Database {
         Ok(())
     }
 
-    pub(crate) fn sync_song_status_from_scores(conn: &Connection, song_id: &str) -> Result<(), AppError> {
+    pub(crate) fn sync_song_status_from_scores(
+        conn: &Connection,
+        song_id: &str,
+    ) -> Result<(), AppError> {
         let (next_status, current_status): (String, String) = conn
             .query_row(
                 "SELECT

@@ -32,9 +32,7 @@ pub fn create_category(
     let settings = require_server_settings(&store)?;
 
     if name.trim().is_empty() {
-        return Err(AppError::Generic(
-            "Category name cannot be empty".into(),
-        ));
+        return Err(AppError::Generic("Category name cannot be empty".into()));
     }
 
     let updated_by = settings.computer_id.clone();
@@ -42,8 +40,6 @@ pub fn create_category(
     let category = Category {
         id: uuid::Uuid::new_v4().to_string(),
         name: name.trim().to_string(),
-        updated_at: Local::now().naive_local(),
-        updated_by,
     };
     db.insert_category(&category)
         .map(|_| {
@@ -69,9 +65,7 @@ pub fn update_category(
     let trimmed_name = name.trim();
 
     if trimmed_name.is_empty() {
-        return Err(AppError::Generic(
-            "Category name cannot be empty".into(),
-        ));
+        return Err(AppError::Generic("Category name cannot be empty".into()));
     }
 
     let updated_by = settings.computer_id.clone();
@@ -82,8 +76,6 @@ pub fn update_category(
             Category {
                 id: category_id,
                 name: trimmed_name.to_string(),
-                updated_at: Local::now().naive_local(),
-                updated_by,
             }
         })
         .map_err(|e| {

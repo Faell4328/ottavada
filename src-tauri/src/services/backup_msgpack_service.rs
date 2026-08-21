@@ -1179,8 +1179,6 @@ mod tests {
                 path: song_dir.to_string_lossy().to_string(),
                 is_favorite: false,
                 status: ScoreStatus::Main,
-                updated_at: chrono::Local::now().naive_local(),
-                updated_by: "server-1".to_string(),
             },
             &[],
         )
@@ -1194,9 +1192,7 @@ mod tests {
             file_name: file_name.to_string(),
             file_size: 0,
             file_modified_at: chrono::Local::now().naive_local(),
-            updated_at: chrono::Local::now().naive_local(),
             status: ScoreStatus::Main,
-            updated_by: "server-1".to_string(),
         })
         .expect("insert score");
     }
@@ -1419,8 +1415,6 @@ mod tests {
         let category = Category {
             id: "cat-1".to_string(),
             name: "Classica".to_string(),
-            updated_at: chrono::Local::now().naive_local(),
-            updated_by: "server-a".to_string(),
         };
         source_db
             .insert_category(&category)
@@ -1434,8 +1428,6 @@ mod tests {
             path: "/music/song-1".to_string(),
             is_favorite: true,
             status: ScoreStatus::Main,
-            updated_at: chrono::Local::now().naive_local(),
-            updated_by: "server-a".to_string(),
         };
         source_db
             .insert_song(&song, std::slice::from_ref(&category.id))
@@ -1450,9 +1442,7 @@ mod tests {
             file_name: "flauta.musx".to_string(),
             file_size: 1234,
             file_modified_at: now,
-            updated_at: now,
             status: ScoreStatus::Main,
-            updated_by: "server-a".to_string(),
         };
         source_db.insert_score(&score).expect("insert score");
         source_db
@@ -1543,8 +1533,6 @@ mod tests {
         let category = Category {
             id: "cat-2".to_string(),
             name: "Popular".to_string(),
-            updated_at: chrono::Local::now().naive_local(),
-            updated_by: "server-c".to_string(),
         };
         source_db
             .insert_category(&category)
@@ -1558,8 +1546,6 @@ mod tests {
             path: "/music/song-2".to_string(),
             is_favorite: false,
             status: ScoreStatus::Main,
-            updated_at: chrono::Local::now().naive_local(),
-            updated_by: "server-c".to_string(),
         };
         source_db
             .insert_song(&song, std::slice::from_ref(&category.id))

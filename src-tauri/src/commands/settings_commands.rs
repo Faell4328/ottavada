@@ -7,9 +7,7 @@ use tracing::{error, info};
 use crate::commands::common::run_blocking_with_store;
 use crate::commands::rclone_commands::terminate_running_rclone_processes;
 use crate::domain::errors::AppError;
-use crate::domain::models::{
-    AppContacts, AppSettings, ComputerType, LibrarySummary, RcloneConfig,
-};
+use crate::domain::models::{AppContacts, AppSettings, ComputerType, LibrarySummary, RcloneConfig};
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
 use crate::services::client_sync_service::has_pending_server_changes;
@@ -40,9 +38,7 @@ pub async fn get_settings(
 
 #[tauri::command]
 pub fn get_app_contacts() -> AppContacts {
-    AppContacts::from_env_values(
-        option_env!("APP_CONTACT_EMAIL"),
-    )
+    AppContacts::from_env_values(option_env!("APP_CONTACT_EMAIL"))
 }
 
 #[tauri::command]
@@ -63,10 +59,7 @@ pub async fn refresh_library_summary_cache(
 
 #[tauri::command]
 pub fn save_settings(store: State<'_, SystemStore>, settings: AppSettings) -> Result<(), AppError> {
-    info!(
-        "Saving settings for computer: {}",
-        settings.computer_id
-    );
+    info!("Saving settings for computer: {}", settings.computer_id);
     match store.save_app_settings(&settings) {
         Ok(_) => {
             info!("Settings saved successfully");
@@ -283,8 +276,6 @@ mod tests {
         db.insert_category(&Category {
             id: "cat-1".to_string(),
             name: "Teste".to_string(),
-            updated_at: chrono::Local::now().naive_local(),
-            updated_by: "server-1".to_string(),
         })
         .expect("insert category");
 

@@ -126,7 +126,10 @@ pub fn run_initial_scan(db: &Database, updated_by: &str) {
             }
         }
 
-        for score in song_scores.iter().filter(|s| s.status == ScoreStatus::Draft) {
+        for score in song_scores
+            .iter()
+            .filter(|s| s.status == ScoreStatus::Draft)
+        {
             let full_path = build_score_full_path(&score.file_path, &score.file_name);
             let path = Path::new(&full_path);
 
@@ -173,7 +176,6 @@ pub fn run_initial_scan(db: &Database, updated_by: &str) {
                     let (file_path, file_name) = split_file_path(current_path);
                     let score = Score::new_from_file(
                         song_id.clone(),
-                        updated_by.to_string(),
                         &current_file,
                         file_path,
                         file_name,
@@ -257,10 +259,6 @@ mod tests {
     use std::fs;
     use tempfile::tempdir;
 
-    fn now() -> chrono::NaiveDateTime {
-        Local::now().naive_local()
-    }
-
     #[test]
     fn does_not_recheck_draft_scores_after_they_change_again() {
         let dir = tempdir().expect("temp dir");
@@ -282,8 +280,6 @@ mod tests {
                 path: song_dir.to_string_lossy().to_string(),
                 is_favorite: false,
                 status: ScoreStatus::Main,
-                updated_at: now(),
-                updated_by: "server-1".to_string(),
             },
             &[],
         )
@@ -297,9 +293,7 @@ mod tests {
             file_name: "score-1.musx".to_string(),
             file_size: metadata_v1.0,
             file_modified_at: metadata_v1.1,
-            updated_at: now(),
             status: ScoreStatus::Main,
-            updated_by: "server-1".to_string(),
         })
         .expect("insert score");
 
@@ -317,13 +311,17 @@ mod tests {
             )
             .expect("first scan size");
 
-        let after_first_scan = db.get_song_list_item_by_id("song-1").expect("song after first scan");
+        let after_first_scan = db
+            .get_song_list_item_by_id("song-1")
+            .expect("song after first scan");
         assert_eq!(after_first_scan.scores[0].status, ScoreStatus::Main);
 
         fs::write(&score_path, b"main-v3-changed-again").expect("write score v3");
         run_initial_scan(&db, "server-1");
 
-        let after_second_scan = db.get_song_list_item_by_id("song-1").expect("song after second scan");
+        let after_second_scan = db
+            .get_song_list_item_by_id("song-1")
+            .expect("song after second scan");
 
         assert_eq!(after_second_scan.scores[0].status, ScoreStatus::Draft);
         let second_scan_size: i64 = db
@@ -336,6 +334,5 @@ mod tests {
                 |row| row.get(0),
             )
             .expect("second scan size");
-
     }
 }

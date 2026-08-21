@@ -297,7 +297,9 @@ fn copy_and_rename_scores_parallel(
                 }
 
                 if let Err(err) = copy_single_score(&entries[idx], temp_dir) {
-                    let mut guard = first_error.lock().unwrap_or_else(|poison| poison.into_inner());
+                    let mut guard = first_error
+                        .lock()
+                        .unwrap_or_else(|poison| poison.into_inner());
                     if guard.is_none() {
                         *guard = Some(err.to_string());
                     }
@@ -308,7 +310,11 @@ fn copy_and_rename_scores_parallel(
         }
     });
 
-    if let Some(error) = first_error.lock().unwrap_or_else(|poison| poison.into_inner()).clone() {
+    if let Some(error) = first_error
+        .lock()
+        .unwrap_or_else(|poison| poison.into_inner())
+        .clone()
+    {
         return Err(AppError::Generic(error));
     }
 
@@ -371,20 +377,14 @@ fn create_tar_zst_from_temp_dir_with_threads(
             let file_name: OsString = file
                 .file_name()
                 .ok_or_else(|| {
-                    AppError::Generic(
-                        "Invalid file name in the temporary directory".to_string(),
-                    )
+                    AppError::Generic("Invalid file name in the temporary directory".to_string())
                 })?
                 .to_owned();
 
             tar_builder
                 .append_path_with_name(&file, Path::new(&file_name))
                 .map_err(|e| {
-                    AppError::Generic(format!(
-                        "Error adding {} to the tar: {}",
-                        file.display(),
-                        e
-                    ))
+                    AppError::Generic(format!("Error adding {} to the tar: {}", file.display(), e))
                 })?;
         }
 
@@ -1060,8 +1060,6 @@ mod tests {
                 path: song_dir.to_string_lossy().to_string(),
                 is_favorite: false,
                 status: ScoreStatus::Main,
-                updated_at: Local::now().naive_local(),
-                updated_by: "server-1".to_string(),
             },
             &[],
         )
@@ -1075,9 +1073,7 @@ mod tests {
             file_name: "score-a.musx".to_string(),
             file_size: 14,
             file_modified_at: Local::now().naive_local(),
-            updated_at: Local::now().naive_local(),
             status: ScoreStatus::Main,
-            updated_by: "server-1".to_string(),
         })
         .expect("insert score");
 
@@ -1152,8 +1148,6 @@ mod tests {
                 path: song_dir.to_string_lossy().to_string(),
                 is_favorite: false,
                 status: ScoreStatus::Main,
-                updated_at: Local::now().naive_local(),
-                updated_by: "server-1".to_string(),
             },
             &[],
         )
@@ -1167,9 +1161,7 @@ mod tests {
             file_name: "draft-score.musx".to_string(),
             file_size: 13,
             file_modified_at: Local::now().naive_local(),
-            updated_at: Local::now().naive_local(),
             status: ScoreStatus::Draft,
-            updated_by: "server-1".to_string(),
         })
         .expect("insert draft score");
 
@@ -1211,8 +1203,6 @@ mod tests {
                 path: song_dir.to_string_lossy().to_string(),
                 is_favorite: false,
                 status: ScoreStatus::Main,
-                updated_at: Local::now().naive_local(),
-                updated_by: "server-1".to_string(),
             },
             &[],
         )
@@ -1226,9 +1216,7 @@ mod tests {
             file_name: "main-score.musx".to_string(),
             file_size: 12,
             file_modified_at: Local::now().naive_local(),
-            updated_at: Local::now().naive_local(),
             status: ScoreStatus::Main,
-            updated_by: "server-1".to_string(),
         })
         .expect("insert main score");
 
@@ -1240,9 +1228,7 @@ mod tests {
             file_name: "draft-score.musx".to_string(),
             file_size: 13,
             file_modified_at: Local::now().naive_local(),
-            updated_at: Local::now().naive_local(),
             status: ScoreStatus::Draft,
-            updated_by: "server-1".to_string(),
         })
         .expect("insert draft score");
 

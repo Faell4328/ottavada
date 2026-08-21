@@ -380,8 +380,6 @@ mod tests {
         let category = Category {
             id: "cat-1".to_string(),
             name: "Teste".to_string(),
-            updated_at: chrono::Local::now().naive_local(),
-            updated_by: "server-1".to_string(),
         };
         db.insert_category(&category).expect("insert category");
 
@@ -398,8 +396,6 @@ mod tests {
                 .to_string(),
             is_favorite: false,
             status: crate::domain::models::ScoreStatus::Main,
-            updated_at: chrono::Local::now().naive_local(),
-            updated_by: "server-1".to_string(),
         };
         db.insert_song(&song, &[category.id.clone()])
             .expect("insert song");
@@ -461,8 +457,6 @@ mod tests {
         let category = Category {
             id: "cat-1".to_string(),
             name: "Teste".to_string(),
-            updated_at: chrono::Local::now().naive_local(),
-            updated_by: "server-1".to_string(),
         };
         db.insert_category(&category).expect("insert category");
 
@@ -474,8 +468,6 @@ mod tests {
             path: "/music/song-1".to_string(),
             is_favorite: false,
             status: crate::domain::models::ScoreStatus::Main,
-            updated_at: chrono::Local::now().naive_local(),
-            updated_by: "server-1".to_string(),
         };
         db.insert_song(&song, &[category.id.clone()])
             .expect("insert song");
@@ -524,8 +516,6 @@ mod tests {
             path: "/music/song-main".to_string(),
             is_favorite: false,
             status: crate::domain::models::ScoreStatus::Main,
-            updated_at: chrono::Local::now().naive_local(),
-            updated_by: "server-1".to_string(),
         };
         db.insert_song(&main_song, &[]).expect("insert main song");
 
@@ -537,8 +527,6 @@ mod tests {
             path: "/music/song-draft".to_string(),
             is_favorite: false,
             status: crate::domain::models::ScoreStatus::Draft,
-            updated_at: chrono::Local::now().naive_local(),
-            updated_by: "server-1".to_string(),
         };
         db.insert_song(&draft_song, &[]).expect("insert draft song");
 
