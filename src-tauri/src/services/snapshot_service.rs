@@ -55,6 +55,8 @@ struct SnapshotCategory {
 struct SnapshotSong {
     id: String,
     name: String,
+    #[serde(default)]
+    is_favorite: bool,
     scores: Vec<SnapshotScore>,
 }
 
@@ -132,6 +134,7 @@ pub fn generate_snapshot_msgpack(
         .map(|song| SnapshotSong {
             id: song.id.clone(),
             name: song.name.clone(),
+            is_favorite: song.is_favorite,
             scores: song
                 .scores
                 .iter()

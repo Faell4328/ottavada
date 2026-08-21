@@ -1075,6 +1075,18 @@ mod tests {
         )
         .expect("insert song");
 
+        db.insert_score(&Score {
+            id: "score-1".to_string(),
+            song_id: "song-1".to_string(),
+            name: Some("Flauta".to_string()),
+            file_path: "/missing/path".to_string(),
+            file_name: "flauta.musx".to_string(),
+            file_size: 10,
+            file_modified_at: chrono::Utc::now().naive_utc(),
+            status: ScoreStatus::Main,
+        })
+        .expect("insert score");
+
         let err = resolve_openable_score_path(&db, "score-1").expect_err("missing file");
 
         assert!(err.to_string().contains("Score file not found"));

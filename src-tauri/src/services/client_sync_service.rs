@@ -61,6 +61,8 @@ struct SnapshotSong {
     arranger: Option<String>,
     #[serde(default)]
     path: Option<String>,
+    #[serde(default)]
+    is_favorite: bool,
     #[serde(default, rename = "categoriesId")]
     categories_id: Vec<String>,
     #[serde(default)]
@@ -359,8 +361,15 @@ fn apply_snapshot(db: &Database, payload: &SnapshotMessagePack) -> Result<(), Ap
 
             tx.execute(
                 "INSERT INTO songs (id, name, composer, arranger, path, is_favorite)
-                 VALUES (?1, ?2, ?3, ?4, ?5, 0)",
-                params![song.id, song.name, composer_name, arranger_name, song_path,],
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                params![
+                    song.id,
+                    song.name,
+                    composer_name,
+                    arranger_name,
+                    song_path,
+                    song.is_favorite as i32,
+                ],
             )?;
 
             let snapshot_category_relations: Vec<&SnapshotCategorySong> = payload
