@@ -226,15 +226,10 @@ pub fn apply_server_changes_for_client(
     })
 }
 
-pub fn has_pending_server_changes(db: &Database, store: &SystemStore) -> Result<bool, AppError> {
+pub fn has_pending_server_changes(store: &SystemStore) -> Result<bool, AppError> {
     let settings = store.get_app_settings()?;
     let last_snapshot_timestamp = settings.last_snapshot_timestamp.unwrap_or(0);
     let last_change_timestamp = settings.last_change_timestamp.unwrap_or(0);
-
-    let latest_change = db.get_latest_changed_field_timestamp()?.unwrap_or(0);
-    if latest_change > last_change_timestamp {
-        return Ok(true);
-    }
 
     let actions_dir = resolve_cloud_dir(store.app_data_dir())?.join(ACTIONS_DIR_NAME);
 
@@ -1453,7 +1448,7 @@ mod tests {
     fn detects_pending_changes_when_actions_files_are_newer_than_store() {
         let dir = tempdir().expect("temp dir");
         let db_path = dir.path().join("test.db");
-        let db = Database::new(&db_path).expect("db init");
+        let _db = Database::new(&db_path).expect("db init");
         let store = SystemStore::new(dir.path().to_path_buf());
 
         let settings = AppSettings {
@@ -1482,14 +1477,14 @@ mod tests {
         };
         write_zstd_msgpack(&actions_dir.join("snapshot.msgpack.zst"), &snapshot_payload);
 
-        assert!(has_pending_server_changes(&db, &store).expect("inspect pending changes"));
+        assert!(has_pending_server_changes(&store).expect("inspect pending changes"));
     }
 
     #[test]
     fn ignores_actions_files_when_their_timestamps_match_the_store() {
         let dir = tempdir().expect("temp dir");
         let db_path = dir.path().join("test.db");
-        let db = Database::new(&db_path).expect("db init");
+        let _db = Database::new(&db_path).expect("db init");
         let store = SystemStore::new(dir.path().to_path_buf());
 
         let settings = AppSettings {
@@ -1521,7 +1516,7 @@ mod tests {
         let events_payload = EventsTestPayload { events: vec![] };
         write_zstd_msgpack(&actions_dir.join("events.msgpack.zst"), &events_payload);
 
-        assert!(!has_pending_server_changes(&db, &store).expect("inspect pending changes"));
+        assert!(!has_pending_server_changes(&store).expect("inspect pending changes"));
     }
 
     fn write_zstd_msgpack<T: serde::Serialize>(path: &std::path::Path, payload: &T) {

@@ -184,10 +184,10 @@ pub fn toggle_computer_type(store: State<'_, SystemStore>) -> Result<String, App
 
 #[tauri::command]
 pub fn has_pending_changes(
-    db: State<'_, Database>,
+    _db: State<'_, Database>,
     store: State<'_, SystemStore>,
 ) -> Result<bool, AppError> {
-    has_pending_server_changes(&db, &store)
+    has_pending_server_changes(&store)
 }
 
 #[tauri::command]
