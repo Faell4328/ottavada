@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router";
 import { Toaster } from "react-hot-toast";
 import toast from "./utils/toast";
@@ -161,7 +161,7 @@ interface AppContentProps {
   startupUpdate: UpdateInfo | null;
 }
 
-function AppContent({ startupUpdate }: AppContentProps) {
+export function AppContent({ startupUpdate }: AppContentProps) {
   const { state, resetScanReport, scanFilesForChanges } = useAppState();
   const { t } = useTranslation();
   const [showExitModal, setShowExitModal] = useState(false);
@@ -285,41 +285,48 @@ function AppContent({ startupUpdate }: AppContentProps) {
     [isConfirmingScanReport, resetScanReport, scanFilesForChanges],
   );
 
+  const isAppBusyRef = useRef(isAppBusy);
+  isAppBusyRef.current = isAppBusy;
+
+  const tRef = useRef(t);
+  tRef.current = t;
+
+  const closeHandlerRef = useRef<() => void>(() => {});
+
+  closeHandlerRef.current = async () => {
+    if (isAppBusyRef.current) {
+      setExitMessage(tRef.current("appContent.exitBusyMessage"));
+      setShowExitModal(true);
+      return;
+    }
+
+    try {
+      const hasPendingChanges = await api.hasPendingChanges();
+
+      if (hasPendingChanges) {
+        setExitMessage(tRef.current("appContent.exitPendingMessage"));
+        setShowExitModal(true);
+        return;
+      }
+
+      setIsExitProcessing(true);
+      await api.exitApplication();
+    } catch (error) {
+      console.error("Failed to handle close request:", error);
+      setExitMessage(tRef.current("appContent.exitUnknownMessage"));
+      setShowExitModal(true);
+      setIsExitProcessing(false);
+    }
+  };
+
   useEffect(() => {
     let disposed = false;
     let unlisten: (() => void) | undefined;
 
     const registerCloseHandler = async () => {
-      const closeListener = await getCurrentWindow().onCloseRequested(async (event) => {
+      const closeListener = await getCurrentWindow().onCloseRequested((event) => {
         event.preventDefault();
-
-        if (isAppBusy) {
-          setExitMessage(
-            t("appContent.exitBusyMessage")
-          );
-          setShowExitModal(true);
-          return;
-        }
-
-        try {
-          const hasPendingChanges = await api.hasPendingChanges();
-
-          if (hasPendingChanges) {
-            setExitMessage(t("appContent.exitPendingMessage"));
-            setShowExitModal(true);
-            return;
-          }
-
-          setIsExitProcessing(true);
-          await api.exitApplication();
-        } catch (error) {
-          console.error("Failed to handle close request:", error);
-          setExitMessage(
-            t("appContent.exitUnknownMessage")
-          );
-          setShowExitModal(true);
-          setIsExitProcessing(false);
-        }
+        void closeHandlerRef.current();
       });
 
       if (disposed) {
@@ -336,7 +343,7 @@ function AppContent({ startupUpdate }: AppContentProps) {
       disposed = true;
       void unlisten?.();
     };
-  }, [isAppBusy]);
+  }, []);
 
   async function handleConfirmExit() {
     setIsExitProcessing(true);
