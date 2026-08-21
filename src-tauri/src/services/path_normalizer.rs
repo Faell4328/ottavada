@@ -106,11 +106,11 @@ mod tests {
             "HOME"
         };
         let old = env::var(key).ok();
-        unsafe { env::set_var(key, value) };
+        env::set_var(key, value);
         test();
         match old {
-            Some(v) => unsafe { env::set_var(key, v) },
-            None => unsafe { env::remove_var(key) },
+            Some(v) => env::set_var(key, v),
+            None => env::remove_var(key),
         }
     }
 

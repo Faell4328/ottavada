@@ -76,6 +76,73 @@ export function getScanFailureToastMessage(
   return getErrorMessage(err, fallbackMessage);
 }
 
+interface RunRcloneOperationParams {
+  dispatch: Dispatch<Action>;
+  dispatchProgress: (snapshot: RcloneProgressSnapshot) => void;
+  resetLastProgress: () => void;
+  direction: RcloneProgressSnapshot["direction"];
+  operation: () => Promise<unknown>;
+}
+
+async function runRcloneOperationWithProgress({
+  dispatch,
+  dispatchProgress,
+  resetLastProgress,
+  direction,
+  operation,
+}: RunRcloneOperationParams): Promise<unknown> {
+  let stopPolling = false;
+  resetLastProgress();
+
+  dispatch({
+    type: "SET_RCLONE_PROGRESS",
+    payload: {
+      active: true,
+      direction,
+      bytes: 0,
+      totalBytes: null,
+      percentage: null,
+      speedBytesPerSec: 0,
+      etaSeconds: null,
+    },
+  });
+
+  const operationPromise = operation();
+
+  const pollingPromise = (async () => {
+    while (!stopPolling) {
+      try {
+        const stats = await api.getRcloneRcStats();
+        if (stats) {
+          dispatchProgress({
+            active: stats.active,
+            direction,
+            bytes: Math.max(stats.bytes, 0),
+            totalBytes: stats.total_bytes,
+            percentage:
+              stats.percentage !== null ? Math.round(stats.percentage) : null,
+            speedBytesPerSec: stats.speed_bytes_per_sec,
+            etaSeconds: stats.eta_seconds,
+          });
+        }
+      } catch {
+        // Ignore transient RC polling errors.
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+  })();
+
+  try {
+    return await operationPromise;
+  } finally {
+    stopPolling = true;
+    resetLastProgress();
+    dispatch({ type: "RESET_RCLONE_PROGRESS" });
+    void pollingPromise.catch(() => undefined);
+  }
+}
+
 export function useAppScanFlow({
   dispatch,
   computerType,
@@ -146,117 +213,35 @@ export function useAppScanFlow({
       relativePath,
       lockInteraction = true,
     }: RunSyncWithProgressOptions) => {
-      let stopPolling = false;
-      lastRcloneProgressRef.current = null;
-      const progressDirection = lockInteraction ? direction : null;
+      const progressDirection: RcloneProgressSnapshot["direction"] =
+        lockInteraction ? direction : null;
 
-      dispatch({
-        type: "SET_RCLONE_PROGRESS",
-        payload: {
-          active: true,
-          direction: progressDirection,
-          bytes: 0,
-          totalBytes: null,
-          percentage: null,
-          speedBytesPerSec: 0,
-          etaSeconds: null,
+      const result = await runRcloneOperationWithProgress({
+        dispatch,
+        dispatchProgress: dispatchRcloneProgress,
+        resetLastProgress: () => {
+          lastRcloneProgressRef.current = null;
         },
+        direction: progressDirection,
+        operation: () => api.syncCloudWithRclone(direction, relativePath),
       });
 
-      const syncPromise = api.syncCloudWithRclone(direction, relativePath);
-
-      const pollingPromise = (async () => {
-        while (!stopPolling) {
-          try {
-            const stats = await api.getRcloneRcStats();
-            if (stats) {
-              dispatchRcloneProgress({
-                active: stats.active,
-                direction: progressDirection,
-                bytes: Math.max(stats.bytes, 0),
-                totalBytes: stats.total_bytes,
-                percentage:
-                  stats.percentage !== null
-                    ? Math.round(stats.percentage)
-                    : null,
-                speedBytesPerSec: stats.speed_bytes_per_sec,
-                etaSeconds: stats.eta_seconds,
-              });
-            }
-          } catch {
-            // Ignore transient RC polling errors.
-          }
-
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-        }
-      })();
-
-      try {
-        return await syncPromise;
-      } finally {
-        stopPolling = true;
-        lastRcloneProgressRef.current = null;
-        dispatch({ type: "RESET_RCLONE_PROGRESS" });
-        void pollingPromise.catch(() => undefined);
-      }
+      return result as api.RcloneSyncSummary;
     },
     [dispatch, dispatchRcloneProgress],
   );
 
   const runSelectiveUploadWithProgress = useCallback(
     async (relativePaths: string[]) => {
-      let stopPolling = false;
-      lastRcloneProgressRef.current = null;
-
-      dispatch({
-        type: "SET_RCLONE_PROGRESS",
-        payload: {
-          active: true,
-          direction: "upload",
-          bytes: 0,
-          totalBytes: null,
-          percentage: null,
-          speedBytesPerSec: 0,
-          etaSeconds: null,
+      await runRcloneOperationWithProgress({
+        dispatch,
+        dispatchProgress: dispatchRcloneProgress,
+        resetLastProgress: () => {
+          lastRcloneProgressRef.current = null;
         },
+        direction: "upload",
+        operation: () => api.uploadCloudPathsWithRclone(relativePaths),
       });
-
-      const uploadPromise = api.uploadCloudPathsWithRclone(relativePaths);
-
-      const pollingPromise = (async () => {
-        while (!stopPolling) {
-          try {
-            const stats = await api.getRcloneRcStats();
-            if (stats) {
-              dispatchRcloneProgress({
-                active: stats.active,
-                direction: "upload",
-                bytes: Math.max(stats.bytes, 0),
-                totalBytes: stats.total_bytes,
-                percentage:
-                  stats.percentage !== null
-                    ? Math.round(stats.percentage)
-                    : null,
-                speedBytesPerSec: stats.speed_bytes_per_sec,
-                etaSeconds: stats.eta_seconds,
-              });
-            }
-          } catch {
-            // Ignore transient RC polling errors.
-          }
-
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-        }
-      })();
-
-      try {
-        return await uploadPromise;
-      } finally {
-        stopPolling = true;
-        lastRcloneProgressRef.current = null;
-        dispatch({ type: "RESET_RCLONE_PROGRESS" });
-        void pollingPromise.catch(() => undefined);
-      }
     },
     [dispatch, dispatchRcloneProgress],
   );

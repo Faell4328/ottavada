@@ -31,10 +31,6 @@ const LANGUAGES = [
   { code: "de", label: "Deutsch" },
 ] as const;
 
-function getRcloneProviderLabel(provider: RcloneProvider) {
-  return getProviderLabel(provider);
-}
-
 export default function FirstRunPage() {
   const { t } = useTranslation();
   const { completeFirstRun } = useAppState();
@@ -489,7 +485,7 @@ export default function FirstRunPage() {
             <div className="mb-4 rounded-xl border border-[#c5cfdb] bg-white p-4">
               <div className="mb-3">
                 <p className="text-sm font-semibold text-[#34485d]">
-                  {getRcloneProviderLabel(rcloneProvider)}
+                  {getProviderLabel(rcloneProvider)}
                 </p>
                 <p className="mt-2 text-xs text-[#6b849e]">
                   {rcloneProvider === "google_drive" ||
@@ -647,7 +643,7 @@ export default function FirstRunPage() {
               {isGeneratingRcloneConfig
                 ? t("firstRun.configuring")
                 : t("firstRun.configureTestProvider", {
-                    provider: getRcloneProviderLabel(rcloneProvider),
+                    provider: getProviderLabel(rcloneProvider),
                   })}
             </button>
 

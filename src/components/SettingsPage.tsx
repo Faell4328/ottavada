@@ -15,6 +15,7 @@ import { UpdateModal } from "./UpdateModal";
 import { OrganizationNameField } from "./OrganizationNameField";
 import { SupportContactsCard } from "./SupportContactsCard";
 import { formatBackupTimestamp } from "../utils/formatters";
+import { getLocale } from "../utils/locale";
 import { shouldRunCloudBackupOnProviderChange } from "../utils/rcloneProviderChange";
 import { getProviderLabel, getProviderRemoteName } from "../utils/rcloneProviders";
 import { runBackupImportFlow } from "../context/backupImportFlow";
@@ -28,10 +29,6 @@ import type {
 import { isClientComputer } from "../utils/computer";
 import { getFriendlyRcloneErrorMessage } from "../utils/rcloneErrors";
 import packageJson from "../../package.json";
-
-function getRcloneProviderLabel(provider: RcloneProvider) {
-  return getProviderLabel(provider);
-}
 
 export default function SettingsPage() {
   const {
@@ -618,17 +615,8 @@ export default function SettingsPage() {
     }
   }
 
-  const localeMap: Record<string, string> = {
-    pt: "pt-BR",
-    en: "en-US",
-    es: "es-ES",
-    fr: "fr-FR",
-    it: "it-IT",
-    de: "de-DE",
-  };
-
   const lastSnapshotLabel = settings.last_snapshot_timestamp
-    ? new Date(settings.last_snapshot_timestamp * 1000).toLocaleString(localeMap[i18n.language] || "en-US")
+    ? new Date(settings.last_snapshot_timestamp * 1000).toLocaleString(getLocale(i18n.language))
     : t("settings.neverGenerated");
 
   const lastBackupLabel = settings.last_backup_timestamp
@@ -730,7 +718,7 @@ export default function SettingsPage() {
             <p className="mt-1 text-xs text-[#6b849e]">
               {t("settings.currentProvider")}{" "}
               <span className="font-semibold text-[#34485d]">
-                {getRcloneProviderLabel(rcloneProvider)}
+                {getProviderLabel(rcloneProvider)}
               </span>
             </p>
             <p className="mt-1 text-xs text-[#6b849e]">

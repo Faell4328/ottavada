@@ -1,4 +1,5 @@
 import i18n from "../i18n";
+import { getLocale } from "./locale";
 
 export function formatBytes(value: number): string {
   if (!Number.isFinite(value) || value <= 0) return "0 B";
@@ -26,15 +27,7 @@ export function formatEta(seconds: number | null): string | null {
 
 export function formatBackupTimestamp(timestamp: number): string {
   const date = new Date(timestamp * 1000);
-  const localeMap: Record<string, string> = {
-    pt: "pt-BR",
-    en: "en-US",
-    es: "es-ES",
-    fr: "fr-FR",
-    it: "it-IT",
-    de: "de-DE",
-  };
-  const locale = localeMap[i18n.language] || "en-US";
+  const locale = getLocale(i18n.language);
   const formattedDate = date.toLocaleDateString(locale);
   const formattedTime = date.toLocaleTimeString(locale, {
     hour: "2-digit",

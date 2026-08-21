@@ -5,6 +5,7 @@ import i18next from "i18next";
 import * as api from "../api/commands";
 import type { Action } from "./reducer";
 import type { RunSyncWithProgress } from "./types";
+import { getLocale } from "../utils/locale";
 
 const t = i18next.t.bind(i18next);
 
@@ -151,13 +152,5 @@ export async function runBackupImportFlow(
 
 function formatTimestamp(timestamp: number): string {
   const date = new Date(timestamp * 1000);
-  const localeMap: Record<string, string> = {
-    pt: "pt-BR",
-    en: "en-US",
-    es: "es-ES",
-    fr: "fr-FR",
-    it: "it-IT",
-    de: "de-DE",
-  };
-  return date.toLocaleString(localeMap[i18next.language] || "en-US");
+  return date.toLocaleString(getLocale(i18next.language));
 }

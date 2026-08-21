@@ -4,6 +4,7 @@ import App from "./App";
 import "./index.css";
 import { initI18n } from "./i18n";
 import { preloadAppImages } from "./utils/preloadImages";
+import { ScrollLockProvider } from "./hooks/useScrollLock";
 
 async function bootstrap(): Promise<void> {
   await initI18n();
@@ -11,7 +12,9 @@ async function bootstrap(): Promise<void> {
 
   ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
     <React.StrictMode>
-      <App />
+      <ScrollLockProvider>
+        <App />
+      </ScrollLockProvider>
     </React.StrictMode>,
   );
 }
