@@ -85,13 +85,17 @@ pub fn from_storage_path(path: &str) -> String {
 }
 
 fn normalize_for_comparison(home: &str, path: &str) -> (String, String) {
-    let home_normalized = home.replace('\\', "/").to_lowercase();
-    let path_normalized = path.replace('\\', "/").to_lowercase();
+    let home_normalized = home.replace('\\', "/").trim_end_matches('/').to_string();
+    let path_normalized = path.replace('\\', "/").trim_end_matches('/').to_string();
 
-    let home_normalized = home_normalized.trim_end_matches('/').to_string();
-    let path_normalized = path_normalized.trim_end_matches('/').to_string();
-
-    (home_normalized, path_normalized)
+    if cfg!(target_os = "windows") || cfg!(target_os = "macos") {
+        (
+            home_normalized.to_lowercase(),
+            path_normalized.to_lowercase(),
+        )
+    } else {
+        (home_normalized, path_normalized)
+    }
 }
 
 #[cfg(test)]
@@ -259,6 +263,28 @@ mod tests {
             let stored = to_storage_path(original);
             let restored = from_storage_path(&stored);
             assert_eq!(restored.replace('\\', "/"), original);
+        });
+    }
+
+    #[test]
+    fn storage_path_unix_case_sensitive_on_linux() {
+        // On Linux (case-sensitive ext4), /Home/User differs from /home/user.
+        with_userprofile("/home/user", || {
+            let result = to_storage_path("/Home/User/Documents/Song");
+            if cfg!(target_os = "linux") {
+                assert_eq!(result, "/Home/User/Documents/Song");
+            } else {
+                assert_eq!(result, "%USERPROFILE%/Documents/Song");
+            }
+        });
+    }
+
+    #[test]
+    fn storage_path_unix_sibling_with_common_prefix_not_converted() {
+        // Guards against the "john" vs "johnny" starts_with fragility.
+        with_userprofile("/home/user", || {
+            assert_eq!(to_storage_path("/home/user_2/song"), "/home/user_2/song");
+            assert_eq!(to_storage_path("/home/username/song"), "/home/username/song");
         });
     }
 }

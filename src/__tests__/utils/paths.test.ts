@@ -76,3 +76,27 @@ describe("isSamePath", () => {
     );
   });
 });
+
+describe("isSamePath on case-insensitive filesystems (macOS/Windows)", () => {
+  const macUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)";
+
+  it("should match macOS paths with different casing", () => {
+    Object.defineProperty(navigator, "userAgent", {
+      value: macUserAgent,
+      configurable: true,
+    });
+    expect(
+      isSamePath("/Users/Foo/Music/Canon.musx", "/Users/foo/music/canon.musx")
+    ).toBe(true);
+  });
+
+  it("should still not match different files on macOS", () => {
+    Object.defineProperty(navigator, "userAgent", {
+      value: macUserAgent,
+      configurable: true,
+    });
+    expect(
+      isSamePath("/Users/Foo/Music/Canon.musx", "/Users/Foo/Music/Other.musx")
+    ).toBe(false);
+  });
+});

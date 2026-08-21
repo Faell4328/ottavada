@@ -234,19 +234,13 @@ pub fn split_file_path(file_path: &str) -> (String, String) {
 
 /// Compares file paths resiliently across platforms.
 /// - Normalizes separators to '/'
-/// - In Windows-style paths (with drive letter), comparison is case-insensitive
+/// - On Windows and macOS (case-insensitive filesystems), comparison is case-insensitive
+/// - On Linux (case-sensitive ext4), comparison is case-sensitive
 pub fn paths_match(path_a: &str, path_b: &str) -> bool {
     let normalized_a = path_a.replace('\\', "/");
     let normalized_b = path_b.replace('\\', "/");
 
-    let is_windows_path = |value: &str| {
-        value.len() >= 3
-            && value.as_bytes()[1] == b':'
-            && value.as_bytes()[2] == b'/'
-            && value.as_bytes()[0].is_ascii_alphabetic()
-    };
-
-    if is_windows_path(&normalized_a) || is_windows_path(&normalized_b) {
+    if cfg!(target_os = "windows") || cfg!(target_os = "macos") {
         normalized_a.eq_ignore_ascii_case(&normalized_b)
     } else {
         normalized_a == normalized_b
@@ -532,5 +526,16 @@ mod tests {
             "C:\\Users\\user\\music\\Canon.musx",
             "C:/Users/user/music/Other.musx"
         ));
+    }
+
+    #[test]
+    fn test_paths_match_macos_case_insensitive() {
+        // On macOS (case-insensitive APFS) these are the same file.
+        let same = if cfg!(target_os = "linux") {
+            paths_match("/Users/Foo/Music/Canon.musx", "/Users/Foo/Music/Canon.musx")
+        } else {
+            paths_match("/Users/Foo/Music/Canon.musx", "/Users/foo/music/canon.musx")
+        };
+        assert!(same);
     }
 }
