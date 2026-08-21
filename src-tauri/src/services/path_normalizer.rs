@@ -30,7 +30,12 @@ pub fn to_storage_path(path: &str) -> String {
 
     let (home_for_check, path_for_check) = normalize_for_comparison(&home, trimmed);
 
-    if !path_for_check.starts_with(&home_for_check) {
+    let home_parts: Vec<&str> = home_for_check.split('/').filter(|s| !s.is_empty()).collect();
+    let path_parts: Vec<&str> = path_for_check.split('/').filter(|s| !s.is_empty()).collect();
+
+    if path_parts.len() < home_parts.len()
+        || path_parts[..home_parts.len()] != home_parts
+    {
         return trimmed.to_string();
     }
 
@@ -127,6 +132,20 @@ mod tests {
             assert_eq!(
                 to_storage_path(r"C:\Users\john\Documents\Song"),
                 r"%USERPROFILE%/Documents/Song"
+            );
+        });
+    }
+
+    #[test]
+    fn storage_path_sibling_with_common_prefix_not_converted() {
+        with_userprofile(r"C:\Users\john", || {
+            assert_eq!(
+                to_storage_path(r"C:\Users\johnny\music"),
+                r"C:\Users\johnny\music"
+            );
+            assert_eq!(
+                to_storage_path(r"C:\Users\john_2\song"),
+                r"C:\Users\john_2\song"
             );
         });
     }
