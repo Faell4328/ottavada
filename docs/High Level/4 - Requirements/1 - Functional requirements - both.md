@@ -234,3 +234,15 @@ The supported instruments and their order are based on the internal order of Fin
 | 63       | Viola                   | Viola                    |
 | 64       | Violoncelo              | Cello / Violoncello      |
 | 65       | Contrabaixo             | Double bass / Contrabass |
+
+## 6.3. Score name normalization
+
+When normalizing a score name (used for uniqueness comparison and for the stored instrument name), leading digits and whitespace must be removed, because they represent the file's ordering prefix and are not part of the instrument name. Digits that are not at the start of the name must be preserved.
+
+**Examples:**
+
+- `00001 Flauta 1` → `Flauta 1`;
+- `2 Flauta` → `Flauta`;
+- `Trompete 3I` → `Trompete 3I` (trailing number preserved);
+- `Flauta 2 Principal 3` → `Flauta 2 Principal 3` (numbers not at the start preserved);
+- `Sax10` → `Sax10` (number not separated by whitespace preserved).
