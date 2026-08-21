@@ -59,8 +59,8 @@ fn ensure_unique_song_name(
     let arranger_norm = arranger.unwrap_or("").trim();
 
     let has_conflict = songs.iter().any(|song| {
-        let different_song = except_song_id.map(|id| song.id != id).unwrap_or(false);
-        different_song
+        let same_song = except_song_id.map(|id| song.id == id).unwrap_or(false);
+        !same_song
             && song.name.eq_ignore_ascii_case(song_name)
             && authors_match(&song.composer, Some(composer_norm))
             && authors_match(&song.arranger, Some(arranger_norm))
@@ -626,7 +626,7 @@ pub fn create_song(
     name: String,
     path: String,
 ) -> Result<SongListItem, AppError> {
-    create_song_with_metadata(db, store, name, path, None, None, Vec::new())
+    create_song_with_metadata(&db, &store, name, path, None, None, Vec::new())
 }
 
 #[tauri::command]
@@ -637,12 +637,12 @@ pub fn create_song_with_categories(
     path: String,
     category_ids: Vec<String>,
 ) -> Result<SongListItem, AppError> {
-    create_song_with_metadata(db, store, name, path, None, None, category_ids)
+    create_song_with_metadata(&db, &store, name, path, None, None, category_ids)
 }
 
 pub fn create_song_with_metadata(
-    db: State<'_, Database>,
-    store: State<'_, SystemStore>,
+    db: &Database,
+    store: &SystemStore,
     name: String,
     path: String,
     composer: Option<String>,
@@ -651,6 +651,16 @@ pub fn create_song_with_metadata(
 ) -> Result<SongListItem, AppError> {
     let normalized_name = normalized_required_song_name(&name)?;
     let normalized_path = normalized_required_song_path(&path)?;
+
+    let all_songs = db.get_all_songs()?;
+    ensure_unique_song_name(
+        &all_songs,
+        &normalized_name,
+        composer.as_deref(),
+        arranger.as_deref(),
+        None,
+    )?;
+
     let song_id = uuid::Uuid::new_v4().to_string();
 
     info!("Creating new song: {}", normalized_name);
@@ -920,9 +930,9 @@ mod tests {
     use tempfile::tempdir;
 
     use super::{
-        delete_song_core, delete_song_with_files_core, delete_songs_core,
-        delete_songs_with_files_core, import_files_core, toggle_favorites_core,
-        update_songs_status_core,
+        create_song_with_metadata, delete_song_core, delete_song_with_files_core,
+        delete_songs_core, delete_songs_with_files_core, import_files_core,
+        toggle_favorites_core, update_songs_status_core,
     };
     use crate::domain::models::{AppSettings, ComputerType, IndexedFile, ScoreStatus};
     use crate::infrastructure::database::Database;
@@ -1320,5 +1330,70 @@ mod tests {
         assert!(db.get_song_by_id("song-1").expect("song-1").is_favorite);
         assert!(!db.get_song_by_id("song-2").expect("song-2").is_favorite);
         assert!(db.get_song_by_id("song-3").expect("song-3").is_favorite);
+    }
+
+    #[test]
+    fn creating_a_song_twice_with_same_name_composer_arranger_fails() {
+        let dir = tempdir().expect("temp dir");
+        let db = Database::new(&dir.path().join("songs.db")).expect("db");
+        let store = SystemStore::new(dir.path().to_path_buf());
+
+        let song_dir = dir.path().join("repertoire").join("song-1");
+        fs::create_dir_all(&song_dir).expect("create song dir");
+
+        create_song_with_metadata(
+            &db,
+            &store,
+            "Canon".to_string(),
+            song_dir.to_string_lossy().to_string(),
+            Some("Neusom".to_string()),
+            Some("Maria".to_string()),
+            Vec::new(),
+        )
+        .expect("first create");
+
+        let result = create_song_with_metadata(
+            &db,
+            &store,
+            "CANON".to_string(),
+            song_dir.to_string_lossy().to_string(),
+            Some("neusom".to_string()),
+            Some("maria".to_string()),
+            Vec::new(),
+        );
+
+        assert!(result.is_err(), "duplicate song should be rejected");
+    }
+
+    #[test]
+    fn creating_songs_with_same_name_but_different_authors_succeeds() {
+        let dir = tempdir().expect("temp dir");
+        let db = Database::new(&dir.path().join("songs.db")).expect("db");
+        let store = SystemStore::new(dir.path().to_path_buf());
+
+        let song_dir = dir.path().join("repertoire").join("song-1");
+        fs::create_dir_all(&song_dir).expect("create song dir");
+
+        create_song_with_metadata(
+            &db,
+            &store,
+            "Canon".to_string(),
+            song_dir.to_string_lossy().to_string(),
+            Some("Neusom".to_string()),
+            Some("Maria".to_string()),
+            Vec::new(),
+        )
+        .expect("first create");
+
+        create_song_with_metadata(
+            &db,
+            &store,
+            "Canon".to_string(),
+            song_dir.to_string_lossy().to_string(),
+            Some("Outro".to_string()),
+            Some("Maria".to_string()),
+            Vec::new(),
+        )
+        .expect("create with different composer");
     }
 }
