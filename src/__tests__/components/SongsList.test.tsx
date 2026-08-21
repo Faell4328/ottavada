@@ -6,6 +6,7 @@ import SongsList from "../../components/SongsList";
 import { useAppState } from "../../context/AppContext";
 import { renderWithAppProvider } from "../utils/renderWithAppProvider";
 import type { Category, ScoreListItem, SongListItem } from "../../types";
+import * as api from "../../api/commands";
 
 let resolveScores: ((scores: ScoreListItem[]) => void) | null = null;
 let nextSongSummaries: SongListItem[][] = [];
@@ -38,6 +39,20 @@ vi.mock("@tauri-apps/api/core", () => ({
         return undefined;
       case "update_song_status":
         return updatedDraftSong;
+      case "delete_songs":
+        return undefined;
+      case "delete_songs_with_files":
+        return undefined;
+      case "update_songs_status":
+        return undefined;
+      case "toggle_favorites":
+        return undefined;
+      case "update_songs_categories":
+        return undefined;
+      case "set_songs_composer":
+        return undefined;
+      case "set_songs_arranger":
+        return undefined;
       default:
         return null;
     }
@@ -271,5 +286,135 @@ describe("SongsList", () => {
     expect(screen.getByText("Hinos").closest("tr")).toContainElement(
       screen.getByText("CANON"),
     );
+  });
+
+  it("shows the bulk action bar when a song is selected and hides it on clear", async () => {
+    renderWithAppProvider(<SongsListHarness />);
+
+    expect(await screen.findByText("CANON")).toBeInTheDocument();
+    expect(screen.queryByText(/selecionada/)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText("select CANON"));
+
+    expect(screen.getByText("1 selecionada")).toBeInTheDocument();
+    expect(screen.getByText("Parar de indexar pasta")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("Limpar seleção"));
+
+    expect(screen.queryByText(/selecionada/)).not.toBeInTheDocument();
+    expect(screen.queryByText("Parar de indexar pasta")).not.toBeInTheDocument();
+  });
+
+  it("selects all visible songs with the header checkbox", async () => {
+    renderWithAppProvider(<SongsListHarness />);
+
+    expect(await screen.findByText("CANON")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText("Selecionar tudo"));
+
+    expect(screen.getByText("2 selecionadas")).toBeInTheDocument();
+  });
+
+  it("asks for confirmation before bulk moving songs to trash", async () => {
+    renderWithAppProvider(<SongsListHarness />);
+
+    expect(await screen.findByText("CANON")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText("select CANON"));
+
+    fireEvent.click(screen.getByText("Mover pasta e arquivos para lixeira"));
+
+    expect(screen.getByText("Remover músicas")).toBeInTheDocument();
+    expect(
+      screen.getByText("Mover 1 música selecionada e seus arquivos para a lixeira?"),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("Cancelar"));
+    expect(screen.queryByText("Remover músicas")).not.toBeInTheDocument();
+  });
+
+  it("shows the reindex option when all selected songs have no scores", async () => {
+    nextSongSummaries = [
+      [
+        { ...sampleSong, status: "not_found" },
+        { ...sampleSong2, status: "not_found" },
+      ],
+      [
+        { ...sampleSong, status: "not_found" },
+        { ...sampleSong2, status: "not_found" },
+      ],
+    ];
+    renderWithAppProvider(<SongsListHarness />);
+
+    expect(await screen.findByText("CANON")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText("select CANON"));
+
+    expect(screen.getByText("Reindexar pasta")).toBeInTheDocument();
+    expect(screen.getByText("Parar de indexar pasta")).toBeInTheDocument();
+    expect(screen.queryByText("Mover pasta e arquivos para lixeira")).not.toBeInTheDocument();
+    expect(screen.queryByText("Editar")).not.toBeInTheDocument();
+  });
+
+  it("opens a modal naming the song before reindexing it", async () => {
+    nextSongSummaries = [
+      [{ ...sampleSong, status: "not_found" }],
+      [{ ...sampleSong, status: "not_found" }],
+    ];
+    renderWithAppProvider(<SongsListHarness />);
+
+    expect(await screen.findByText("CANON")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText("select CANON"));
+    fireEvent.click(screen.getByText("Reindexar pasta"));
+
+    expect(screen.getByText('Reindexar "CANON"')).toBeInTheDocument();
+    expect(screen.getByText("Abrir no explorador")).toBeInTheDocument();
+  });
+
+  it("opens the song folder in the file explorer from the reindex modal", async () => {
+    const openFileLocationSpy = vi
+      .spyOn(api, "openFileLocation")
+      .mockResolvedValue(undefined);
+
+    nextSongSummaries = [
+      [{ ...sampleSong, status: "not_found" }],
+      [{ ...sampleSong, status: "not_found" }],
+    ];
+    renderWithAppProvider(<SongsListHarness />);
+
+    expect(await screen.findByText("CANON")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText("select CANON"));
+    fireEvent.click(screen.getByText("Reindexar pasta"));
+    fireEvent.click(screen.getByText("Abrir no explorador"));
+
+    expect(openFileLocationSpy).toHaveBeenCalledWith("/music/canon");
+    openFileLocationSpy.mockRestore();
+  });
+
+  it("shows only clear selection when mixing songs with and without scores", async () => {
+    nextSongSummaries = [
+      [
+        { ...sampleSong, status: "main" },
+        { ...sampleSong2, status: "not_found" },
+      ],
+      [
+        { ...sampleSong, status: "main" },
+        { ...sampleSong2, status: "not_found" },
+      ],
+    ];
+    renderWithAppProvider(<SongsListHarness />);
+
+    expect(await screen.findByText("CANON")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText("select CANON"));
+    fireEvent.click(screen.getByLabelText("select AMAZING GRACE"));
+
+    expect(screen.getByText("2 selecionadas")).toBeInTheDocument();
+    expect(screen.queryByText("Reindexar pasta")).not.toBeInTheDocument();
+    expect(screen.queryByText("Parar de indexar pasta")).not.toBeInTheDocument();
+    expect(screen.queryByText("Mover pasta e arquivos para lixeira")).not.toBeInTheDocument();
+    expect(screen.getByText("Limpar seleção")).toBeInTheDocument();
   });
 });

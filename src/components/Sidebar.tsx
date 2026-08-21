@@ -356,16 +356,7 @@ export default function Sidebar() {
                 }
                 className="flex-1"
               />
-              {canEditAuthor("arranger", arranger) && (
-                <button
-                  type="button"
-                  onClick={() => openEditAuthor("arranger", arranger)}
-                  title={t("sidebar.editArranger")}
-                  className="opacity-0 group-hover:opacity-100 flex h-5 w-5 items-center justify-center rounded bg-transparent hover:bg-white/10 transition-all cursor-pointer border-0 text-white/70"
-                >
-                  <Pencil className="h-3 w-3" />
-                </button>
-              )}
+
               {canEditAuthor("arranger", arranger) && (
                 <button
                   type="button"

@@ -40,7 +40,33 @@
     "noSongsHint": "Indexez un répertoire pour commencer",
     "loadingScores": "Chargement des partitions...",
     "songsCount_one": "{{count}} chant",
-    "songsCount_other": "{{count}} chants"
+    "songsCount_other": "{{count}} chants",
+    "selectAll": "Tout sélectionner",
+    "selectedCount_one": "{{count}} sélectionné",
+    "selectedCount_other": "{{count}} sélectionnés",
+    "toggleFavorite": "Basculer le favori",
+    "clearSelection": "Effacer la sélection",
+    "bulkEdit": "Modifier",
+    "bulkDeleteTitle": "Supprimer les chants",
+    "bulkDeleteMessage_one": "Arrêter l'indexation de {{count}} chant sélectionné ?",
+    "bulkDeleteMessage_other": "Arrêter l'indexation de {{count}} chants sélectionnés ?",
+    "bulkDeleteWithFilesMessage_one": "Déplacer {{count}} chant sélectionné et ses fichiers vers la corbeille ?",
+    "bulkDeleteWithFilesMessage_other": "Déplacer {{count}} chants sélectionnés et leurs fichiers vers la corbeille ?"
+  },
+  "bulkEditSongsModal": {
+    "title": "Modifier les chants sélectionnés",
+    "progress": "Chant {{current}} sur {{total}}",
+    "titleLabel": "Titre",
+    "titlePlaceholder": "Titre du chant",
+    "composerLabel": "Compositeur",
+    "arrangerLabel": "Arrangeur",
+    "categoriesLabel": "Catégories",
+    "composerPlaceholder": "Nom du compositeur",
+    "arrangerPlaceholder": "Nom de l'arrangeur",
+    "titleRequired": "Le titre du chant est obligatoire.",
+    "saveAndNext": "Enregistrer et suivant",
+    "finish": "Terminer",
+    "saveError": "Impossible d'enregistrer les modifications."
   },
   "topBar": {
     "updateAvailable": "Mise à jour disponible",
@@ -135,6 +161,13 @@
     "cancel": "Annuler",
     "confirm": "Confirmer",
     "processing": "Traitement en cours..."
+  },
+  "reindexSongsModal": {
+    "title": "Réindexer le dossier",
+    "song": "Réindexer « {{song}} »",
+    "remaining": "{{count}} chant(s) restant(s)",
+    "openExplorer": "Ouvrir dans l'explorateur",
+    "reindex": "Réindexer"
   },
   "modal": {
     "close": "Fermer",

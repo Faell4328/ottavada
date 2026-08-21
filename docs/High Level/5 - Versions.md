@@ -391,7 +391,9 @@
 - removal of the computer name and organization name from telemetry;
 - lazy loading to the front-end;
 - CSP security;
-- removal of unnecessary dependencies (such as `tauri-plugin-store`).
+- removal of unnecessary dependencies (such as `tauri-plugin-store`);
+- styling of the selected instrument;
+- limiting the number of visible toasts to ten.
 
 ## Fixes
 
@@ -399,46 +401,6 @@
 - fixing inconsistency in the song and score count label in the settings;
 - changes report;
 - migration from Score Maestro to Ottavada;
-- fixing inconsistencies between code and documentation.
-
-# Development
-
-## Fixing inconsistencies
-
-**Update the names of the rows in the tables**
-
-**Update the names of the tables and columns**
-
-- [x] Table name: `changedField` -> `changes`
-  
-- [x] Table name: `songsBackup` -> `backupQueue`
-  
-- [x] Remove table: `computerInformation` (it is used)
-  
-- [x] Remove the `hash` row in `scores` (it is not used)
-  
-- [x] Remove the `last_score_file_modified_at` row in `songs` (it is used)
-  
-- [x] Remove the `host_id` row from `scores` (it is used)
-
-**Fix code that uses the old name**
-
-**Remove code that uses or creates old tables**
-
-- [x] Use the lock to avoid overwriting the store file (process-wide `Mutex` in `SystemStore`)
-
-- [x] Remove `google_drive_mode` from tauri-plugin-store
-
-- [x] Fix the field names and order in tauri-plugin-store
-
-- [x] Add the option in the overflow menu: "add to favorites" on the client
-
-**Change the button option when opening the song, in the song's overflow menu**
-
-- [x] Close the song/score overflow menu when clicked outside
-
-## Planning
-
-**Build a plan to make migration easier**
-
-**Improve the backup system**
+- fixing inconsistencies between code and documentation;
+- generating a backup whenever "apply changes" is clicked;
+- importing only the latest backup.

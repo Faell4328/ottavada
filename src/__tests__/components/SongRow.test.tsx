@@ -29,6 +29,7 @@ const song: SongListItem = {
 
 describe("SongRow menu", () => {
   const onToggle = vi.fn();
+  const onToggleSelect = vi.fn();
   const onToggleFavorite = vi.fn();
   const onEdit = vi.fn();
   const onDelete = vi.fn();
@@ -53,6 +54,8 @@ describe("SongRow menu", () => {
           <MemoizedSongRow
             song={song}
             isExpanded={true}
+            isSelected={false}
+            onToggleSelect={onToggleSelect}
             onToggle={onToggle}
             onToggleFavorite={onToggleFavorite}
             onEdit={onEdit}
@@ -86,6 +89,8 @@ describe("SongRow menu", () => {
           <MemoizedSongRow
             song={song}
             isExpanded={true}
+            isSelected={false}
+            onToggleSelect={onToggleSelect}
             onToggle={onToggle}
             onToggleFavorite={onToggleFavorite}
             onEdit={onEdit}
@@ -117,6 +122,8 @@ describe("SongRow menu", () => {
           <MemoizedSongRow
             song={song}
             isExpanded={true}
+            isSelected={false}
+            onToggleSelect={onToggleSelect}
             onToggle={onToggle}
             onToggleFavorite={onToggleFavorite}
             onEdit={onEdit}
@@ -160,6 +167,8 @@ describe("SongRow menu", () => {
           <MemoizedSongRow
             song={{ ...song, status: "not_found" }}
             isExpanded={true}
+            isSelected={false}
+            onToggleSelect={onToggleSelect}
             onToggle={onToggle}
             onToggleFavorite={onToggleFavorite}
             onEdit={onEdit}
@@ -197,6 +206,8 @@ describe("SongRow menu", () => {
           <MemoizedSongRow
             song={song}
             isExpanded={true}
+            isSelected={false}
+            onToggleSelect={onToggleSelect}
             onToggle={onToggle}
             onToggleFavorite={onToggleFavorite}
             onEdit={onEdit}
@@ -232,6 +243,8 @@ describe("SongRow menu", () => {
           <MemoizedSongRow
             song={song}
             isExpanded={true}
+            isSelected={false}
+            onToggleSelect={onToggleSelect}
             onToggle={onToggle}
             onToggleFavorite={onToggleFavorite}
             onEdit={onEdit}
@@ -262,6 +275,8 @@ describe("SongRow menu", () => {
           <MemoizedSongRow
             song={draftSong}
             isExpanded={true}
+            isSelected={false}
+            onToggleSelect={onToggleSelect}
             onToggle={onToggle}
             onToggleFavorite={onToggleFavorite}
             onEdit={onEdit}
@@ -296,6 +311,8 @@ describe("SongRow menu", () => {
           <MemoizedSongRow
             song={missingSong}
             isExpanded={true}
+            isSelected={false}
+            onToggleSelect={onToggleSelect}
             onToggle={onToggle}
             onToggleFavorite={onToggleFavorite}
             onEdit={onEdit}
@@ -330,6 +347,8 @@ describe("SongRow menu", () => {
           <MemoizedSongRow
             song={{ ...song, category_ids: ["cat-1", "cat-2", "missing"] }}
             isExpanded={false}
+            isSelected={false}
+            onToggleSelect={onToggleSelect}
             onToggle={onToggle}
             onToggleFavorite={onToggleFavorite}
             onEdit={onEdit}
@@ -362,6 +381,8 @@ describe("SongRow menu", () => {
           <MemoizedSongRow
             song={song}
             isExpanded={false}
+            isSelected={false}
+            onToggleSelect={onToggleSelect}
             onToggle={onToggle}
             onToggleFavorite={onToggleFavorite}
             onEdit={onEdit}

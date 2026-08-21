@@ -40,7 +40,33 @@
     "noSongsHint": "Indicizza una directory per iniziare",
     "loadingScores": "Caricamento spartiti...",
     "songsCount_one": "{{count}} brano",
-    "songsCount_other": "{{count}} brani"
+    "songsCount_other": "{{count}} brani",
+    "selectAll": "Seleziona tutto",
+    "selectedCount_one": "{{count}} selezionato",
+    "selectedCount_other": "{{count}} selezionati",
+    "toggleFavorite": "Alterna preferito",
+    "clearSelection": "Cancella selezione",
+    "bulkEdit": "Modifica",
+    "bulkDeleteTitle": "Rimuovi brani",
+    "bulkDeleteMessage_one": "Interrompere l'indicizzazione di {{count}} brano selezionato?",
+    "bulkDeleteMessage_other": "Interrompere l'indicizzazione di {{count}} brani selezionati?",
+    "bulkDeleteWithFilesMessage_one": "Spostare {{count}} brano selezionato e i suoi file nel cestino?",
+    "bulkDeleteWithFilesMessage_other": "Spostare {{count}} brani selezionati e i loro file nel cestino?"
+  },
+  "bulkEditSongsModal": {
+    "title": "Modifica i brani selezionati",
+    "progress": "Brano {{current}} di {{total}}",
+    "titleLabel": "Titolo",
+    "titlePlaceholder": "Titolo del brano",
+    "composerLabel": "Compositore",
+    "arrangerLabel": "Arrangiatore",
+    "categoriesLabel": "Categorie",
+    "composerPlaceholder": "Nome del compositore",
+    "arrangerPlaceholder": "Nome dell'arrangiatore",
+    "titleRequired": "Il titolo del brano è obbligatorio.",
+    "saveAndNext": "Salva e successivo",
+    "finish": "Fine",
+    "saveError": "Impossibile salvare le modifiche."
   },
   "topBar": {
     "updateAvailable": "Aggiornamento disponibile",
@@ -135,6 +161,13 @@
     "cancel": "Annulla",
     "confirm": "Conferma",
     "processing": "Elaborazione..."
+  },
+  "reindexSongsModal": {
+    "title": "Reindicizza cartella",
+    "song": "Reindicizza \"{{song}}\"",
+    "remaining": "{{count}} brano/i rimanenti",
+    "openExplorer": "Apri nell'esploratore",
+    "reindex": "Reindicizza"
   },
   "modal": {
     "close": "Chiudi",

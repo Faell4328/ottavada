@@ -63,6 +63,13 @@ export interface AppContextValue {
   deleteScore: (scoreId: string) => Promise<void>;
   deleteSong: (songId: string) => Promise<void>;
   deleteSongWithFiles: (songId: string) => Promise<void>;
+  toggleSongSelection: (songId: string) => void;
+  setSongSelection: (songIds: string[]) => void;
+  clearSongSelection: () => void;
+  deleteSongs: (songIds: string[]) => Promise<void>;
+  deleteSongsWithFiles: (songIds: string[]) => Promise<void>;
+  updateSongsStatus: (songIds: string[], status: "main" | "draft") => Promise<void>;
+  toggleFavorites: (songIds: string[]) => Promise<void>;
   useScoreAsBase: (sourceScoreId: string, newScoreName: string) => Promise<void>;
   completeFirstRun: (
     computerId: string,

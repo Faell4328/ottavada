@@ -40,7 +40,33 @@
     "noSongsHint": "Indexa un directorio para comenzar",
     "loadingScores": "Cargando partituras...",
     "songsCount_one": "{{count}} canción",
-    "songsCount_other": "{{count}} canciones"
+    "songsCount_other": "{{count}} canciones",
+    "selectAll": "Seleccionar todo",
+    "selectedCount_one": "{{count}} seleccionada",
+    "selectedCount_other": "{{count}} seleccionadas",
+    "toggleFavorite": "Alternar favorito",
+    "clearSelection": "Limpiar selección",
+    "bulkEdit": "Editar",
+    "bulkDeleteTitle": "Eliminar canciones",
+    "bulkDeleteMessage_one": "¿Dejar de indexar {{count}} canción seleccionada?",
+    "bulkDeleteMessage_other": "¿Dejar de indexar {{count}} canciones seleccionadas?",
+    "bulkDeleteWithFilesMessage_one": "¿Mover {{count}} canción seleccionada y sus archivos a la papelera?",
+    "bulkDeleteWithFilesMessage_other": "¿Mover {{count}} canciones seleccionadas y sus archivos a la papelera?"
+  },
+  "bulkEditSongsModal": {
+    "title": "Editar canciones seleccionadas",
+    "progress": "Canción {{current}} de {{total}}",
+    "titleLabel": "Título",
+    "titlePlaceholder": "Título de la canción",
+    "composerLabel": "Compositor",
+    "arrangerLabel": "Arreglista",
+    "categoriesLabel": "Categorías",
+    "composerPlaceholder": "Nombre del compositor",
+    "arrangerPlaceholder": "Nombre del arreglista",
+    "titleRequired": "El título de la canción es obligatorio.",
+    "saveAndNext": "Guardar y siguiente",
+    "finish": "Finalizar",
+    "saveError": "No se pudieron guardar los cambios."
   },
   "topBar": {
     "updateAvailable": "Actualización disponible",
@@ -135,6 +161,13 @@
     "cancel": "Cancelar",
     "confirm": "Confirmar",
     "processing": "Procesando..."
+  },
+  "reindexSongsModal": {
+    "title": "Reindexar carpeta",
+    "song": "Reindexar \"{{song}}\"",
+    "remaining": "Quedan {{count}} canción(es)",
+    "openExplorer": "Abrir en el explorador",
+    "reindex": "Reindexar"
   },
   "modal": {
     "close": "Cerrar",

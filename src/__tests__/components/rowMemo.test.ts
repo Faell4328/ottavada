@@ -49,6 +49,8 @@ function buildSongRowProps(overrides: Partial<SongRowProps> = {}): SongRowProps 
   return {
     song: baseSong,
     isExpanded: true,
+    isSelected: false,
+    onToggleSelect: () => undefined,
     onToggle: () => undefined,
     onToggleFavorite: () => undefined,
     onEdit: () => undefined,

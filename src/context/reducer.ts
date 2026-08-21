@@ -16,6 +16,7 @@ export interface State {
   sidebarView: SidebarView;
   selectedSong: SongListItem | null;
   selectedScore: ScoreListItem | null;
+  selectedSongIds: string[];
   searchQuery: string;
   authorFilters: {
     composer: string;
@@ -56,6 +57,7 @@ export const initialState: State = {
   sidebarView: "all",
   selectedSong: null,
   selectedScore: null,
+  selectedSongIds: [],
   searchQuery: "",
   authorFilters: {
     composer: "all",
@@ -98,6 +100,9 @@ export type Action =
   | { type: "SET_SIDEBAR_VIEW"; payload: SidebarView }
   | { type: "SET_SELECTED_SONG"; payload: SongListItem | null }
   | { type: "SET_SELECTED_SCORE"; payload: ScoreListItem | null }
+  | { type: "TOGGLE_SONG_SELECTION"; payload: string }
+  | { type: "SET_SONG_SELECTION"; payload: string[] }
+  | { type: "CLEAR_SONG_SELECTION" }
   | { type: "SET_SEARCH_QUERY"; payload: string }
   | { type: "SET_AUTHOR_FILTERS"; payload: { composer: string; arranger: string } }
   | { type: "UPDATE_SIDEBAR_CATEGORY_NAME"; payload: { categoryId: string; name: string } }
@@ -165,11 +170,23 @@ export function reducer(state: State, action: Action): State {
         sidebarView: action.payload,
         selectedSong: null,
         selectedScore: null,
+        selectedSongIds: [],
         authorFilters: {
           composer: "all",
           arranger: "all",
         },
       };
+    case "TOGGLE_SONG_SELECTION":
+      return {
+        ...state,
+        selectedSongIds: state.selectedSongIds.includes(action.payload)
+          ? state.selectedSongIds.filter((id) => id !== action.payload)
+          : [...state.selectedSongIds, action.payload],
+      };
+    case "SET_SONG_SELECTION":
+      return { ...state, selectedSongIds: action.payload };
+    case "CLEAR_SONG_SELECTION":
+      return { ...state, selectedSongIds: [] };
     case "SET_SELECTED_SONG":
       return {
         ...state,

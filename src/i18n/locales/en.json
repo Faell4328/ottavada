@@ -40,7 +40,33 @@
     "noSongsHint": "Index a directory to get started",
     "loadingScores": "Loading scores...",
     "songsCount_one": "{{count}} song",
-    "songsCount_other": "{{count}} songs"
+    "songsCount_other": "{{count}} songs",
+    "selectAll": "Select all",
+    "selectedCount_one": "{{count}} selected",
+    "selectedCount_other": "{{count}} selected",
+    "toggleFavorite": "Toggle favorite",
+    "clearSelection": "Clear selection",
+    "bulkEdit": "Edit",
+    "bulkDeleteTitle": "Remove songs",
+    "bulkDeleteMessage_one": "Stop indexing {{count}} selected song?",
+    "bulkDeleteMessage_other": "Stop indexing {{count}} selected songs?",
+    "bulkDeleteWithFilesMessage_one": "Move {{count}} selected song and its files to the trash?",
+    "bulkDeleteWithFilesMessage_other": "Move {{count}} selected songs and their files to the trash?"
+  },
+  "bulkEditSongsModal": {
+    "title": "Edit selected songs",
+    "progress": "Song {{current}} of {{total}}",
+    "titleLabel": "Title",
+    "titlePlaceholder": "Song title",
+    "composerLabel": "Composer",
+    "arrangerLabel": "Arranger",
+    "categoriesLabel": "Categories",
+    "composerPlaceholder": "Composer name",
+    "arrangerPlaceholder": "Arranger name",
+    "titleRequired": "The song title is required.",
+    "saveAndNext": "Save & next",
+    "finish": "Finish",
+    "saveError": "Could not save the changes."
   },
   "topBar": {
     "updateAvailable": "Update available",
@@ -135,6 +161,13 @@
     "cancel": "Cancel",
     "confirm": "Confirm",
     "processing": "Processing..."
+  },
+  "reindexSongsModal": {
+    "title": "Reindex folder",
+    "song": "Reindexing \"{{song}}\"",
+    "remaining": "{{count}} more song(s) left",
+    "openExplorer": "Open in file explorer",
+    "reindex": "Reindex"
   },
   "modal": {
     "close": "Close",

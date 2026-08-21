@@ -40,7 +40,33 @@
     "noSongsHint": "Indizieren Sie einen Ordner, um zu beginnen",
     "loadingScores": "Noten werden geladen...",
     "songsCount_one": "{{count}} Lied",
-    "songsCount_other": "{{count}} Lieder"
+    "songsCount_other": "{{count}} Lieder",
+    "selectAll": "Alle auswählen",
+    "selectedCount_one": "{{count}} ausgewählt",
+    "selectedCount_other": "{{count}} ausgewählt",
+    "toggleFavorite": "Favorit umschalten",
+    "clearSelection": "Auswahl löschen",
+    "bulkEdit": "Bearbeiten",
+    "bulkDeleteTitle": "Lieder entfernen",
+    "bulkDeleteMessage_one": "Indizierung von {{count}} ausgewähltem Lied beenden?",
+    "bulkDeleteMessage_other": "Indizierung von {{count}} ausgewählten Liedern beenden?",
+    "bulkDeleteWithFilesMessage_one": "{{count}} ausgewähltes Lied und seine Dateien in den Papierkorb verschieben?",
+    "bulkDeleteWithFilesMessage_other": "{{count}} ausgewählte Lieder und ihre Dateien in den Papierkorb verschieben?"
+  },
+  "bulkEditSongsModal": {
+    "title": "Ausgewählte Lieder bearbeiten",
+    "progress": "Lied {{current}} von {{total}}",
+    "titleLabel": "Titel",
+    "titlePlaceholder": "Titel des Liedes",
+    "composerLabel": "Komponist",
+    "arrangerLabel": "Arrangeur",
+    "categoriesLabel": "Kategorien",
+    "composerPlaceholder": "Name des Komponisten",
+    "arrangerPlaceholder": "Name des Arrangeurs",
+    "titleRequired": "Der Liedtitel ist erforderlich.",
+    "saveAndNext": "Speichern & weiter",
+    "finish": "Fertig",
+    "saveError": "Die Änderungen konnten nicht gespeichert werden."
   },
   "topBar": {
     "updateAvailable": "Update verfügbar",
@@ -135,6 +161,13 @@
     "cancel": "Abbrechen",
     "confirm": "Bestätigen",
     "processing": "Verarbeitung..."
+  },
+  "reindexSongsModal": {
+    "title": "Ordner neu indizieren",
+    "song": "\"{{song}}\" neu indizieren",
+    "remaining": "{{count}} Lied(er) übrig",
+    "openExplorer": "Im Explorer öffnen",
+    "reindex": "Neu indizieren"
   },
   "modal": {
     "close": "Schließen",

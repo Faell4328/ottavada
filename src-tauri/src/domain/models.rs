@@ -338,11 +338,23 @@ mod rclone_provider_tests {
 
     #[test]
     fn parses_provider_from_stored_strings() {
-        assert_eq!(RcloneProvider::from_str("google_drive"), RcloneProvider::GoogleDrive);
-        assert_eq!(RcloneProvider::from_str("gdrive"), RcloneProvider::GoogleDrive);
+        assert_eq!(
+            RcloneProvider::from_str("google_drive"),
+            RcloneProvider::GoogleDrive
+        );
+        assert_eq!(
+            RcloneProvider::from_str("gdrive"),
+            RcloneProvider::GoogleDrive
+        );
         assert_eq!(RcloneProvider::from_str("dropbox"), RcloneProvider::Dropbox);
-        assert_eq!(RcloneProvider::from_str("onedrive"), RcloneProvider::OneDrive);
-        assert_eq!(RcloneProvider::from_str("one_drive"), RcloneProvider::OneDrive);
+        assert_eq!(
+            RcloneProvider::from_str("onedrive"),
+            RcloneProvider::OneDrive
+        );
+        assert_eq!(
+            RcloneProvider::from_str("one_drive"),
+            RcloneProvider::OneDrive
+        );
         assert_eq!(RcloneProvider::from_str("pcloud"), RcloneProvider::Pcloud);
         assert_eq!(RcloneProvider::from_str("sftp"), RcloneProvider::Sftp);
         assert_eq!(RcloneProvider::from_str("webdav"), RcloneProvider::Webdav);
@@ -452,20 +464,3 @@ pub struct IndexedFile {
     pub extension: String,
     pub status: Option<ScoreStatus>,
 }
-
-// ── REMOVED: Structures for MessagePack export (full database) ──
-//
-// Following the v0.3 documentation update, the strategy changed from:
-// - ❌ Exporting the entire database as ExportDatabase
-// To:
-// - ✅ Exporting only changes as {computerId}.msgpack
-//
-// Removed structures:
-// - ExportChange - Individual change
-// - ExportChangeList - Group of changes
-// - ExportCategory - Category for export
-// - ExportScore - Score for export
-// - ExportSong - Song for export
-// - ExportDatabase - Full database for export
-//
-// TODO: Implement correct structures for {computerId}.msgpack with "events"

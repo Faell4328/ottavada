@@ -40,7 +40,33 @@
     "noSongsHint": "Indexe um diretório para começar",
     "loadingScores": "Carregando partituras...",
     "songsCount_one": "{{count}} música",
-    "songsCount_other": "{{count}} músicas"
+    "songsCount_other": "{{count}} músicas",
+    "selectAll": "Selecionar tudo",
+    "selectedCount_one": "{{count}} selecionada",
+    "selectedCount_other": "{{count}} selecionadas",
+    "toggleFavorite": "Alternar favorito",
+    "clearSelection": "Limpar seleção",
+    "bulkEdit": "Editar",
+    "bulkDeleteTitle": "Remover músicas",
+    "bulkDeleteMessage_one": "Deixar de indexar {{count}} música selecionada?",
+    "bulkDeleteMessage_other": "Deixar de indexar {{count}} músicas selecionadas?",
+    "bulkDeleteWithFilesMessage_one": "Mover {{count}} música selecionada e seus arquivos para a lixeira?",
+    "bulkDeleteWithFilesMessage_other": "Mover {{count}} músicas selecionadas e seus arquivos para a lixeira?"
+  },
+  "bulkEditSongsModal": {
+    "title": "Editar músicas selecionadas",
+    "progress": "Música {{current}} de {{total}}",
+    "titleLabel": "Título",
+    "titlePlaceholder": "Título da música",
+    "composerLabel": "Compositor",
+    "arrangerLabel": "Arranjador",
+    "categoriesLabel": "Categorias",
+    "composerPlaceholder": "Nome do compositor",
+    "arrangerPlaceholder": "Nome do arranjador",
+    "titleRequired": "O título da música é obrigatório.",
+    "saveAndNext": "Salvar e próxima",
+    "finish": "Concluir",
+    "saveError": "Não foi possível salvar as alterações."
   },
   "topBar": {
     "updateAvailable": "Atualização disponível",
@@ -135,6 +161,13 @@
     "cancel": "Cancelar",
     "confirm": "Confirmar",
     "processing": "Processando..."
+  },
+  "reindexSongsModal": {
+    "title": "Reindexar pasta",
+    "song": "Reindexar \"{{song}}\"",
+    "remaining": "Faltam {{count}} música(s)",
+    "openExplorer": "Abrir no explorador",
+    "reindex": "Reindexar"
   },
   "modal": {
     "close": "Fechar",

@@ -414,6 +414,84 @@ export function useAppCrudActions({
     }
   }, [dispatch, getErrorMessage, loadSettings, loadSongs, refreshSelectedSong, state.selectedSong]);
 
+  const toggleSongSelection = useCallback((songId: string) => {
+    dispatch({ type: "TOGGLE_SONG_SELECTION", payload: songId });
+  }, [dispatch]);
+
+  const setSongSelection = useCallback((songIds: string[]) => {
+    dispatch({ type: "SET_SONG_SELECTION", payload: songIds });
+  }, [dispatch]);
+
+  const clearSongSelection = useCallback(() => {
+    dispatch({ type: "CLEAR_SONG_SELECTION" });
+  }, [dispatch]);
+
+  const deleteSongs = useCallback(async (songIds: string[]) => {
+    if (isActionLocked(state, t)) return;
+
+    try {
+      await api.deleteSongs(songIds);
+      dispatch({ type: "CLEAR_SONG_SELECTION" });
+      if (state.selectedSong && songIds.includes(state.selectedSong.id)) {
+        dispatch({ type: "SET_SELECTED_SONG", payload: null });
+      }
+      dispatch({ type: "SET_SELECTED_SCORE", payload: null });
+      await loadSongs();
+      await loadSettings();
+      toast.success(t("crudActions.songDeleted"));
+    } catch (err) {
+      console.error("Failed to delete songs:", err);
+      toast.error(t("crudActions.songDeleteError"));
+      throw err;
+    }
+  }, [dispatch, getErrorMessage, loadSettings, loadSongs, state.selectedSong]);
+
+  const deleteSongsWithFiles = useCallback(async (songIds: string[]) => {
+    if (isActionLocked(state, t)) return;
+
+    try {
+      await api.deleteSongsWithFiles(songIds);
+      dispatch({ type: "CLEAR_SONG_SELECTION" });
+      if (state.selectedSong && songIds.includes(state.selectedSong.id)) {
+        dispatch({ type: "SET_SELECTED_SONG", payload: null });
+      }
+      dispatch({ type: "SET_SELECTED_SCORE", payload: null });
+      await loadSongs();
+      await loadSettings();
+      toast.success(t("crudActions.songDeletedWithFiles"));
+    } catch (err) {
+      console.error("Failed to delete songs with files:", err);
+      toast.error(t("crudActions.songDeleteError"));
+      throw err;
+    }
+  }, [dispatch, getErrorMessage, loadSettings, loadSongs, state.selectedSong]);
+
+  const updateSongsStatus = useCallback(async (songIds: string[], status: "main" | "draft") => {
+    if (isActionLocked(state, t)) return;
+
+    try {
+      await api.updateSongsStatus(songIds, status);
+      dispatch({ type: "CLEAR_SONG_SELECTION" });
+      await Promise.all([loadSongs(), refreshSelectedSong()]);
+      await loadSettings();
+      toast.success(t("crudActions.songStatusUpdated"));
+    } catch (err) {
+      console.error("Failed to update songs status:", err);
+      toast.error(t("crudActions.songStatusError"));
+      throw err;
+    }
+  }, [dispatch, getErrorMessage, loadSettings, loadSongs, refreshSelectedSong]);
+
+  const toggleFavorites = useCallback(async (songIds: string[]) => {
+    try {
+      await api.toggleFavorites(songIds);
+      await loadSongs();
+    } catch (err) {
+      console.error("Failed to toggle favorites:", err);
+      throw err;
+    }
+  }, [loadSongs]);
+
   const saveSettings = useCallback(async (settings: AppSettings) => {
     try {
       await api.saveSettings(settings);
@@ -489,6 +567,13 @@ export function useAppCrudActions({
     deleteScore,
     deleteSong,
     deleteSongWithFiles,
+    toggleSongSelection,
+    setSongSelection,
+    clearSongSelection,
+    deleteSongs,
+    deleteSongsWithFiles,
+    updateSongsStatus,
+    toggleFavorites,
     saveSettings,
     completeFirstRun,
     useScoreAsBase,

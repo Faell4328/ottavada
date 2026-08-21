@@ -8,6 +8,7 @@ import React, {
   useTransition,
 } from "react";
 import { Search, FileMusic } from "lucide-react";
+import { open } from "@tauri-apps/plugin-dialog";
 import toast from "../utils/toast";
 import { useTranslation } from "react-i18next";
 
@@ -15,11 +16,15 @@ import * as api from "../api/commands";
 import { useAppState } from "../context/AppContext";
 import { compareInstrumentNames } from "../utils/instrumentOrder";
 import { getSidebarViewLabel } from "../utils/sidebarView";
+import { isClientComputer } from "../utils/computer";
 import { normalizeSearchText, songMatchesAuthorFilter, songMatchesSearchQuery } from "../utils/songSearch";
 import type { ScoreListItem, SongListItem } from "../types";
 import { EditMusicModal } from "./EditMusicModal";
 import { EditScoreModal } from "./EditScoreModal";
 import { UseAsBaseScoreModal } from "./UseAsBaseScoreModal";
+import { BulkEditSongsModal } from "./BulkEditSongsModal";
+import { ReindexSongsModal } from "./ReindexSongsModal";
+import { ConfirmationModal } from "./ui/ConfirmationModal";
 import { MemoizedScoreRow } from "./ScoreRow";
 import { MemoizedSongRow } from "./SongRow";
 
@@ -39,6 +44,13 @@ export default function SongsList() {
     deleteScore,
     deleteSong,
     deleteSongWithFiles,
+    toggleSongSelection,
+    setSongSelection,
+    clearSongSelection,
+    deleteSongs,
+    deleteSongsWithFiles,
+    updateSongsStatus,
+    toggleFavorites,
     useScoreAsBase,
   } = useAppState();
 
@@ -51,6 +63,13 @@ export default function SongsList() {
   const [baseScore, setBaseScore] = useState<ScoreListItem | null>(null);
   const [isUseAsBaseModalOpen, setIsUseAsBaseModalOpen] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [bulkDeleteAction, setBulkDeleteAction] = useState<
+    "stopIndexing" | "moveToTrash" | null
+  >(null);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [isBulkEditOpen, setIsBulkEditOpen] = useState(false);
+  const [reindexQueue, setReindexQueue] = useState<SongListItem[]>([]);
+  const [reindexIndex, setReindexIndex] = useState(0);
   const [scoresBySongId, setScoresBySongId] = useState<Record<string, ScoreListItem[]>>({});
   const [loadingScoresBySongId, setLoadingScoresBySongId] = useState<Record<string, boolean>>({});
   const [isSearchPending, startSearchTransition] = useTransition();
@@ -165,6 +184,108 @@ export default function SongsList() {
     setScoresBySongId({});
     setLoadingScoresBySongId({});
   }, [sortScoresForDisplay, state.selectedSong]);
+
+  const selectedSongIds = state.selectedSongIds;
+  const visibleSongIds = displayedSongs.map((song) => song.id);
+  const selectedSongs = state.songs.filter((song) =>
+    selectedSongIds.includes(song.id)
+  );
+  const allSelectedNotFound =
+    selectedSongs.length > 0 && selectedSongs.every((song) => song.status === "not_found");
+  const hasSelectedNotFound =
+    selectedSongs.length > 0 &&
+    selectedSongs.some((song) => song.status === "not_found");
+  const isMixedSelection = hasSelectedNotFound && !allSelectedNotFound;
+  const allVisibleSelected =
+    visibleSongIds.length > 0 &&
+    visibleSongIds.every((id) => selectedSongIds.includes(id));
+
+  const handleToggleSelectAll = () => {
+    if (allVisibleSelected) {
+      setSongSelection(
+        selectedSongIds.filter((id) => !visibleSongIds.includes(id))
+      );
+    } else {
+      const merged = new Set([...selectedSongIds, ...visibleSongIds]);
+      setSongSelection([...merged]);
+    }
+  };
+
+  const handleBulkDelete = (withFiles: boolean) => {
+    setBulkDeleteAction(withFiles ? "moveToTrash" : "stopIndexing");
+  };
+
+  const handleBulkReindex = () => {
+    const notFoundSongs = selectedSongs.filter((song) => song.status === "not_found");
+    if (notFoundSongs.length === 0) return;
+    setReindexQueue(notFoundSongs);
+    setReindexIndex(0);
+  };
+
+  const closeReindexModal = () => {
+    setReindexQueue([]);
+    setReindexIndex(0);
+  };
+
+  const handleOpenReindexExplorer = () => {
+    const song = reindexQueue[reindexIndex];
+    if (song) void api.openFileLocation(song.path);
+  };
+
+  const handleReindexConfirm = async () => {
+    const song = reindexQueue[reindexIndex];
+    if (!song) return;
+    const selected = await open({ directory: true, multiple: false });
+    if (typeof selected !== "string" || !selected) {
+      return;
+    }
+    await api.reindexSongDirectory(song.id, selected);
+    if (reindexIndex + 1 >= reindexQueue.length) {
+      closeReindexModal();
+      await loadSongs();
+      await refreshSelectedSong();
+    } else {
+      setReindexIndex(reindexIndex + 1);
+    }
+  };
+
+  const confirmBulkDelete = async () => {
+    setIsBulkDeleting(true);
+    try {
+      if (bulkDeleteAction === "moveToTrash") {
+        await deleteSongsWithFiles(selectedSongIds);
+      } else if (bulkDeleteAction === "stopIndexing") {
+        await deleteSongs(selectedSongIds);
+      }
+    } finally {
+      setIsBulkDeleting(false);
+      setBulkDeleteAction(null);
+    }
+  };
+
+  const handleBulkStatusChange = (status: "main" | "draft") => {
+    void updateSongsStatus(selectedSongIds, status);
+  };
+
+  const handleBulkToggleFavorite = () => {
+    void toggleFavorites(selectedSongIds);
+  };
+
+  const handleBulkEditSave = async (data: {
+    songId: string;
+    title: string;
+    composer: string | null;
+    arranger: string | null;
+    categoryIds: string[];
+  }) => {
+    await updateSong(
+      data.songId,
+      data.title,
+      data.composer,
+      data.arranger,
+      data.categoryIds
+    );
+  };
 
   const handleSaveMusic = async (data: {
     songId: string;
@@ -287,12 +408,102 @@ export default function SongsList() {
         </div>
       </div>
 
+      {selectedSongIds.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5 rounded border border-[#bcd0ec] bg-[#eaf1fb] px-2.5 py-2">
+          <span className="mr-1 text-xs font-bold text-[#2f4259]">
+            {t("songsList.selectedCount", { count: selectedSongIds.length })}
+          </span>
+          {!isClientComputer(state.settings?.computer_type) &&
+            (allSelectedNotFound ? (
+              <>
+                <button
+                  onClick={() => handleBulkDelete(false)}
+                  disabled={isSyncLocked}
+                  className="rounded border border-[#c5cfdb] bg-white px-2.5 py-1 text-xs font-medium text-[#344b61] transition-colors hover:bg-[#eef2f6] disabled:opacity-40"
+                >
+                  {t("songRow.stopIndexing")}
+                </button>
+                <button
+                  onClick={handleBulkReindex}
+                  disabled={isSyncLocked}
+                  className="rounded border border-[#c5cfdb] bg-white px-2.5 py-1 text-xs font-medium text-[#344b61] transition-colors hover:bg-[#eef2f6] disabled:opacity-40"
+                >
+                  {t("songRow.reindexDirectory")}
+                </button>
+              </>
+            ) : isMixedSelection ? null : (
+              <>
+                <button
+                  onClick={() => handleBulkStatusChange("main")}
+                  disabled={isSyncLocked}
+                  className="rounded border border-[#c5cfdb] bg-white px-2.5 py-1 text-xs font-medium text-[#344b61] transition-colors hover:bg-[#eef2f6] disabled:opacity-40"
+                >
+                  {t("songRow.allowSend")}
+                </button>
+                <button
+                  onClick={() => handleBulkStatusChange("draft")}
+                  disabled={isSyncLocked}
+                  className="rounded border border-[#c5cfdb] bg-white px-2.5 py-1 text-xs font-medium text-[#344b61] transition-colors hover:bg-[#eef2f6] disabled:opacity-40"
+                >
+                  {t("songRow.disallowSend")}
+                </button>
+                <button
+                  onClick={handleBulkToggleFavorite}
+                  disabled={isSyncLocked}
+                  className="rounded border border-[#c5cfdb] bg-white px-2.5 py-1 text-xs font-medium text-[#344b61] transition-colors hover:bg-[#eef2f6] disabled:opacity-40"
+                >
+                  {t("songsList.toggleFavorite")}
+                </button>
+                <button
+                  onClick={() => setIsBulkEditOpen(true)}
+                  disabled={isSyncLocked}
+                  className="rounded border border-[#c5cfdb] bg-white px-2.5 py-1 text-xs font-medium text-[#344b61] transition-colors hover:bg-[#eef2f6] disabled:opacity-40"
+                >
+                  {t("songsList.bulkEdit")}
+                </button>
+                <button
+                  onClick={() => handleBulkDelete(false)}
+                  disabled={isSyncLocked}
+                  className="rounded border border-[#c5cfdb] bg-white px-2.5 py-1 text-xs font-medium text-[#344b61] transition-colors hover:bg-[#eef2f6] disabled:opacity-40"
+                >
+                  {t("songRow.stopIndexing")}
+                </button>
+                <button
+                  onClick={() => handleBulkDelete(true)}
+                  disabled={isSyncLocked}
+                  className="rounded bg-[#c04b4b] px-2.5 py-1 text-xs font-medium text-white transition-colors hover:bg-[#a93b3b] disabled:opacity-40"
+                >
+                  {t("songRow.moveToTrash")}
+                </button>
+              </>
+            ))}
+          <button
+            onClick={clearSongSelection}
+            className="rounded border border-[#c5cfdb] bg-white px-2.5 py-1 text-xs font-medium text-[#344b61] transition-colors hover:bg-[#eef2f6]"
+          >
+            {t("songsList.clearSelection")}
+          </button>
+        </div>
+      )}
+
       <div className="overflow-hidden rounded border border-[#c8d1dc] bg-[#f8fafd] flex-1 flex flex-col">
         <div className="overflow-y-auto flex-1 scroll-smooth">
           <table className="w-full border-collapse">
             <thead>
               <tr className="border-b border-[#ced7e3] bg-[#eef2f6] text-xs font-bold text-[#34485d] sticky top-0">
-                <th className="text-left px-3.5 py-2.5 font-bold">{t("songsList.headerTitle")}</th>
+                <th className="text-left px-3.5 py-2.5 font-bold">
+                  <span className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={allVisibleSelected}
+                      onChange={handleToggleSelectAll}
+                      disabled={visibleSongIds.length === 0 || isSyncLocked}
+                      className="h-4 w-4 cursor-pointer accent-[#4f84d7] disabled:opacity-40"
+                      aria-label={t("songsList.selectAll")}
+                    />
+                    {t("songsList.headerTitle")}
+                  </span>
+                </th>
                 <th className="text-left px-3.5 py-2.5 font-bold">{t("songsList.headerAuthor")}</th>
                 <th className="text-left px-3.5 py-2.5 font-bold">{t("songsList.headerCategory")}</th>
                 <th className="text-left px-3.5 py-2.5 font-bold"></th>
@@ -323,6 +534,8 @@ export default function SongsList() {
                       <MemoizedSongRow
                         song={song}
                         isExpanded={state.selectedSong?.id === song.id}
+                        isSelected={selectedSongIds.includes(song.id)}
+                        onToggleSelect={() => toggleSongSelection(song.id)}
                         onToggle={() => {
                           void handleToggleSong(song);
                         }}
@@ -438,6 +651,45 @@ export default function SongsList() {
             console.error("Failed to use score as base:", err);
             toast.error(err instanceof Error ? err.message : t("useAsBaseScoreModal.saveError"));
             throw err;
+          }
+        }}
+      />
+
+      <BulkEditSongsModal
+        isOpen={isBulkEditOpen}
+        songs={selectedSongs}
+        onClose={() => setIsBulkEditOpen(false)}
+        onSave={handleBulkEditSave}
+      />
+
+      <ReindexSongsModal
+        isOpen={reindexQueue.length > 0}
+        song={reindexQueue[reindexIndex] ?? null}
+        remainingCount={reindexQueue.length - reindexIndex}
+        onOpenExplorer={handleOpenReindexExplorer}
+        onConfirm={() => void handleReindexConfirm()}
+        onCancel={closeReindexModal}
+      />
+
+      <ConfirmationModal
+        isOpen={bulkDeleteAction !== null}
+        title={t("songsList.bulkDeleteTitle")}
+        message={
+          bulkDeleteAction === "moveToTrash"
+            ? t("songsList.bulkDeleteWithFilesMessage", {
+                count: selectedSongIds.length,
+              })
+            : t("songsList.bulkDeleteMessage", {
+                count: selectedSongIds.length,
+              })
+        }
+        isLoading={isBulkDeleting}
+        onConfirm={() => {
+          void confirmBulkDelete();
+        }}
+        onCancel={() => {
+          if (!isBulkDeleting) {
+            setBulkDeleteAction(null);
           }
         }}
       />

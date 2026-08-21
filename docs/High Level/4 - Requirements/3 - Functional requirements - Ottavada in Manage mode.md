@@ -93,6 +93,35 @@ The user must be able to:
 - **re-index song**, changing the path and folder name referring to that song;
 - **stop indexing folder**, removes the song from Ottavada.
 
+## 2.3. Selecting multiple songs
+
+The user must be able to select more than one song at a time through a checkbox in each row. When at least one song is selected, a bulk actions bar must be shown with a counter of selected songs and a **clear selection** action.
+
+The available bulk actions depend on the status of the selected songs:
+
+- **All selected songs have "send allowed" (`main`) or "send not allowed" (`draft`) status** — the full options must be shown:
+  - **allow sending** (`main`), applies the status to all selected songs;
+  - **disallow sending** (`draft`), applies the status to all selected songs;
+  - **add/remove from favorites**;
+  - **edit**, opens a modal that edits the selected songs one at a time, pre-filled with the current data, advancing to the next with **save & next**;
+  - **stop indexing folder**, removes the songs from Ottavada;
+  - **move folder and files to trash**;
+  - **clear selection**.
+- **All selected songs have "no score" (`not_found`) status** — only these options must be shown:
+  - **stop indexing folder**, removes the songs from Ottavada;
+  - **re-index folder**;
+  - **clear selection**.
+- **Mixed selection** (songs with and without scores together) — only **clear selection** must be shown; no bulk action is available.
+
+### 2.3.1. Re-index confirmation modal
+
+When re-indexing (individually or in bulk), a modal must be shown naming the song that is about to be re-indexed, so the user knows which folder they are working on:
+
+- a button to **open in file explorer**, which opens the indexed folder of the current song;
+- a **re-index** button, which opens the folder picker for that song and, after confirming, advances to the next selected song;
+- a **cancel** button;
+- when there is more than one song left, the modal must show how many remain.
+
 ---
 
 # 3. Scores

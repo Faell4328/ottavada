@@ -346,6 +346,10 @@ pub fn run() {
             commands::song_commands::delete_file_path,
             commands::song_commands::delete_song,
             commands::song_commands::delete_song_with_files,
+            commands::song_commands::delete_songs,
+            commands::song_commands::delete_songs_with_files,
+            commands::song_commands::update_songs_status,
+            commands::song_commands::toggle_favorites,
             commands::song_commands::find_song_by_directory,
             // Scores
             commands::score_commands::update_score,

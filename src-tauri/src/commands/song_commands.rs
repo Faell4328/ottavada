@@ -833,6 +833,114 @@ pub fn delete_song_with_files(
     Ok(())
 }
 
+fn delete_songs_core(
+    db: &Database,
+    store: &SystemStore,
+    song_ids: &[String],
+) -> Result<(), AppError> {
+    for song_id in song_ids {
+        delete_song_core(db, store, song_id)?;
+    }
+    Ok(())
+}
+
+fn delete_songs_with_files_core(
+    db: &Database,
+    store: &SystemStore,
+    song_ids: &[String],
+) -> Result<(), AppError> {
+    for song_id in song_ids {
+        delete_song_with_files_core(db, store, song_id)?;
+    }
+    Ok(())
+}
+
+fn update_songs_status_core(
+    db: &Database,
+    store: &SystemStore,
+    song_ids: &[String],
+    status: ScoreStatus,
+) -> Result<(), AppError> {
+    let settings = store.get_app_settings()?;
+    for song_id in song_ids {
+        db.update_song_status_for_song(song_id, status.clone(), &settings.computer_id)?;
+    }
+    Ok(())
+}
+
+fn toggle_favorites_core(
+    db: &Database,
+    song_ids: &[String],
+) -> Result<(), AppError> {
+    for song_id in song_ids {
+        db.toggle_favorite(song_id)?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn delete_songs(
+    db: State<'_, Database>,
+    store: State<'_, SystemStore>,
+    song_ids: Vec<String>,
+) -> Result<(), AppError> {
+    require_server_settings(&store)?;
+
+    info!("Deleting songs: {}", song_ids.len());
+
+    delete_songs_core(&db, &store, &song_ids)?;
+
+    info!("Songs deleted successfully: {}", song_ids.len());
+    Ok(())
+}
+
+#[tauri::command]
+pub fn delete_songs_with_files(
+    db: State<'_, Database>,
+    store: State<'_, SystemStore>,
+    song_ids: Vec<String>,
+) -> Result<(), AppError> {
+    require_server_settings(&store)?;
+
+    info!("Deleting song directories: {}", song_ids.len());
+
+    delete_songs_with_files_core(&db, &store, &song_ids)?;
+
+    info!("Song directories deleted successfully: {}", song_ids.len());
+    Ok(())
+}
+
+#[tauri::command]
+pub fn update_songs_status(
+    db: State<'_, Database>,
+    store: State<'_, SystemStore>,
+    song_ids: Vec<String>,
+    status: String,
+) -> Result<(), AppError> {
+    let settings = require_server_settings(&store)?;
+    let next_status = resolve_manual_song_status(&status)?;
+
+    info!("Updating status of {} songs to: {}", song_ids.len(), status);
+
+    update_songs_status_core(&db, &store, &song_ids, next_status)?;
+    let _ = refresh_library_summary_cache(&db, &store);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn toggle_favorites(
+    db: State<'_, Database>,
+    store: State<'_, SystemStore>,
+    song_ids: Vec<String>,
+) -> Result<(), AppError> {
+    require_server_settings(&store)?;
+
+    info!("Toggling favorite for songs: {}", song_ids.len());
+
+    toggle_favorites_core(&db, &song_ids)?;
+    Ok(())
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct SongDirectoryInfo {
     pub name: String,
@@ -861,7 +969,11 @@ mod tests {
 
     use tempfile::tempdir;
 
-    use super::{delete_song_core, delete_song_with_files_core, import_files_core};
+    use super::{
+        delete_song_core, delete_song_with_files_core, delete_songs_core,
+        delete_songs_with_files_core, import_files_core, toggle_favorites_core,
+        update_songs_status_core,
+    };
     use crate::domain::models::{AppSettings, ComputerType, IndexedFile, ScoreStatus};
     use crate::infrastructure::database::Database;
     use crate::infrastructure::store::SystemStore;
@@ -1092,5 +1204,159 @@ mod tests {
 
         assert!(song_dir.exists());
         assert!(db.get_song_by_id("song-2").is_err());
+    }
+
+    fn insert_test_song(
+        db: &Database,
+        id: &str,
+        name: &str,
+        path: &std::path::Path,
+        status: ScoreStatus,
+    ) {
+        db.insert_song(
+            &crate::domain::models::Song {
+                id: id.to_string(),
+                name: name.to_string(),
+                composer: None,
+                arranger: None,
+                path: path.to_string_lossy().to_string(),
+                is_favorite: false,
+                status,
+                updated_at: chrono::Local::now().naive_local(),
+                updated_by: "server-1".to_string(),
+            },
+            &[],
+        )
+        .expect("insert song");
+    }
+
+    #[test]
+    fn deleting_multiple_songs_removes_them_all() {
+        let dir = tempdir().expect("temp dir");
+        let db = Database::new(&dir.path().join("songs.db")).expect("db");
+        let store = SystemStore::new(dir.path().to_path_buf());
+
+        store
+            .save_app_settings(&AppSettings {
+                computer_id: "server-1".to_string(),
+                computer_name: Some("Server".to_string()),
+                computer_type: ComputerType::Server,
+                first_run_completed: true,
+                ..Default::default()
+            })
+            .expect("save settings");
+
+        for i in 1..=3 {
+            let song_dir = dir.path().join("repertoire").join(format!("song-{}", i));
+            fs::create_dir_all(&song_dir).expect("create song dir");
+            insert_test_song(&db, &format!("song-{}", i), &format!("CANON {}", i), &song_dir, ScoreStatus::Main);
+        }
+
+        delete_songs_core(&db, &store, &["song-1".to_string(), "song-2".to_string()])
+            .expect("delete songs");
+
+        assert!(db.get_song_by_id("song-1").is_err());
+        assert!(db.get_song_by_id("song-2").is_err());
+        assert!(db.get_song_by_id("song-3").is_ok());
+    }
+
+    #[test]
+    fn deleting_multiple_songs_with_files_removes_the_directories() {
+        let dir = tempdir().expect("temp dir");
+        let db = Database::new(&dir.path().join("songs.db")).expect("db");
+        let store = SystemStore::new(dir.path().to_path_buf());
+
+        store
+            .save_app_settings(&AppSettings {
+                computer_id: "server-1".to_string(),
+                computer_name: Some("Server".to_string()),
+                computer_type: ComputerType::Server,
+                first_run_completed: true,
+                ..Default::default()
+            })
+            .expect("save settings");
+
+        for i in 1..=3 {
+            let song_dir = dir.path().join("repertoire").join(format!("song-{}", i));
+            fs::create_dir_all(&song_dir).expect("create song dir");
+            fs::write(song_dir.join("score.musx"), b"score").expect("write score");
+            insert_test_song(&db, &format!("song-{}", i), &format!("CANON {}", i), &song_dir, ScoreStatus::Main);
+        }
+
+        delete_songs_with_files_core(
+            &db,
+            &store,
+            &["song-1".to_string(), "song-2".to_string()],
+        )
+        .expect("delete songs with files");
+
+        assert!(db.get_song_by_id("song-1").is_err());
+        assert!(db.get_song_by_id("song-2").is_err());
+        assert!(db.get_song_by_id("song-3").is_ok());
+    }
+
+    #[test]
+    fn updating_status_of_multiple_songs_changes_all_of_them() {
+        let dir = tempdir().expect("temp dir");
+        let db = Database::new(&dir.path().join("songs.db")).expect("db");
+        let store = SystemStore::new(dir.path().to_path_buf());
+
+        store
+            .save_app_settings(&AppSettings {
+                computer_id: "server-1".to_string(),
+                computer_name: Some("Server".to_string()),
+                computer_type: ComputerType::Server,
+                first_run_completed: true,
+                ..Default::default()
+            })
+            .expect("save settings");
+
+        for i in 1..=3 {
+            let song_dir = dir.path().join("repertoire").join(format!("song-{}", i));
+            fs::create_dir_all(&song_dir).expect("create song dir");
+            insert_test_song(&db, &format!("song-{}", i), &format!("CANON {}", i), &song_dir, ScoreStatus::Main);
+        }
+
+        update_songs_status_core(
+            &db,
+            &store,
+            &["song-1".to_string(), "song-3".to_string()],
+            ScoreStatus::Draft,
+        )
+        .expect("update songs status");
+
+        assert_eq!(db.get_song_by_id("song-1").expect("song-1").status, ScoreStatus::Draft);
+        assert_eq!(db.get_song_by_id("song-2").expect("song-2").status, ScoreStatus::Main);
+        assert_eq!(db.get_song_by_id("song-3").expect("song-3").status, ScoreStatus::Draft);
+    }
+
+    #[test]
+    fn toggling_favorite_of_multiple_songs_updates_all_of_them() {
+        let dir = tempdir().expect("temp dir");
+        let db = Database::new(&dir.path().join("songs.db")).expect("db");
+        let store = SystemStore::new(dir.path().to_path_buf());
+
+        store
+            .save_app_settings(&AppSettings {
+                computer_id: "server-1".to_string(),
+                computer_name: Some("Server".to_string()),
+                computer_type: ComputerType::Server,
+                first_run_completed: true,
+                ..Default::default()
+            })
+            .expect("save settings");
+
+        for i in 1..=3 {
+            let song_dir = dir.path().join("repertoire").join(format!("song-{}", i));
+            fs::create_dir_all(&song_dir).expect("create song dir");
+            insert_test_song(&db, &format!("song-{}", i), &format!("CANON {}", i), &song_dir, ScoreStatus::Main);
+        }
+
+        toggle_favorites_core(&db, &["song-1".to_string(), "song-3".to_string()])
+            .expect("toggle favorites");
+
+        assert!(db.get_song_by_id("song-1").expect("song-1").is_favorite);
+        assert!(!db.get_song_by_id("song-2").expect("song-2").is_favorite);
+        assert!(db.get_song_by_id("song-3").expect("song-3").is_favorite);
     }
 }

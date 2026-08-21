@@ -205,6 +205,25 @@ export async function deleteSongWithFiles(songId: string): Promise<void> {
   return invoke("delete_song_with_files", { songId });
 }
 
+export async function deleteSongs(songIds: string[]): Promise<void> {
+  return invoke("delete_songs", { songIds });
+}
+
+export async function deleteSongsWithFiles(songIds: string[]): Promise<void> {
+  return invoke("delete_songs_with_files", { songIds });
+}
+
+export async function updateSongsStatus(
+  songIds: string[],
+  status: "main" | "draft"
+): Promise<void> {
+  return invoke("update_songs_status", { songIds, status });
+}
+
+export async function toggleFavorites(songIds: string[]): Promise<void> {
+  return invoke("toggle_favorites", { songIds });
+}
+
 export async function getScoresForSong(songId: string): Promise<ScoreListItem[]> {
   return invoke("get_scores_for_song", { songId });
 }
