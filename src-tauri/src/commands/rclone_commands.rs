@@ -158,10 +158,7 @@ fn terminate_process_pid(pid: u32) -> Result<(), AppError> {
     }
 
     let stderr = String::from_utf8_lossy(&output.stderr).to_lowercase();
-    if stderr.contains("not found")
-        || stderr.contains("not found")
-        || stderr.contains("not found")
-    {
+    if stderr.contains("not found") {
         return Ok(());
     }
 
@@ -230,10 +227,7 @@ fn run_rclone_once_impl(
 
     let child = cmd.spawn().map_err(|e| {
         error!("Error running rclone [{}]: {:?}", operation_label, e);
-        AppError::Generic(format!(
-            "Error running rclone ({}): {}",
-            operation_label, e
-        ))
+        AppError::Generic(format!("Error running rclone ({}): {}", operation_label, e))
     })?;
 
     let pid = child.id();
@@ -313,9 +307,7 @@ fn write_rclone_config(setup: &RcloneSetupRequest) -> Result<(), AppError> {
                 .as_ref()
                 .map(|value| value.trim())
                 .filter(|value| !value.is_empty())
-                .ok_or_else(|| {
-                    AppError::Generic("Enter the Koofr app password".to_string())
-                })?;
+                .ok_or_else(|| AppError::Generic("Enter the Koofr app password".to_string()))?;
 
             let password_arg = format!("password={}", app_password);
             let user_arg = format!("user={}", email);
@@ -461,8 +453,12 @@ fn write_rclone_config(setup: &RcloneSetupRequest) -> Result<(), AppError> {
         }
     }
 
-    let current_config = std::fs::read_to_string(&config_path)
-        .map_err(|e| AppError::Generic(format!("Failed to validate the generated rclone.conf: {}", e)))?;
+    let current_config = std::fs::read_to_string(&config_path).map_err(|e| {
+        AppError::Generic(format!(
+            "Failed to validate the generated rclone.conf: {}",
+            e
+        ))
+    })?;
 
     if current_config.trim().is_empty() {
         return Err(AppError::Generic(
@@ -524,10 +520,7 @@ pub fn terminate_stale_rclone_rc_processes() {
                 }
             }
             Err(err) => {
-                warn!(
-                    "Failed to run taskkill to clean up orphan rclone: {}",
-                    err
-                );
+                warn!("Failed to run taskkill to clean up orphan rclone: {}", err);
             }
         }
     }
@@ -875,14 +868,10 @@ fn fetch_rclone_rc_stats() -> Result<Option<RcloneRcStats>, AppError> {
 
     stream
         .set_read_timeout(Some(Duration::from_millis(RCLONE_RC_TIMEOUT_MS)))
-        .map_err(|e| {
-            AppError::Generic(format!("Error configuring RC read timeout: {}", e))
-        })?;
+        .map_err(|e| AppError::Generic(format!("Error configuring RC read timeout: {}", e)))?;
     stream
         .set_write_timeout(Some(Duration::from_millis(RCLONE_RC_TIMEOUT_MS)))
-        .map_err(|e| {
-            AppError::Generic(format!("Error configuring RC write timeout: {}", e))
-        })?;
+        .map_err(|e| AppError::Generic(format!("Error configuring RC write timeout: {}", e)))?;
 
     let request = concat!(
         "POST /core/stats HTTP/1.1\r\n",
@@ -921,14 +910,10 @@ fn reset_rclone_rc_stats() -> Result<(), AppError> {
 
     stream
         .set_read_timeout(Some(Duration::from_millis(RCLONE_RC_TIMEOUT_MS)))
-        .map_err(|e| {
-            AppError::Generic(format!("Error configuring RC read timeout: {}", e))
-        })?;
+        .map_err(|e| AppError::Generic(format!("Error configuring RC read timeout: {}", e)))?;
     stream
         .set_write_timeout(Some(Duration::from_millis(RCLONE_RC_TIMEOUT_MS)))
-        .map_err(|e| {
-            AppError::Generic(format!("Error configuring RC write timeout: {}", e))
-        })?;
+        .map_err(|e| AppError::Generic(format!("Error configuring RC write timeout: {}", e)))?;
 
     let request = concat!(
         "POST /core/stats-reset HTTP/1.1\r\n",
@@ -1268,10 +1253,10 @@ pub fn upload_cloud_paths_with_rclone_impl(
                     let relative_entry =
                         entry_path.strip_prefix(&cloud_local_dir).map_err(|e| {
                             AppError::Generic(format!(
-                            "Error computing relative path '{}' for incremental upload: {}",
-                            entry_path.display(),
-                            e
-                        ))
+                                "Error computing relative path '{}' for incremental upload: {}",
+                                entry_path.display(),
+                                e
+                            ))
                         })?;
 
                     let normalized_entry = relative_entry.to_string_lossy().replace('\\', "/");
@@ -1537,10 +1522,7 @@ fn test_rclone_upload_impl(
     store: &SystemStore,
     provider: &crate::domain::models::RcloneProvider,
 ) -> Result<(), AppError> {
-    info!(
-        "Starting rclone upload test: provider={:?}",
-        provider
-    );
+    info!("Starting rclone upload test: provider={:?}", provider);
 
     // Create test directory if it does not exist
     let cloud_dir = ensure_cloud_dir(store.app_data_dir())?;
@@ -1581,10 +1563,7 @@ fn test_rclone_upload_impl(
         // Try to remove the test file even after failure
         let _ = std::fs::remove_file(&test_file_path);
 
-        return Err(AppError::Generic(format!(
-            "Failed upload test: {}",
-            stderr
-        )));
+        return Err(AppError::Generic(format!("Failed upload test: {}", stderr)));
     }
 
     info!("✓ Test upload completed successfully");

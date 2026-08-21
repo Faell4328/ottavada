@@ -458,7 +458,7 @@ pub fn open_file_path(file_path: String) -> Result<(), AppError> {
 }
 
 #[tauri::command]
-pub fn open_file_location(db: State<'_, Database>, file_path: String) -> Result<(), AppError> {
+pub fn open_file_location(file_path: String) -> Result<(), AppError> {
     let expanded = from_storage_path(&file_path);
     let path = Path::new(&expanded);
     if path.exists() && path.is_dir() {
@@ -470,11 +470,10 @@ pub fn open_file_location(db: State<'_, Database>, file_path: String) -> Result<
         return open_file_location_on_system(&expanded);
     }
 
-    let resolved_path = db.get_score_file_path(&file_path)?;
-    let expanded_resolved = from_storage_path(&resolved_path);
-    let resolved = Path::new(&expanded_resolved);
-    ensure_supported_score_file(resolved)?;
-    open_file_location_on_system(&expanded_resolved)
+    Err(AppError::Generic(format!(
+        "File location not found for path '{}'",
+        file_path
+    )))
 }
 
 #[tauri::command]
@@ -1075,17 +1074,6 @@ mod tests {
             &[],
         )
         .expect("insert song");
-
-        db.insert_score(&Score {
-            id: "score-1".to_string(),
-            song_id: "song-1".to_string(),
-            name: Some("Flauta".to_string()),
-            file_path: "/missing/path".to_string(),
-            file_name: "flauta.musx".to_string(),
-            file_size: 10,
-            file_modified_at: chrono::Utc::now().naive_utc(),
-            status: ScoreStatus::Main,
-        });
 
         let err = resolve_openable_score_path(&db, "score-1").expect_err("missing file");
 
