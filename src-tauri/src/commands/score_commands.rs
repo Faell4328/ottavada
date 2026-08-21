@@ -1,4 +1,3 @@
-use chrono::Local;
 use std::fs::{self, File};
 use std::path::Path;
 use tauri::State;
@@ -15,77 +14,13 @@ use crate::domain::models::*;
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
 use crate::services::backup_draft_ignored_service::remove_backup_file_for_draft_ignored_score;
-use crate::services::indexer::{get_file_metadata, paths_match, split_file_path};
+use crate::services::indexer::{get_file_metadata, split_file_path};
 use crate::services::name_formatter::normalize_optional_score_name;
 use crate::services::path_normalizer::from_storage_path;
-#[cfg(target_os = "windows")]
-use std::os::windows::process::CommandExt;
 
 const VALID_SCORE_EXTENSIONS: [&str; 12] = [
     "pdf", "mus", "musx", "mscx", "mscz", "xml", "musicxml", "sib", "enc", "dorico", "mid", "midi",
 ];
-
-fn score_exists_for_indexed_file(
-    scores: &[ScoreListItem],
-    file: &IndexedFile,
-    treat_empty_instrument_as_duplicate: bool,
-) -> bool {
-    let normalized_instrument = normalize_optional_score_name(file.instrument.as_deref());
-
-    scores
-        .iter()
-        .any(|sc| match (&sc.name, &normalized_instrument) {
-            (Some(existing), Some(indexed)) => existing.eq_ignore_ascii_case(indexed),
-            (None, None) => {
-                treat_empty_instrument_as_duplicate || paths_match(&sc.file_path, &file.path)
-            }
-            _ => false,
-        })
-}
-
-fn find_existing_score_by_file_path<'a>(
-    scores: &'a [ScoreListItem],
-    indexed_file: &IndexedFile,
-) -> Option<&'a ScoreListItem> {
-    scores
-        .iter()
-        .find(|score| paths_match(&score.file_path, &indexed_file.path))
-}
-
-fn build_score_from_indexed_file(
-    song_id: &str,
-    updated_by: &str,
-    file: &IndexedFile,
-) -> Result<Score, AppError> {
-    let normalized_file = IndexedFile {
-        instrument: normalize_optional_score_name(file.instrument.as_deref()),
-        status: file.status.clone(),
-        ..file.clone()
-    };
-
-    let (file_size, file_modified_at) = read_score_file_metadata(Path::new(&file.path))?;
-    let (score_file_path, file_name) = split_file_path(&file.path);
-
-    Ok(Score::new_from_file(
-        song_id.to_string(),
-        &normalized_file,
-        score_file_path,
-        file_name,
-        (file_size, file_modified_at),
-    ))
-}
-
-fn find_score_usage_in_library<'a>(
-    songs: &'a [SongListItem],
-    file: &IndexedFile,
-) -> Option<(&'a SongListItem, &'a ScoreListItem)> {
-    songs.iter().find_map(|song| {
-        song.scores
-            .iter()
-            .find(|score| paths_match(&score.file_path, &file.path))
-            .map(|score| (song, score))
-    })
-}
 
 fn ensure_supported_score_file(path: &Path) -> Result<(), AppError> {
     if !path.exists() || !path.is_file() {
@@ -193,34 +128,6 @@ fn open_path_on_system(file_path: &str) -> Result<(), AppError> {
     Ok(())
 }
 
-fn open_url_on_system(url: &str) -> Result<(), AppError> {
-    #[cfg(target_os = "windows")]
-    {
-        let mut cmd = configure_no_window_command(std::process::Command::new("cmd"));
-        cmd.args(["/C", "start", "", url])
-            .spawn()
-            .map_err(|e| AppError::Generic(format!("Error opening URL: {}", e)))?;
-    }
-
-    #[cfg(target_os = "macos")]
-    {
-        std::process::Command::new("open")
-            .arg(url)
-            .spawn()
-            .map_err(|e| AppError::Generic(format!("Error opening URL: {}", e)))?;
-    }
-
-    #[cfg(target_os = "linux")]
-    {
-        std::process::Command::new("xdg-open")
-            .arg(url)
-            .spawn()
-            .map_err(|e| AppError::Generic(format!("Error opening URL: {}", e)))?;
-    }
-
-    Ok(())
-}
-
 fn open_file_location_on_system(file_path: &str) -> Result<(), AppError> {
     #[cfg(target_os = "windows")]
     {
@@ -282,11 +189,6 @@ fn open_file_location_on_system(file_path: &str) -> Result<(), AppError> {
     }
 
     Ok(())
-}
-
-#[tauri::command]
-pub fn open_tutorial_url() -> Result<(), AppError> {
-    open_url_on_system("https://ottavada.com/docs")
 }
 
 fn extract_score_file_from_archive(
@@ -646,8 +548,6 @@ pub fn use_score_as_base(
     source_score_id: String,
     new_score_name: String,
 ) -> Result<SongListItem, AppError> {
-    let settings = require_server_settings(&store)?;
-
     info!(
         "Using score as base: source_score_id={}, new_score_name={}",
         source_score_id, new_score_name
@@ -715,7 +615,6 @@ pub fn use_score_as_base(
     let (score_file_path, file_name) =
         split_file_path(&new_file_path.to_string_lossy().to_string());
 
-    let now = Local::now().naive_local();
     let new_score = Score {
         id: uuid::Uuid::new_v4().to_string(),
         song_id: song_id.clone(),

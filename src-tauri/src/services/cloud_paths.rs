@@ -4,7 +4,6 @@ use std::path::{Path, PathBuf};
 use crate::domain::errors::AppError;
 
 pub const CLOUD_DIR_NAME: &str = "cloud";
-pub const CLOUD_SYNC_DIR_NAME: &str = "sync";
 pub const CLOUD_ACTIONS_DIR_NAME: &str = "actions";
 pub const CLOUD_BACKUP_DIR_NAME: &str = "backup";
 pub const CLOUD_BACKUP_DRAFT_IGNORED_DIR_NAME: &str = "backup_scores_draft_ignored";
@@ -17,29 +16,12 @@ pub fn ensure_cloud_root_dir(app_data_dir: &Path) -> Result<PathBuf, AppError> {
     Ok(cloud_dir)
 }
 
-pub fn ensure_sync_cloud_dir(app_data_dir: &Path) -> Result<PathBuf, AppError> {
-    let cloud_dir = ensure_cloud_root_dir(app_data_dir)?;
-    let sync_dir = cloud_dir.join(CLOUD_SYNC_DIR_NAME);
-
-    fs::create_dir_all(&sync_dir).map_err(|e| {
-        AppError::Generic(format!(
-            "Error preparing local cloud sync folder: {}",
-            e
-        ))
-    })?;
-
-    Ok(sync_dir)
-}
-
 pub fn ensure_actions_cloud_dir(app_data_dir: &Path) -> Result<PathBuf, AppError> {
     let cloud_dir = ensure_cloud_root_dir(app_data_dir)?;
     let actions_dir = cloud_dir.join(CLOUD_ACTIONS_DIR_NAME);
 
     fs::create_dir_all(&actions_dir).map_err(|e| {
-        AppError::Generic(format!(
-            "Error preparing local cloud actions folder: {}",
-            e
-        ))
+        AppError::Generic(format!("Error preparing local cloud actions folder: {}", e))
     })?;
 
     Ok(actions_dir)
@@ -50,10 +32,7 @@ pub fn ensure_backup_cloud_dir(app_data_dir: &Path) -> Result<PathBuf, AppError>
     let backup_dir = cloud_dir.join(CLOUD_BACKUP_DIR_NAME);
 
     fs::create_dir_all(&backup_dir).map_err(|e| {
-        AppError::Generic(format!(
-            "Error preparing local cloud backup folder: {}",
-            e
-        ))
+        AppError::Generic(format!("Error preparing local cloud backup folder: {}", e))
     })?;
 
     Ok(backup_dir)
@@ -103,19 +82,9 @@ mod tests {
 
     use super::{
         clear_server_apply_in_progress, ensure_actions_cloud_dir, ensure_backup_cloud_dir,
-        ensure_draft_ignored_backup_dir, ensure_sync_cloud_dir, has_server_apply_in_progress,
+        ensure_draft_ignored_backup_dir, has_server_apply_in_progress,
         mark_server_apply_in_progress,
     };
-
-    #[test]
-    fn creates_sync_dir() {
-        let dir = tempdir().expect("temp dir");
-
-        let sync_dir = ensure_sync_cloud_dir(dir.path()).expect("ensure sync dir");
-
-        assert_eq!(sync_dir, dir.path().join("cloud").join("sync"));
-        assert!(sync_dir.exists());
-    }
 
     #[test]
     fn creates_actions_dir() {
@@ -146,9 +115,7 @@ mod tests {
 
         assert_eq!(
             backup_dir,
-            dir.path()
-                .join("cloud")
-                .join("backup_scores_draft_ignored")
+            dir.path().join("cloud").join("backup_scores_draft_ignored")
         );
         assert!(backup_dir.exists());
     }

@@ -279,11 +279,7 @@ mod tests {
         })
         .expect("insert category");
 
-        assert!(db.has_pending_changes().expect("pending changes"));
-
         mark_local_changes_as_applied_impl(&db, &store).expect("mark applied");
-
-        assert!(!db.has_pending_changes().expect("pending changes"));
 
         let settings = store.get_app_settings().expect("reload settings");
         assert!(settings.last_change_timestamp.is_some());

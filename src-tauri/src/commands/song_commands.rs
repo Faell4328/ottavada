@@ -305,8 +305,6 @@ pub fn reindex_song_directory(
         return Err(AppError::InvalidDirectory(normalized_directory));
     }
 
-    let settings = require_server_settings(&store)?;
-    let updated_by = settings.computer_id.clone();
     let song_item = db.get_song_list_item_by_id(&song_id)?;
     let mut song = db.get_song_by_id(&song_id)?;
     let indexed_files = indexer::scan_directory(path);
@@ -373,7 +371,6 @@ pub fn reindex_song_directory(
 fn import_files_core(
     db: &Database,
     store: &SystemStore,
-    computer_id: &str,
     files: &[IndexedFile],
     category_ids: &[String],
     composer: Option<&str>,
@@ -533,11 +530,9 @@ pub fn import_indexed_files(
     files: Vec<IndexedFile>,
     category_ids: Vec<String>,
 ) -> Result<Vec<SongListItem>, AppError> {
-    let settings = require_server_settings(&store)?;
     import_files_core(
         &db,
         &store,
-        &settings.computer_id,
         &files,
         &category_ids,
         None,
@@ -559,7 +554,6 @@ pub fn import_indexed_files_with_metadata(
     composer: Option<String>,
     arranger: Option<String>,
 ) -> Result<ImportIndexedFilesResult, AppError> {
-    let settings = require_server_settings(&store)?;
     info!(
         "Importing indexed files with metadata: files={}, categories={}, composer_set={}, arranger_set={}",
         files.len(),
@@ -571,7 +565,6 @@ pub fn import_indexed_files_with_metadata(
     import_files_core(
         &db,
         &store,
-        &settings.computer_id,
         &files,
         &category_ids,
         composer.as_deref(),
@@ -607,24 +600,6 @@ pub fn get_song_summaries_by_category(
     category_id: String,
 ) -> Result<Vec<SongListItem>, AppError> {
     db.get_song_summaries_by_category(&category_id)
-}
-
-/// Checks if it is a server and validates unique name, returning the computer_id
-fn validate_server_create_song(
-    db: &Database,
-    store: &SystemStore,
-    name: &str,
-    composer: Option<&str>,
-    arranger: Option<&str>,
-) -> Result<String, AppError> {
-    let settings = require_server_settings(store)?;
-
-    let normalized_name = normalized_required_song_name(name)?;
-
-    let all_songs = db.get_all_songs()?;
-    ensure_unique_song_name(&all_songs, &normalized_name, composer, arranger, None)?;
-
-    Ok(settings.computer_id)
 }
 
 fn resolve_manual_song_status(requested_status: &str) -> Result<ScoreStatus, AppError> {
@@ -669,14 +644,6 @@ pub fn create_song_with_metadata(
 ) -> Result<SongListItem, AppError> {
     let normalized_name = normalized_required_song_name(&name)?;
     let normalized_path = normalized_required_song_path(&path)?;
-    let updated_by = validate_server_create_song(
-        &db,
-        &store,
-        &normalized_name,
-        composer.as_deref(),
-        arranger.as_deref(),
-    )?;
-    let now = Local::now().naive_local();
     let song_id = uuid::Uuid::new_v4().to_string();
 
     info!("Creating new song: {}", normalized_name);
@@ -721,9 +688,6 @@ pub fn update_song(
 ) -> Result<SongListItem, AppError> {
     let normalized_name = normalized_required_song_name(&name)?;
 
-    let settings = require_server_settings(&store)?;
-    let updated_by = settings.computer_id.clone();
-
     let all_songs = db.get_all_songs()?;
     ensure_unique_song_name(
         &all_songs,
@@ -735,7 +699,6 @@ pub fn update_song(
 
     info!("Updating song: {} -> {}", song_id, normalized_name);
     let original_song = db.get_song_by_id(&song_id)?;
-    let now = Local::now().naive_local();
 
     let updated_song = Song {
         id: original_song.id.clone(),
@@ -898,7 +861,6 @@ pub fn update_songs_status(
     song_ids: Vec<String>,
     status: String,
 ) -> Result<(), AppError> {
-    let settings = require_server_settings(&store)?;
     let next_status = resolve_manual_song_status(&status)?;
 
     info!("Updating status of {} songs to: {}", song_ids.len(), status);
@@ -988,17 +950,8 @@ mod tests {
             status: None,
         }];
 
-        let result = import_files_core(
-            &db,
-            &store,
-            "server-1",
-            &files,
-            &[],
-            None,
-            None,
-            ScoreStatus::Main,
-        )
-        .expect("import files");
+        let result = import_files_core(&db, &store, &files, &[], None, None, ScoreStatus::Main)
+            .expect("import files");
 
         let song_id = &result.songs[0].id;
         assert!(dir
@@ -1041,7 +994,6 @@ mod tests {
         let result = import_files_core(
             &db,
             &store,
-            "server-1",
             &files,
             &[],
             Some("Neusom"),
@@ -1088,7 +1040,6 @@ mod tests {
         let result = import_files_core(
             &db,
             &store,
-            "server-1",
             &files,
             &[],
             Some("Neusom"),

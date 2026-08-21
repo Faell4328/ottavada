@@ -299,17 +299,6 @@ impl RcloneProvider {
             _ => Self::default(),
         }
     }
-
-    /// Whether the provider is configured through browser (OAuth) authentication.
-    pub fn uses_browser_auth(&self) -> bool {
-        matches!(
-            self,
-            RcloneProvider::GoogleDrive
-                | RcloneProvider::Dropbox
-                | RcloneProvider::OneDrive
-                | RcloneProvider::Pcloud
-        )
-    }
 }
 
 #[cfg(test)]
@@ -351,17 +340,6 @@ mod rclone_provider_tests {
         assert_eq!(RcloneProvider::from_str("webdav"), RcloneProvider::Webdav);
         assert_eq!(RcloneProvider::from_str("koofr"), RcloneProvider::Koofr);
         assert_eq!(RcloneProvider::from_str("unknown"), RcloneProvider::Koofr);
-    }
-
-    #[test]
-    fn detects_browser_auth_providers() {
-        assert!(RcloneProvider::GoogleDrive.uses_browser_auth());
-        assert!(RcloneProvider::Dropbox.uses_browser_auth());
-        assert!(RcloneProvider::OneDrive.uses_browser_auth());
-        assert!(RcloneProvider::Pcloud.uses_browser_auth());
-        assert!(!RcloneProvider::Koofr.uses_browser_auth());
-        assert!(!RcloneProvider::Sftp.uses_browser_auth());
-        assert!(!RcloneProvider::Webdav.uses_browser_auth());
     }
 
     #[test]

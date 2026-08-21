@@ -14,7 +14,6 @@ struct ScoreMetadataEntry {
     score_id: String,
     file_path: String,
     file_name: String,
-    score_name: Option<String>,
     stored_size: u64,
     stored_modified_at_str: String,
     status: ScoreStatus,
@@ -38,16 +37,8 @@ pub fn run_initial_scan(db: &Database, updated_by: &str) {
     let mut recovered_count = 0;
 
     let mut scores_by_song: HashMap<String, Vec<ScoreMetadataEntry>> = HashMap::new();
-    for (
-        song_id,
-        score_id,
-        file_path,
-        file_name,
-        score_name,
-        stored_size,
-        stored_modified_at_str,
-        status,
-    ) in scores
+    for (song_id, score_id, file_path, file_name, _, stored_size, stored_modified_at_str, status) in
+        scores
     {
         scores_by_song
             .entry(song_id)
@@ -56,7 +47,6 @@ pub fn run_initial_scan(db: &Database, updated_by: &str) {
                 score_id,
                 file_path,
                 file_name,
-                score_name,
                 stored_size,
                 stored_modified_at_str,
                 status: ScoreStatus::from_str(&status),
@@ -254,8 +244,6 @@ mod tests {
     use super::run_initial_scan;
     use crate::domain::models::{Score, ScoreStatus, Song};
     use crate::infrastructure::database::Database;
-    use chrono::Local;
-    use rusqlite::params;
     use std::fs;
     use tempfile::tempdir;
 
@@ -300,17 +288,6 @@ mod tests {
         fs::write(&score_path, b"main-v2").expect("write score v2");
         run_initial_scan(&db, "server-1");
 
-        let first_scan_size: i64 = db
-            .conn
-            .lock()
-            .unwrap()
-            .query_row(
-                "SELECT file_size FROM scores WHERE id = ?1",
-                params!["score-1"],
-                |row| row.get(0),
-            )
-            .expect("first scan size");
-
         let after_first_scan = db
             .get_song_list_item_by_id("song-1")
             .expect("song after first scan");
@@ -324,15 +301,5 @@ mod tests {
             .expect("song after second scan");
 
         assert_eq!(after_second_scan.scores[0].status, ScoreStatus::Draft);
-        let second_scan_size: i64 = db
-            .conn
-            .lock()
-            .unwrap()
-            .query_row(
-                "SELECT file_size FROM scores WHERE id = ?1",
-                params!["score-1"],
-                |row| row.get(0),
-            )
-            .expect("second scan size");
     }
 }

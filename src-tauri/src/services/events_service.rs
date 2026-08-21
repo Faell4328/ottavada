@@ -12,7 +12,6 @@ use crate::infrastructure::store::SystemStore;
 use crate::services::cloud_paths::ensure_actions_cloud_dir;
 use crate::services::msgpack_zstd::{
     compress_zstd_with_threads, read_zstd_msgpack, serialize_msgpack_named, write_atomic,
-    ZSTD_LEVEL_BALANCED,
 };
 
 const EVENTS_FILE_NAME: &str = "events.msgpack.zst";
@@ -623,7 +622,7 @@ mod tests {
     use crate::infrastructure::database::Database;
     use crate::infrastructure::store::SystemStore;
     use crate::services::msgpack_zstd::{
-        compress_zstd_with_threads, serialize_msgpack_named, write_atomic, ZSTD_LEVEL_BALANCED,
+        compress_zstd_with_threads, serialize_msgpack_named, write_atomic,
     };
 
     use super::{

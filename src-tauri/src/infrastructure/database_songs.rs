@@ -1060,25 +1060,6 @@ impl Database {
         Ok(deleted)
     }
 
-    pub fn clear_changed_fields_for_entity(
-        &self,
-        entity: &str,
-        entity_id: &str,
-    ) -> Result<usize, AppError> {
-        let conn = self.lock_conn();
-        let deleted = conn.execute(
-            "DELETE FROM changes WHERE entity = ?1 AND entityId = ?2",
-            params![entity, entity_id],
-        )?;
-        Ok(deleted)
-    }
-
-    pub fn has_pending_changes(&self) -> Result<bool, AppError> {
-        let conn = self.lock_conn();
-        let count: i64 = conn.query_row("SELECT COUNT(1) FROM changes", [], |row| row.get(0))?;
-        Ok(count > 0)
-    }
-
     pub fn get_pending_changes_count(&self) -> Result<usize, AppError> {
         let conn = self.lock_conn();
         let count: i64 = conn.query_row("SELECT COUNT(1) FROM changes", [], |row| row.get(0))?;

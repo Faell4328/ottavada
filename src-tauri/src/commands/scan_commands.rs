@@ -120,7 +120,7 @@ fn scan_files_for_changes_impl(
     let mut changed_files = Vec::new();
     let mut added_files = Vec::new();
     let mut deleted_files = Vec::new();
-    let mut recovered_files = Vec::new();
+    let recovered_files = Vec::new();
     let mut failed_files = Vec::new();
     let mut duplicate_score_warnings = Vec::new();
 
@@ -418,7 +418,7 @@ fn preview_scan_files_for_changes_impl(
     let mut changed_files = Vec::new();
     let mut added_files = Vec::new();
     let mut deleted_files = Vec::new();
-    let mut recovered_files = Vec::new();
+    let recovered_files = Vec::new();
     let mut failed_files = Vec::new();
     let mut score_status_changes = Vec::new();
     let mut duplicate_score_warnings = Vec::new();

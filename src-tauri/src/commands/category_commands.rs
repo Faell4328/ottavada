@@ -1,4 +1,3 @@
-use chrono::Local;
 use tauri::State;
 use tracing::{error, info};
 
@@ -22,20 +21,12 @@ pub fn get_categories(db: State<'_, Database>) -> Result<Vec<Category>, AppError
 }
 
 #[tauri::command]
-pub fn create_category(
-    db: State<'_, Database>,
-    store: State<'_, SystemStore>,
-    name: String,
-) -> Result<Category, AppError> {
+pub fn create_category(db: State<'_, Database>, name: String) -> Result<Category, AppError> {
     info!("Creating new category: {}", name);
-
-    let settings = require_server_settings(&store)?;
 
     if name.trim().is_empty() {
         return Err(AppError::Generic("Category name cannot be empty".into()));
     }
-
-    let updated_by = settings.computer_id.clone();
 
     let category = Category {
         id: uuid::Uuid::new_v4().to_string(),
@@ -55,20 +46,16 @@ pub fn create_category(
 #[tauri::command]
 pub fn update_category(
     db: State<'_, Database>,
-    store: State<'_, SystemStore>,
     category_id: String,
     name: String,
 ) -> Result<Category, AppError> {
     info!("Updating category: {}", category_id);
 
-    let settings = require_server_settings(&store)?;
     let trimmed_name = name.trim();
 
     if trimmed_name.is_empty() {
         return Err(AppError::Generic("Category name cannot be empty".into()));
     }
-
-    let updated_by = settings.computer_id.clone();
 
     db.update_category(&category_id, trimmed_name)
         .map(|_| {

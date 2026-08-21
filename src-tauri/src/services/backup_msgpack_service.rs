@@ -1139,8 +1139,7 @@ mod tests {
     use super::{
         backup_filename, cleanup_old_backups, export_backup_msgpack, files_are_equal,
         find_latest_valid_backup, import_backup_msgpack, list_backup_files, parse_backup_timestamp,
-        restore_missing_songs_from_archives, BackupCategory, BackupMessagePack, BackupScore,
-        BackupSong,
+        restore_missing_songs_from_archives, BackupMessagePack, BackupSong,
     };
 
     fn write_tar_zst_from_dir(source_dir: &std::path::Path, archive_path: &std::path::Path) {
@@ -1445,9 +1444,6 @@ mod tests {
             status: ScoreStatus::Main,
         };
         source_db.insert_score(&score).expect("insert score");
-        source_db
-            .upsert_backup_song_status(&song.id, &crate::domain::models::BackupStatus::Ok)
-            .expect("insert backupQueue");
 
         let backup_path = source_dir.path().join("exports").join("backup.msgpack");
         let export_summary = export_backup_msgpack(

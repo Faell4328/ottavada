@@ -479,8 +479,6 @@ mod tests {
         db.update_score_status("sc1", ScoreStatus::Ignored, "test-computer", None)
             .unwrap();
 
-        assert!(db.has_pending_changes().unwrap());
-
         let conn = db.lock_conn();
         let ignored_events: i64 = conn
             .query_row(

@@ -1,4 +1,3 @@
-use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -93,10 +92,6 @@ mod tests {
     use crate::infrastructure::database::Database;
     use crate::infrastructure::store::SystemStore;
     use crate::services::indexer::get_file_metadata;
-
-    fn now() -> chrono::NaiveDateTime {
-        chrono::Local::now().naive_local()
-    }
 
     #[test]
     fn regenerates_song_archive_immediately_after_score_insert() {

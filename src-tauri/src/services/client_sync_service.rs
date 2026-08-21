@@ -139,7 +139,6 @@ struct PendingCategorySong {
 
 #[derive(Default)]
 struct PendingNamedRelation {
-    relation_id: Option<String>,
     foreign_id: Option<String>,
     song_id: Option<String>,
 }
@@ -243,10 +242,7 @@ pub fn has_pending_server_changes(db: &Database, store: &SystemStore) -> Result<
         }
         Ok(_) => {}
         Err(err) => {
-            warn!(
-                "Failed to read local snapshot to validate changes: {}",
-                err
-            );
+            warn!("Failed to read local snapshot to validate changes: {}", err);
             return Ok(true);
         }
     }
@@ -364,13 +360,7 @@ fn apply_snapshot(db: &Database, payload: &SnapshotMessagePack) -> Result<(), Ap
             tx.execute(
                 "INSERT INTO songs (id, name, composer, arranger, path, is_favorite)
                  VALUES (?1, ?2, ?3, ?4, ?5, 0)",
-                params![
-                    song.id,
-                    song.name,
-                    composer_name,
-                    arranger_name,
-                    song_path,
-                ],
+                params![song.id, song.name, composer_name, arranger_name, song_path,],
             )?;
 
             let snapshot_category_relations: Vec<&SnapshotCategorySong> = payload
@@ -630,11 +620,7 @@ fn apply_upsert_field_event(
 
                 tx.execute(
                     "UPDATE scores SET song_id = ?1, file_path = ?2 WHERE id = ?3",
-                    params![
-                        song_id,
-                        cloud_score_stored_path(&song_id),
-                        event.entity_id
-                    ],
+                    params![song_id, cloud_score_stored_path(&song_id), event.entity_id],
                 )?;
 
                 if let Some(pending) = pending_scores.remove(&event.entity_id) {
@@ -743,7 +729,9 @@ fn apply_upsert_field_event(
                 entry.song_id = item.value.clone();
             }
 
-            if let (Some(composer_id), Some(song_id)) = (entry.foreign_id.clone(), entry.song_id.clone()) {
+            if let (Some(composer_id), Some(song_id)) =
+                (entry.foreign_id.clone(), entry.song_id.clone())
+            {
                 ensure_song_exists(tx, &song_id)?;
                 tx.execute(
                     "INSERT OR IGNORE INTO composerSongs (id, composerId, songId) VALUES (?1, ?2, ?3)",
@@ -763,7 +751,9 @@ fn apply_upsert_field_event(
                 entry.song_id = item.value.clone();
             }
 
-            if let (Some(arranger_id), Some(song_id)) = (entry.foreign_id.clone(), entry.song_id.clone()) {
+            if let (Some(arranger_id), Some(song_id)) =
+                (entry.foreign_id.clone(), entry.song_id.clone())
+            {
                 ensure_song_exists(tx, &song_id)?;
                 tx.execute(
                     "INSERT OR IGNORE INTO arrangerSongs (id, arrangerId, songId) VALUES (?1, ?2, ?3)",
@@ -777,10 +767,7 @@ fn apply_upsert_field_event(
     Ok(())
 }
 
-fn ensure_song_exists(
-    tx: &rusqlite::Transaction<'_>,
-    song_id: &str,
-) -> Result<(), AppError> {
+fn ensure_song_exists(tx: &rusqlite::Transaction<'_>, song_id: &str) -> Result<(), AppError> {
     tx.execute(
         "INSERT OR IGNORE INTO songs (id, name, composer, arranger, path, is_favorite)
          VALUES (?1, '', NULL, NULL, ?2, 0)",
