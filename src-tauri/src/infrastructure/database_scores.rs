@@ -10,7 +10,17 @@ impl Database {
     // ── Scores ──
 
     pub fn insert_score(&self, score: &Score) -> Result<(), AppError> {
-        let conn = self.lock_conn();
+        let mut guard = self.lock_conn();
+        let conn = guard.transaction()?;
+        Self::insert_score_with_conn(&conn, score)?;
+        conn.commit()?;
+        Ok(())
+    }
+
+    pub(crate) fn insert_score_with_conn(
+        conn: &Connection,
+        score: &Score,
+    ) -> Result<(), AppError> {
         let file_extension = Self::extract_file_extension(&score.file_name).unwrap_or_default();
         let storage_file_path = to_storage_path(&score.file_path);
 
@@ -123,7 +133,8 @@ impl Database {
     }
 
     pub fn delete_score(&self, score_id: &str) -> Result<(), AppError> {
-        let conn = self.lock_conn();
+        let mut guard = self.lock_conn();
+        let conn = guard.transaction()?;
 
         let (song_id, file_name): (String, String) = conn
             .query_row(
@@ -161,6 +172,7 @@ impl Database {
             params![song_id],
         )?;
 
+        conn.commit()?;
         Ok(())
     }
 
@@ -288,7 +300,8 @@ impl Database {
         _updated_by: &str,
         file_metadata: Option<(u64, chrono::NaiveDateTime)>,
     ) -> Result<(), AppError> {
-        let conn = self.lock_conn();
+        let mut guard = self.lock_conn();
+        let conn = guard.transaction()?;
 
         let old_status = conn
             .query_row(
@@ -348,6 +361,7 @@ impl Database {
 
         Self::sync_song_status_from_scores(&conn, &song_id)?;
 
+        conn.commit()?;
         Ok(())
     }
 

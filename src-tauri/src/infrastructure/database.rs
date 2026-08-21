@@ -125,6 +125,23 @@ impl Database {
             .unwrap_or_else(|poison| poison.into_inner())
     }
 
+    /// Run `f` inside a single transaction. Commits on success, rolls back on error.
+    pub fn with_transaction<T>(
+        &self,
+        f: impl FnOnce(&rusqlite::Transaction) -> Result<T, AppError>,
+    ) -> Result<T, AppError> {
+        let mut guard = self.lock_conn();
+        let tx = guard.transaction()?;
+        let result = f(&tx);
+        match result {
+            Ok(value) => {
+                tx.commit()?;
+                Ok(value)
+            }
+            Err(err) => Err(err),
+        }
+    }
+
     fn initialize_schema(&self) -> Result<(), AppError> {
         let conn = self.lock_conn();
         Self::initialize_schema_with_conn(&conn)

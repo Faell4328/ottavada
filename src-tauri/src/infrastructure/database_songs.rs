@@ -169,7 +169,18 @@ impl Database {
     // ── Songs ──
 
     pub fn insert_song(&self, song: &Song, category_ids: &[String]) -> Result<(), AppError> {
-        let conn = self.lock_conn();
+        let mut guard = self.lock_conn();
+        let conn = guard.transaction()?;
+        Self::insert_song_with_conn(&conn, song, category_ids)?;
+        conn.commit()?;
+        Ok(())
+    }
+
+    pub(crate) fn insert_song_with_conn(
+        conn: &rusqlite::Connection,
+        song: &Song,
+        category_ids: &[String],
+    ) -> Result<(), AppError> {
         let category_ids = Self::normalize_category_ids(category_ids);
 
         if song.path.trim().is_empty() {
@@ -252,7 +263,8 @@ impl Database {
     }
 
     pub fn update_song(&self, song: &Song, category_ids: &[String]) -> Result<(), AppError> {
-        let conn = self.lock_conn();
+        let mut guard = self.lock_conn();
+        let conn = guard.transaction()?;
         let category_ids = Self::normalize_category_ids(category_ids);
 
         let original_song = conn
@@ -366,6 +378,7 @@ impl Database {
             }
         }
 
+        conn.commit()?;
         Ok(())
     }
 

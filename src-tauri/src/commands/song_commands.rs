@@ -393,7 +393,9 @@ fn import_files_core(
 
     let all_songs = db.get_all_songs()?;
     let mut added_count = 0;
+    let mut touched_song_ids: Vec<String> = Vec::new();
 
+    db.with_transaction(|tx| {
     for (song_name, group_files) in &groups {
         let existing_song = all_songs.iter().find(|s| {
             s.name.eq_ignore_ascii_case(song_name)
@@ -482,7 +484,7 @@ fn import_files_core(
                 is_favorite: false,
                 status: new_song_status.clone(),
             };
-            db.insert_song(&song, category_ids)?;
+            Database::insert_song_with_conn(tx, &song, category_ids)?;
             new_song_id
         };
 
@@ -504,11 +506,17 @@ fn import_files_core(
             let mut score = score;
             score.status = score_status;
 
-            db.insert_score(&score)?;
+            Database::insert_score_with_conn(tx, &score)?;
             added_count += 1;
         }
 
-        let _ = regenerate_song_archives_for_song_ids(db, store, &[song_id.clone()]);
+        touched_song_ids.push(song_id.clone());
+    }
+    Ok(())
+    })?;
+
+    for song_id in touched_song_ids {
+        let _ = regenerate_song_archives_for_song_ids(db, store, &[song_id]);
     }
 
     Ok(ImportIndexedFilesResult {
