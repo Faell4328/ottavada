@@ -661,6 +661,8 @@
     "nameConflictError": "Es existieren bereits Noten mit diesem Namen",
     "invalidName": "Geben Sie einen gültigen Namen für die neuen Noten ein",
     "saveError": "Die neuen Noten konnten nicht gespeichert werden.",
+    "fileExistsError": "Im indizierten Ordner existiert bereits eine Datei mit dem Namen '{{fileName}}'.",
+    "sourceFileNotFoundError": "Die Original-Datei der Noten wurde nicht gefunden. Indizieren Sie den Ordner neu.",
     "cancel": "Abbrechen",
     "save": "Speichern"
   },

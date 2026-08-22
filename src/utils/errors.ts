@@ -1,5 +1,7 @@
 import i18n from "../i18n";
 
+const SCORE_TARGET_FILE_EXISTS_PREFIX = "score_target_file_exists:";
+
 export function getErrorMessage(error: unknown): string {
   if (error instanceof Error) {
     return error.message;
@@ -32,4 +34,22 @@ export function getErrorMessage(error: unknown): string {
   }
 
   return i18n.t("errors.unknown");
+}
+
+export function getScoreUseAsBaseError(rawError: string): string {
+  if (rawError === "score_duplicate_instrument") {
+    return i18n.t("useAsBaseScoreModal.nameConflictError");
+  }
+
+  if (rawError.startsWith(SCORE_TARGET_FILE_EXISTS_PREFIX)) {
+    return i18n.t("useAsBaseScoreModal.fileExistsError", {
+      fileName: rawError.slice(SCORE_TARGET_FILE_EXISTS_PREFIX.length),
+    });
+  }
+
+  if (rawError === "score_source_file_not_found") {
+    return i18n.t("useAsBaseScoreModal.sourceFileNotFoundError");
+  }
+
+  return rawError;
 }

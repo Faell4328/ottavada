@@ -649,7 +649,6 @@ export default function SongsList() {
             setBaseScore(null);
           } catch (err) {
             console.error("Failed to use score as base:", err);
-            toast.error(err instanceof Error ? err.message : t("useAsBaseScoreModal.saveError"));
             throw err;
           }
         }}

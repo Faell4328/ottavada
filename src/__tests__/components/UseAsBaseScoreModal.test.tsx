@@ -131,4 +131,83 @@ describe("UseAsBaseScoreModal", () => {
       expect(mockOnSave).toHaveBeenCalledWith("score-1", "Flauta Base");
     });
   });
+
+  it("should show conflict message when backend rejects with duplicate instrument", async () => {
+    mockOnSave.mockRejectedValue("score_duplicate_instrument");
+
+    render(
+      <UseAsBaseScoreModal
+        isOpen={true}
+        song={sampleSong}
+        score={sampleScore}
+        onClose={mockOnClose}
+        onSave={mockOnSave}
+      />
+    );
+
+    fireEvent.change(screen.getByDisplayValue("Flauta"), {
+      target: { value: "Clarinete" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("Já existe uma partitura com esse nome")
+      ).toBeInTheDocument();
+    });
+  });
+
+  it("should show translated error when target file already exists", async () => {
+    mockOnSave.mockRejectedValue("score_target_file_exists:clarinete.mus");
+
+    render(
+      <UseAsBaseScoreModal
+        isOpen={true}
+        song={sampleSong}
+        score={sampleScore}
+        onClose={mockOnClose}
+        onSave={mockOnSave}
+      />
+    );
+
+    fireEvent.change(screen.getByDisplayValue("Flauta"), {
+      target: { value: "Clarinete" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          "Já existe um arquivo chamado 'clarinete.mus' na pasta indexada."
+        )
+      ).toBeInTheDocument();
+    });
+  });
+
+  it("should show translated error when source file is missing", async () => {
+    mockOnSave.mockRejectedValue("score_source_file_not_found");
+
+    render(
+      <UseAsBaseScoreModal
+        isOpen={true}
+        song={sampleSong}
+        score={sampleScore}
+        onClose={mockOnClose}
+        onSave={mockOnSave}
+      />
+    );
+
+    fireEvent.change(screen.getByDisplayValue("Flauta"), {
+      target: { value: "Clarinete" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          "O arquivo da partitura original não foi encontrado. Reindexe a pasta."
+        )
+      ).toBeInTheDocument();
+    });
+  });
 });

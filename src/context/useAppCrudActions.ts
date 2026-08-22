@@ -543,7 +543,6 @@ export function useAppCrudActions({
       toast.success(t("crudActions.scoreDuplicated"));
     } catch (err) {
       console.error("Failed to use score as base:", err);
-      toast.error(t("crudActions.scoreDuplicateError"));
       throw err;
     }
   }, [dispatch, loadSettings, loadSongs, refreshSelectedSong]);

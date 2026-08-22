@@ -102,7 +102,11 @@ export function findScoreNameConflictInSong(
         return false;
       }
 
-      return normalizeScoreNameForSave(score.name ?? "") === normalizedScoreName;
+      const existingInstrument = normalizeScoreNameForSave(score.name ?? "");
+      return (
+        existingInstrument !== null &&
+        existingInstrument.toLowerCase() === normalizedScoreName.toLowerCase()
+      );
     }) ?? null
   );
 }

@@ -4,6 +4,7 @@ import { Modal, ModalFooterButtons, FormField, TextInput, ErrorMessage } from ".
 import { useTranslation } from "react-i18next";
 import { normalizeScoreNameForSave, normalizeScoreNameInput } from "../utils/nameFormat";
 import { findScoreNameConflictInSong } from "../utils/libraryDuplicates";
+import { getErrorMessage, getScoreUseAsBaseError } from "../utils/errors";
 
 interface UseAsBaseScoreModalProps {
   isOpen: boolean;
@@ -71,8 +72,13 @@ export function UseAsBaseScoreModal({
       await onSave(score.id, normalizedName);
       onClose();
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : t("useAsBaseScoreModal.saveError");
-      setError(errorMsg);
+      const rawError = getErrorMessage(err);
+      const mappedError = getScoreUseAsBaseError(rawError);
+      setError(
+        mappedError === rawError && rawError === t("errors.unknown")
+          ? t("useAsBaseScoreModal.saveError")
+          : mappedError,
+      );
     } finally {
       setIsSaving(false);
     }

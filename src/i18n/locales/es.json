@@ -661,6 +661,8 @@
     "nameConflictError": "Ya existe una partitura con ese nombre",
     "invalidName": "Ingresa un nombre válido para la nueva partitura",
     "saveError": "No se pudo guardar la nueva partitura.",
+    "fileExistsError": "Ya existe un archivo llamado '{{fileName}}' en la carpeta indexada.",
+    "sourceFileNotFoundError": "No se encontró el archivo de la partitura original. Vuelve a indexar la carpeta.",
     "cancel": "Cancelar",
     "save": "Guardar"
   },

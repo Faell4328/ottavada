@@ -661,6 +661,8 @@
     "nameConflictError": "Une partition avec ce nom existe déjà",
     "invalidName": "Saisissez un nom valide pour la nouvelle partition",
     "saveError": "Impossible d'enregistrer la nouvelle partition.",
+    "fileExistsError": "Un fichier nommé '{{fileName}}' existe déjà dans le dossier indexé.",
+    "sourceFileNotFoundError": "Le fichier de la partition d'origine est introuvable. Ré-indexez le dossier.",
     "cancel": "Annuler",
     "save": "Enregistrer"
   },

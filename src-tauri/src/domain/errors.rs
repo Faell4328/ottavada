@@ -24,6 +24,12 @@ pub enum AppError {
     #[error("score_duplicate_instrument")]
     ScoreDuplicateInstrument,
 
+    #[error("score_source_file_not_found")]
+    ScoreSourceFileNotFound,
+
+    #[error("score_target_file_exists:{0}")]
+    ScoreTargetFileExists(String),
+
     #[error("{0}")]
     Generic(String),
 }

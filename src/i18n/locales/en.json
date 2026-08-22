@@ -661,6 +661,8 @@
     "nameConflictError": "A score with this name already exists",
     "invalidName": "Enter a valid name for the new score",
     "saveError": "Could not save the new score.",
+    "fileExistsError": "A file named '{{fileName}}' already exists in the indexed folder.",
+    "sourceFileNotFoundError": "The original score file was not found. Re-index the folder.",
     "cancel": "Cancel",
     "save": "Save"
   },

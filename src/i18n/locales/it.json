@@ -661,6 +661,8 @@
     "nameConflictError": "Esiste già uno spartito con questo nome",
     "invalidName": "Inserisci un nome valido per il nuovo spartito",
     "saveError": "Impossibile salvare il nuovo spartito.",
+    "fileExistsError": "Nella cartella indicizzata esiste già un file chiamato '{{fileName}}'.",
+    "sourceFileNotFoundError": "Il file dello spartito originale non è stato trovato. Re-indicizza la cartella.",
     "cancel": "Annulla",
     "save": "Salva"
   },

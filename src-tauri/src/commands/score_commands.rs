@@ -567,17 +567,24 @@ pub fn delete_score(
         })
 }
 
-#[tauri::command]
-pub fn use_score_as_base(
-    db: State<'_, Database>,
-    store: State<'_, SystemStore>,
-    source_score_id: String,
-    new_score_name: String,
-) -> Result<SongListItem, AppError> {
-    info!(
-        "Using score as base: source_score_id={}, new_score_name={}",
-        source_score_id, new_score_name
-    );
+fn build_base_score_file_name(source_file_name: &str, new_score_name: &str) -> Option<String> {
+    let (song_prefix, extension) = source_file_name.rsplit_once('.')?;
+
+    match song_prefix.rsplit_once(" - ") {
+        // Preserve the "Song name - " prefix when the source file follows that convention.
+        Some((song_name, _)) => Some(format!("{} - {}.{}", song_name, new_score_name, extension)),
+        // Otherwise the typed name is the file name (e.g. flute.mus -> clarinet.mus).
+        None => Some(format!("{}.{}", new_score_name, extension)),
+    }
+}
+
+fn use_score_as_base_core(
+    db: &Database,
+    source_score_id: &str,
+    new_score_name: &str,
+) -> Result<String, AppError> {
+    let normalized_new_name = normalize_optional_score_name(Some(new_score_name))
+        .ok_or_else(|| AppError::Generic("The new score name cannot be empty".into()))?;
 
     // Find the source score and its song
     let all_songs = db.get_all_songs()?;
@@ -593,10 +600,15 @@ pub fn use_score_as_base(
 
     let song_id = &song.id;
 
-    let source_full_path = Path::new(&db.get_score_file_path(&source_score_id)?).to_path_buf();
+    // Reject a duplicate instrument before creating the new score.
+    if score_has_duplicate_instrument(song, source_score_id, Some(&normalized_new_name)) {
+        return Err(AppError::ScoreDuplicateInstrument);
+    }
+
+    let source_full_path = Path::new(&db.get_score_file_path(source_score_id)?).to_path_buf();
 
     if !source_full_path.exists() || !source_full_path.is_file() {
-        return Err(AppError::Generic("Source file not found".into()));
+        return Err(AppError::ScoreSourceFileNotFound);
     }
 
     let source_file_name = source_full_path
@@ -604,26 +616,19 @@ pub fn use_score_as_base(
         .and_then(|name| name.to_str())
         .ok_or_else(|| AppError::Generic("Invalid source file name".into()))?;
 
-    let (song_prefix, extension) = source_file_name
-        .rsplit_once('.')
+    let new_filename = build_base_score_file_name(source_file_name, &normalized_new_name)
         .ok_or_else(|| AppError::Generic("Invalid file extension".into()))?;
 
-    let file_name_prefix = song_prefix
-        .rsplit_once(" - ")
-        .map(|(prefix, _)| prefix)
-        .unwrap_or(song_prefix);
-
-    let compacted_score_name = new_score_name.replace(' ', "");
-
-    // Create new filename with the new name and extension
-    let new_filename = format!(
-        "{} - {}.{}",
-        file_name_prefix, compacted_score_name, extension
-    );
     let source_parent = source_full_path.parent().ok_or_else(|| {
         AppError::Generic("Could not identify the source score's directory".into())
     })?;
+
     let new_file_path = source_parent.join(&new_filename);
+
+    // Never overwrite an existing file in the indexed directory.
+    if new_file_path.exists() {
+        return Err(AppError::ScoreTargetFileExists(new_filename));
+    }
 
     // Copy the file
     fs::copy(&source_full_path, &new_file_path).map_err(|e| {
@@ -644,7 +649,7 @@ pub fn use_score_as_base(
     let new_score = Score {
         id: uuid::Uuid::new_v4().to_string(),
         song_id: song_id.clone(),
-        name: Some(new_score_name.clone()),
+        name: Some(normalized_new_name),
         file_path: score_file_path,
         file_name,
         file_size,
@@ -664,10 +669,27 @@ pub fn use_score_as_base(
         song_id, new_score.id
     );
 
+    Ok(song_id.clone())
+}
+
+#[tauri::command]
+pub fn use_score_as_base(
+    db: State<'_, Database>,
+    store: State<'_, SystemStore>,
+    source_score_id: String,
+    new_score_name: String,
+) -> Result<SongListItem, AppError> {
+    info!(
+        "Using score as base: source_score_id={}, new_score_name={}",
+        source_score_id, new_score_name
+    );
+
+    let song_id = use_score_as_base_core(&db, &source_score_id, &new_score_name)?;
+
     let _ = regenerate_song_archives_for_song_ids(&db, &store, &[song_id.clone()]);
     let _ = refresh_library_summary_cache(&db, &store);
 
-    db.get_song_list_item_by_id(song_id)
+    db.get_song_list_item_by_id(&song_id)
 }
 
 #[tauri::command]
@@ -719,13 +741,14 @@ mod tests {
     use tempfile::tempdir;
 
     use crate::commands::common::remove_path_if_exists;
+    use crate::domain::errors::AppError;
     use crate::domain::models::{Score, ScoreStatus};
     use crate::infrastructure::database::Database;
 
     use super::{
-        build_client_extracted_score_name, delete_score_core, extract_score_file_from_archive,
-        resolve_manual_score_status, resolve_openable_score_path, sanitize_file_name_component,
-        score_has_duplicate_instrument,
+        build_base_score_file_name, build_client_extracted_score_name, delete_score_core,
+        extract_score_file_from_archive, resolve_manual_score_status, resolve_openable_score_path,
+        sanitize_file_name_component, score_has_duplicate_instrument, use_score_as_base_core,
     };
 
     fn write_test_tar_zst(archive_path: &Path, files: &[(&str, &[u8])]) {
@@ -938,6 +961,155 @@ mod tests {
             new_file_path.file_name().and_then(|n| n.to_str()),
             Some("copy.musx")
         );
+    }
+
+    fn setup_base_score(db: &Database, dir: &Path, file_name: &str) -> String {
+        let song_dir = dir.join("songs").join("song-1");
+        fs::create_dir_all(&song_dir).expect("create song dir");
+        fs::write(song_dir.join(file_name), b"score content").expect("write score file");
+
+        db.insert_song(
+            &crate::domain::models::Song {
+                id: "song-1".to_string(),
+                name: "NATIONAL ANTHEM".to_string(),
+                composer: None,
+                arranger: None,
+                path: song_dir.to_string_lossy().to_string(),
+                is_favorite: false,
+                status: ScoreStatus::Main,
+            },
+            &[],
+        )
+        .expect("insert song");
+
+        db.insert_score(&Score {
+            id: "score-1".to_string(),
+            song_id: "song-1".to_string(),
+            name: Some("Flute".to_string()),
+            file_path: song_dir.to_string_lossy().to_string(),
+            file_name: file_name.to_string(),
+            file_size: 13,
+            file_modified_at: chrono::Utc::now().naive_utc(),
+            status: ScoreStatus::Main,
+        })
+        .expect("insert score");
+
+        song_dir.to_string_lossy().to_string()
+    }
+
+    #[test]
+    fn builds_base_score_file_name_without_song_prefix() {
+        assert_eq!(
+            build_base_score_file_name("flute.mus", "clarinet").as_deref(),
+            Some("clarinet.mus")
+        );
+    }
+
+    #[test]
+    fn builds_base_score_file_name_preserving_song_prefix() {
+        assert_eq!(
+            build_base_score_file_name("NATIONAL ANTHEM - flute.mus", "clarinet").as_deref(),
+            Some("NATIONAL ANTHEM - clarinet.mus")
+        );
+    }
+
+    #[test]
+    fn builds_base_score_file_name_preserving_spaces_in_typed_name() {
+        assert_eq!(
+            build_base_score_file_name("flute.mus", "Flauta 1").as_deref(),
+            Some("Flauta 1.mus")
+        );
+    }
+
+    #[test]
+    fn builds_base_score_file_name_returns_none_without_extension() {
+        assert_eq!(build_base_score_file_name("flute", "clarinet"), None);
+    }
+
+    #[test]
+    fn duplicates_score_creating_file_with_typed_name() {
+        let dir = tempdir().expect("temp dir");
+        let db = Database::new(&dir.path().join("scores.db")).expect("db");
+        let song_dir = setup_base_score(&db, dir.path(), "NATIONAL ANTHEM - flute.mus");
+
+        let song_id = use_score_as_base_core(&db, "score-1", "clarinet").expect("duplicate");
+
+        let new_file = Path::new(&song_dir).join("NATIONAL ANTHEM - clarinet.mus");
+        assert!(new_file.exists());
+        assert!(!Path::new(&song_dir).join("NATIONAL ANTHEM - flute - clarinet.mus").exists());
+
+        let song = db.get_song_list_item_by_id(&song_id).expect("get song");
+        assert_eq!(song.scores.len(), 2);
+        let new_score = song
+            .scores
+            .iter()
+            .find(|score| score.name.as_deref() == Some("clarinet"))
+            .expect("new score");
+        assert_eq!(new_score.file_extension, "mus");
+    }
+
+    #[test]
+    fn duplicates_score_using_name_only_when_source_has_no_song_prefix() {
+        let dir = tempdir().expect("temp dir");
+        let db = Database::new(&dir.path().join("scores.db")).expect("db");
+        let song_dir = setup_base_score(&db, dir.path(), "flute.mus");
+
+        let song_id = use_score_as_base_core(&db, "score-1", "clarinet").expect("duplicate");
+
+        assert!(Path::new(&song_dir).join("clarinet.mus").exists());
+        assert!(!Path::new(&song_dir).join("flute - clarinet.mus").exists());
+
+        let song = db.get_song_list_item_by_id(&song_id).expect("get song");
+        assert_eq!(song.scores.len(), 2);
+    }
+
+    #[test]
+    fn rejects_duplicate_instrument_when_creating_from_base() {
+        let dir = tempdir().expect("temp dir");
+        let db = Database::new(&dir.path().join("scores.db")).expect("db");
+        let song_dir = setup_base_score(&db, dir.path(), "flute.mus");
+
+        let song_dir_path = Path::new(&song_dir);
+        fs::write(song_dir_path.join("clarinet.mus"), b"other").expect("write other score");
+        db.insert_score(&Score {
+            id: "score-2".to_string(),
+            song_id: "song-1".to_string(),
+            name: Some("clarinet".to_string()),
+            file_path: song_dir_path.to_string_lossy().to_string(),
+            file_name: "clarinet.mus".to_string(),
+            file_size: 5,
+            file_modified_at: chrono::Utc::now().naive_utc(),
+            status: ScoreStatus::Main,
+        })
+        .expect("insert other score");
+
+        let err = use_score_as_base_core(&db, "score-1", "clarinet").expect_err("should reject");
+        assert!(matches!(err, AppError::ScoreDuplicateInstrument));
+    }
+
+    #[test]
+    fn rejects_when_target_file_already_exists_in_directory() {
+        let dir = tempdir().expect("temp dir");
+        let db = Database::new(&dir.path().join("scores.db")).expect("db");
+        let song_dir = setup_base_score(&db, dir.path(), "flute.mus");
+
+        fs::write(Path::new(&song_dir).join("clarinet.mus"), b"existing")
+            .expect("write existing file");
+
+        let err = use_score_as_base_core(&db, "score-1", "clarinet").expect_err("should reject");
+        assert!(matches!(err, AppError::ScoreTargetFileExists(name) if name == "clarinet.mus"));
+    }
+
+    #[test]
+    fn rejects_when_source_file_is_missing() {
+        let dir = tempdir().expect("temp dir");
+        let db = Database::new(&dir.path().join("scores.db")).expect("db");
+        let song_dir = setup_base_score(&db, dir.path(), "flute.mus");
+
+        fs::remove_file(Path::new(&song_dir).join("flute.mus")).expect("remove source file");
+
+        let err = use_score_as_base_core(&db, "score-1", "clarinet").expect_err("should reject");
+        assert!(matches!(err, AppError::ScoreSourceFileNotFound));
     }
 
     #[test]
