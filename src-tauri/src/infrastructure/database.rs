@@ -340,7 +340,7 @@ impl Database {
                 entity_id,
                 field,
                 value,
-                chrono::Local::now().timestamp(),
+                chrono::Local::now().timestamp_millis(),
             ],
         )?;
 

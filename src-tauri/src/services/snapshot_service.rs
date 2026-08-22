@@ -106,7 +106,7 @@ pub fn generate_snapshot_msgpack(
     let settings = store.get_app_settings()?;
     settings.require_server_only()?;
 
-    let generated_at = chrono::Local::now().timestamp();
+    let generated_at = chrono::Local::now().timestamp_millis();
 
     let cloud_dir = ensure_actions_cloud_dir(store.app_data_dir())?;
     let _cloud_root_dir = ensure_cloud_root_dir(store.app_data_dir())?;
