@@ -621,6 +621,32 @@ mod tests {
         assert_eq!(song_status, ScoreStatus::NotFound.as_str());
     }
 
+    #[test]
+    fn test_song_becomes_not_found_when_all_scores_are_ignored() {
+        let db = make_db();
+        db.insert_song(&make_song("s1", "Canon"), &[]).unwrap();
+
+        let mut score = make_score(&db, "sc1", "s1", Some("Violino"));
+        score.status = ScoreStatus::Main;
+        db.insert_score(&score).unwrap();
+
+        let mut ignored = make_score(&db, "sc2", "s1", Some("Piano"));
+        ignored.status = ScoreStatus::Ignored;
+        db.insert_score(&ignored).unwrap();
+
+        db.update_score_status("sc1", ScoreStatus::Ignored, "test-computer", None)
+            .unwrap();
+
+        let conn = db.lock_conn();
+        let song_status: String = conn
+            .query_row("SELECT status FROM songs WHERE id = ?1", ["s1"], |row| {
+                row.get(0)
+            })
+            .unwrap();
+
+        assert_eq!(song_status, ScoreStatus::NotFound.as_str());
+    }
+
     // ── Score Metadata for Scanning ──
 
     #[test]

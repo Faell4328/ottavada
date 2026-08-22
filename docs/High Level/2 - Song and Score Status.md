@@ -10,6 +10,8 @@ The Ottavada in **Manage** mode keeps all songs and scores in the local catalog.
 
   - This happens when the song was previously indexed with scores, but for some reason the directory or files were not found.
 
+  - Songs whose all scores are `ignored` also become **No score**. Since an `ignored` score is, literally, a score that is ignored, it does not participate in status derivation. With no `main` or `draft` scores left, the song has no available score and is therefore considered **No score**.
+
 ## Observations
 
 The **Send allowed** and **Send not allowed** statuses can be set manually or automatically, while the **No score** status is always automatic.
