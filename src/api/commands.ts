@@ -491,6 +491,30 @@ export interface RestoreSongsResult {
   scores_replaced: number;
 }
 
+export type OperationProgressKind =
+  | "decompress"
+  | "move_scores"
+  | "generate_archives";
+
+export interface OperationProgressSnapshot {
+  active: boolean;
+  kind: OperationProgressKind | null;
+  current: number;
+  total: number;
+}
+
+export async function getOperationProgress(): Promise<OperationProgressSnapshot> {
+  return invoke("get_operation_progress");
+}
+
+export async function decompressSongArchives(): Promise<number> {
+  return invoke("decompress_song_archives_cmd");
+}
+
+export async function moveRestoredScores(): Promise<RestoreSongsResult> {
+  return invoke("move_restored_scores_cmd");
+}
+
 export async function exportBackupFile(outputPath?: string | null): Promise<BackupFileSummary> {
   return invoke("export_backup_file", { outputPath: outputPath ?? null });
 }

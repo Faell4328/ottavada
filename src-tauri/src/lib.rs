@@ -402,6 +402,9 @@ pub fn run() {
             commands::backup_commands::validate_cloud_backup_cmd,
             commands::backup_commands::restore_backup_db_from_cloud,
             commands::backup_commands::restore_songs_from_cloud_archives,
+            commands::backup_commands::decompress_song_archives_cmd,
+            commands::backup_commands::move_restored_scores_cmd,
+            commands::backup_commands::get_operation_progress,
             commands::backup_commands::restore_draft_ignored_from_cloud,
             commands::backup_commands::apply_server_changes_on_client,
             // Rclone
@@ -447,3 +450,5 @@ mod tests {
         );
     }
 }
+
+

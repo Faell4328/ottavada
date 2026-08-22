@@ -11,8 +11,10 @@ vi.mock("../../utils/toast", () => ({
 vi.mock("../../api/commands", () => ({
   validateCloudBackup: vi.fn(),
   restoreDatabaseFromCloudBackup: vi.fn(),
-  restoreSongsFromCloudArchives: vi.fn(),
+  decompressSongArchives: vi.fn(),
+  moveRestoredScores: vi.fn(),
   restoreDraftIgnoredFromCloud: vi.fn(),
+  getOperationProgress: vi.fn(),
 }));
 
 import toast from "../../utils/toast";
@@ -61,18 +63,26 @@ describe("runBackupImportFlow", () => {
   it("runs each granular step once and never calls the all-in-one import", async () => {
     vi.mocked(api.validateCloudBackup).mockResolvedValue(makeValidation());
     vi.mocked(api.restoreDatabaseFromCloudBackup).mockResolvedValue(makeDbSummary());
-    vi.mocked(api.restoreSongsFromCloudArchives).mockResolvedValue({
+    vi.mocked(api.decompressSongArchives).mockResolvedValue(3);
+    vi.mocked(api.moveRestoredScores).mockResolvedValue({
       songs_restored: 3,
       scores_restored: 5,
       scores_replaced: 1,
     });
     vi.mocked(api.restoreDraftIgnoredFromCloud).mockResolvedValue(2);
+    vi.mocked(api.getOperationProgress).mockResolvedValue({
+      active: false,
+      kind: null,
+      current: 0,
+      total: 0,
+    });
 
     const deps = makeDeps();
     await runBackupImportFlow(deps);
 
     expect(api.restoreDatabaseFromCloudBackup).toHaveBeenCalledTimes(1);
-    expect(api.restoreSongsFromCloudArchives).toHaveBeenCalledTimes(1);
+    expect(api.decompressSongArchives).toHaveBeenCalledTimes(1);
+    expect(api.moveRestoredScores).toHaveBeenCalledTimes(1);
     expect(api.restoreDraftIgnoredFromCloud).toHaveBeenCalledTimes(1);
 
     const syncCalls = deps.runSyncWithProgress.mock.calls;
@@ -90,15 +100,22 @@ describe("runBackupImportFlow", () => {
     expect(toast.success).toHaveBeenCalledTimes(1);
   });
 
-  it("advances through the five steps in order and resets state at the end", async () => {
+  it("advances through the six steps in order and resets state at the end", async () => {
     vi.mocked(api.validateCloudBackup).mockResolvedValue(makeValidation());
     vi.mocked(api.restoreDatabaseFromCloudBackup).mockResolvedValue(makeDbSummary());
-    vi.mocked(api.restoreSongsFromCloudArchives).mockResolvedValue({
+    vi.mocked(api.decompressSongArchives).mockResolvedValue(0);
+    vi.mocked(api.moveRestoredScores).mockResolvedValue({
       songs_restored: 0,
       scores_restored: 0,
       scores_replaced: 0,
     });
     vi.mocked(api.restoreDraftIgnoredFromCloud).mockResolvedValue(0);
+    vi.mocked(api.getOperationProgress).mockResolvedValue({
+      active: false,
+      kind: null,
+      current: 0,
+      total: 0,
+    });
 
     const deps = makeDeps();
     await runBackupImportFlow(deps);
@@ -107,7 +124,7 @@ describe("runBackupImportFlow", () => {
       .map((call) => call[0])
       .filter((action: any) => action && action.type === "SET_OPERATION_STATUS");
     const steps = statuses.map((action: any) => action.payload.stepCurrent);
-    expect(steps).toEqual([1, 2, 3, 4, 5, null]);
+    expect(steps).toEqual([1, 2, 3, 4, 5, 6, null]);
 
     const actionTypes = deps.dispatch.mock.calls.map((call) => call[0].type);
     expect(actionTypes).toContain("SET_SCANNING_FILES");
@@ -125,7 +142,8 @@ describe("runBackupImportFlow", () => {
     await runBackupImportFlow(deps);
 
     expect(api.restoreDatabaseFromCloudBackup).not.toHaveBeenCalled();
-    expect(api.restoreSongsFromCloudArchives).not.toHaveBeenCalled();
+    expect(api.decompressSongArchives).not.toHaveBeenCalled();
+    expect(api.moveRestoredScores).not.toHaveBeenCalled();
     expect(api.restoreDraftIgnoredFromCloud).not.toHaveBeenCalled();
     expect(toast.error).toHaveBeenCalledTimes(1);
   });

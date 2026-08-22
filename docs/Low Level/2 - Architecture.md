@@ -311,6 +311,8 @@ Business logic and orchestration. Depends on domain and infrastructure.
 
 **path_normalizer.rs** - Normalization of system file paths.
 
+**progress.rs** - Shared store for real-time operation progress. Services write `current`/`total` snapshots (per operation kind) while iterating files; the frontend polls them via the `get_operation_progress` command to update the status bar.
+
 **snapshot_service.rs** - Generation of the snapshot.msgpack.zst file (consolidated state).
 
 **telemetry_service.rs** - Periodic sending of telemetry data.

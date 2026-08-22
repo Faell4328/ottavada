@@ -5,8 +5,9 @@ use crate::domain::errors::AppError;
 use crate::infrastructure::database::Database;
 use crate::infrastructure::store::SystemStore;
 use crate::services::backup_msgpack_service::{
-    export_backup_msgpack, generate_backup_msgpack_in_cloud, import_backup_msgpack,
-    import_backup_msgpack_from_cloud, import_backup_msgpack_from_cloud_by_name,
+    decompress_song_archives, export_backup_msgpack, generate_backup_msgpack_in_cloud,
+    import_backup_msgpack, import_backup_msgpack_from_cloud,
+    import_backup_msgpack_from_cloud_by_name, move_restored_scores,
     restore_database_from_cloud_backup, restore_song_files_from_cloud_archives,
     validate_cloud_backup, BackupFileSummary, BackupImportSummary, CloudBackupValidation,
 };
@@ -17,6 +18,7 @@ use crate::services::backup_draft_ignored_service::restore_draft_ignored_scores_
 use crate::services::client_sync_service::{apply_server_changes_for_client, ClientSyncSummary};
 use crate::services::cloud_paths::ensure_cloud_root_dir;
 use crate::services::events_service::{generate_events_msgpack, EventsFileSummary};
+use crate::services::progress::snapshot as operation_progress_snapshot;
 use crate::services::snapshot_service::{generate_snapshot_msgpack, SnapshotFileSummary};
 
 #[tauri::command]
@@ -209,6 +211,52 @@ pub async fn restore_songs_from_cloud_archives(
         },
     )
     .await
+}
+
+#[tauri::command]
+pub async fn decompress_song_archives_cmd(
+    store: State<'_, SystemStore>,
+) -> Result<usize, AppError> {
+    let app_data_dir = store.app_data_dir().clone();
+
+    run_blocking_with_store(
+        app_data_dir,
+        "Internal failure decompressing song archives",
+        move |store| {
+            require_server_settings(&store)?;
+            decompress_song_archives(store.app_data_dir())
+        },
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn move_restored_scores_cmd(
+    db: State<'_, Database>,
+    store: State<'_, SystemStore>,
+) -> Result<RestoreSongsResult, AppError> {
+    let db = db.inner().clone();
+    let app_data_dir = store.app_data_dir().clone();
+
+    run_blocking_with_store(
+        app_data_dir,
+        "Internal failure moving restored scores",
+        move |store| {
+            require_server_settings(&store)?;
+            let stats = move_restored_scores(&db, store.app_data_dir())?;
+            Ok(RestoreSongsResult {
+                songs_restored: stats.songs_restored,
+                scores_restored: stats.scores_restored,
+                scores_replaced: stats.scores_replaced,
+            })
+        },
+    )
+    .await
+}
+
+#[tauri::command]
+pub fn get_operation_progress() -> crate::services::progress::OperationProgressSnapshot {
+    operation_progress_snapshot()
 }
 
 #[tauri::command]

@@ -20,6 +20,7 @@ use crate::services::msgpack_zstd::{
     compress_zstd_with_threads, serialize_msgpack_named, write_atomic,
 };
 use crate::services::path_normalizer::from_storage_path;
+use crate::services::progress::{finish_progress, report_progress, OperationKind};
 
 const BACKUP_FILE_PREFIX: &str = "backup - ";
 const BACKUP_FILE_EXTENSION: &str = ".msgpack.zst";
@@ -547,24 +548,7 @@ pub fn restore_database_from_cloud_backup_by_name(
     Ok(summary)
 }
 
-pub fn restore_song_files_from_cloud_archives(
-    db: &Database,
-    app_data_dir: &Path,
-) -> Result<SongFileRestoreStats, AppError> {
-    let result = restore_missing_songs_from_archives(db, app_data_dir)?;
-
-    let tmp_dir = app_data_dir.join("tmp");
-    if tmp_dir.exists() {
-        let _ = empty_directory_contents(&tmp_dir);
-    }
-
-    Ok(result)
-}
-
-pub fn restore_missing_songs_from_archives(
-    db: &Database,
-    app_data_dir: &Path,
-) -> Result<SongFileRestoreStats, AppError> {
+pub fn decompress_song_archives(app_data_dir: &Path) -> Result<usize, AppError> {
     let songs_cloud_dir = app_data_dir.join("cloud").join("songs");
     let temp_songs_root = app_data_dir.join("tmp").join("songs");
 
@@ -572,8 +556,7 @@ pub fn restore_missing_songs_from_archives(
         let _ = empty_directory_contents(&temp_songs_root);
     }
 
-    let mut extracted_song_ids = std::collections::HashSet::new();
-
+    let mut archive_files = Vec::new();
     if songs_cloud_dir.is_dir() {
         for entry in fs::read_dir(&songs_cloud_dir)
             .map_err(|e| AppError::Generic(format!("Error reading cloud songs directory: {}", e)))?
@@ -591,32 +574,48 @@ pub fn restore_missing_songs_from_archives(
             let Some(song_id) = file_name.strip_suffix(".tar.zst") else {
                 continue;
             };
-
-            let temp_song_dir = temp_songs_root.join(song_id);
-            fs::create_dir_all(&temp_song_dir).map_err(|e| {
-                AppError::Generic(format!(
-                    "Error creating temporary directory for song {}: {}",
-                    song_id, e
-                ))
-            })?;
-
-            extract_full_archive(&path, &temp_song_dir, song_id)?;
-            extracted_song_ids.insert(song_id.to_string());
+            archive_files.push((song_id.to_string(), path));
         }
     }
 
+    let total = archive_files.len();
+    for (index, (song_id, archive_path)) in archive_files.iter().enumerate() {
+        let temp_song_dir = temp_songs_root.join(song_id);
+        fs::create_dir_all(&temp_song_dir).map_err(|e| {
+            AppError::Generic(format!(
+                "Error creating temporary directory for song {}: {}",
+                song_id, e
+            ))
+        })?;
+
+        extract_full_archive(archive_path, &temp_song_dir, song_id)?;
+        report_progress(OperationKind::Decompress, index + 1, total);
+    }
+
+    finish_progress();
+    Ok(total)
+}
+
+pub fn move_restored_scores(
+    db: &Database,
+    app_data_dir: &Path,
+) -> Result<SongFileRestoreStats, AppError> {
+    let temp_songs_root = app_data_dir.join("tmp").join("songs");
     let score_refs = query_song_score_refs(db)?;
 
     let mut song_dirs_created = std::collections::HashSet::new();
     let mut scores_restored = 0_usize;
     let mut scores_replaced = 0_usize;
 
-    for score_ref in &score_refs {
-        if !extracted_song_ids.contains(&score_ref.song_id) {
+    let total = score_refs.len();
+    for (index, score_ref) in score_refs.iter().enumerate() {
+        report_progress(OperationKind::MoveScores, index + 1, total);
+
+        let temp_song_dir = temp_songs_root.join(&score_ref.song_id);
+        if !temp_song_dir.is_dir() {
             continue;
         }
 
-        let temp_song_dir = temp_songs_root.join(&score_ref.song_id);
         let Some(temp_path) = find_score_in_temp_dir(&temp_song_dir, &score_ref.score_id) else {
             warn!(
                 "Score {} not found in the temporary directory of song {}",
@@ -670,6 +669,8 @@ pub fn restore_missing_songs_from_archives(
         }
     }
 
+    finish_progress();
+
     let _ = empty_directory_contents(&temp_songs_root);
 
     Ok(SongFileRestoreStats {
@@ -677,6 +678,21 @@ pub fn restore_missing_songs_from_archives(
         scores_restored,
         scores_replaced,
     })
+}
+
+pub fn restore_song_files_from_cloud_archives(
+    db: &Database,
+    app_data_dir: &Path,
+) -> Result<SongFileRestoreStats, AppError> {
+    decompress_song_archives(app_data_dir)?;
+    let result = move_restored_scores(db, app_data_dir)?;
+
+    let tmp_dir = app_data_dir.join("tmp");
+    if tmp_dir.exists() {
+        let _ = empty_directory_contents(&tmp_dir);
+    }
+
+    Ok(result)
 }
 
 fn query_song_score_refs(db: &Database) -> Result<Vec<SongScoreRef>, AppError> {
@@ -1140,9 +1156,9 @@ mod tests {
     use crate::infrastructure::store::SystemStore;
 
     use super::{
-        backup_filename, cleanup_old_backups, export_backup_msgpack, files_are_equal,
-        find_latest_valid_backup, import_backup_msgpack, list_backup_files, parse_backup_timestamp,
-        restore_missing_songs_from_archives, BackupMessagePack, BackupSong,
+        backup_filename, cleanup_old_backups, decompress_song_archives, export_backup_msgpack,
+        files_are_equal, find_latest_valid_backup, import_backup_msgpack, list_backup_files,
+        move_restored_scores, parse_backup_timestamp, BackupMessagePack, BackupSong,
     };
 
     fn write_tar_zst_from_dir(source_dir: &std::path::Path, archive_path: &std::path::Path) {
@@ -1251,7 +1267,8 @@ mod tests {
     fn restores_missing_score_file() {
         let (_temp, app_data_dir, db, song_dir) = setup_restore_scenario(None);
 
-        let stats = restore_missing_songs_from_archives(&db, &app_data_dir).expect("restore");
+        decompress_song_archives(&app_data_dir).expect("decompress");
+        let stats = move_restored_scores(&db, &app_data_dir).expect("restore");
 
         assert_eq!(stats.scores_restored, 1);
         assert_eq!(stats.scores_replaced, 0);
@@ -1265,7 +1282,8 @@ mod tests {
     fn skips_when_existing_score_matches_archive() {
         let (_temp, app_data_dir, db, song_dir) = setup_restore_scenario(Some(b"new version"));
 
-        let stats = restore_missing_songs_from_archives(&db, &app_data_dir).expect("restore");
+        decompress_song_archives(&app_data_dir).expect("decompress");
+        let stats = move_restored_scores(&db, &app_data_dir).expect("restore");
 
         assert_eq!(stats.scores_restored, 0);
         assert_eq!(stats.scores_replaced, 0);
@@ -1279,7 +1297,8 @@ mod tests {
     fn replaces_outdated_score_file() {
         let (_temp, app_data_dir, db, song_dir) = setup_restore_scenario(Some(b"old version"));
 
-        let stats = restore_missing_songs_from_archives(&db, &app_data_dir).expect("restore");
+        decompress_song_archives(&app_data_dir).expect("decompress");
+        let stats = move_restored_scores(&db, &app_data_dir).expect("restore");
 
         assert_eq!(stats.scores_restored, 0);
         assert_eq!(stats.scores_replaced, 1);

@@ -262,6 +262,8 @@ Steps:
 
 The backup step (3) uses `rclone copy` so that older backups already stored in the cloud are preserved. The other steps (2, 4 and 5) use `rclone sync`, so that files removed locally are also removed from the cloud.
 
+During the "Group and compress changed files" (step 4) and "Generate automatic backup" (step 3) steps, the status bar shows **real-time progress** (a `current / total` counter and percentage) by emitting progress from the Rust layer and polling it from the frontend (see 10.2).
+
 ---
 
 # 8. File processing
@@ -326,12 +328,31 @@ The cloud import runs as a sequence of steps, each one shown in the status bar. 
 1. **Download backup** — downloads the cloud `backup` directory locally (shows the download progress).
 2. **Restore database** — reads the latest downloaded `backup.msgpack.zst`, validates it, and restores the **Manage** database (songs, scores, categories, composers, arrangers, settings and pending changes). Only the catalog is restored here; the files are not touched yet.
 3. **Download song archives** — downloads the cloud `songs` directory locally (`{songId}.tar.zst` archives), showing the download progress.
-4. **Restore scores** — extracts each `{songId}.tar.zst` archive into its song directory, replacing or restoring the `main` score files.
-5. **Restore draft/ignored scores** — downloads the cloud `backup_scores_draft_ignored` directory and restores the draft and ignored score files.
+4. **Decompress song archives** — extracts each downloaded `{songId}.tar.zst` archive into a temporary directory. This step only decompresses; no score files are moved yet. The status bar shows the progress as `current / total` compressed files processed.
+5. **Move scores** — moves/copies the decompressed `main` score files from the temporary directory into each song directory, replacing or restoring the score files. This step only moves files (already decompressed). The status bar shows the progress as `current / total` score files processed.
+6. **Restore draft/ignored scores** — downloads the cloud `backup_scores_draft_ignored` directory and restores the draft and ignored score files.
 
 After the last step the interface is reloaded and the import summary is shown.
 
 In "import backup", if the score files already exist, Ottavada must check whether the files it has are more recent than those on the computer; if so, it must replace the local file with the one Ottavada downloaded; if not or if equal, it must keep the original file (<mark>Not implemented</mark>).
+
+## 10.2. Real-time operation progress
+
+Long-running operations (`.tar.zst` generation, archive decompression and score moving) report **real-time progress** to the status bar instead of showing only an indeterminate spinner.
+
+Mechanism:
+
+1. **Rust services** write progress snapshots to a shared store (`services/progress.rs`) while iterating over files. Each snapshot carries the operation kind (`generate_archives`, `decompress`, `move_scores`) and a `current`/`total` count.
+2. **Frontend** runs a polling loop while the blocking command executes, calling the `get_operation_progress` command (same pattern already used for rclone progress).
+3. Each received snapshot dispatches a `SET_OPERATION_STATUS` update with `itemCurrent`/`itemTotal`, and the `StatusBar` renders the `current / total` text plus a percentage bar.
+
+This applies to:
+
+- **`.tar.zst` generation** on the server — counts each song archive generated.
+- **Import backup decompression** (step 4) — counts each `.tar.zst` decompressed.
+- **Import backup score moving** (step 5) — counts each score file moved.
+
+The **directory verification** (scan) step intentionally does **not** show an item percentage: its heavy work (enumerating each song directory) cannot be represented by a reliable `current / total` counter, so it shows only the step progress.
 
 ---
 

@@ -67,6 +67,23 @@ export default function StatusBar() {
       : state.isScanningFiles
         ? 0
         : 0;
+  const itemPercentage =
+    state.operationStatus.itemCurrent !== null && state.operationStatus.itemTotal !== null
+      ? Math.round(
+          (Math.min(state.operationStatus.itemCurrent, state.operationStatus.itemTotal) /
+            Math.max(state.operationStatus.itemTotal, 1)) *
+            100
+        )
+      : null;
+  const scanProgress = state.scanProgress ?? { total: 0, completed: 0, changedFiles: 0 };
+  const scanPercentage =
+    scanProgress.total > 0 && state.isScanningFiles
+      ? Math.round(
+          (Math.min(scanProgress.completed, scanProgress.total) /
+            scanProgress.total) *
+            100
+        )
+      : null;
   const totalBytes = state.rcloneProgress.totalBytes;
   const bytesTransferred = state.rcloneProgress.bytes;
   const bytesRemaining =
@@ -79,7 +96,11 @@ export default function StatusBar() {
   const hasTransferPercentage = transferPercentage !== null;
   const barPercentage = isRcloneActive
     ? Math.max(0, Math.min(100, transferPercentage ?? 0))
-    : Math.max(0, Math.min(100, workflowPercentage));
+    : itemPercentage !== null
+      ? Math.max(0, Math.min(100, itemPercentage))
+      : scanPercentage !== null
+        ? Math.max(0, Math.min(100, scanPercentage))
+        : Math.max(0, Math.min(100, workflowPercentage));
   const shouldShowIndeterminateBar = hasOperationStatus && !state.isScanningFiles && !isRcloneActive;
   const isIndeterminateProgress = shouldShowIndeterminateBar || (isRcloneActive && !hasTransferPercentage);
 

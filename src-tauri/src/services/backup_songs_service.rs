@@ -12,6 +12,7 @@ use tracing::{error, info, warn};
 use crate::domain::errors::AppError;
 use crate::infrastructure::database::Database;
 use crate::services::path_normalizer::from_storage_path;
+use crate::services::progress::{finish_progress, report_progress, OperationKind};
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct SongArchiveResult {
@@ -520,6 +521,7 @@ fn run_archive_jobs_parallel(
         return Vec::new();
     }
 
+    let total = jobs.len();
     let available_cores = std::thread::available_parallelism()
         .map(usize::from)
         .unwrap_or(1)
@@ -528,9 +530,12 @@ fn run_archive_jobs_parallel(
     let zstd_threads = zstd_threads_per_archive(workers);
     let copy_threads = copy_worker_count_for(workers, available_cores);
     if workers == 1 {
+        let mut completed = 0_usize;
         return jobs
             .into_iter()
             .map(|job| {
+                completed += 1;
+                report_progress(OperationKind::GenerateArchives, completed, total);
                 let result = generate_archive_with_retry(
                     &job.entries,
                     &job.row.song_id,
@@ -589,8 +594,11 @@ fn run_archive_jobs_parallel(
     let mut ordered: Vec<Option<(SongBackupRow, Result<(String, u64), AppError>)>> =
         Vec::with_capacity(jobs.len());
     ordered.resize_with(jobs.len(), || None);
+    let mut completed = 0_usize;
     for _ in 0..jobs.len() {
         if let Ok((idx, row, result)) = rx.recv() {
+            completed += 1;
+            report_progress(OperationKind::GenerateArchives, completed, total);
             ordered[idx] = Some((row, result));
         }
     }
@@ -816,6 +824,8 @@ fn generate_song_archives_with_prepared_versions(
     let generated = results.iter().filter(|r| r.generated).count();
     let failed = results.iter().filter(|r| r.error.is_some()).count();
     let skipped = results.len().saturating_sub(generated + failed);
+
+    finish_progress();
 
     Ok(SongArchiveSummary {
         total: results.len(),

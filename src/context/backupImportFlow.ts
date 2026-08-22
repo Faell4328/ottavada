@@ -6,6 +6,7 @@ import * as api from "../api/commands";
 import type { Action } from "./reducer";
 import type { RunSyncWithProgress } from "./types";
 import { getLocale } from "../utils/locale";
+import { runOperationWithProgress } from "./operationProgress";
 
 const t = i18next.t.bind(i18next);
 
@@ -29,7 +30,7 @@ export async function runBackupImportFlow(deps: BackupImportDeps) {
         title: t("backupImportFlow.step1DownloadingBackup"),
         detail: t("backupImportFlow.downloadingBackupFiles"),
         stepCurrent: 1,
-        stepTotal: 5,
+        stepTotal: 6,
       },
     });
 
@@ -52,7 +53,7 @@ export async function runBackupImportFlow(deps: BackupImportDeps) {
         title: t("backupImportFlow.step2RestoringDb"),
         detail: t("backupImportFlow.restoringDbDetail", { songs: validation.songs_count, scores: validation.scores_count }),
         stepCurrent: 2,
-        stepTotal: 5,
+        stepTotal: 6,
       },
     });
 
@@ -64,7 +65,7 @@ export async function runBackupImportFlow(deps: BackupImportDeps) {
         title: t("backupImportFlow.step3DownloadingSongs"),
         detail: t("backupImportFlow.downloadingScoresFiles"),
         stepCurrent: 3,
-        stepTotal: 5,
+        stepTotal: 6,
       },
     });
 
@@ -77,22 +78,66 @@ export async function runBackupImportFlow(deps: BackupImportDeps) {
     dispatch({
       type: "SET_OPERATION_STATUS",
       payload: {
-        title: t("backupImportFlow.step4RestoringScores"),
-        detail: t("backupImportFlow.extractingScores"),
+        title: t("backupImportFlow.step4DecompressingScores"),
+        detail: t("backupImportFlow.decompressingScores"),
         stepCurrent: 4,
-        stepTotal: 5,
+        stepTotal: 6,
       },
     });
 
-    const restoreResult = await api.restoreSongsFromCloudArchives();
+    await runOperationWithProgress({
+      operation: () => api.decompressSongArchives(),
+      onSnapshot: (snapshot) => {
+        if (snapshot.kind !== "decompress") return;
+        dispatch({
+          type: "SET_OPERATION_STATUS",
+          payload: {
+            title: t("backupImportFlow.step4DecompressingScores"),
+            detail: t("backupImportFlow.decompressingScores"),
+            stepCurrent: 4,
+            stepTotal: 6,
+            itemCurrent: snapshot.current,
+            itemTotal: snapshot.total,
+          },
+        });
+      },
+    });
 
     dispatch({
       type: "SET_OPERATION_STATUS",
       payload: {
-        title: t("backupImportFlow.step5RestoringDrafts"),
-        detail: t("backupImportFlow.restoringDrafts"),
+        title: t("backupImportFlow.step5MovingScores"),
+        detail: t("backupImportFlow.movingScores"),
         stepCurrent: 5,
-        stepTotal: 5,
+        stepTotal: 6,
+      },
+    });
+
+    const restoreResult = await runOperationWithProgress({
+      operation: () => api.moveRestoredScores(),
+      onSnapshot: (snapshot) => {
+        if (snapshot.kind !== "move_scores") return;
+        dispatch({
+          type: "SET_OPERATION_STATUS",
+          payload: {
+            title: t("backupImportFlow.step5MovingScores"),
+            detail: t("backupImportFlow.movingScores"),
+            stepCurrent: 5,
+            stepTotal: 6,
+            itemCurrent: snapshot.current,
+            itemTotal: snapshot.total,
+          },
+        });
+      },
+    }) as api.RestoreSongsResult;
+
+    dispatch({
+      type: "SET_OPERATION_STATUS",
+      payload: {
+        title: t("backupImportFlow.step6RestoringDrafts"),
+        detail: t("backupImportFlow.restoringDrafts"),
+        stepCurrent: 6,
+        stepTotal: 6,
       },
     });
 

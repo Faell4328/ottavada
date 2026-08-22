@@ -8,6 +8,7 @@ import { runClientSyncFlow } from "./clientSyncFlow";
 import type { RunSyncWithProgressOptions } from "./clientSyncFlow";
 import type { RcloneProgressSnapshot } from "../utils/rcloneProgress";
 import { shouldDispatchRcloneProgressUpdate } from "../utils/rcloneProgress";
+import { runOperationWithProgress } from "./operationProgress";
 
 const t = i18n.t.bind(i18n);
 
@@ -422,7 +423,23 @@ export function useAppScanFlow({
             stepTotal: currentTotalSteps,
           },
         });
-        const archiveSummary = await api.generateSongArchivesFiles();
+        const archiveSummary = (await runOperationWithProgress({
+          operation: () => api.generateSongArchivesFiles(),
+          onSnapshot: (snapshot) => {
+            if (snapshot.kind !== "generate_archives") return;
+            dispatch({
+              type: "SET_OPERATION_STATUS",
+              payload: {
+                title: t("scanFlow.savingChanges"),
+                detail: t("scanFlow.generatingArchives"),
+                stepCurrent: 2,
+                stepTotal: currentTotalSteps,
+                itemCurrent: snapshot.current,
+                itemTotal: snapshot.total,
+              },
+            });
+          },
+        })) as api.SongArchiveSummary;
         completedSteps += 1;
 
         dispatch({
