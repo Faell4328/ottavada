@@ -17,16 +17,8 @@ export interface BackupImportDeps {
   loadSettings: () => Promise<void>;
 }
 
-export interface BackupImportOptions {
-  backupFileName?: string | null;
-}
-
-export async function runBackupImportFlow(
-  deps: BackupImportDeps,
-  options: BackupImportOptions = {},
-) {
+export async function runBackupImportFlow(deps: BackupImportDeps) {
   const { dispatch, runSyncWithProgress, loadSongs, loadCategories, loadSettings } = deps;
-  const backupFileName = options.backupFileName ?? null;
 
   dispatch({ type: "SET_SCANNING_FILES", payload: true });
 
@@ -64,7 +56,7 @@ export async function runBackupImportFlow(
       },
     });
 
-    const dbSummary = await api.importBackupCloudFile(backupFileName);
+    const dbSummary = await api.restoreDatabaseFromCloudBackup();
 
     dispatch({
       type: "SET_OPERATION_STATUS",

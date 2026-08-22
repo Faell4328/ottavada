@@ -321,6 +321,16 @@ The backup generation is performed during step 3 of the upload to cloud flow (se
 
 When clicking the "import backup" button (cloud), the system must download and validate the most recent backup in the cloud, verifying that it is not corrupted and was sent correctly. Before importing, the confirmation modal must be displayed showing the backup **date**, and the counts of **songs**, **scores**, **categories**, **composers** and **arrangers** contained in that backup.
 
+The cloud import runs as a sequence of steps, each one shown in the status bar. Each step performs exactly one task, so the progress text always matches the work being done:
+
+1. **Download backup** — downloads the cloud `backup` directory locally (shows the download progress).
+2. **Restore database** — reads the latest downloaded `backup.msgpack.zst`, validates it, and restores the **Manage** database (songs, scores, categories, composers, arrangers, settings and pending changes). Only the catalog is restored here; the files are not touched yet.
+3. **Download song archives** — downloads the cloud `songs` directory locally (`{songId}.tar.zst` archives), showing the download progress.
+4. **Restore scores** — extracts each `{songId}.tar.zst` archive into its song directory, replacing or restoring the `main` score files.
+5. **Restore draft/ignored scores** — downloads the cloud `backup_scores_draft_ignored` directory and restores the draft and ignored score files.
+
+After the last step the interface is reloaded and the import summary is shown.
+
 In "import backup", if the score files already exist, Ottavada must check whether the files it has are more recent than those on the computer; if so, it must replace the local file with the one Ottavada downloaded; if not or if equal, it must keep the original file (<mark>Not implemented</mark>).
 
 ---

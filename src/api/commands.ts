@@ -503,16 +503,12 @@ export async function forceGenerateBackupCloudFile(): Promise<BackupFileSummary>
   return invoke("force_generate_backup_cloud_file");
 }
 
-export async function importBackupCloudFile(
-  backupFileName?: string | null,
-): Promise<BackupImportSummary> {
-  return invoke("import_backup_cloud_file", {
-    backupFileName: backupFileName ?? null,
-  });
-}
-
 export async function validateCloudBackup(): Promise<CloudBackupValidation> {
   return invoke("validate_cloud_backup_cmd");
+}
+
+export async function restoreDatabaseFromCloudBackup(): Promise<BackupImportSummary> {
+  return invoke("restore_backup_db_from_cloud");
 }
 
 export async function restoreSongsFromCloudArchives(): Promise<RestoreSongsResult> {
