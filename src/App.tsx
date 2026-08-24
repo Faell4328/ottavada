@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from "react-router";
 import { Toaster } from "react-hot-toast";
 import toast from "./utils/toast";
 import { useTranslation } from "react-i18next";
+import i18n from "./i18n";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import {
   TopBar,
@@ -67,7 +68,7 @@ export function StartupUpdateGate({ onReady }: { onReady: (update: UpdateInfo | 
     const run = async () => {
       try {
         const result: UpdateCheckResult | typeof STARTUP_UPDATE_TIMEOUT = await Promise.race([
-          api.checkForUpdates(),
+          api.checkForUpdates(i18n.language),
           new Promise<UpdateCheckResult | typeof STARTUP_UPDATE_TIMEOUT>((resolve) => {
             timeoutId = setTimeout(
               () => resolve(STARTUP_UPDATE_TIMEOUT),
@@ -203,7 +204,7 @@ export function AppContent({ startupUpdate }: AppContentProps) {
     setIsCheckingUpdate(true);
 
     try {
-      const result = await api.checkForUpdates();
+      const result = await api.checkForUpdates(i18n.language);
 
       if (!result.configured) {
         if (manual) {

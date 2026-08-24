@@ -575,7 +575,7 @@ export default function SettingsPage() {
     setIsCheckingUpdate(true);
 
     try {
-      const result = await api.checkForUpdates();
+      const result = await api.checkForUpdates(i18n.language);
 
       if (!result.configured) {
         toast.error(t("settings.updateNotConfigured"));

@@ -260,7 +260,7 @@ Steps:
 4. Group and compress changed files;
 5. Send new or modified files.
 
-The backup step (3) uses `rclone copy` so that older backups already stored in the cloud are preserved. The other steps (2, 4 and 5) use `rclone sync`, so that files removed locally are also removed from the cloud.
+The backup step (3) uploads the current backup to the cloud; only the **most recent backup is kept** in the cloud (older ones are removed). The other steps (2, 4 and 5) use `rclone sync`, so that files removed locally are also removed from the cloud.
 
 During the "Group and compress changed files" (step 4) and "Generate automatic backup" (step 3) steps, the status bar shows **real-time progress** (a `current / total` counter and percentage) by emitting progress from the Rust layer and polling it from the frontend (see 10.2).
 
@@ -311,9 +311,9 @@ The user must be able to:
 
 The backup must be **generated every time** the user clicks **apply changes**.
 
-One backup **must not replace** another. The system must keep only the most recent backup in the backup directory. After generating a new backup, the older files that exceed this limit must be removed.
+Each backup is saved with a name based on the generation timestamp, in the format `backup - {timestamp}.msgpack.zst`.
 
-Each backup must be saved with a name based on the generation timestamp, in the format `backup - {timestamp}.msgpack.zst`, without replacing previous backups.
+The system keeps only the **most recent backup**, both locally and in the cloud. After generating a new backup, the previous one is removed.
 
 The full backup must contain the **Manage** mode database.
 
@@ -334,7 +334,7 @@ The cloud import runs as a sequence of steps, each one shown in the status bar. 
 
 After the last step the interface is reloaded and the import summary is shown.
 
-In "import backup", if the score files already exist, Ottavada must check whether the files it has are more recent than those on the computer; if so, it must replace the local file with the one Ottavada downloaded; if not or if equal, it must keep the original file (<mark>Not implemented</mark>).
+In "import backup", the most recent backup is the **source of truth**. When restoring song files, the backup version **always overwrites** the local file; no date or content comparison is performed against the local file.
 
 ## 10.2. Real-time operation progress
 

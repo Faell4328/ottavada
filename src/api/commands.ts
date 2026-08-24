@@ -274,8 +274,8 @@ export async function markSnapshotAsUploaded(
   });
 }
 
-export async function checkForUpdates(): Promise<UpdateCheckResult> {
-  return invoke("check_for_updates");
+export async function checkForUpdates(language: string): Promise<UpdateCheckResult> {
+  return invoke("check_for_updates", { language });
 }
 
 export async function installUpdate(): Promise<void> {

@@ -50,10 +50,11 @@ Unlike `snapshot.msgpack.zst`, `backup.msgpack.zst` has an administrative and pe
 
 # Restoring song files during import
 
-When a backup is imported (Manage mode), each `main` score file is restored to its song directory from the song archives (`{songId}.tar.zst`), which are downloaded from the cloud. For each destination file there are three cases:
+When a backup is imported (Manage mode), each `main` score file is restored to its song directory from the song archives (`{songId}.tar.zst`), which are downloaded from the cloud.
+
+The **most recent backup is the source of truth**: its version **always overwrites** the local file. No date or content comparison is made against the local file.
 
 1. **File does not exist** → it is copied from the backup and counted as *restored*.
-2. **File exists and its content is identical** to the backup → nothing is done.
-3. **File exists and its content differs** → the backup version wins and replaces the local (outdated) file; it is counted as *replaced*.
+2. **File exists** → it is replaced by the backup version and counted as *replaced* (as an optimization, the copy is skipped when the local file is already byte-identical to the backup, which yields the same result).
 
-The comparison is done by content (byte by byte), not by timestamp or size, so an edited file with the same size is still detected. The **backup is the source of truth**: in case of conflict the local file is overwritten. The import summary reports how many files were restored and how many were replaced, and the UI informs the user of the replaced scores.
+The import summary reports how many files were restored and how many were replaced, and the UI informs the user of the replaced scores.
