@@ -100,7 +100,9 @@ Currently this is a limitation that has no solution in Ottavada, but the solutio
 
 It is not recommended to use two or more computers in Manage mode at the same time, due to write and rewrite conflicts in the cloud provider; this is a limitation of the architecture.
 
-Currently this is a limitation that has no solution in Ottavada, but the solution is already in **planning**.
+To switch the Manage mode to another computer, you need to **import the backup** from the cloud (Settings → Import backups). This process downloads and restores all songs, scores and settings, which can be slow depending on the size of your repertoire.
+
+Currently there is no mechanism for real-time synchronization between two Manage mode computers, but this is already in **planning**.
 
 ### 4th Limitation - Learning a new tool
 
