@@ -99,13 +99,13 @@ describe("FirstRunPage", () => {
     expect(screen.getByText("Provedores de Nuvem")).toBeInTheDocument();
     expect(screen.getByText("Opções avançadas")).toBeInTheDocument();
 
-    expect(screen.getByText("Koofr")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Koofr" })).toBeInTheDocument();
     expect(screen.queryByText("WebDAV")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByText("Opções avançadas"));
 
     expect(screen.getByText("WebDAV")).toBeInTheDocument();
     expect(screen.getByText("SFTP")).toBeInTheDocument();
-    expect(screen.queryByText("Koofr")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Koofr" })).not.toBeInTheDocument();
   });
 });

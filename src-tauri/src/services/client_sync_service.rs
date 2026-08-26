@@ -394,11 +394,11 @@ fn apply_snapshot(db: &Database, payload: &SnapshotMessagePack) -> Result<(), Ap
                 let file_extension = normalize_extension(score.file_extension.as_deref())
                     .unwrap_or_else(|| "score".to_string());
                 let score_status = score.status.clone().unwrap_or_else(|| "main".to_string());
-                let score_updated_at = score.updated_at.unwrap_or(payload.generated_at);
+                let score_updated_at = sanitize_timestamp(score.updated_at.unwrap_or(payload.generated_at));
 
                 tx.execute(
                     "INSERT INTO scores (id, song_id, name, file_path, file_name, file_extension, file_size, file_modified_at, status)
-                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, 0, datetime(?7, 'unixepoch'), ?8)",
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, 0, COALESCE(datetime(?7, 'unixepoch'), datetime('now')), ?8)",
                     params![
                         score.id,
                         score_song_id,
@@ -799,14 +799,14 @@ fn ensure_score_exists(
 ) -> Result<(), AppError> {
     tx.execute(
         "INSERT OR IGNORE INTO scores (id, song_id, name, file_path, file_name, file_extension, file_size, file_modified_at, status)
-         VALUES (?1, ?2, NULL, ?3, ?4, ?5, 0, datetime(?6, 'unixepoch'), 'main')",
+         VALUES (?1, ?2, NULL, ?3, ?4, ?5, 0, COALESCE(datetime(?6, 'unixepoch'), datetime('now')), 'main')",
         params![
             score_id,
             song_id,
             cloud_score_stored_path(song_id),
             score_stored_file_name(score_id, "score"),
             "score",
-            timestamp,
+            sanitize_timestamp(timestamp),
         ],
     )?;
     Ok(())
@@ -828,12 +828,22 @@ fn category_fallback_name(category_id: &str) -> String {
     format!("Category {}", category_id)
 }
 
+const MILLISECOND_THRESHOLD: i64 = 100_000_000_000;
+
 fn normalize_extension(raw_extension: Option<&str>) -> Option<String> {
     raw_extension
         .map(str::trim)
         .map(|value| value.trim_start_matches('.'))
         .filter(|value| !value.is_empty())
         .map(|value| value.to_lowercase())
+}
+
+fn sanitize_timestamp(ts: i64) -> i64 {
+    if ts.abs() > MILLISECOND_THRESHOLD {
+        ts / 1000
+    } else {
+        ts
+    }
 }
 
 fn read_snapshot_generated_at(path: &Path) -> Result<Option<i64>, AppError> {
@@ -904,7 +914,9 @@ mod tests {
     use crate::infrastructure::database::Database;
     use crate::infrastructure::store::SystemStore;
 
-    use super::{apply_server_changes_for_client, has_pending_server_changes};
+    use super::{
+        apply_server_changes_for_client, has_pending_server_changes, sanitize_timestamp,
+    };
 
     #[derive(serde::Serialize)]
     struct SnapshotTestPayload {
@@ -994,6 +1006,23 @@ mod tests {
     struct EventDataTestPayload {
         field: String,
         value: Option<String>,
+    }
+
+    #[test]
+    fn sanitize_timestamp_keeps_seconds_unchanged() {
+        assert_eq!(sanitize_timestamp(1_700_000_000), 1_700_000_000);
+        assert_eq!(sanitize_timestamp(0), 0);
+    }
+
+    #[test]
+    fn sanitize_timestamp_converts_milliseconds_to_seconds() {
+        assert_eq!(sanitize_timestamp(1_700_000_000_000), 1_700_000_000);
+    }
+
+    #[test]
+    fn sanitize_timestamp_handles_negative_timestamps() {
+        assert_eq!(sanitize_timestamp(-1_700_000_000), -1_700_000_000);
+        assert_eq!(sanitize_timestamp(-1_700_000_000_000), -1_700_000_000);
     }
 
     #[test]

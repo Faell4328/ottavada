@@ -161,6 +161,7 @@ mod tests {
         });
     }
 
+    #[cfg(target_os = "windows")]
     #[test]
     fn storage_path_case_insensitive() {
         with_userprofile(r"C:\Users\John", || {
@@ -171,6 +172,7 @@ mod tests {
         });
     }
 
+    #[cfg(target_os = "windows")]
     #[test]
     fn from_storage_path_expands_correctly() {
         with_userprofile(r"C:\Users\john", || {
@@ -181,6 +183,7 @@ mod tests {
         });
     }
 
+    #[cfg(target_os = "windows")]
     #[test]
     fn from_storage_path_legacy_backslash_format() {
         with_userprofile(r"C:\Users\john", || {
@@ -246,6 +249,7 @@ mod tests {
         });
     }
 
+    #[cfg(target_os = "windows")]
     #[test]
     fn roundtrip_preserves_semantics() {
         with_userprofile(r"C:\Users\john", || {

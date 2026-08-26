@@ -133,11 +133,15 @@ fn open_path_on_system(file_path: &str) -> Result<(), AppError> {
 /// without `xdg-utils` installed).
 #[cfg(target_os = "linux")]
 fn open_with_default_handler(target: &str) -> Result<(), String> {
-    let handlers = ["xdg-open", "gio", "kde-open", "gnome-open"];
+    open_with_handlers(target, &["xdg-open", "gio", "kde-open", "gnome-open"])
+}
+
+#[cfg(target_os = "linux")]
+fn open_with_handlers(target: &str, handlers: &[&str]) -> Result<(), String> {
     let mut last_error = String::from("no file handler available");
 
     for handler in handlers {
-        let arg = if handler == "gio" { "open" } else { target };
+        let arg = if *handler == "gio" { "open" } else { target };
         match std::process::Command::new(handler).arg(arg).spawn() {
             Ok(_) => return Ok(()),
             Err(e) => {
@@ -747,8 +751,9 @@ mod tests {
 
     use super::{
         build_base_score_file_name, build_client_extracted_score_name, delete_score_core,
-        extract_score_file_from_archive, resolve_manual_score_status, resolve_openable_score_path,
-        sanitize_file_name_component, score_has_duplicate_instrument, use_score_as_base_core,
+        extract_score_file_from_archive, open_with_handlers, resolve_manual_score_status,
+        resolve_openable_score_path, sanitize_file_name_component, score_has_duplicate_instrument,
+        use_score_as_base_core,
     };
 
     fn write_test_tar_zst(archive_path: &Path, files: &[(&str, &[u8])]) {
@@ -1267,9 +1272,9 @@ mod tests {
     #[cfg(target_os = "linux")]
     #[test]
     fn open_with_default_handler_reports_clear_error_when_no_handler() {
-        // On a minimal Linux system with no xdg-utils/gio/kde-open/gnome-open,
-        // the error must clearly tell the user what is missing.
-        let err = open_with_default_handler("/tmp/does-not-matter.pdf")
+        // Passing an empty handler list forces the "no handler available" path
+        // deterministically, regardless of what the host machine has installed.
+        let err = open_with_handlers("/tmp/does-not-matter.pdf", &[])
             .expect_err("no handler available");
         assert!(err.contains("no system file handler available"));
         assert!(err.contains("xdg-utils"));

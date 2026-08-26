@@ -512,6 +512,7 @@ mod tests {
         ));
     }
 
+    #[cfg(any(target_os = "windows", target_os = "macos"))]
     #[test]
     fn test_paths_match_windows_drive_case_difference() {
         assert!(paths_match(
