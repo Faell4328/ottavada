@@ -75,4 +75,37 @@ describe("FirstRunPage", () => {
 
     expect(screen.getByPlaceholderText("Ex: Orquestra, igreja, ministério...")).toBeInTheDocument();
   });
+
+  it("shows cloud provider tabs and switches between standard and advanced providers", async () => {
+    renderWithAppProvider(<FirstRunPage />);
+
+    fireEvent.click(screen.getByText("Próximo"));
+    fireEvent.click(screen.getByText("Modo Gerir"));
+    fireEvent.click(screen.getByText("Próximo"));
+    fireEvent.change(
+      screen.getByPlaceholderText("Ex: Mesa do maestro, sala de ensaio, igreja..."),
+      { target: { value: "Maestro" } },
+    );
+    fireEvent.change(
+      screen.getByPlaceholderText("Ex: Orquestra, igreja, ministério..."),
+      { target: { value: "Orquestra" } },
+    );
+    fireEvent.click(screen.getByText("Próximo"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Escolha e conecte ao Provedor de Nuvem")).toBeInTheDocument();
+    });
+
+    expect(screen.getByText("Provedores de Nuvem")).toBeInTheDocument();
+    expect(screen.getByText("Opções avançadas")).toBeInTheDocument();
+
+    expect(screen.getByText("Koofr")).toBeInTheDocument();
+    expect(screen.queryByText("WebDAV")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("Opções avançadas"));
+
+    expect(screen.getByText("WebDAV")).toBeInTheDocument();
+    expect(screen.getByText("SFTP")).toBeInTheDocument();
+    expect(screen.queryByText("Koofr")).not.toBeInTheDocument();
+  });
 });

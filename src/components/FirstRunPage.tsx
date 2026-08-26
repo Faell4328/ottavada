@@ -54,6 +54,9 @@ export default function FirstRunPage() {
   const [isGeneratingRcloneConfig, setIsGeneratingRcloneConfig] =
     useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [providerTab, setProviderTab] = useState<
+    "cloud-providers" | "advanced"
+  >("cloud-providers");
 
   const { testRclone } = useRcloneTest({
     provider: rcloneProvider,
@@ -426,60 +429,87 @@ export default function FirstRunPage() {
               </span>
             </p>
 
-            <div className="mb-4 rounded-xl border border-[#c5cfdb] bg-[#f8fafd] p-4">
-              <div className="mb-3 pb-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8b9db2]">
-                  {t("firstRun.cloudProviderLabel")}
-                </p>
-              </div>
+            <div className="mb-4 flex rounded-lg border border-[#c5cfdb] bg-[#f8fafd] p-1">
+              <button
+                type="button"
+                onClick={() => setProviderTab("cloud-providers")}
+                className={`h-10 flex-1 rounded-md text-sm font-semibold transition-colors cursor-pointer ${
+                  providerTab === "cloud-providers"
+                    ? "bg-white text-[#4f84d7] shadow-sm"
+                    : "text-[#6b849e] hover:text-[#4f84d7]"
+                }`}
+              >
+                {t("firstRun.cloudProvidersTab")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setProviderTab("advanced")}
+                className={`h-10 flex-1 rounded-md text-sm font-semibold transition-colors cursor-pointer ${
+                  providerTab === "advanced"
+                    ? "bg-white text-[#4f84d7] shadow-sm"
+                    : "text-[#6b849e] hover:text-[#4f84d7]"
+                }`}
+              >
+                {t("firstRun.advancedOptionsTab")}
+              </button>
+            </div>
 
-              <div className="mb-2 flex items-center gap-2">
-                <span className="rounded-full bg-[#e8eef7] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.2em] text-[#4f84d7]">
-                  {t("firstRun.recommended")}
-                </span>
-              </div>
-              <div className="grid gap-3 md:grid-cols-3">
-                {STANDARD_PROVIDERS.map((provider) => (
-                  <button
-                    key={provider.key}
-                    type="button"
-                    onClick={() => handleProviderChange(provider.key)}
-                    className={`rounded-lg border p-4 text-left transition-colors cursor-pointer ${
-                      rcloneProvider === provider.key
-                        ? "border-[#4f84d7] bg-white"
-                        : "border-[#c5cfdb] bg-white/70 hover:border-[#7ba0d4]"
-                    }`}
-                  >
-                    <p className="text-sm font-semibold text-[#34485d]">
-                      {provider.label}
+            <div className="mb-4 rounded-xl border border-[#c5cfdb] bg-white p-4">
+              {providerTab === "cloud-providers" && (
+                <>
+                  <div className="mb-3 flex items-center gap-2">
+                    <span className="rounded-full bg-[#e8eef7] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.2em] text-[#4f84d7]">
+                      {t("firstRun.recommended")}
+                    </span>
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-3">
+                    {STANDARD_PROVIDERS.map((provider) => (
+                      <button
+                        key={provider.key}
+                        type="button"
+                        onClick={() => handleProviderChange(provider.key)}
+                        className={`rounded-lg border p-4 text-left transition-colors cursor-pointer ${
+                          rcloneProvider === provider.key
+                            ? "border-[#4f84d7] bg-white"
+                            : "border-[#c5cfdb] bg-white/70 hover:border-[#7ba0d4]"
+                        }`}
+                      >
+                        <p className="text-sm font-semibold text-[#34485d]">
+                          {provider.label}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {providerTab === "advanced" && (
+                <>
+                  <div className="mb-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8b9db2]">
+                      {t("firstRun.advancedMode")}
                     </p>
-                  </button>
-                ))}
-              </div>
-
-              <div className="mt-3 border-t border-[#c5cfdb] pt-3">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#8b9db2]">
-                  {t("firstRun.advancedMode")}
-                </p>
-                <div className="grid gap-3 md:grid-cols-3">
-                  {ADVANCED_PROVIDERS.map((provider) => (
-                    <button
-                      key={provider.key}
-                      type="button"
-                      onClick={() => handleProviderChange(provider.key)}
-                      className={`rounded-lg border p-4 text-left transition-colors cursor-pointer ${
-                        rcloneProvider === provider.key
-                          ? "border-[#4f84d7] bg-white"
-                          : "border-[#c5cfdb] bg-white/70 hover:border-[#7ba0d4]"
-                      }`}
-                    >
-                      <p className="text-sm font-semibold text-[#34485d]">
-                        {provider.label}
-                      </p>
-                    </button>
-                  ))}
-                </div>
-              </div>
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-3">
+                    {ADVANCED_PROVIDERS.map((provider) => (
+                      <button
+                        key={provider.key}
+                        type="button"
+                        onClick={() => handleProviderChange(provider.key)}
+                        className={`rounded-lg border p-4 text-left transition-colors cursor-pointer ${
+                          rcloneProvider === provider.key
+                            ? "border-[#4f84d7] bg-white"
+                            : "border-[#c5cfdb] bg-white/70 hover:border-[#7ba0d4]"
+                        }`}
+                      >
+                        <p className="text-sm font-semibold text-[#34485d]">
+                          {provider.label}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="mb-4 rounded-xl border border-[#c5cfdb] bg-white p-4">

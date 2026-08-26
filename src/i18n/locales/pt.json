@@ -408,6 +408,8 @@
     "sftpHint": "Conecte via SFTP ao seu próprio servidor. Informe os dados de conexão.",
     "webdavHint": "Conecte via WebDAV. Informe a URL do servidor e suas credenciais.",
     "advancedMode": "Avançado",
+    "cloudProvidersTab": "Provedores de Nuvem",
+    "advancedOptionsTab": "Opções avançadas",
     "configuring": "Configurando...",
     "configureTestGoogleDrive": "Configurar e testar Google Drive",
     "configureTestKoofr": "Configurar e testar Koofr",
