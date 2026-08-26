@@ -77,6 +77,7 @@ export default function SongsList() {
     state.isScanningFiles ||
     state.rcloneProgress.active ||
     state.operationStatus.stepCurrent !== null;
+  const isClient = isClientComputer(state.settings?.computer_type);
   const normalizedSearchQuery = useMemo(
     () => normalizeSearchText(state.searchQuery),
     [state.searchQuery]
@@ -408,7 +409,7 @@ export default function SongsList() {
         </div>
       </div>
 
-      {selectedSongIds.length > 0 && (
+      {!isClient && selectedSongIds.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5 rounded border border-[#bcd0ec] bg-[#eaf1fb] px-2.5 py-2">
           <span className="mr-1 text-xs font-bold text-[#2f4259]">
             {t("songsList.selectedCount", { count: selectedSongIds.length })}
@@ -493,6 +494,7 @@ export default function SongsList() {
               <tr className="border-b border-[#ced7e3] bg-[#eef2f6] text-xs font-bold text-[#34485d] sticky top-0">
                 <th className="text-left px-3.5 py-2.5 font-bold">
                   <span className="flex items-center gap-2">
+                    {!isClient && (
                     <input
                       type="checkbox"
                       checked={allVisibleSelected}
@@ -501,6 +503,7 @@ export default function SongsList() {
                       className="h-4 w-4 cursor-pointer accent-[#4f84d7] disabled:opacity-40"
                       aria-label={t("songsList.selectAll")}
                     />
+                  )}
                     {t("songsList.headerTitle")}
                   </span>
                 </th>

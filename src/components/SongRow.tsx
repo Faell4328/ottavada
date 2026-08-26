@@ -171,14 +171,16 @@ const SongRow = React.forwardRef<HTMLTableRowElement, SongRowProps>(
         >
           <td className="px-3.5 py-2">
             <span className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={isSelected}
-                onChange={onToggleSelect}
-                onClick={(e) => e.stopPropagation()}
-                className="h-4 w-4 shrink-0 cursor-pointer accent-[#4f84d7]"
-                aria-label={`select ${song.name}`}
-              />
+              {!isClient && (
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  onChange={onToggleSelect}
+                  onClick={(e) => e.stopPropagation()}
+                  className="h-4 w-4 shrink-0 cursor-pointer accent-[#4f84d7]"
+                  aria-label={`select ${song.name}`}
+                />
+              )}
               {isExpanded ? (
                 <ChevronDown className="h-3.5 w-3.5 text-[#7b8da1] shrink-0" />
               ) : (
