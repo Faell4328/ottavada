@@ -160,6 +160,22 @@ fn open_with_handlers(target: &str, handlers: &[&str]) -> Result<(), String> {
     ))
 }
 
+fn resolve_open_location_directory(file_path: &str) -> Result<std::path::PathBuf, AppError> {
+    let path = Path::new(file_path);
+
+    if !path.exists() {
+        return Err(AppError::Generic("File not found".into()));
+    }
+
+    if path.is_dir() {
+        return Ok(path.to_path_buf());
+    }
+
+    path.parent().map(Path::to_path_buf).ok_or_else(|| {
+        AppError::Generic("Could not identify the file's directory".into())
+    })
+}
+
 fn open_file_location_on_system(file_path: &str) -> Result<(), AppError> {
     #[cfg(target_os = "windows")]
     {
@@ -204,18 +220,10 @@ fn open_file_location_on_system(file_path: &str) -> Result<(), AppError> {
 
     #[cfg(target_os = "linux")]
     {
-        let path = Path::new(file_path);
+        let target = resolve_open_location_directory(file_path)?;
+        let target_str = target.to_string_lossy().to_string();
 
-        if !path.exists() {
-            return Err(AppError::Generic("File not found".into()));
-        }
-
-        let parent = path
-            .parent()
-            .ok_or_else(|| AppError::Generic("Could not identify the file's directory".into()))?;
-
-        let parent_str = parent.to_string_lossy().to_string();
-        open_with_default_handler(&parent_str)
+        open_with_default_handler(&target_str)
             .map_err(|e| AppError::Generic(format!("Error opening file location: {}", e)))?;
     }
 
@@ -752,8 +760,8 @@ mod tests {
     use super::{
         build_base_score_file_name, build_client_extracted_score_name, delete_score_core,
         extract_score_file_from_archive, open_with_handlers, resolve_manual_score_status,
-        resolve_openable_score_path, sanitize_file_name_component, score_has_duplicate_instrument,
-        use_score_as_base_core,
+        resolve_open_location_directory, resolve_openable_score_path, sanitize_file_name_component,
+        score_has_duplicate_instrument, use_score_as_base_core,
     };
 
     fn write_test_tar_zst(archive_path: &Path, files: &[(&str, &[u8])]) {
@@ -1278,5 +1286,34 @@ mod tests {
             .expect_err("no handler available");
         assert!(err.contains("no system file handler available"));
         assert!(err.contains("xdg-utils"));
+    }
+
+    #[test]
+    fn resolve_open_location_directory_returns_dir_itself_when_target_is_dir() {
+        let dir = tempdir().expect("create temp dir");
+        let result = resolve_open_location_directory(&dir.path().to_string_lossy())
+            .expect("dir resolves to itself");
+
+        assert_eq!(result, dir.path());
+    }
+
+    #[test]
+    fn resolve_open_location_directory_returns_parent_when_target_is_file() {
+        let dir = tempdir().expect("create temp dir");
+        let file_path = dir.path().join("score.musx");
+        fs::write(&file_path, b"score").expect("write file");
+
+        let result = resolve_open_location_directory(&file_path.to_string_lossy())
+            .expect("file resolves to its parent");
+
+        assert_eq!(result, dir.path());
+    }
+
+    #[test]
+    fn resolve_open_location_directory_errors_when_target_missing() {
+        let missing = "/definitely/not/a/real/path/file.musx";
+        let err = resolve_open_location_directory(missing).expect_err("missing target");
+
+        assert!(err.to_string().contains("File not found"));
     }
 }
