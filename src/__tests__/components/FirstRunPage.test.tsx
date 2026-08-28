@@ -38,6 +38,9 @@ describe("FirstRunPage", () => {
 
     fireEvent.click(screen.getByText("Abrir documentação no navegador"));
     expect(openTutorialSite).toHaveBeenCalledTimes(1);
+    expect(openTutorialSite).toHaveBeenCalledWith(
+      "http://ottavada.com/pt-BR/documentacao",
+    );
 
     fireEvent.click(screen.getByText("Próximo"));
 

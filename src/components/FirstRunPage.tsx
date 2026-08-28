@@ -31,6 +31,19 @@ const LANGUAGES = [
   { code: "de", label: "Deutsch" },
 ] as const;
 
+const DOCUMENTATION_URLS: Record<string, string> = {
+  pt: "http://ottavada.com/pt-BR/documentacao",
+  en: "https://ottavada.com/en/docs",
+  es: "https://ottavada.com/es/documentacion",
+  fr: "https://ottavada.com/fr/documentation",
+  it: "https://ottavada.com/it/documentazione",
+  de: "https://ottavada.com/de/dokumentation",
+};
+
+function getDocumentationUrl(language: string): string {
+  return DOCUMENTATION_URLS[language] ?? DOCUMENTATION_URLS.en;
+}
+
 export default function FirstRunPage() {
   const { t } = useTranslation();
   const { completeFirstRun } = useAppState();
@@ -191,7 +204,7 @@ export default function FirstRunPage() {
   }
 
   function handleOpenTutorial() {
-    void api.openTutorialSite();
+    void api.openTutorialSite(getDocumentationUrl(i18n.language));
   }
 
   async function handleConfirm() {

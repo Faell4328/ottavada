@@ -116,9 +116,9 @@ fn open_url_on_system(url: &str) -> Result<(), AppError> {
 }
 
 #[tauri::command]
-pub fn open_tutorial_site() -> Result<(), AppError> {
+pub fn open_tutorial_site(url: String) -> Result<(), AppError> {
     info!("Opening documentation site");
-    open_url_on_system("https://ottavada.com/docs")
+    open_url_on_system(&url)
 }
 
 #[tauri::command]

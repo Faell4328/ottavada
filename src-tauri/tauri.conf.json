@@ -51,9 +51,9 @@
   },
   "bundle": {
     "publisher": "Faell Software",
-    "createUpdaterArtifacts": false,
+    "createUpdaterArtifacts": true,
     "active": true,
-    "resources": ["rclone/rclone"],
+    "resources": ["rclone/rclone.exe"],
     "targets": ["nsis", "dmg", "appimage"],
     "icon": [
       "icons/32x32.png",

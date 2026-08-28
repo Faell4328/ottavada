@@ -121,8 +121,8 @@ export async function deleteScore(scoreId: string): Promise<void> {
   return invoke("delete_score", { scoreId });
 }
 
-export async function openTutorialSite(): Promise<void> {
-  return invoke("open_tutorial_site");
+export async function openTutorialSite(url: string): Promise<void> {
+  return invoke("open_tutorial_site", { url });
 }
 
 export async function useScoreAsBase(
