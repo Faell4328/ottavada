@@ -176,7 +176,14 @@ pub async fn install_update(app: AppHandle) -> Result<(), AppError> {
     update
         .download_and_install(|_, _| {}, || {})
         .await
-        .map_err(|err| AppError::Generic(format!("Error installing update: {}", err)))
+        .map_err(|err| AppError::Generic(format!("Error installing update: {}", err)))?;
+
+    if !cfg!(target_os = "windows") {
+        info!("Update installed, restarting application");
+        app.restart();
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
