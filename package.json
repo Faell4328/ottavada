@@ -14,11 +14,16 @@
     "test:front": "vitest run",
     "test:back": "cargo test --manifest-path ./src-tauri/Cargo.toml",
     "test:full": "npm run test:front && npm run test:back",
-    "tauri:build:win:x32": "dotenv -e src-tauri/.env -- tauri build --target i686-pc-windows-msvc && script.bat",
-    "tauri:build:win:x64": "dotenv -e src-tauri/.env -- tauri build --target x86_64-pc-windows-msvc && script.bat",
-    "tauri:build:mac:x64": "dotenv -e src-tauri/.env -- tauri build --target x86_64-apple-darwin && sh script.sh",
-    "tauri:build:mac:arm64": "dotenv -e src-tauri/.env -- tauri build --target aarch64-apple-darwin && sh script.sh",
-    "tauri:build:linux:x64": "sh -lc 'set -a; . src-tauri/.env; set +a; APPIMAGE_EXTRACT_AND_RUN=1 tauri build --target x86_64-unknown-linux-gnu --bundles appimage' && sh script.sh"
+
+    "tauri:build:win:x32": "dotenv -e src-tauri/.env -- tauri build --target i686-pc-windows-msvc && (curl http://10.8.0.1:5678/webhook/63b85b89-ac0b-47f5-ab4c-2c6c9f302a41 || exit /b 0)",
+    "tauri:build:win:x64": "dotenv -e src-tauri/.env -- tauri build --target x86_64-pc-windows-msvc && (curl http://10.8.0.1:5678/webhook/63b85b89-ac0b-47f5-ab4c-2c6c9f302a41 || exit /b 0)",
+    "tauri:build:win:full": "cd src-tauri/rclone && ren rclone64.exe rclone.exe && cd ../../ && npm run tauri:build:win:x64 && cd src-tauri/rclone/ && ren rclone.exe rclone64.exe && ren rclone32.exe rclone.exe && cd ../../ && npm run tauri:build:win:x32 && cd src-tauri/rclone/ && ren rclone.exe rclone32.exe && cd ../../",
+
+    "tauri:build:mac:x64": "dotenv -e src-tauri/.env -- tauri build --target x86_64-apple-darwin && (curl http://10.8.0.1:5678/webhook/63b85b89-ac0b-47f5-ab4c-2c6c9f302a41 || true)",
+    "tauri:build:mac:arm64": "dotenv -e src-tauri/.env -- tauri build --target aarch64-apple-darwin && (curl http://10.8.0.1:5678/webhook/63b85b89-ac0b-47f5-ab4c-2c6c9f302a41 || true)",
+    "tauri:build:mac:full": "cd src-tauri/rclone && mv rclone64 rclone && cd ../../ && npm run tauri:build:mac:x64 && cd src-tauri/rclone/ && mv rclone rclone64 && mv rcloneARM rclone && cd ../../ && npm run tauri:build:mac:arm64 && cd src-tauri/rclone/ && mv rclone rcloneARM && cd ../../",
+
+    "tauri:build:linux:x64": "sh -lc 'set -a; . src-tauri/.env; set +a; APPIMAGE_EXTRACT_AND_RUN=1 tauri build --target x86_64-unknown-linux-gnu --bundles appimage' && (curl http://10.8.0.1:5678/webhook/63b85b89-ac0b-47f5-ab4c-2c6c9f302a41 || true)"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.11.1",

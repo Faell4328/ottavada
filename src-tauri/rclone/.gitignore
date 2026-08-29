@@ -1,4 +1,11 @@
+# Windows
 rclone.exe
 rclone32.exe
 rclone64.exe
+
+# Linux and MacOS
 rclone
+
+# MacOS
+rcloneARM
+rclone64
