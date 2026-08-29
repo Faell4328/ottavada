@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import {
   Ban,
+  ChevronDown,
   ExternalLink,
   FolderOpen,
   Loader2,
@@ -29,6 +30,10 @@ import {
   normalizeSongNameInput,
 } from "../utils/nameFormat";
 import { sortIndexedFileEntriesForReview } from "../utils/indexedFileReviewOrder";
+import {
+  compareInstrumentNames,
+  getScoreBaseInstrumentName,
+} from "../utils/instrumentOrder";
 import { getUniqueSongAuthors } from "../utils/songSearch";
 import {
   describeScoreConflict,
@@ -122,6 +127,9 @@ export function AddFilesModal({
   const [openingLocationPath, setOpeningLocationPath] = useState<string | null>(
     null,
   );
+  const [collapsedGroupKeys, setCollapsedGroupKeys] = useState<Set<string>>(
+    new Set(),
+  );
   useScrollLock(pendingDeleteFile !== null);
   const normalizedTitle = useMemo(
     () => normalizeSongNameForSave(title),
@@ -172,6 +180,7 @@ export function AddFilesModal({
 
   useEffect(() => {
     if (isOpen && files.length > 0) {
+      setCollapsedGroupKeys(new Set());
       setAllSongSuggestions(state.songs);
 
       void (async () => {
@@ -347,6 +356,218 @@ export function AddFilesModal({
     fileEntries,
     reviewInstrumentNames,
   );
+
+  const groupedFiles = useMemo(() => {
+    const UNNAMED = t("statusBar.noInstrument");
+    const groups = new Map<
+      string,
+      {
+        key: string;
+        label: string;
+        hasPending: boolean;
+        entries: Array<{ file: IndexedFile; idx: number }>;
+      }
+    >();
+
+    for (const { file, idx } of visibleFiles) {
+      const raw = reviewInstrumentNames[idx] ?? "";
+      const base = getScoreBaseInstrumentName(raw);
+      const isUnnamed = base.trim().length === 0;
+      const key = isUnnamed ? "__unnamed__" : base.trim();
+      const existing = groups.get(key);
+      const isIgnored = ignoredFileIndices.has(idx);
+      const normalizedName = normalizedInstrumentNames.get(idx);
+      const isTrueDuplicate =
+        !isIgnored &&
+        normalizedName !== null &&
+        normalizedName !== undefined &&
+        (normalizedInstrumentCounts.get(normalizedName) ?? 0) > 1;
+
+      if (existing) {
+        existing.entries.push({ file, idx });
+        if (isTrueDuplicate) {
+          existing.hasPending = true;
+        }
+        continue;
+      }
+
+      groups.set(key, {
+        key,
+        label: isUnnamed ? UNNAMED : base.trim(),
+        hasPending: isTrueDuplicate,
+        entries: [{ file, idx }],
+      });
+    }
+
+    const result = [...groups.values()].sort((a, b) => {
+      const aUnnamed = a.key === "__unnamed__";
+      const bUnnamed = b.key === "__unnamed__";
+      if (aUnnamed !== bUnnamed) {
+        return aUnnamed ? -1 : 1;
+      }
+      return compareInstrumentNames(a.label, b.label);
+    });
+
+    return result;
+  }, [
+    normalizedInstrumentCounts,
+    normalizedInstrumentNames,
+    ignoredFileIndices,
+    t,
+    visibleFiles,
+  ]);
+
+  const toggleGroup = (key: string) => {
+    setCollapsedGroupKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
+
+  const allGroupsExpanded = groupedFiles.every(
+    (group) => !collapsedGroupKeys.has(group.key),
+  );
+
+  const toggleAllGroups = () => {
+    setCollapsedGroupKeys(allGroupsExpanded ? new Set(groupedFiles.map((g) => g.key)) : new Set());
+  };
+
+  const renderFileEntry = (file: IndexedFile, idx: number, index: number) => {
+    const fileName = getFileName(file.path) || file.name;
+    const directoryPath = getDirectoryPath(file.path);
+    const isBusy =
+      openingScorePath === file.path ||
+      openingLocationPath === file.path;
+    const isIgnored = ignoredFileIndices.has(idx);
+    const conflict = isIgnored || isDuplicateSong
+      ? null
+      : (duplicateMap.get(idx) ?? null);
+    const isLocked = conflict !== null;
+    const conflictMessage = conflict
+      ? describeScoreConflict(conflict, normalizedTitle)
+      : null;
+
+    return (
+      <div
+        key={idx}
+        className={
+          index > 0
+            ? "border-t border-[#d8e0ea] pt-3 space-y-2"
+            : "space-y-2"
+        }
+      >
+        {conflictMessage && (
+          <p className="text-xs font-semibold text-amber-700">
+            {conflictMessage}
+          </p>
+        )}
+
+        <div className="flex items-center justify-between">
+          <div className="min-w-0 flex-1 pr-2">
+              <p className="flex items-center gap-1.5 text-xs text-[#5d738b] font-semibold">
+                {isIgnored && (
+                  <span className="shrink-0 inline-flex items-center gap-1 rounded-full border border-slate-600 bg-slate-600 px-2 py-0.5 text-[11px] font-semibold text-white">
+                    {t("addFilesModal.badgeIgnored")}
+                  </span>
+                )}
+                <span className="break-all whitespace-normal">
+                  {fileName}
+                </span>
+              </p>
+              <p className="text-[11px] text-[#8b9db2] break-all whitespace-normal mt-0.5">
+                {directoryPath}
+              </p>
+            </div>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() =>
+                isIgnored
+                  ? unignoreFile(idx)
+                  : ignoreFile(idx)
+              }
+              className={`p-1 transition-colors ${isIgnored ? "text-[#4f84d7] hover:text-[#345f9e]" : "text-[#8b9db2] hover:text-[#4f84d7]"}`}
+              title={
+                isIgnored
+                  ? t("addFilesModal.titleUnignoreFile")
+                  : t("addFilesModal.titleIgnoreFile")
+              }
+            >
+              {isIgnored ? (
+                <RotateCcw className="h-4 w-4" />
+              ) : (
+                <Ban className="h-4 w-4" />
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                openDeleteFileModal(idx, file.path, fileName)
+              }
+              disabled={isLocked}
+              className="p-1 text-[#8b9db2] hover:text-red-500 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+              title={t("addFilesModal.titleMoveToTrash")}
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={() => handleOpenScore(file.path)}
+            disabled={isBusy}
+            className="inline-flex items-center gap-1 rounded border border-[#d8e0ea] px-2 py-1 text-[11px] text-[#5d738b] hover:bg-[#eef3f8] disabled:cursor-not-allowed disabled:opacity-60"
+            title={t("addFilesModal.titleOpenScore")}
+          >
+            {openingScorePath === file.path ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <ExternalLink className="h-3.5 w-3.5" />
+            )}
+            {t("addFilesModal.btnOpenScore")}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleOpenLocal(file.path)}
+            disabled={isBusy}
+            className="inline-flex items-center gap-1 rounded border border-[#d8e0ea] px-2 py-1 text-[11px] text-[#5d738b] hover:bg-[#eef3f8] disabled:cursor-not-allowed disabled:opacity-60"
+            title={t("addFilesModal.titleOpenLocal")}
+          >
+            {openingLocationPath === file.path ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <FolderOpen className="h-3.5 w-3.5" />
+            )}
+            {t("addFilesModal.btnOpenLocal")}
+          </button>
+        </div>
+
+        <TextInput
+          value={instrumentNames[idx] || ""}
+          onChange={(val) => {
+            if (!isIgnored) {
+              updateInstrumentName(idx, val);
+            }
+          }}
+          onBlur={() => {
+            commitInstrumentName(idx);
+          }}
+          placeholder={t("addFilesModal.placeholderInstrumentName")}
+          autoFocus={visibleFiles[0]?.idx === idx}
+          disabled={isIgnored}
+          readOnly={isLocked}
+        />
+      </div>
+    );
+  };
 
   const reviewItems = useMemo(() => {
     const items: Array<
@@ -536,248 +757,62 @@ export function AddFilesModal({
       )}
 
       {instrumentCount > 0 && (
-        <FormField label={t("addFilesModal.labelInstrumentsToAdd", { count: instrumentCount })}>
-          <div className="rounded border border-[#c5cfdb] bg-white p-3 space-y-4 max-h-80 overflow-y-auto">
-            {reviewItems.map((item) => {
-              if (item.kind === "group") {
-                return (
-                  <div
-                    key={item.normalizedInstrument}
-                    className="rounded border border-amber-200 bg-amber-50 p-2 space-y-3"
-                  >
-                    {item.entries.map(({ file, idx }, index) => {
-                      const fileName = getFileName(file.path) || file.name;
-                      const directoryPath = getDirectoryPath(file.path);
-                      const isBusy =
-                        openingScorePath === file.path ||
-                        openingLocationPath === file.path;
-                      const isIgnored = ignoredFileIndices.has(idx);
-                      const conflict = isIgnored
-                        ? null
-                        : (duplicateMap.get(idx) ?? null);
-                      const isLocked = conflict !== null;
-
-                      return (
-                        <div
-                          key={idx}
-                          className={
-                            index > 0 ? "border-t border-amber-200 pt-3" : ""
-                          }
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="min-w-0 flex-1 pr-2">
-                              <p className="text-xs text-[#5d738b] font-semibold break-all whitespace-normal">
-                                {fileName}
-                              </p>
-                              <p className="text-[11px] text-[#8b9db2] break-all whitespace-normal mt-0.5">
-                                {directoryPath}
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <button
-                                type="button"
-                                onClick={() => ignoreFile(idx)}
-                                className="p-1 text-[#8b9db2] hover:text-[#4f84d7] transition-colors"
-                                title={t("addFilesModal.titleIgnoreFile")}
-                              >
-                                <Ban className="h-4 w-4" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  openDeleteFileModal(idx, file.path, fileName)
-                                }
-                                className="p-1 text-[#8b9db2] hover:text-red-500 transition-colors"
-                                title={t("addFilesModal.titleMoveToTrash")}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-2 flex-wrap mt-2">
-                            <button
-                              type="button"
-                              onClick={() => handleOpenScore(file.path)}
-                              disabled={isBusy}
-                              className="inline-flex items-center gap-1 rounded border border-[#d8e0ea] px-2 py-1 text-[11px] text-[#5d738b] hover:bg-[#eef3f8] disabled:cursor-not-allowed disabled:opacity-60"
-                              title={t("addFilesModal.titleOpenScore")}
-                            >
-                              {openingScorePath === file.path ? (
-                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                              ) : (
-                                <ExternalLink className="h-3.5 w-3.5" />
-                              )}
-                              {t("addFilesModal.btnOpenScore")}
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => handleOpenLocal(file.path)}
-                              disabled={isBusy}
-                              className="inline-flex items-center gap-1 rounded border border-[#d8e0ea] px-2 py-1 text-[11px] text-[#5d738b] hover:bg-[#eef3f8] disabled:cursor-not-allowed disabled:opacity-60"
-                              title={t("addFilesModal.titleOpenLocal")}
-                            >
-                              {openingLocationPath === file.path ? (
-                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                              ) : (
-                                <FolderOpen className="h-3.5 w-3.5" />
-                              )}
-                              {t("addFilesModal.btnOpenLocal")}
-                            </button>
-                          </div>
-
-                          <TextInput
-                            value={instrumentNames[idx] || ""}
-                            onChange={(val) => {
-                              if (!isIgnored) {
-                                updateInstrumentName(idx, val);
-                              }
-                            }}
-                            onBlur={() => {
-                              commitInstrumentName(idx);
-                            }}
-                            placeholder={t("addFilesModal.placeholderInstrumentName")}
-                            autoFocus={visibleFiles[0]?.idx === idx}
-                            disabled={isIgnored}
-                            readOnly={isLocked}
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              }
-
-              const fileName = getFileName(item.file.path) || item.file.name;
-              const directoryPath = getDirectoryPath(item.file.path);
-              const isBusy =
-                openingScorePath === item.file.path ||
-                openingLocationPath === item.file.path;
-
-              return (
-                <div
-                  key={item.idx}
-                  className={
-                    item.conflictMessage
-                      ? "rounded border border-amber-200 bg-amber-50 p-2 space-y-2"
-                      : "space-y-2"
-                  }
-                >
-                  {item.conflictMessage && (
-                    <p className="text-xs font-semibold text-amber-700">
-                      {item.conflictMessage}
-                    </p>
-                  )}
-
-                  <div className="flex items-center justify-between">
-                    <div className="min-w-0 flex-1 pr-2">
-                      <p className="text-xs text-[#5d738b] font-semibold break-all whitespace-normal">
-                        {fileName}
-                      </p>
-                      <p className="text-[11px] text-[#8b9db2] break-all whitespace-normal mt-0.5">
-                        {directoryPath}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          item.isIgnored
-                            ? unignoreFile(item.idx)
-                            : ignoreFile(item.idx)
-                        }
-                        className={`p-1 transition-colors ${item.isIgnored ? "text-[#4f84d7] hover:text-[#345f9e]" : "text-[#8b9db2] hover:text-[#4f84d7]"}`}
-                        title={
-                          item.isIgnored
-                            ? t("addFilesModal.titleUnignoreFile")
-                            : t("addFilesModal.titleIgnoreFile")
-                        }
-                      >
-                        {item.isIgnored ? (
-                          <RotateCcw className="h-4 w-4" />
-                        ) : (
-                          <Ban className="h-4 w-4" />
-                        )}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          openDeleteFileModal(
-                            item.idx,
-                            item.file.path,
-                            fileName,
-                          )
-                        }
-                        disabled={item.isLocked}
-                        className="p-1 text-[#8b9db2] hover:text-red-500 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-                        title={t("addFilesModal.titleMoveToTrash")}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-
-                  {item.isIgnored && (
-                    <div className="flex items-center gap-2">
-                      <span className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700">
-                        {t("addFilesModal.badgeIgnored")}
-                      </span>
-                    </div>
-                  )}
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleOpenScore(item.file.path)}
-                      disabled={isBusy}
-                      className="inline-flex items-center gap-1 rounded border border-[#d8e0ea] px-2 py-1 text-[11px] text-[#5d738b] hover:bg-[#eef3f8] disabled:cursor-not-allowed disabled:opacity-60"
-                      title={t("addFilesModal.titleOpenScore")}
-                    >
-                      {openingScorePath === item.file.path ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <ExternalLink className="h-3.5 w-3.5" />
-                      )}
-                      {t("addFilesModal.btnOpenScore")}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleOpenLocal(item.file.path)}
-                      disabled={isBusy}
-                      className="inline-flex items-center gap-1 rounded border border-[#d8e0ea] px-2 py-1 text-[11px] text-[#5d738b] hover:bg-[#eef3f8] disabled:cursor-not-allowed disabled:opacity-60"
-                      title={t("addFilesModal.titleOpenLocal")}
-                    >
-                      {openingLocationPath === item.file.path ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <FolderOpen className="h-3.5 w-3.5" />
-                      )}
-                      {t("addFilesModal.btnOpen")}
-                    </button>
-                  </div>
-
-                  <TextInput
-                    value={instrumentNames[item.idx] || ""}
-                    onChange={(val) => {
-                      if (!item.isIgnored) {
-                        updateInstrumentName(item.idx, val);
-                      }
-                    }}
-                    onBlur={() => {
-                      commitInstrumentName(item.idx);
-                    }}
-                    placeholder={t("addFilesModal.placeholderInstrumentName")}
-                    autoFocus={visibleFiles[0]?.idx === item.idx}
-                    disabled={item.isIgnored}
-                    readOnly={item.isLocked}
-                  />
-                </div>
-              );
-            })}
+        <div>
+          <div className="mb-1.5 flex items-center justify-between">
+            <label className="block text-sm font-medium text-[#344b61]">
+              {t("addFilesModal.labelInstrumentsToAdd", { count: instrumentCount })}
+            </label>
+            <button
+              type="button"
+              onClick={toggleAllGroups}
+              className="rounded border border-[#c5cfdb] bg-white px-2 py-1 text-[11px] font-medium text-[#5d738b] transition-colors hover:bg-[#eef3f8]"
+            >
+              {allGroupsExpanded
+                ? t("addFilesModal.btnCollapseAll")
+                : t("addFilesModal.btnExpandAll")}
+            </button>
           </div>
-        </FormField>
+
+          <div className="rounded border border-[#c5cfdb] bg-white p-3 space-y-2 max-h-80 overflow-y-auto">
+            {groupedFiles.map((group) => {
+                  const isCollapsed = collapsedGroupKeys.has(group.key);
+
+                  return (
+                    <div
+                      key={group.key}
+                      className={
+                        group.hasPending
+                          ? "rounded border border-amber-200 bg-amber-50 p-2 space-y-2"
+                          : "rounded border border-[#d8e0ea] bg-[#f4f7fb] p-2 space-y-2"
+                      }
+                    >
+                      <button
+                        type="button"
+                        onClick={() => toggleGroup(group.key)}
+                        className="flex w-full items-center justify-between rounded px-1 py-1 text-left transition-colors hover:bg-[#00000008]"
+                      >
+                        <span className="flex items-center gap-1.5 min-w-0">
+                          <ChevronDown
+                            className={`h-4 w-4 shrink-0 text-[#8b9db2] transition-transform ${isCollapsed ? "-rotate-90" : ""}`}
+                          />
+                          <span className="truncate text-xs font-semibold text-[#5d738b]">
+                            {group.label}
+                          </span>
+                        </span>
+                        <span className="shrink-0 pl-2 text-[11px] text-[#8b9db2]">
+                          {group.entries.length}
+                        </span>
+                      </button>
+
+                      {!isCollapsed &&
+                        group.entries.map(({ file, idx }, index) =>
+                          renderFileEntry(file, idx, index),
+                        )}
+                    </div>
+                  );
+                })}
+          </div>
+        </div>
       )}
 
       {pendingDeleteFile && (

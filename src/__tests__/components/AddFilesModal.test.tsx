@@ -98,6 +98,36 @@ const duplicateBatchFiles: IndexedFile[] = [
   },
 ];
 
+const fluteSectionsFiles: IndexedFile[] = [
+  {
+    path: "/music/Canon - Flauta I.musx",
+    name: "Canon",
+    instrument: "Flauta I",
+    extension: "musx",
+  },
+  {
+    path: "/music/Canon - Flauta II.musx",
+    name: "Canon",
+    instrument: "Flauta II",
+    extension: "musx",
+  },
+];
+
+const unnamedAndNamedFiles: IndexedFile[] = [
+  {
+    path: "/music/Canon - Flauta.musx",
+    name: "Canon",
+    instrument: "Flauta",
+    extension: "musx",
+  },
+  {
+    path: "/music/Canon - Sem nome.musx",
+    name: "Canon",
+    instrument: "",
+    extension: "musx",
+  },
+];
+
 const reorderFiles: IndexedFile[] = [
   {
     path: "/music/Canon - Violino.musx",
@@ -515,6 +545,66 @@ describe("AddFilesModal", () => {
     );
     expect(instrumentInputs[0]).not.toHaveAttribute("readonly");
     expect(instrumentInputs[1]).not.toHaveAttribute("readonly");
+  });
+
+  it("should group instrument sections under a single base instrument name", () => {
+    renderWithAppProvider(
+      <AddFilesModal
+        isOpen={true}
+        files={fluteSectionsFiles}
+        onClose={mockOnClose}
+        onSuccess={mockOnSuccess}
+      />,
+    );
+
+    expect(screen.getAllByText("Flauta")).toHaveLength(1);
+    expect(screen.getByText("Canon - Flauta I.musx")).toBeInTheDocument();
+    expect(screen.getByText("Canon - Flauta II.musx")).toBeInTheDocument();
+    expect(screen.getByText("2")).toBeInTheDocument();
+    expect(screen.queryByText(/usam o mesmo instrumento/)).toBeNull();
+  });
+
+  it("places the unnamed instrument group at the top", () => {
+    renderWithAppProvider(
+      <AddFilesModal
+        isOpen={true}
+        files={unnamedAndNamedFiles}
+        onClose={mockOnClose}
+        onSuccess={mockOnSuccess}
+      />,
+    );
+
+    const html = document.body.innerHTML;
+    expect(html.indexOf("Sem instrumento")).toBeLessThan(
+      html.indexOf("Flauta"),
+    );
+  });
+
+  it("should toggle between expanding and collapsing all groups", () => {
+    renderWithAppProvider(
+      <AddFilesModal
+        isOpen={true}
+        files={sampleFiles}
+        onClose={mockOnClose}
+        onSuccess={mockOnSuccess}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Recolher todos" }),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Recolher todos" }));
+    expect(
+      screen.getByRole("button", { name: "Expandir todos" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Canon - Flauta.musx")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Expandir todos" }));
+    expect(
+      screen.getByRole("button", { name: "Recolher todos" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Canon - Flauta.musx")).toBeInTheDocument();
   });
 
   it("should keep focus while editing a repeated instrument until blur", async () => {

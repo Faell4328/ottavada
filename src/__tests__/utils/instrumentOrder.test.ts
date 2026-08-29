@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { compareInstrumentNames, getInstrumentRank } from "../../utils/instrumentOrder";
+import {
+  compareInstrumentNames,
+  getInstrumentRank,
+  getScoreBaseInstrumentName,
+} from "../../utils/instrumentOrder";
 
 describe("compareInstrumentNames", () => {
   it("prioritizes unnamed instruments first", () => {
@@ -208,5 +212,32 @@ describe("compareInstrumentNames", () => {
       "harp",
       "violin",
     ]);
+  });
+});
+
+describe("getScoreBaseInstrumentName", () => {
+  it("strips roman numeral section markers", () => {
+    expect(getScoreBaseInstrumentName("Flauta I")).toBe("Flauta");
+    expect(getScoreBaseInstrumentName("Flauta II")).toBe("Flauta");
+    expect(getScoreBaseInstrumentName("Trumpet III")).toBe("Trumpet");
+  });
+
+  it("strips arabic numeral section markers", () => {
+    expect(getScoreBaseInstrumentName("Flauta 1")).toBe("Flauta");
+    expect(getScoreBaseInstrumentName("Flauta 2")).toBe("Flauta");
+    expect(getScoreBaseInstrumentName("Violino 1st")).toBe("Violino");
+  });
+
+  it("keeps names without a trailing section marker unchanged", () => {
+    expect(getScoreBaseInstrumentName("Flauta Transversal")).toBe(
+      "Flauta Transversal",
+    );
+    expect(getScoreBaseInstrumentName("Grade")).toBe("Grade");
+  });
+
+  it("returns empty for empty or null names", () => {
+    expect(getScoreBaseInstrumentName(null)).toBe("");
+    expect(getScoreBaseInstrumentName("")).toBe("");
+    expect(getScoreBaseInstrumentName("   ")).toBe("");
   });
 });

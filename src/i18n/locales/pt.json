@@ -248,6 +248,8 @@
     "labelArranger": "Arranjador",
     "labelCategories": "Categorias",
     "labelInstrumentsToAdd": "Instrumentos a adicionar ({{count}})",
+    "btnCollapseAll": "Recolher todos",
+    "btnExpandAll": "Expandir todos",
     "titleIgnoreFile": "Ignorar arquivo",
     "titleUnignoreFile": "Desconsiderar arquivo",
     "titleMoveToTrash": "Mover para lixeira",

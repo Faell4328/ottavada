@@ -35,6 +35,30 @@ function includesAny(text: string, fragments: string[]): boolean {
 //   return baseRank;
 // }
 
+function isSectionMarker(token: string): boolean {
+  if (/^\d+(?:st|nd|rd|th)?$/i.test(token)) {
+    return true;
+  }
+  return /^(?=[ivxlcdm]+$)[ivxlcdm]+$/i.test(token);
+}
+
+export function getScoreBaseInstrumentName(
+  name: string | null | undefined,
+): string {
+  const value = (name ?? "").trim().replace(/\s+/g, " ");
+  if (!value) {
+    return "";
+  }
+
+  const tokens = value.split(" ");
+  const last = tokens[tokens.length - 1];
+  if (tokens.length > 1 && isSectionMarker(last)) {
+    return tokens.slice(0, -1).join(" ");
+  }
+
+  return value;
+}
+
 function isScoreOrGrade(text: string): boolean {
   return (
     text === "grade" ||
