@@ -200,18 +200,6 @@ export function AddFilesModal({
     }));
   };
 
-  const clearInstrumentName = (idx: number) => {
-    setInstrumentNames((prev) => ({
-      ...prev,
-      [idx]: "",
-    }));
-
-    setReviewInstrumentNames((prev) => ({
-      ...prev,
-      [idx]: "",
-    }));
-  };
-
   const commitInstrumentName = (idx: number) => {
     const nextValue = normalizeScoreNameInput(instrumentNames[idx] ?? "");
 
@@ -228,8 +216,6 @@ export function AddFilesModal({
   };
 
   const ignoreFile = (idx: number) => {
-    clearInstrumentName(idx);
-
     setIgnoredFileIndices((prev) => {
       const next = new Set(prev);
       next.add(idx);

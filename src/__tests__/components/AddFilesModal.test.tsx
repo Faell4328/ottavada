@@ -310,7 +310,7 @@ describe("AddFilesModal", () => {
     ).toBeDisabled();
     expect(
       screen.getAllByPlaceholderText("Nome do instrumento")[0],
-    ).toHaveValue("");
+    ).toHaveValue("Flauta");
 
     fireEvent.change(screen.getAllByPlaceholderText("Nome do instrumento")[0], {
       target: { value: "Outra coisa" },
@@ -318,7 +318,7 @@ describe("AddFilesModal", () => {
 
     expect(
       screen.getAllByPlaceholderText("Nome do instrumento")[0],
-    ).toHaveValue("");
+    ).toHaveValue("Flauta");
 
     fireEvent.click(screen.getByTitle("Desconsiderar arquivo"));
 
